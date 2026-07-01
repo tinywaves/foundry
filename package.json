@@ -48,6 +48,7 @@
     "dev": "tsx watch --clear-screen=false src/index.ts",
     "lint": "eslint",
     "lint-fix": "eslint --fix .",
+    "prepack": "pnpm run build",
     "prepare": "husky",
     "release": "bumpp",
     "release:publish": "pnpm release && pnpm publish --access public",

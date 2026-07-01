@@ -1,0 +1,74 @@
+{
+  "name": "starter-typescript",
+  "type": "module",
+  "version": "1.2.1",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.7.0",
+      "onFail": "download"
+    },
+    "runtime": {
+      "name": "node",
+      "version": "^26.3.0",
+      "onFail": "download"
+    }
+  },
+  "description": "A template for typescript project",
+  "author": {
+    "name": "tinywaves",
+    "email": "dhzhme@gmail.com"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/tinywaves/starter-typescript",
+  "keywords": [
+    "typescript",
+    "template",
+    "starter"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "url": "git+https://github.com/tinywaves/starter-typescript.git",
+    "type": "git"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown",
+    "build:dev": "tsdown --watch",
+    "dev": "tsx watch --clear-screen=false src/index.ts",
+    "lint": "eslint",
+    "lint-fix": "eslint --fix .",
+    "prepare": "husky",
+    "release": "bumpp",
+    "release:publish": "pnpm release && pnpm publish",
+    "test": "vitest run",
+    "test:coverage": "pnpm run test --coverage",
+    "test:dev": "vitest"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.0.2",
+    "@commitlint/config-conventional": "^21.0.2",
+    "@dhzh/eslint-config": "^2.1.1",
+    "@types/node": "^25.9.3",
+    "@vitest/coverage-v8": "^4.1.9",
+    "bumpp": "^11.1.0",
+    "changelogithub": "^14.0.0",
+    "eslint": "^10.5.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7",
+    "tsdown": "^0.22.2",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  }
+}

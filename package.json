@@ -1,7 +1,7 @@
 {
-  "name": "starter-typescript",
+  "name": "@dhzh/foundry",
   "type": "module",
-  "version": "1.2.1",
+  "version": "0.0.0",
   "devEngines": {
     "packageManager": {
       "name": "pnpm",
@@ -14,17 +14,17 @@
       "onFail": "download"
     }
   },
-  "description": "A template for typescript project",
+  "description": "An AI-native local developer runtime for tools, skills, agents, and workflows.",
   "author": {
     "name": "tinywaves",
     "email": "dhzhme@gmail.com"
   },
-  "license": "MIT",
-  "homepage": "https://github.com/tinywaves/starter-typescript",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/tinywaves/foundry",
   "keywords": [
-    "typescript",
-    "template",
-    "starter"
+    "agent",
+    "cli",
+    "ai"
   ],
   "exports": {
     ".": {
@@ -38,7 +38,7 @@
     "dist"
   ],
   "repository": {
-    "url": "git+https://github.com/tinywaves/starter-typescript.git",
+    "url": "git+https://github.com/tinywaves/foundry.git",
     "type": "git"
   },
   "sideEffects": false,

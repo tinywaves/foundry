@@ -7,6 +7,9 @@
 ## Layout
 
 - `src/index.ts` is the public package entrypoint.
+- `src/bin/index.ts` is the bundled CLI source entrypoint.
+- `src/bin/server.tsx` owns the local Web UI Hono app and server used by the CLI.
+- `bin/index.js` is the published executable wrapper and should stay minimal.
 - `test/` contains Vitest tests.
 - `dist/` is generated build output and should not be edited by hand.
 - Root config files define TypeScript, ESLint, Vitest, Commitlint, and tsdown behavior.
@@ -14,8 +17,8 @@
 ## Tooling
 
 - Use `pnpm` for all package operations.
-- The expected package manager is `pnpm ^11.7.0`.
-- The expected runtime is `node ^26.3.0`.
+- The expected package manager is `pnpm ^11.9.0`.
+- The expected runtime is `node ^24.18.0`.
 - Do not add JavaScript dependencies with `npm` or `yarn`.
 
 ## Common Commands
@@ -31,8 +34,13 @@
 ## Code Style
 
 - Write TypeScript using ESM syntax.
+- In TypeScript source files, omit `.js` extensions for local relative imports.
+- Avoid meaningless blank lines; use blank lines to separate semantic blocks, not after every statement. Keep a blank line before `return`.
 - Keep strict TypeScript settings satisfied; avoid weakening types to silence errors.
 - Prefer small, explicit exported APIs from `src/index.ts`.
+- Use `cac` for CLI startup and command parsing.
+- Use `consola` for CLI logging instead of direct `console.*` calls; prefer `consola.box` for CLI startup messages.
+- Use `hono` with `@hono/node-server` for the local Web UI service; prefer simple Hono JSX views for the initial UI.
 - Preserve the package's side-effect-free behavior unless a feature explicitly requires otherwise.
 - Keep generated artifacts out of manual edits.
 

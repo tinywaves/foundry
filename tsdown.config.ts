@@ -1,7 +1,10 @@
 import { defineConfig } from 'tsdown';
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  entry: {
+    'bin/index': 'src/bin/index.ts',
+    'index': 'src/index.ts',
+  },
   outDir: 'dist',
   shims: true,
   format: ['cjs', 'esm'],

@@ -4,6 +4,8 @@
     "lib": ["ESNext"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
     "resolveJsonModule": true,
     "strict": true,
     "strictNullChecks": true,

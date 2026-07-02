@@ -29,13 +29,21 @@
   ],
   "exports": {
     ".": {
-      "import": "./dist/index.js",
+      "types": {
+        "import": "./dist/index.d.mts",
+        "require": "./dist/index.d.cts"
+      },
+      "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
     }
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.mts",
+  "bin": {
+    "foundry": "./bin/index.js"
+  },
   "files": [
+    "bin",
     "dist"
   ],
   "repository": {
@@ -72,5 +80,11 @@
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "vitest": "^4.1.9"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.0.8",
+    "cac": "^7.0.0",
+    "consola": "^3.4.2",
+    "hono": "^4.12.27"
   }
 }

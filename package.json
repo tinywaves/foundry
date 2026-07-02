@@ -2,15 +2,16 @@
   "name": "@dhzh/foundry",
   "type": "module",
   "version": "0.0.1-beta.2",
+  "packageManager": "pnpm@11.9.0",
   "devEngines": {
     "packageManager": {
       "name": "pnpm",
-      "version": "^11.7.0",
+      "version": "^11.9.0",
       "onFail": "download"
     },
     "runtime": {
       "name": "node",
-      "version": "^26.3.0",
+      "version": "^24.18.0",
       "onFail": "download"
     }
   },

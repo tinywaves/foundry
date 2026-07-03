@@ -10,9 +10,16 @@
 - `src/bin/index.ts` is the bundled CLI source entrypoint.
 - `src/bin/server.tsx` owns the local Web UI Hono app and server used by the CLI.
 - `bin/index.js` is the published executable wrapper and should stay minimal.
+- `docs/plans/` contains numbered project plans.
 - `test/` contains Vitest tests.
 - `dist/` is generated build output and should not be edited by hand.
 - Root config files define TypeScript, ESLint, Vitest, Commitlint, and tsdown behavior.
+
+## Documentation
+
+- `docs/plans/` stores numbered implementation plans for features and milestones.
+- Before starting a new feature or refactor, read the relevant plan in `docs/plans/`.
+- Keep plans aligned with staged or merged implementation changes.
 
 ## Tooling
 

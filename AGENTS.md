@@ -17,9 +17,37 @@
 
 ## Documentation
 
-- `docs/plans/` stores numbered implementation plans for features and milestones.
+- `docs/plans/` stores numbered implementation plans for features and milestones. Name files `NNN-short-slug.md` (hyphen-separated).
 - Before starting a new feature or refactor, read the relevant plan in `docs/plans/`.
 - Keep plans aligned with staged or merged implementation changes.
+
+### Plans
+
+Every plan in `docs/plans/` that touches package dependencies must include a **Dependency Changes** section with:
+
+- **Add**: package name(s) to install, with a one-line reason for each.
+- **Remove**: package name(s) to uninstall, with a one-line reason for each.
+- **Commands**: the exact `pnpm add` / `pnpm remove` commands for reference.
+
+Example:
+
+```markdown
+## Dependency Changes
+
+### Add
+- `terminal-link` — OSC 8 hyperlinks for clickable CLI URLs.
+
+### Remove
+- `consola` — only used for startup box; replaced by `terminal-link` + `console.info`.
+
+### Commands (manual only)
+pnpm remove consola
+pnpm add terminal-link
+```
+
+**Dependency commands are manual-only.** Do not run `pnpm add`, `pnpm remove`, or similar install/uninstall commands unless the user explicitly asks. List the commands in the plan; the user runs them by hand before or during implementation.
+
+**Persist plans after execution.** Once implementation is done, write the finalized plan into `docs/plans/` so it is versioned in the repo. Use the next sequential number and a short slug joined by hyphens, for example `002-clickable-cli-url.md`. The committed plan should match what was actually shipped—update goals, dependency changes, and verification steps if they diverged during implementation. Do not leave execution-only plans in ephemeral locations when the work is complete.
 
 ## Tooling
 
@@ -46,7 +74,7 @@
 - Keep strict TypeScript settings satisfied; avoid weakening types to silence errors.
 - Prefer small, explicit exported APIs from `src/index.ts`.
 - Use `cac` for CLI startup and command parsing.
-- Use `consola` for CLI logging instead of direct `console.*` calls; prefer `consola.box` for CLI startup messages.
+- Use `terminal-link` for clickable CLI URLs; print startup messages with `console.info`.
 - Use `hono` with `@hono/node-server` for the local Web UI service; prefer simple Hono JSX views for the initial UI.
 - Preserve the package's side-effect-free behavior unless a feature explicitly requires otherwise.
 - Keep generated artifacts out of manual edits.

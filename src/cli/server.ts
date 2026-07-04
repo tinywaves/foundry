@@ -5,23 +5,23 @@ import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 
-export function resolveInterfaceRoot(): string {
+export function resolveWebRoot(): string {
   return path.join(
     path.dirname(fileURLToPath(import.meta.url)),
-    '../interface',
+    '../web',
   );
 }
 
-export function createWebUiApp(interfaceRoot = resolveInterfaceRoot()) {
-  const indexPath = path.join(interfaceRoot, 'index.html');
+export function createWebUiApp(webRoot = resolveWebRoot()) {
+  const indexPath = path.join(webRoot, 'index.html');
   if (!existsSync(indexPath)) {
     throw new Error(
-      'Interface not built. Run `pnpm build` or `pnpm build:interface` first.',
+      'Web UI not built. Run `pnpm build:web` or `pnpm build` from the repo root.',
     );
   }
 
   const app = new Hono();
-  app.use('/*', serveStatic({ root: interfaceRoot }));
+  app.use('/*', serveStatic({ root: webRoot }));
 
   return app;
 }

@@ -130,3 +130,12 @@ dist
 .pnp.*
 .DS_Store
 .pnpm-store
+
+# IDE
+.idea
+
+# Local overrides
+*.local
+
+# Rsbuild / Rspack
+.rspack-profile-*/

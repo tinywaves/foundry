@@ -2,17 +2,18 @@
 
 ## Project Overview
 
-`@dhzh/foundry` is an AI-native local developer runtime for tools, skills, agents, and workflows. It is published as a CLI-only package: `bin/` plus built `dist/cli/` and `dist/interface/`.
+`@dhzh/foundry` is an AI-native local developer runtime for tools, skills, agents, and workflows. It is published as a CLI-only package: `bin/` plus built `dist/cli/` and `dist/web/`.
 
 ## Layout
 
+- `pnpm-workspace.yaml` — pnpm workspace (`packages/*`) and shared dependency `catalog`.
 - `src/cli/` — cac entrypoint and Hono static server.
-- `src/interface/` — Web UI source (currently `index.html`; React/Vite in a later phase).
-- `scripts/build-interface.mjs` — copies interface assets to `dist/interface/`.
-- `bin/index.js` is the published executable wrapper and should stay minimal.
-- `docs/plans/` contains numbered project plans.
-- `dist/` is generated build output and should not be edited by hand.
-- Root config files define TypeScript, ESLint, Vitest, Commitlint, and tsdown behavior.
+- `packages/web/` — Web UI workspace package (`@dhzh/foundry-web`, private); Rsbuild + React 19 + Tailwind CSS v4.
+- `bin/index.js` — published executable wrapper; imports `dist/cli/index.mjs`.
+- `docs/plans/` — numbered implementation plans.
+- `dist/cli/` — bundled CLI output (`tsdown`).
+- `dist/web/` — Web UI production build (Rsbuild); served by the CLI.
+- Root config — TypeScript, ESLint, Vitest, Commitlint, and `tsdown` for the CLI. `packages/web/` owns Rsbuild, React, and Tailwind.
 
 ## Documentation
 
@@ -54,18 +55,40 @@ pnpm add terminal-link
 - The expected package manager is `pnpm ^11.9.0`.
 - The expected runtime is `node ^24.18.0`.
 - Do not add JavaScript dependencies with `npm` or `yarn`.
+- Web UI dependencies belong in `packages/web/package.json`, not the root package.
+- Shared versions for workspace packages are defined under `catalog` in `pnpm-workspace.yaml` (`@types/node`, `tailwindcss`, `typescript`).
+
+## TypeScript
+
+- Root `tsconfig.json` — CLI and root config files; `"exclude": ["packages"]` keeps `packages/web/` on its own config.
+- `packages/web/tsconfig.json` — Web UI (`jsx: react-jsx`, DOM lib, `include: ["src", "rsbuild.config.ts"]`).
+- `packages/web/src/env.d.ts` — `/// <reference types="@rsbuild/core/types" />` for Rsbuild type support.
 
 ## Common Commands
 
-- `pnpm run build` builds `dist/cli/` and `dist/interface/`.
-- `pnpm run build:cli` builds the CLI bundle only.
-- `pnpm run build:interface` copies interface assets to `dist/interface/`.
-- `pnpm run dev:cli` runs the CLI in watch mode (requires `pnpm build:interface` once for static files).
-- `pnpm run lint` runs ESLint.
-- `pnpm run lint-fix` applies ESLint fixes.
-- `pnpm run test` runs the Vitest suite once.
-- `pnpm run test:dev` runs Vitest in watch mode.
-- `pnpm run test:coverage` runs tests with coverage.
+### CLI (repo root)
+
+- `pnpm run build` — builds `dist/cli/` and `dist/web/`.
+- `pnpm run build:cli` — CLI bundle only (`tsdown`).
+- `pnpm run build:web` — `pnpm run --filter @dhzh/foundry-web build` → `dist/web/`.
+- `pnpm run dev:cli` — CLI watch mode (run `build:web` once first).
+- `pnpm run lint` / `pnpm run lint-fix` — ESLint (whole repo).
+- `pnpm run test` / `pnpm run test:dev` / `pnpm run test:coverage` — Vitest.
+
+### Web UI (`packages/web` / `@dhzh/foundry-web`)
+
+Prefer root scripts (delegate to the workspace package):
+
+- `pnpm run dev:web` — Rsbuild dev server with `--open` (default `http://localhost:3000`).
+- `pnpm run build:web` — production build into repo-root `dist/web/`.
+- `pnpm run preview:web` — preview production build locally.
+
+Equivalent scripts in `packages/web/`: `dev`, `build`, `preview`.
+
+Rsbuild reference docs (for agents):
+
+- https://rsbuild.rs/llms.txt
+- https://rspack.rs/llms.txt
 
 ## Code Style
 
@@ -73,9 +96,9 @@ pnpm add terminal-link
 - In TypeScript source files, omit `.js` extensions for local relative imports.
 - Avoid meaningless blank lines; use blank lines to separate semantic blocks, not after every statement. Keep a blank line before `return`.
 - Keep strict TypeScript settings satisfied; avoid weakening types to silence errors.
-- Use `cac` for CLI startup and command parsing.
-- Use `terminal-link` for clickable CLI URLs; print startup messages with `console.info`.
-- Use `hono` with `@hono/node-server` for the local Web UI service; serve static files from `dist/interface/`.
+- **CLI**: use `cac` for command parsing; `terminal-link` for clickable URLs; `console.info` for startup messages.
+- **CLI server**: use `hono` with `@hono/node-server`; `serveStatic` from `dist/web/` via `resolveWebRoot()`.
+- **Web UI**: configure Rsbuild in `packages/web/rsbuild.config.ts`; React Compiler enabled via `@rsbuild/plugin-react`; Tailwind via `@import 'tailwindcss'` in `src/index.css`.
 - Keep generated artifacts out of manual edits.
 
 ## Tests

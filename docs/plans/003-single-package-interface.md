@@ -74,7 +74,6 @@ pnpm add -D react react-dom vite @vitejs/plugin-react @types/react @types/react-
 - `foundry` → `http://127.0.0.1:7777` shows interface page
 - `pnpm run lint`
 
-## Phase 2 (not in this milestone)
+## Phase 2 (superseded)
 
-- React + Vite in `src/interface`
-- SPA routing fallback
+Superseded by [004-monorepo-web-ui.md](./004-monorepo-web-ui.md): Rsbuild + React in `packages/web` (pnpm workspace), output at `dist/web/`.

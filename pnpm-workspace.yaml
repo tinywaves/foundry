@@ -2,3 +2,9 @@ allowBuilds:
   esbuild: true
   unrs-resolver: true
 minimumReleaseAge: 0
+packages:
+  - 'packages/*'
+catalog:
+  '@types/node': ^26.1.0
+  tailwindcss: ^4.3.2
+  typescript: ^6.0.3

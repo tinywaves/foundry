@@ -15,4 +15,7 @@ export default defineConfig({
     distPath: path.resolve(import.meta.dirname, '../../dist/web'),
     cleanDistPath: true,
   },
+  html: {
+    title: 'Foundry',
+  },
 });

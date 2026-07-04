@@ -27,18 +27,6 @@
     "cli",
     "ai"
   ],
-  "exports": {
-    ".": {
-      "types": {
-        "import": "./dist/index.d.mts",
-        "require": "./dist/index.d.cts"
-      },
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
-    }
-  },
-  "main": "./dist/index.cjs",
-  "types": "./dist/index.d.mts",
   "bin": {
     "foundry": "./bin/index.js"
   },
@@ -52,9 +40,10 @@
   },
   "sideEffects": false,
   "scripts": {
-    "build": "tsdown",
-    "build:dev": "tsdown --watch",
-    "dev": "tsx watch --clear-screen=false src/index.ts",
+    "build": "pnpm run build:cli && pnpm run build:interface",
+    "build:cli": "tsdown",
+    "build:interface": "node scripts/build-interface.mjs",
+    "dev:cli": "tsx watch --clear-screen=true src/cli/index.ts",
     "lint": "eslint",
     "lint-fix": "eslint --fix .",
     "prepack": "pnpm run build",

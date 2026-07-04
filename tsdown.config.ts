@@ -2,14 +2,13 @@ import { defineConfig } from 'tsdown';
 
 export default defineConfig({
   entry: {
-    'bin/index': 'src/bin/index.ts',
-    'index': 'src/index.ts',
+    'cli/index': 'src/cli/index.ts',
   },
   outDir: 'dist',
   shims: true,
-  format: ['cjs', 'esm'],
+  format: ['esm'],
   clean: true,
-  dts: true,
+  dts: false,
   minify: true,
   target: false,
 });

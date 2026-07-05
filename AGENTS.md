@@ -97,9 +97,19 @@ Rsbuild reference docs (for agents):
 - Avoid meaningless blank lines; use blank lines to separate semantic blocks, not after every statement. Keep a blank line before `return`.
 - Keep strict TypeScript settings satisfied; avoid weakening types to silence errors.
 - **CLI**: use `cac` for command parsing; `terminal-link` for clickable URLs; `console.info` for startup messages.
-- **CLI server**: use `hono` with `@hono/node-server`; `serveStatic` from `dist/web/` via `resolveWebRoot()`.
+- **CLI server**: use `hono` with `@hono/node-server`; `serveStatic` from `dist/web/` (resolved inline in `startWebUiServer()`).
 - **Web UI**: configure Rsbuild in `packages/web/rsbuild.config.ts`; React Compiler enabled via `@rsbuild/plugin-react`; Tailwind via `@import 'tailwindcss'` in `src/index.css`.
 - Keep generated artifacts out of manual edits.
+
+## CLI design
+
+`src/cli/` is a local executable, not a reusable library. Keep it direct:
+
+- Prefer one function with a linear flow over factories, resolvers, or injectable roots (see `startWebUiServer()` in `server.ts`).
+- Inline paths and constants (e.g. `127.0.0.1`, port `7777`, `../web`) unless duplication appears across multiple commands.
+- On fatal errors, print a user-facing message with `console.error` and `exit(1)`; do not throw for the caller to catch.
+- Error copy targets installed users (e.g. reinstall via npm), not monorepo dev commands like `pnpm build:web`.
+- Export only what `index.ts` needs; avoid layering “just in case we test later.”
 
 ## Tests
 

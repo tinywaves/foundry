@@ -10,8 +10,31 @@
     "preview": "rsbuild preview"
   },
   "dependencies": {
+    "@mantine/carousel": "^9.4.1",
+    "@mantine/charts": "^9.4.1",
+    "@mantine/code-highlight": "^9.4.1",
+    "@mantine/core": "^9.4.1",
+    "@mantine/dates": "^9.4.1",
+    "@mantine/dropzone": "^9.4.1",
+    "@mantine/form": "^9.4.1",
+    "@mantine/hooks": "^9.4.1",
+    "@mantine/modals": "^9.4.1",
+    "@mantine/notifications": "^9.4.1",
+    "@mantine/nprogress": "^9.4.1",
+    "@mantine/spotlight": "^9.4.1",
+    "@mantine/tiptap": "^9.4.1",
+    "@tiptap/extension-link": "^3.27.1",
+    "@tiptap/pm": "^3.27.1",
+    "@tiptap/react": "^3.27.1",
+    "@tiptap/starter-kit": "^3.27.1",
+    "dayjs": "^1.11.21",
+    "embla-carousel": "^8.6.0",
+    "embla-carousel-react": "^8.6.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "react-json-view": "^1.21.3",
+    "react-router": "^8.1.0",
+    "recharts": "^3.9.2"
   },
   "devDependencies": {
     "@rsbuild/core": "^2.1.4",
@@ -20,6 +43,10 @@
     "@types/node": "catalog:",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "postcss": "^8.5.16",
+    "postcss-load-config": "^6.0.1",
+    "postcss-preset-mantine": "^1.18.0",
+    "postcss-simple-vars": "^7.0.1",
     "tailwindcss": "catalog:",
     "typescript": "catalog:"
   }

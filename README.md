@@ -23,7 +23,7 @@ The CLI serves the built Web UI at `http://127.0.0.1:7777` (static files from `d
 
 ## Web UI
 
-The Web UI lives in [`packages/web/`](packages/web/) (workspace package `web`): Vite 8, React 19, Tailwind CSS v4, and [shadcn/ui](https://ui.shadcn.com) (`base-luma` style on `@base-ui/react`).
+The Web UI lives in [`packages/web/`](packages/web/) (workspace package `web`): Vite 8, React 19, [React Router](https://reactrouter.com) 8, Tailwind CSS v4, and [shadcn/ui](https://ui.shadcn.com) (`base-luma` style on `@base-ui/react`).
 
 From the repo root:
 
@@ -45,6 +45,10 @@ pnpm dlx shadcn@latest add button
 
 Components are copied into `packages/web/src/components/ui/`.
 
+### Routing
+
+Client-side routing uses `react-router` (^8). Define routes under `packages/web/src/` and mount the router from `main.tsx`.
+
 ## Project layout
 
 | Path | Role |
@@ -60,5 +64,6 @@ Components are copied into `packages/web/src/components/ui/`.
 ## Learn more
 
 - [Vite documentation](https://vite.dev)
+- [React Router documentation](https://reactrouter.com)
 - [shadcn/ui documentation](https://ui.shadcn.com)
 - [Repository guidelines for agents](AGENTS.md)

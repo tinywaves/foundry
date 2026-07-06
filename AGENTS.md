@@ -8,46 +8,53 @@
 
 - `pnpm-workspace.yaml` — pnpm workspace (`packages/*`) and shared dependency `catalog`.
 - `src/cli/` — cac entrypoint and Hono static server.
-- `packages/web/` — Web UI workspace package (`web`, private); Vite 8 + React 19 + Tailwind CSS v4 + shadcn/ui.
+- `packages/web/` — Web UI workspace package (`web`, private); Vite 8 + React 19 + React Router 8 + Tailwind CSS v4 + shadcn/ui.
 - `bin/index.js` — published executable wrapper; imports `dist/cli/index.mjs`.
 - `dist/cli/` — bundled CLI output (`tsdown`).
 - `dist/web/` — Web UI production build (Vite); served by the CLI.
 - `.agents/skills/` — agent skills for shadcn/ui workflows (`shadcn`, `migrate-radix-to-base`).
-- Root config — TypeScript, ESLint, Vitest, Commitlint, Husky, and `tsdown` for the CLI. `packages/web/` owns Vite, React, Tailwind, and shadcn.
+- `specs/plans/` — numbered implementation specs and plans (`NNN-short-slug.md`).
+- Root config — TypeScript, ESLint, Vitest, Commitlint, Husky, and `tsdown` for the CLI. `packages/web/` owns Vite, React, React Router, Tailwind, and shadcn.
 
 ## Documentation
 
-- `docs/plans/` stores numbered implementation plans for features and milestones. Name files `NNN-short-slug.md` (hyphen-separated).
-- Before starting a new feature or refactor, read the relevant plan in `docs/plans/` when one exists.
+- `specs/plans/` stores numbered implementation plans for features and milestones. Name files `NNN-short-slug.md` (hyphen-separated).
+- Before starting a new feature or refactor, read the relevant plan in `specs/plans/` when one exists.
 - Keep plans aligned with staged or merged implementation changes.
 
 ### Plans
 
-Every plan in `docs/plans/` that touches package dependencies must include a **Dependency Changes** section with:
+Every plan in `specs/plans/` that touches package dependencies must include a **Dependency Changes** section with:
 
-- **Add**: package name(s) to install, with a one-line reason for each.
-- **Remove**: package name(s) to uninstall, with a one-line reason for each.
-- **Commands**: the exact `pnpm add` / `pnpm remove` commands for reference.
+- **Add (dependencies)** / **Add (devDependencies)**: package name(s) to install, with a one-line reason for each. State which `package.json` when not obvious (root vs `packages/web/`).
+- **Remove (dependencies)** / **Remove (devDependencies)**: package name(s) to uninstall, with a one-line reason for each.
+- **Commands (manual only)**: the exact `pnpm add` / `pnpm remove` commands for reference (`-D` or `--save-dev` for devDependencies).
 
 Example:
 
 ```markdown
 ## Dependency Changes
 
-### Add
-- `terminal-link` — OSC 8 hyperlinks for clickable CLI URLs.
+### Add (dependencies)
+- `react-router` (`packages/web/`) — client-side routing for the Web UI.
 
-### Remove
-- `consola` — only used for startup box; replaced by `terminal-link` + `console.info`.
+### Add (devDependencies)
+- (none)
+
+### Remove (dependencies)
+- `consola` (root) — only used for startup box; replaced by `terminal-link` + `console.info`.
+
+### Remove (devDependencies)
+- (none)
 
 ### Commands (manual only)
 pnpm remove consola
-pnpm add terminal-link
+pnpm add react-router --filter web
 ```
 
-**Dependency commands are manual-only.** Do not run `pnpm add`, `pnpm remove`, or similar install/uninstall commands unless the user explicitly asks. List the commands in the plan; the user runs them by hand before or during implementation.
+**Dependency changes are manual-only.** Do not run `pnpm add`, `pnpm remove`, or similar install/uninstall commands unless the user explicitly asks. When implementation needs new or removed packages, document them in the plan’s **Dependency Changes** section (or add that section to the spec before coding) and let the user run the commands. Do not edit `package.json` dependency fields or `pnpm-lock.yaml` yourself to simulate an install.
 
-**Persist plans after execution.** Once implementation is done, write the finalized plan into `docs/plans/` so it is versioned in the repo. Use the next sequential number and a short slug joined by hyphens, for example `002-clickable-cli-url.md`. The committed plan should match what was actually shipped—update goals, dependency changes, and verification steps if they diverged during implementation. Do not leave execution-only plans in ephemeral locations when the work is complete.
+**Persist plans after execution.** Once implementation is done, write the finalized plan into `specs/plans/` so it is versioned in the repo. Use the next sequential number and a short slug joined by hyphens, for example `002-clickable-cli-url.md`. The committed plan should match what was actually shipped—update goals, dependency changes, and verification steps if they diverged during implementation. Do not leave execution-only plans in ephemeral locations when the work is complete.
 
 ## Tooling
 
@@ -57,6 +64,7 @@ pnpm add terminal-link
 - Do not add JavaScript dependencies with `npm` or `yarn`.
 - Web UI dependencies belong in `packages/web/package.json`, not the root package.
 - Shared versions for workspace packages are defined under `catalog` in `pnpm-workspace.yaml` (`@types/node`, `tailwindcss`, `typescript`).
+- **Agents must not install or uninstall dependencies automatically.** If a task requires dependency changes, stop and record them in the spec (`specs/plans/` **Dependency Changes** section): what to add, what to remove, whether each item is a `dependency` or `devDependency`, which package owns it, and the manual `pnpm` commands. Proceed with code only after the user has run those commands (or explicitly asks you to run them).
 
 ## TypeScript
 
@@ -102,6 +110,7 @@ Agent skills for shadcn live in [`.agents/skills/shadcn/`](.agents/skills/shadcn
 Reference docs (for agents):
 
 - https://vite.dev/llms.txt
+- https://reactrouter.com
 - https://ui.shadcn.com
 
 ## Code Style
@@ -113,6 +122,7 @@ Reference docs (for agents):
 - **CLI**: use `cac` for command parsing; `terminal-link` for clickable URLs; `console.info` for startup messages.
 - **CLI server**: use `hono` with `@hono/node-server`; `serveStatic` from `dist/web/` (resolved inline in `startWebUiServer()`).
 - **Web UI**: configure Vite in `packages/web/vite.config.ts`; React Compiler via `@rolldown/plugin-babel` + `reactCompilerPreset()` from `@vitejs/plugin-react`; Tailwind via `@tailwindcss/vite` and imports in `src/main.css`.
+- **Web UI routing**: use React Router (`react-router` in `packages/web/`); define routes under `packages/web/src/` and mount the router from `main.tsx`.
 - **Web UI imports**: use `@/` path alias (`@/components/ui/...`, `@/lib/utils`).
 - **Web UI styling**: shadcn theme tokens and `@layer base` rules live in `src/main.css`; use `cn()` from `@/lib/utils` for conditional classes.
 - Keep generated artifacts out of manual edits.

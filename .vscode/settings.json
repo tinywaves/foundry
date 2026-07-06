@@ -111,5 +111,6 @@
     "esbuild",
     "rsbuild",
     "unrs"
-  ]
+  ],
+  "js/ts.tsdk.path": "node_modules/typescript/lib"
 }

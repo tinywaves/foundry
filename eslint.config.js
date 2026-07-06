@@ -10,4 +10,5 @@ export default defineConfig({
       },
     },
   },
+  ignorePatterns: ['./packages/web/src/components/ui'],
 });

@@ -119,6 +119,7 @@ Reference docs (for agents):
 - In TypeScript source files, omit `.js` extensions for local relative imports.
 - Avoid meaningless blank lines; use blank lines to separate semantic blocks, not after every statement. Keep a blank line before `return`.
 - Keep strict TypeScript settings satisfied; avoid weakening types to silence errors.
+- **Inline over premature extraction**: keep trivial logic at the call site (e.g. JSX `onClick={() => setInput('')}`); extract a named function only when the logic grows, is reused, or becomes hard to read inline. Do not add one-line wrappers like `handleClear()` that only forward to a single call.
 - **CLI**: use `cac` for command parsing; `terminal-link` for clickable URLs; `console.info` for startup messages.
 - **CLI server**: use `hono` with `@hono/node-server`; `serveStatic` from `dist/web/` (resolved inline in `startWebUiServer()`).
 - **Web UI**: configure Vite in `packages/web/vite.config.ts`; React Compiler via `@rolldown/plugin-babel` + `reactCompilerPreset()` from `@vitejs/plugin-react`; Tailwind via `@tailwindcss/vite` and imports in `src/main.css`.

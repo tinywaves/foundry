@@ -1,19 +1,60 @@
-import { Outlet, useLocation } from 'react-router';
+import { Link, Outlet, useLocation } from 'react-router';
 import { AppSidebar } from '@/components/layout/app-sidebar';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from '@/components/ui/breadcrumb';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { Separator } from '@/components/ui/separator';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { getToolById } from '@/tools/registry';
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/settings': 'Settings',
+  '/tools': 'Tools',
 };
 
-export function AppShell() {
+function AppBreadcrumb() {
   const { pathname } = useLocation();
+
+  if (pathname.startsWith('/tools/')) {
+    const toolId = pathname.slice('/tools/'.length);
+    const tool = getToolById(toolId);
+
+    return (
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink render={<Link to="/tools" />}>Tools</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{tool?.name ?? 'Tool'}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+    );
+  }
+
   const pageTitle = pageTitles[pathname] ?? 'Foundry';
 
+  return (
+    <Breadcrumb>
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
+  );
+}
+
+export function AppShell() {
   return (
     <SidebarProvider className="h-dvh min-h-0 overflow-hidden">
       <TooltipProvider>
@@ -30,13 +71,7 @@ export function AppShell() {
                 data-vertical:h-4
               "
             />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
+            <AppBreadcrumb />
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             <Outlet />

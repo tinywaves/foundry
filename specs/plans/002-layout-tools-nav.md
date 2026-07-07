@@ -1,4 +1,4 @@
-# 002 — Tools Nav and Utilities
+# 002 — layout · Tools Nav
 
 ## Goals
 
@@ -20,7 +20,7 @@ Nested under `AppShell`:
 
 ```
 /tools              → ToolsIndexPage (card gallery)
-/tools/:toolId      → ToolDetailPage (shared shell + lazy tool component)
+/tools/:toolId      → ToolDetailPage (shared shell + tool component)
 ```
 
 Examples: `/#/tools`, `/#/tools/json-view`, `/#/tools/mock1`
@@ -29,17 +29,19 @@ Examples: `/#/tools`, `/#/tools/json-view`, `/#/tools/mock1`
 
 [`packages/web/src/tools/registry.ts`](../packages/web/src/tools/registry.ts) exports:
 
-- `ToolDefinition` — id, name, description, icon, lazy component
+- `ToolDefinition` — id, name, description, icon, component
 - `tools` — array of registered tools
 - `getToolById(id)` — lookup for detail page and breadcrumb
 
 Initial tools:
 
-| id | name | description |
-|----|------|-------------|
-| `json-view` | JSON View | Format and validate JSON |
-| `mock1` | Mock Tool 1 | Placeholder utility |
-| `mock2` | Mock Tool 2 | Placeholder utility |
+| id | name | description | Plan |
+|----|------|-------------|------|
+| `json-view` | JSON View | Format and validate JSON | [003 — tools · JSON View](./003-tools-json-view.md) |
+| `mock1` | Mock Tool 1 | Placeholder utility | — |
+| `mock2` | Mock Tool 2 | Placeholder utility | — |
+
+Components are **eagerly imported** in the registry (no `React.lazy` / route-level code splitting for tools).
 
 ## Pages
 
@@ -51,19 +53,14 @@ Initial tools:
 
 ### Tool detail (`pages/tools/detail.tsx`)
 
-- Back link to `/tools`
-- Title and description from registry
-- Card workspace with `<Suspense>` + skeleton fallback
-- Unknown `toolId` → 404 block with back link
+- Breadcrumb shows tool name; no duplicate back link or title block in the page body
+- Tool component fills the content area (`flex-1`); unknown `toolId` → 404 card
 
 ## Tool Implementations
 
-### JSON View (`tools/json-view.tsx`)
+### JSON View
 
-- Split input/output layout (stacked on mobile, side-by-side on `lg`)
-- Live `JSON.parse` validation; formatted output via `JSON.stringify(..., null, 2)`
-- Format and Clear buttons
-- No third-party JSON library
+See **[003 — tools · JSON View](./003-tools-json-view.md)**.
 
 ### Mock 1 / Mock 2
 
@@ -79,20 +76,22 @@ Initial tools:
 | File | Role |
 |------|------|
 | `packages/web/src/components/layout/app-sidebar.tsx` | Tools sidebar group |
-| `packages/web/src/components/layout/app-shell.tsx` | Nested breadcrumb |
+| `packages/web/src/components/layout/app-shell.tsx` | Nested breadcrumb; content padding |
 | `packages/web/src/routes.tsx` | Tools routes |
 | `packages/web/src/tools/registry.ts` | Tool metadata |
 | `packages/web/src/pages/tools/index.tsx` | Gallery |
 | `packages/web/src/pages/tools/detail.tsx` | Detail shell |
-| `packages/web/src/tools/json-view.tsx` | JSON formatter |
+| `packages/web/src/tools/json-view.tsx` | JSON View (see 003) |
 | `packages/web/src/tools/mock1.tsx` | Placeholder |
 | `packages/web/src/tools/mock2.tsx` | Placeholder |
 
 ## Dependency Changes
 
+Tool-specific dependencies are documented in each tool plan (e.g. [003 — tools · JSON View](./003-tools-json-view.md) for `@microlink/react-json-view`).
+
 ### Add (dependencies)
 
-- (none)
+- (none at this plan level)
 
 ### Add (devDependencies)
 
@@ -100,7 +99,7 @@ Initial tools:
 
 ### Remove (dependencies)
 
-- (none)
+- (none at this plan level)
 
 ### Remove (devDependencies)
 
@@ -113,8 +112,8 @@ Initial tools:
 ## Verification
 
 1. `pnpm run dev:web` → sidebar shows Tools; gallery lists three cards
-2. Each card opens its tool page; JSON View validates and formats JSON
-3. Detail breadcrumb shows `Tools > {name}`; Back returns to gallery
+2. Each card opens its tool page; JSON View behavior per [003 — tools · JSON View](./003-tools-json-view.md)
+3. Detail breadcrumb shows `Tools > {name}`
 4. Tools sidebar item stays active on detail routes
 5. `pnpm run lint` && `pnpm run build`
 
@@ -122,5 +121,5 @@ Initial tools:
 
 - Tool search / categories
 - Sidebar sub-menu for individual tools
-- Tree-style JSON viewer dependency
+- Per-tool lazy loading / code splitting
 - CLI tool registration

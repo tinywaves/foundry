@@ -13,13 +13,32 @@
 - `dist/cli/` — bundled CLI output (`tsdown`).
 - `dist/web/` — Web UI production build (Vite); served by the CLI.
 - `.agents/skills/` — agent skills for shadcn/ui workflows (`shadcn`, `migrate-radix-to-base`).
-- `specs/plans/` — numbered implementation specs and plans (`NNN-short-slug.md`).
+- `specs/plans/` — numbered implementation specs and plans (`NNN-<module>-<slug>.md`).
 - Root config — TypeScript, ESLint, Vitest, Commitlint, Husky, and `tsdown` for the CLI. `packages/web/` owns Vite, React, React Router, Tailwind, and shadcn.
 
 ## Documentation
 
-- `specs/plans/` stores numbered implementation plans for features and milestones. Name files `NNN-short-slug.md` (hyphen-separated).
-- Before starting a new feature or refactor, read the relevant plan in `specs/plans/` when one exists.
+- `specs/plans/` stores numbered implementation plans for features and milestones.
+
+### Plan naming
+
+Use a **module prefix** after the sequence number so related plans group together:
+
+- **Filename:** `NNN-<module>-<slug>.md` (hyphen-separated; `<slug>` optional extra detail)
+- **Title (H1):** `# NNN — <module> · <Short name>` (middle dot between module and name)
+
+Sequential `NNN` is global across the repo (001, 002, 003, …). Pick the module that best describes the plan’s primary concern:
+
+| Module | Typical scope | Examples |
+|--------|---------------|----------|
+| `layout` | Shell, routing chrome, sidebar, viewport, nav structure | `001-layout-admin-shell.md`, `002-layout-tools-nav.md` |
+| `tools` | Individual Web UI utilities under `/tools/*` | `003-tools-json-view.md` |
+| `cli` | CLI commands, server, packaging | (future) |
+| `web` | Web UI cross-cutting (not layout or a single tool) | (future) |
+
+Add a new module prefix when a plan does not fit existing ones; keep the prefix short and lowercase.
+
+Before starting a new feature or refactor, read the relevant plan in `specs/plans/` when one exists.
 - Keep plans aligned with staged or merged implementation changes.
 
 ### Plans
@@ -54,7 +73,7 @@ pnpm add react-router --filter web
 
 **Dependency changes are manual-only.** Do not run `pnpm add`, `pnpm remove`, or similar install/uninstall commands unless the user explicitly asks. When implementation needs new or removed packages, document them in the plan’s **Dependency Changes** section (or add that section to the spec before coding) and let the user run the commands. Do not edit `package.json` dependency fields or `pnpm-lock.yaml` yourself to simulate an install.
 
-**Persist plans after execution.** Once implementation is done, write the finalized plan into `specs/plans/` so it is versioned in the repo. Use the next sequential number and a short slug joined by hyphens, for example `002-clickable-cli-url.md`. The committed plan should match what was actually shipped—update goals, dependency changes, and verification steps if they diverged during implementation. Do not leave execution-only plans in ephemeral locations when the work is complete.
+**Persist plans after execution.** Once implementation is done, write the finalized plan into `specs/plans/` so it is versioned in the repo. Use the next sequential number, a module prefix, and a short slug — for example `004-cli-clickable-url.md` with title `# 004 — cli · Clickable URL`. The committed plan should match what was actually shipped—update goals, dependency changes, and verification steps if they diverged during implementation. Do not leave execution-only plans in ephemeral locations when the work is complete.
 
 ## Tooling
 
@@ -120,11 +139,13 @@ Reference docs (for agents):
 - Avoid meaningless blank lines; use blank lines to separate semantic blocks, not after every statement. Keep a blank line before `return`.
 - Keep strict TypeScript settings satisfied; avoid weakening types to silence errors.
 - **Inline over premature extraction**: keep trivial logic at the call site (e.g. JSX `onClick={() => setInput('')}`); extract a named function only when the logic grows, is reused, or becomes hard to read inline. Do not add one-line wrappers like `handleClear()` that only forward to a single call.
+- **Preserve i18n / RTL**: the Web UI base is RTL-ready (`components.json` `rtl: true`). Do not override it with forced layout hacks — no default or blanket `dir="ltr"` on shells, pages, or panes; no physical `left`/`right`, `ml`/`mr`, or hard-coded column order to pin panels to one screen side. Lay out with DOM order and logical direction (`start`/`end`, `ms`/`me`, `ps`/`pe`, `border-s`/`border-e`) so LTR and RTL both work when `dir` is set on the document. LTR-only content (code, JSON, URLs) may use `dir="ltr"` on that content node only — not on a wrapper that carries chrome or layout.
 - **CLI**: use `cac` for command parsing; `terminal-link` for clickable URLs; `console.info` for startup messages.
 - **CLI server**: use `hono` with `@hono/node-server`; `serveStatic` from `dist/web/` (resolved inline in `startWebUiServer()`).
 - **Web UI**: configure Vite in `packages/web/vite.config.ts`; React Compiler via `@rolldown/plugin-babel` + `reactCompilerPreset()` from `@vitejs/plugin-react`; Tailwind via `@tailwindcss/vite` and imports in `src/main.css`.
 - **Web UI routing**: use React Router (`react-router` in `packages/web/`); define routes under `packages/web/src/` and mount the router from `main.tsx`.
 - **Web UI imports**: use `@/` path alias (`@/components/ui/...`, `@/lib/utils`).
+- **Prefer shadcn/ui components**: use primitives from `@/components/ui/` (Button, Input, Textarea, Card, etc.) instead of hand-rolled styled markup. If a component is missing, add it with `pnpm dlx shadcn@latest add <name>` from `packages/web/` before building a custom substitute. Reserve `className` overrides for layout and composition (flex, size, gap), not re-styling tokens the component already provides.
 - **Web UI styling**: shadcn theme tokens and `@layer base` rules live in `src/main.css`; use `cn()` from `@/lib/utils` for conditional classes.
 - Keep generated artifacts out of manual edits.
 

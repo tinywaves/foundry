@@ -1,14 +1,16 @@
 import { BoxIcon, BracesIcon, FlaskConicalIcon } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { lazy } from 'react';
-import type { ComponentType, LazyExoticComponent } from 'react';
+import type { ComponentType } from 'react';
+import JsonViewTool from './json-view';
+import Mock1Tool from './mock1';
+import Mock2Tool from './mock2';
 
 export type ToolDefinition = {
   id: string;
   name: string;
   description: string;
   icon: LucideIcon;
-  component: LazyExoticComponent<ComponentType>;
+  component: ComponentType;
 };
 
 export const tools: ToolDefinition[] = [
@@ -17,21 +19,21 @@ export const tools: ToolDefinition[] = [
     name: 'JSON View',
     description: 'Format and validate JSON',
     icon: BracesIcon,
-    component: lazy(() => import('./json-view')),
+    component: JsonViewTool,
   },
   {
     id: 'mock1',
     name: 'Mock Tool 1',
     description: 'Placeholder utility',
     icon: BoxIcon,
-    component: lazy(() => import('./mock1')),
+    component: Mock1Tool,
   },
   {
     id: 'mock2',
     name: 'Mock Tool 2',
     description: 'Placeholder utility',
     icon: FlaskConicalIcon,
-    component: lazy(() => import('./mock2')),
+    component: Mock2Tool,
   },
 ];
 

@@ -1,4 +1,4 @@
-# 001 — Admin Shell Layout
+# 001 — layout · Admin Shell
 
 ## Goals
 

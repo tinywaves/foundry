@@ -1,17 +1,15 @@
 {
   "version": 1,
   "skills": {
-    "migrate-radix-to-base": {
-      "source": "shadcn/ui",
+    "rsbuild-best-practices": {
+      "source": "rstackjs/agent-skills",
       "sourceType": "github",
-      "skillPath": "skills/migrate-radix-to-base/SKILL.md",
-      "computedHash": "e1f2030ee5059be3dff0812ca0e4b995ee9fa3132176f049ebe6c90346a6755e"
+      "computedHash": "2f1de26a27367666c49d16b114d31dbf78dc71f02b3e0784b1e3bf90f4e6e90b"
     },
-    "shadcn": {
-      "source": "shadcn/ui",
+    "vercel-react-best-practices": {
+      "source": "vercel-labs/agent-skills",
       "sourceType": "github",
-      "skillPath": "skills/shadcn/SKILL.md",
-      "computedHash": "d81caa0f86aabab65b25e302d454f23a3328760386ed9078345584c0d5c8058e"
+      "computedHash": "3219a1944e404ffc14d1d9d6aef6dd2e3855b81387ee0a044ccbfe14d34c2357"
     }
   }
 }

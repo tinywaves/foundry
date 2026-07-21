@@ -9,6 +9,8 @@
     "dev": "rsbuild --open"
   },
   "dependencies": {
+    "@astryxdesign/core": "^0.1.7",
+    "@astryxdesign/theme-neutral": "^0.1.7",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },

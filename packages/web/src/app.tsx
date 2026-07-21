@@ -1,3 +1,5 @@
+import { Button } from '@astryxdesign/core/Button';
+
 export default function App() {
-  return <div>App</div>;
+  return <Button label="Hello Astryx" />;
 }

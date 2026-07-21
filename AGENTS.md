@@ -40,6 +40,14 @@ Do not manually edit generated files under `dist/`.
 
 - Keep `README.md` and other root documentation aligned with the current
   implementation.
+- Maintain a single source of truth for every rule, convention, command, and
+  other piece of project guidance. Do not duplicate the same normative content
+  across multiple files or sections.
+- Define each topic completely in one canonical location. Other documentation
+  may link to that location or provide a brief non-normative pointer, but must
+  not restate content that would require synchronized maintenance.
+- When updating documented guidance, identify and edit its canonical source
+  rather than adding another copy elsewhere.
 
 ## Dependency Changes
 
@@ -53,13 +61,11 @@ Do not manually edit generated files under `dist/`.
   owning `package.json`, the reason for the change, and the exact `pnpm add`,
   `pnpm remove`, or other required command, then wait for the user to confirm
   that they have completed it.
-- Every generated implementation plan must contain a **Dependency Changes**
-  module with exactly these four items, using `None` when an item has no
-  proposed changes:
-  1. Dependencies to remove
-  2. Dev dependencies to remove
-  3. Dependencies to add
-  4. Dev dependencies to add
+
+## Implementation Plans
+
+- Follow `specs/plans/README.md` as the single source of truth for where
+  implementation plans are saved and how they are named and structured.
 
 ## Tooling
 
@@ -83,6 +89,14 @@ Do not manually edit generated files under `dist/`.
   broad casts merely to silence errors.
 - Use TypeScript and ESM syntax. Omit `.js` extensions from local TypeScript
   imports.
+- Prefer reusing existing variables and constants instead of repeating values
+  or hardcoding domain-specific literals throughout logic.
+- Extract a named variable or constant when a value is reused, carries
+  meaningful domain intent, or should change consistently across call sites.
+  Keep the declaration in the narrowest sensible shared scope.
+- Use judgment rather than extracting mechanically. Leave obvious, local,
+  one-off literals inline when naming them would add indirection without
+  improving reuse, clarity, or maintainability.
 
 ## Common Commands
 
@@ -110,6 +124,14 @@ From the repository root:
   composition in `packages/web/src/app.tsx` or modules imported from it.
 - Use Astryx components and the neutral theme. Import the Astryx reset, core,
   and theme styles from `packages/web/src/index.css`.
+- Prefer the component library's small or compact size variants when they are
+  available and remain usable. Use larger sizes only when the context,
+  hierarchy, readability, accessibility, or touch-target requirements justify
+  them.
+- Design pages as a coherent extension of the component library. Follow its
+  established visual language for layout, density, spacing, typography,
+  colors, states, and interactions instead of introducing conflicting custom
+  patterns.
 - Use relative imports for local Web modules.
 - Prefer accessible, semantic React components. Keep interactions keyboard
   usable and preserve visible focus states.

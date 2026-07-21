@@ -40,9 +40,26 @@ Do not manually edit generated files under `dist/`.
 
 - Keep `README.md` and other root documentation aligned with the current
   implementation.
-- Treat dependency changes as manual-only. State the owning `package.json`,
-  reason, and exact `pnpm add` or `pnpm remove` command, then wait for the user
-  to apply it before writing code that depends on the package.
+
+## Dependency Changes
+
+- Never add, remove, upgrade, downgrade, or otherwise modify dependencies
+  without the user's explicit approval.
+- The user must personally execute every dependency-changing command. Never
+  run package installation or removal commands, and never edit
+  `package.json`, `pnpm-workspace.yaml`, or lockfiles to make a dependency
+  change on the user's behalf.
+- Before writing code that depends on a proposed dependency change, state the
+  owning `package.json`, the reason for the change, and the exact `pnpm add`,
+  `pnpm remove`, or other required command, then wait for the user to confirm
+  that they have completed it.
+- Every generated implementation plan must contain a **Dependency Changes**
+  module with exactly these four items, using `None` when an item has no
+  proposed changes:
+  1. Dependencies to remove
+  2. Dev dependencies to remove
+  3. Dependencies to add
+  4. Dev dependencies to add
 
 ## Tooling
 

@@ -32,38 +32,17 @@ React Compiler.
   `dist/cli/index.mjs`.
 - `dist/cli/` - generated CLI bundle from tsdown.
 - `dist/web/` - generated Web production build served by the CLI.
-- `specs/plans/` - numbered implementation plans and design history.
 - Root config - TypeScript, ESLint, Vitest, Commitlint, Husky, and tsdown.
 
 Do not manually edit generated files under `dist/`.
 
 ## Documentation
 
-Implementation plans use a global sequence and module prefix:
-
-- Filename: `NNN-<module>-<slug>.md`
-- Title: `# NNN — <module> · <Short name>`
-
-Existing modules include `layout`, `tools`, `cli`, and `web`. Add a short,
-lowercase module when none of those fits.
-
-Before starting a feature or refactor, read the relevant plan when one exists.
-Some plans describe earlier Web implementations, so verify them against the
-current source and root documentation. Update or add a plan so the versioned
-result matches what was actually shipped.
-
-Every plan that changes dependencies must include a **Dependency Changes**
-section with:
-
-- Add and remove lists split into dependencies and devDependencies.
-- The owning `package.json` when it is not obvious.
-- A one-line reason for every package.
-- Exact manual `pnpm add` or `pnpm remove` commands.
-
-Dependency changes are manual-only. Do not run install or uninstall commands,
-edit dependency fields, or update `pnpm-lock.yaml` unless the user explicitly
-asks. Record the required changes in the plan and wait for the user to apply
-them before writing code that depends on those packages.
+- Keep `README.md` and other root documentation aligned with the current
+  implementation.
+- Treat dependency changes as manual-only. State the owning `package.json`,
+  reason, and exact `pnpm add` or `pnpm remove` command, then wait for the user
+  to apply it before writing code that depends on the package.
 
 ## Tooling
 
@@ -73,6 +52,8 @@ them before writing code that depends on those packages.
 - Web dependencies belong in `packages/web/package.json`.
 - Shared workspace versions belong in the `catalog` section of
   `pnpm-workspace.yaml`.
+- ESLint is configured from the root `eslint.config.js` through
+  `@dhzh/eslint-config`.
 
 ## TypeScript
 
@@ -110,9 +91,9 @@ From the repository root:
   `src/cli/server.ts` serves that directory next to the bundled CLI.
 - Mount the application from `packages/web/src/index.tsx`; keep application
   composition in `packages/web/src/app.tsx` or modules imported from it.
-- The current Web package does not include a router, CSS framework, component
-  library, or `@/` path alias. Do not assume the removed Vite/shadcn structure
-  still exists.
+- Use Astryx components and the neutral theme. Import the Astryx reset, core,
+  and theme styles from `packages/web/src/index.css`.
+- Use relative imports for local Web modules.
 - Prefer accessible, semantic React components. Keep interactions keyboard
   usable and preserve visible focus states.
 - Keep trivial handlers inline. Extract functions or components when logic is

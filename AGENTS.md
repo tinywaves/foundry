@@ -2,174 +2,158 @@
 
 ## Project Overview
 
-`@dhzh/foundry` is an AI-native local developer runtime for tools, skills, agents, and workflows. It is published as a CLI-only package: `bin/` plus built `dist/cli/` and `dist/web/`.
+`@dhzh/foundry` is an AI-native local developer runtime for tools, skills,
+agents, and workflows. It is published as a CLI-only package containing
+`bin/`, `dist/cli/`, and `dist/web/`.
+
+The CLI is built with `cac`, Hono, and `@hono/node-server`. The private
+`packages/web/` workspace is a React 19 application built with Rsbuild 2 and
+React Compiler.
+
+## Instruction Scope
+
+- This is the repository's single agent guidance file.
+- It applies to the root CLI, the `packages/web/` workspace, build
+  configuration, tests, documentation, and generated output.
+- Keep developer commands and project documentation rooted at the repository
+  level rather than duplicating them inside workspace packages.
 
 ## Layout
 
-- `pnpm-workspace.yaml` — pnpm workspace (`packages/*`) and shared dependency `catalog`.
-- `src/cli/` — cac entrypoint and Hono static server.
-- `packages/web/` — Web UI workspace package (`web`, private); Vite 8 + React 19 + React Router 8 + Tailwind CSS v4 + shadcn/ui.
-- `bin/index.js` — published executable wrapper; imports `dist/cli/index.mjs`.
-- `dist/cli/` — bundled CLI output (`tsdown`).
-- `dist/web/` — Web UI production build (Vite); served by the CLI.
-- `.agents/skills/` — agent skills for shadcn/ui workflows (`shadcn`, `migrate-radix-to-base`).
-- `specs/plans/` — numbered implementation specs and plans (`NNN-<module>-<slug>.md`).
-- Root config — TypeScript, ESLint, Vitest, Commitlint, Husky, and `tsdown` for the CLI. `packages/web/` owns Vite, React, React Router, Tailwind, and shadcn.
+- `pnpm-workspace.yaml` - pnpm workspace definition and shared dependency
+  catalog.
+- `src/cli/` - `cac` entrypoint and Hono static server.
+- `packages/web/` - private Rsbuild + React workspace package named `web`.
+- `packages/web/src/index.tsx` - browser entrypoint and React root mount.
+- `packages/web/src/app.tsx` - root React component.
+- `packages/web/rsbuild.config.ts` - React plugin, document title, and
+  repository-level output path.
+- `bin/index.js` - published executable wrapper importing
+  `dist/cli/index.mjs`.
+- `dist/cli/` - generated CLI bundle from tsdown.
+- `dist/web/` - generated Web production build served by the CLI.
+- `specs/plans/` - numbered implementation plans and design history.
+- Root config - TypeScript, ESLint, Vitest, Commitlint, Husky, and tsdown.
+
+Do not manually edit generated files under `dist/`.
 
 ## Documentation
 
-- `specs/plans/` stores numbered implementation plans for features and milestones.
+Implementation plans use a global sequence and module prefix:
 
-### Plan naming
+- Filename: `NNN-<module>-<slug>.md`
+- Title: `# NNN — <module> · <Short name>`
 
-Use a **module prefix** after the sequence number so related plans group together:
+Existing modules include `layout`, `tools`, `cli`, and `web`. Add a short,
+lowercase module when none of those fits.
 
-- **Filename:** `NNN-<module>-<slug>.md` (hyphen-separated; `<slug>` optional extra detail)
-- **Title (H1):** `# NNN — <module> · <Short name>` (middle dot between module and name)
+Before starting a feature or refactor, read the relevant plan when one exists.
+Some plans describe earlier Web implementations, so verify them against the
+current source and root documentation. Update or add a plan so the versioned
+result matches what was actually shipped.
 
-Sequential `NNN` is global across the repo (001, 002, 003, …). Pick the module that best describes the plan’s primary concern:
+Every plan that changes dependencies must include a **Dependency Changes**
+section with:
 
-| Module | Typical scope | Examples |
-|--------|---------------|----------|
-| `layout` | Shell, routing chrome, sidebar, viewport, nav structure | `001-layout-admin-shell.md`, `002-layout-tools-nav.md` |
-| `tools` | Individual Web UI utilities under `/tools/*` | `003-tools-json-view.md` |
-| `cli` | CLI commands, server, packaging | (future) |
-| `web` | Web UI cross-cutting (not layout or a single tool) | (future) |
+- Add and remove lists split into dependencies and devDependencies.
+- The owning `package.json` when it is not obvious.
+- A one-line reason for every package.
+- Exact manual `pnpm add` or `pnpm remove` commands.
 
-Add a new module prefix when a plan does not fit existing ones; keep the prefix short and lowercase.
-
-Before starting a new feature or refactor, read the relevant plan in `specs/plans/` when one exists.
-- Keep plans aligned with staged or merged implementation changes.
-
-### Plans
-
-Every plan in `specs/plans/` that touches package dependencies must include a **Dependency Changes** section with:
-
-- **Add (dependencies)** / **Add (devDependencies)**: package name(s) to install, with a one-line reason for each. State which `package.json` when not obvious (root vs `packages/web/`).
-- **Remove (dependencies)** / **Remove (devDependencies)**: package name(s) to uninstall, with a one-line reason for each.
-- **Commands (manual only)**: the exact `pnpm add` / `pnpm remove` commands for reference (`-D` or `--save-dev` for devDependencies).
-
-Example:
-
-```markdown
-## Dependency Changes
-
-### Add (dependencies)
-- `react-router` (`packages/web/`) — client-side routing for the Web UI.
-
-### Add (devDependencies)
-- (none)
-
-### Remove (dependencies)
-- `consola` (root) — only used for startup box; replaced by `terminal-link` + `console.info`.
-
-### Remove (devDependencies)
-- (none)
-
-### Commands (manual only)
-pnpm remove consola
-pnpm add react-router --filter web
-```
-
-**Dependency changes are manual-only.** Do not run `pnpm add`, `pnpm remove`, or similar install/uninstall commands unless the user explicitly asks. When implementation needs new or removed packages, document them in the plan’s **Dependency Changes** section (or add that section to the spec before coding) and let the user run the commands. Do not edit `package.json` dependency fields or `pnpm-lock.yaml` yourself to simulate an install.
-
-**Persist plans after execution.** Once implementation is done, write the finalized plan into `specs/plans/` so it is versioned in the repo. Use the next sequential number, a module prefix, and a short slug — for example `004-cli-clickable-url.md` with title `# 004 — cli · Clickable URL`. The committed plan should match what was actually shipped—update goals, dependency changes, and verification steps if they diverged during implementation. Do not leave execution-only plans in ephemeral locations when the work is complete.
+Dependency changes are manual-only. Do not run install or uninstall commands,
+edit dependency fields, or update `pnpm-lock.yaml` unless the user explicitly
+asks. Record the required changes in the plan and wait for the user to apply
+them before writing code that depends on those packages.
 
 ## Tooling
 
-- Use `pnpm` for all package operations.
-- The expected package manager is `pnpm ^11.9.0`.
-- The expected runtime is `node ^24.18.0`.
-- Do not add JavaScript dependencies with `npm` or `yarn`.
-- Web UI dependencies belong in `packages/web/package.json`, not the root package.
-- Shared versions for workspace packages are defined under `catalog` in `pnpm-workspace.yaml` (`@types/node`, `tailwindcss`, `typescript`).
-- **Agents must not install or uninstall dependencies automatically.** If a task requires dependency changes, stop and record them in the spec (`specs/plans/` **Dependency Changes** section): what to add, what to remove, whether each item is a `dependency` or `devDependency`, which package owns it, and the manual `pnpm` commands. Proceed with code only after the user has run those commands (or explicitly asks you to run them).
+- Use `pnpm` for package operations; do not use npm or Yarn.
+- Expected package manager: pnpm `^11.9.0`.
+- Expected runtime: Node.js `^24.18.0`.
+- Web dependencies belong in `packages/web/package.json`.
+- Shared workspace versions belong in the `catalog` section of
+  `pnpm-workspace.yaml`.
 
 ## TypeScript
 
-- Root `tsconfig.json` — CLI and root config files; `"exclude": ["packages"]`.
-- `packages/web/tsconfig.json` — solution-style root; references `tsconfig.app.json` and `tsconfig.node.json`; `@/*` → `./src/*`.
-- `packages/web/tsconfig.app.json` — Web UI source (`jsx: react-jsx`, DOM lib, `types: ["vite/client"]`, `include: ["src"]`).
-- `packages/web/tsconfig.node.json` — Vite config (`include: ["vite.config.ts"]`).
+- Root `tsconfig.json` covers CLI and root configuration files and excludes
+  `packages/`.
+- `packages/web/tsconfig.json` covers `src/` and `rsbuild.config.ts`.
+- The Web package uses `jsx: react-jsx`, an ES2020 target, bundler module
+  resolution, `noEmit`, and Rsbuild's client types.
+- Keep strict typing intact. Do not weaken compiler settings or introduce
+  broad casts merely to silence errors.
+- Use TypeScript and ESM syntax. Omit `.js` extensions from local TypeScript
+  imports.
 
 ## Common Commands
 
-### CLI (repo root)
+From the repository root:
 
-- `pnpm run build` — builds `dist/cli/` and `dist/web/`.
-- `pnpm run build:cli` — CLI bundle only (`tsdown`).
-- `pnpm run build:web` — `pnpm run --filter web build` → `dist/web/`.
-- `pnpm run dev:cli` — CLI watch mode (run `build:web` once first).
-- `pnpm run lint` / `pnpm run lint-fix` — ESLint (whole repo).
-- `pnpm run test` / `pnpm run test:dev` / `pnpm run test:coverage` — Vitest.
+- `pnpm run build` - build the CLI, then the Web UI.
+- `pnpm run build:cli` - bundle `src/cli/index.ts` into `dist/cli/index.mjs`.
+- `pnpm run build:web` - run the `web` workspace build into `dist/web/`.
+- `pnpm run dev:cli` - run the CLI source in watch mode; build the Web UI
+  first so static assets exist.
+- `pnpm run dev:web` - start Rsbuild and open the Web UI at
+  `http://localhost:3000`.
+- `pnpm run lint` / `pnpm run lint-fix` - check or fix ESLint issues.
+- `pnpm run test` / `pnpm run test:dev` / `pnpm run test:coverage` - run
+  Vitest.
 
-### Web UI (`packages/web` / filter name `web`)
+## Web UI
 
-Prefer root scripts (delegate to the workspace package):
+- Configure the build in `packages/web/rsbuild.config.ts`.
+- Use `pluginReact({ reactCompiler: true })`; preserve React Compiler unless a
+  task explicitly changes that architecture.
+- Keep the production output at the repository-level `dist/web/` path because
+  `src/cli/server.ts` serves that directory next to the bundled CLI.
+- Mount the application from `packages/web/src/index.tsx`; keep application
+  composition in `packages/web/src/app.tsx` or modules imported from it.
+- The current Web package does not include a router, CSS framework, component
+  library, or `@/` path alias. Do not assume the removed Vite/shadcn structure
+  still exists.
+- Prefer accessible, semantic React components. Keep interactions keyboard
+  usable and preserve visible focus states.
+- Keep trivial handlers inline. Extract functions or components when logic is
+  reused, grows beyond a simple expression, or becomes difficult to read.
+- Use blank lines to separate semantic blocks, including a blank line before
+  `return`; avoid decorative whitespace.
 
-- `pnpm run dev:web` — Vite dev server (default `http://localhost:5173`).
-- `pnpm run build:web` — `tsc -b` then production build into repo-root `dist/web/`.
+Reference documentation:
 
-Equivalent scripts in `packages/web/`: `dev`, `build`.
+- Rsbuild: https://rsbuild.rs/llms.txt
+- Rspack: https://rspack.rs/llms.txt
 
-### shadcn/ui
+## CLI Design
 
-Project config: [`packages/web/components.json`](packages/web/components.json) (`style: base-luma`, `@base-ui/react`, lucide icons).
+`src/cli/` is a local executable, not a reusable library.
 
-Add or update components from `packages/web/`:
-
-```bash
-pnpm dlx shadcn@latest add <component>
-```
-
-Generated components land in `packages/web/src/components/ui/`. ESLint ignores that directory—do not hand-edit generated files unless fixing a specific bug.
-
-Agent skills for shadcn live in [`.agents/skills/shadcn/`](.agents/skills/shadcn/SKILL.md) and [`.agents/skills/migrate-radix-to-base/`](.agents/skills/migrate-radix-to-base/SKILL.md). Read the relevant skill before shadcn CLI or migration work.
-
-Reference docs (for agents):
-
-- https://vite.dev/llms.txt
-- https://reactrouter.com
-- https://ui.shadcn.com
-
-## Code Style
-
-- Write TypeScript using ESM syntax.
-- In TypeScript source files, omit `.js` extensions for local relative imports.
-- Avoid meaningless blank lines; use blank lines to separate semantic blocks, not after every statement. Keep a blank line before `return`.
-- Keep strict TypeScript settings satisfied; avoid weakening types to silence errors.
-- **Inline over premature extraction**: keep trivial logic at the call site (e.g. JSX `onClick={() => setInput('')}`); extract a named function only when the logic grows, is reused, or becomes hard to read inline. Do not add one-line wrappers like `handleClear()` that only forward to a single call.
-- **Preserve i18n / RTL**: the Web UI base is RTL-ready (`components.json` `rtl: true`). Do not override it with forced layout hacks — no default or blanket `dir="ltr"` on shells, pages, or panes; no physical `left`/`right`, `ml`/`mr`, or hard-coded column order to pin panels to one screen side. Lay out with DOM order and logical direction (`start`/`end`, `ms`/`me`, `ps`/`pe`, `border-s`/`border-e`) so LTR and RTL both work when `dir` is set on the document. LTR-only content (code, JSON, URLs) may use `dir="ltr"` on that content node only — not on a wrapper that carries chrome or layout.
-- **CLI**: use `cac` for command parsing; `terminal-link` for clickable URLs; `console.info` for startup messages.
-- **CLI server**: use `hono` with `@hono/node-server`; `serveStatic` from `dist/web/` (resolved inline in `startWebUiServer()`).
-- **Web UI**: configure Vite in `packages/web/vite.config.ts`; React Compiler via `@rolldown/plugin-babel` + `reactCompilerPreset()` from `@vitejs/plugin-react`; Tailwind via `@tailwindcss/vite` and imports in `src/main.css`.
-- **Web UI routing**: use React Router (`react-router` in `packages/web/`); define routes under `packages/web/src/` and mount the router from `main.tsx`.
-- **Web UI imports**: use `@/` path alias (`@/components/ui/...`, `@/lib/utils`).
-- **Prefer shadcn/ui components**: use primitives from `@/components/ui/` (Button, Input, Textarea, Card, etc.) instead of hand-rolled styled markup. If a component is missing, add it with `pnpm dlx shadcn@latest add <name>` from `packages/web/` before building a custom substitute. Reserve `className` overrides for layout and composition (flex, size, gap), not re-styling tokens the component already provides.
-- **Web UI styling**: shadcn theme tokens and `@layer base` rules live in `src/main.css`; use `cn()` from `@/lib/utils` for conditional classes.
-- Keep generated artifacts out of manual edits.
-
-## CLI design
-
-`src/cli/` is a local executable, not a reusable library. Keep it direct:
-
-- Prefer one function with a linear flow over factories, resolvers, or injectable roots (see `startWebUiServer()` in `server.ts`).
-- Inline paths and constants (e.g. `127.0.0.1`, port `7777`, `../web`) unless duplication appears across multiple commands.
-- On fatal errors, print a user-facing message with `console.error` and `exit(1)`; do not throw for the caller to catch.
-- Error copy targets installed users (e.g. reinstall via npm), not monorepo dev commands like `pnpm build:web`.
-- Export only what `index.ts` needs; avoid layering “just in case we test later.”
+- Use `cac` for command parsing, `terminal-link` for clickable URLs, and
+  `console.info` for startup messages.
+- Keep `startWebUiServer()` direct and linear.
+- Serve files from `dist/web/` through Hono and `serveStatic`.
+- Keep the default server on `127.0.0.1:7777` unless the task changes its
+  public behavior.
+- On fatal startup errors, print an installed-user-facing message with
+  `console.error` and exit with status 1.
+- Export only what another source file currently needs.
 
 ## Tests
 
-Vitest scripts and devDependencies are kept for later use. Add tests under `test/` when behavior warrants coverage.
+Vitest is configured to pass when no tests exist. Add focused tests under
+`test/` when behavior warrants coverage, especially for shared logic or CLI
+behavior.
 
 ## Commits
 
-- Use English commit messages.
-- Follow Conventional Commit style; commitlint extends `@commitlint/config-conventional`.
-- Husky runs `lint-staged` on pre-commit and `commitlint` on commit-msg.
+- Use English Conventional Commit messages.
+- Commitlint extends `@commitlint/config-conventional`.
+- Husky runs `lint-staged` before commits and commitlint on commit messages.
 
 ## Before Finishing
 
-- For code changes, run at least `pnpm run lint` when practical.
-- Run `pnpm run build` when changing build settings or layout.
+- Review the diff for stale paths, commands, and framework references.
+- Run `pnpm run lint` for code changes when practical.
+- Run `pnpm run build` when changing CLI/Web integration, build configuration,
+  or production output behavior.

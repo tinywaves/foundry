@@ -67,6 +67,40 @@ Do not manually edit generated files under `dist/`.
 - Follow `specs/plans/README.md` as the single source of truth for where
   implementation plans are saved and how they are named and structured.
 
+## Incremental Implementation And Review
+
+- For substantial implementation tasks, split the work into small,
+  independently reviewable slices with explicit checkpoints.
+- Before each slice, state its goal, expected file scope, and verification
+  approach.
+- Implement one slice at a time, then report the changed files, test results,
+  and remaining risks.
+- Wait for the user's confirmation before starting the next slice. Do not
+  implement the entire plan in one pass merely because a plan already exists.
+- Keep each slice buildable or testable in isolation whenever practical, and
+  avoid mixing unrelated refactors into a review slice.
+
+## Capability Surfaces
+
+- Every user-facing capability must be designed and implemented across the Web
+  UI, CLI, and Skills as part of the same delivery slice. A capability is not
+  considered complete when only one or two of these surfaces work.
+- Put shared behavior, validation, and data access in an application service.
+  The Web API route and the CLI command must call the same application service;
+  this shared service boundary is mandatory and must not be bypassed.
+- Organize CLI commands by domain module, with module commands owning their
+  related subcommands and options.
+- Define each Skill as a wrapper around one module-level CLI command. A Skill
+  may expose that command's subcommands and options, but must not independently
+  encapsulate the underlying feature, call repositories or storage directly, or
+  duplicate business logic from the command's service.
+- Keep the CLI command as the automation contract for Skills so the same
+  capability remains available to people, scripts, and AI-driven workflows.
+- For each capability slice, verify the complete path:
+  `Web UI -> Hono API route -> application service` and
+  `CLI -> module command -> application service`, followed by a Skill that
+  wraps that module-level CLI command.
+
 ## Tooling
 
 - Use `pnpm` for package operations; do not use npm or Yarn.

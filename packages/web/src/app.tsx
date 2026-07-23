@@ -21,6 +21,7 @@ import {
 import { StackItem } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { VStack } from '@astryxdesign/core/VStack';
+import SettingsPage from './pages/settings';
 
 type SectionId = 'dashboard' | 'skills' | 'settings';
 
@@ -118,7 +119,11 @@ export default function App() {
           <Route
             key={section.id}
             path={section.path}
-            element={<SectionPlaceholder section={section} />}
+            element={
+              section.id === 'settings'
+                ? <SettingsPage />
+                : <SectionPlaceholder section={section} />
+            }
           />
         ))}
         <Route

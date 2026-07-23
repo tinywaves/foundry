@@ -6,4 +6,5 @@ packages:
   - 'packages/*'
 catalog:
   '@types/node': ^26.1.0
+  hono: ^4.12.27
   typescript: ^6.0.3

@@ -1,9 +1,10 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { exit } from 'node:process';
-import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
+import { createApplication } from '../application/create-application';
+import { createSettingsApi } from '../modules/settings/routes';
 
 export function startWebUiServer() {
   const webPath = path.resolve(import.meta.dirname, '../web');
@@ -14,16 +15,27 @@ export function startWebUiServer() {
     exit(1);
   }
 
-  const app = new Hono();
+  const application = createApplication();
+  const app = createSettingsApi(application.settingsService);
   app.use('/*', serveStatic({ root: webPath }));
-  const server = serve({
-    fetch: app.fetch,
-    hostname: '127.0.0.1',
-    port: 7777,
-  });
 
-  return {
-    server,
-    url: 'http://127.0.0.1:7777',
-  };
+  try {
+    const server = serve({
+      fetch: app.fetch,
+      hostname: '127.0.0.1',
+      port: 7777,
+    });
+
+    return {
+      server,
+      url: 'http://127.0.0.1:7777',
+      close: () => {
+        server.close();
+        application.close();
+      },
+    };
+  } catch (error) {
+    application.close();
+    throw error;
+  }
 }

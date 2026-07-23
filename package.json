@@ -75,7 +75,8 @@
   "dependencies": {
     "@hono/node-server": "^2.0.8",
     "cac": "^7.0.0",
-    "hono": "^4.12.27",
-    "terminal-link": "^5.0.0"
+    "hono": "catalog:",
+    "terminal-link": "^5.0.0",
+    "zod": "^4.4.3"
   }
 }

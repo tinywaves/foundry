@@ -23,6 +23,12 @@ React Compiler.
 - `pnpm-workspace.yaml` - pnpm workspace definition and shared dependency
   catalog.
 - `src/cli/` - `cac` entrypoint and Hono static server.
+- `src/modules/` - domain modules containing their service, repository, API
+  routes, CLI command, registry, and shared types.
+- `src/storage/` - shared local storage infrastructure.
+- `skills/` - installable Skills distributed for use with Foundry.
+- `.agents/skills/` - repository-local agent guidance, not distributable
+  Foundry Skills.
 - `packages/web/` - private Rsbuild + React workspace package named `web`.
 - `packages/web/src/index.tsx` - browser entrypoint and React root mount.
 - `packages/web/src/app.tsx` - root React component.
@@ -66,6 +72,9 @@ Do not manually edit generated files under `dist/`.
 
 - Follow `specs/plans/README.md` as the single source of truth for where
   implementation plans are saved and how they are named and structured.
+- Keep implementation plans synchronized with confirmed design decisions and
+  the code. When an agreed architecture or behavior changes, update the
+  corresponding plan as part of the same change.
 
 ## Incremental Implementation And Review
 
@@ -79,6 +88,28 @@ Do not manually edit generated files under `dist/`.
   implement the entire plan in one pass merely because a plan already exists.
 - Keep each slice buildable or testable in isolation whenever practical, and
   avoid mixing unrelated refactors into a review slice.
+
+## Engineering Scope And Abstraction
+
+- Do not add extension points for hypothetical future capabilities. Avoid
+  speculative options, providers, adapters, strategy objects, and abstraction
+  layers unless the current requirement needs them.
+- Shape production APIs around confirmed product requirements, not around
+  possible future use cases or test convenience.
+- Keep test isolation in the test layer. Use mocks, fixtures, or test
+  environments instead of adding production options solely to control tests.
+- Prefer functions, pure functions, function factories, and module composition
+  in application code. Do not introduce classes, inheritance, or abstract base
+  types unless a concrete lifecycle or library requirement justifies them.
+- Prefer the standard APIs of the frameworks and libraries already used by the
+  repository. Do not manually reimplement concerns that a selected framework
+  already owns, such as command parsing, routing, or build orchestration.
+- Keep orchestration, input handling, business logic, data access, and
+  presentation responsibilities separate. Each layer should coordinate its
+  dependencies without taking over another layer's responsibility.
+- Keep implementation scope limited to confirmed requirements. Defer unrelated
+  features, speculative refactors, and architecture upgrades to a separate
+  plan.
 
 ## Capability Surfaces
 
@@ -94,6 +125,8 @@ Do not manually edit generated files under `dist/`.
   may expose that command's subcommands and options, but must not independently
   encapsulate the underlying feature, call repositories or storage directly, or
   duplicate business logic from the command's service.
+- Put installable Skills under the root `skills/` directory. Do not place
+  distributable product Skills under `.agents/skills/`.
 - Keep the CLI command as the automation contract for Skills so the same
   capability remains available to people, scripts, and AI-driven workflows.
 - For each capability slice, verify the complete path:
@@ -123,6 +156,18 @@ Do not manually edit generated files under `dist/`.
   broad casts merely to silence errors.
 - Use TypeScript and ESM syntax. Omit `.js` extensions from local TypeScript
   imports.
+- Put types shared across a domain module in that module's `types.ts`. Keep
+  private implementation-only types next to the code that uses them.
+- Treat declarations as private by default. Add `export` only when another
+  file has a real consumer for that declaration; do not export values, types,
+  schemas, helpers, or constants speculatively.
+- Keep each declaration in the file that owns its responsibility. A schema,
+  parser, helper, or implementation type used by one file belongs in that
+  file. Move a declaration to shared types or another module only when its
+  actual consumers require it.
+- Before adding or retaining an export, search the repository for its
+  consumers. Remove exports whose only references are local to the defining
+  file, and keep module APIs as narrow as the current implementation allows.
 - Prefer reusing existing variables and constants instead of repeating values
   or hardcoding domain-specific literals throughout logic.
 - Extract a named variable or constant when a value is reused, carries
@@ -191,7 +236,6 @@ Reference documentation:
   public behavior.
 - On fatal startup errors, print an installed-user-facing message with
   `console.error` and exit with status 1.
-- Export only what another source file currently needs.
 
 ## Tests
 

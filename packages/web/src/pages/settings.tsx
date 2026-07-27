@@ -12,25 +12,15 @@ import { Selector } from '@astryxdesign/core/Selector';
 import { Spinner } from '@astryxdesign/core/Spinner';
 import { Stack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
-import { TextInput } from '@astryxdesign/core/TextInput';
 import {
   fetchSettings,
   resetSettings,
   updateSettings,
 } from '../api/settings';
-import type { SettingEntry } from '../api/settings';
 
 const themeKey = 'ui.theme';
 const settingsQueryKey = ['settings'] as const;
-
-function mergeUpdatedSettings(
-  settings: readonly SettingEntry[],
-  updated: readonly SettingEntry[],
-): SettingEntry[] {
-  const updatedByKey = new Map(updated.map((entry) => [entry.key, entry]));
-
-  return settings.map((entry) => updatedByKey.get(entry.key) ?? entry);
-}
+const themeOptions = ['system', 'light', 'dark'];
 
 export default function SettingsPage() {
   const [draftTheme, setDraftTheme] = useState<string | null>(null);
@@ -41,22 +31,16 @@ export default function SettingsPage() {
   });
   const updateMutation = useMutation({
     mutationFn: updateSettings,
-    onSuccess: (updatedSettings) => {
-      queryClient.setQueryData<SettingEntry[]>(
-        settingsQueryKey,
-        (settings = []) => mergeUpdatedSettings(settings, updatedSettings),
-      );
+    onSuccess: async () => {
       setDraftTheme(null);
+      await queryClient.invalidateQueries({ queryKey: settingsQueryKey });
     },
   });
   const resetMutation = useMutation({
     mutationFn: resetSettings,
-    onSuccess: (updatedSettings) => {
-      queryClient.setQueryData<SettingEntry[]>(
-        settingsQueryKey,
-        (settings = []) => mergeUpdatedSettings(settings, updatedSettings),
-      );
+    onSuccess: async () => {
       setDraftTheme(null);
+      await queryClient.invalidateQueries({ queryKey: settingsQueryKey });
     },
   });
 
@@ -112,17 +96,16 @@ export default function SettingsPage() {
     );
   }
 
-  const storedTheme = String(themeSetting.value);
-  let selectedTheme: string | undefined;
-
-  if (draftTheme !== null) {
-    selectedTheme = draftTheme;
-  } else if (themeSetting.valid && themeSetting.options.includes(storedTheme)) {
-    selectedTheme = storedTheme;
-  }
-
+  const storedTheme = typeof themeSetting.value === 'string'
+    ? themeSetting.value
+    : '';
+  const themeGroup = themeSetting.group;
+  const themeName = themeSetting.name;
+  const selectedTheme = draftTheme
+    ?? (themeOptions.includes(storedTheme) ? storedTheme : undefined);
   const hasChanges = draftTheme !== null && draftTheme !== storedTheme;
-  const isStoredValueInvalid = !themeSetting.valid && draftTheme === null;
+  const isStoredValueInvalid = !themeOptions.includes(storedTheme)
+    && draftTheme === null;
   const mutationError = updateMutation.error ?? resetMutation.error;
   const mutationErrorMessage = mutationError?.message;
   let status:
@@ -148,34 +131,23 @@ export default function SettingsPage() {
       return;
     }
 
-    updateMutation.mutate([{ key: themeKey, value: draftTheme }]);
+    updateMutation.mutate([
+      {
+        group: themeGroup,
+        name: themeName,
+        value: draftTheme,
+      },
+    ]);
   }
 
   function resetTheme() {
-    resetMutation.mutate([themeKey]);
+    resetMutation.mutate([
+      {
+        group: themeGroup,
+        name: themeName,
+      },
+    ]);
   }
-
-  const themeControl = themeSetting.secret
-    ? (
-        <TextInput
-          label={themeSetting.key}
-          type="password"
-          value={selectedTheme ?? ''}
-          onChange={setDraftTheme}
-          status={status}
-        />
-      )
-    : (
-        <Selector
-          label={themeSetting.key}
-          description="Controls the interface color theme."
-          options={[...themeSetting.options]}
-          value={selectedTheme}
-          onChange={setDraftTheme}
-          placeholder="Select a theme"
-          status={status}
-        />
-      );
 
   return (
     <Stack as="section" gap={4} height="100%" isScrollable>
@@ -195,7 +167,15 @@ export default function SettingsPage() {
             </Text>
           </Stack>
 
-          {themeControl}
+          <Selector
+            label={themeSetting.key}
+            description="Controls the interface color theme."
+            options={themeOptions}
+            value={selectedTheme}
+            onChange={setDraftTheme}
+            placeholder="Select a theme"
+            status={status}
+          />
 
           <Stack direction="horizontal" gap={2} justify="end">
             <Button

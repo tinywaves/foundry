@@ -4,19 +4,20 @@ import { exit } from 'node:process';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { createApplication } from '../application/create-application';
-import { createSettingsApi } from '../modules/settings/routes';
+import { createSettingsRoutes } from '../modules/settings/routes';
+import { output } from './output';
 
 export function startWebUiServer() {
   const webPath = path.resolve(import.meta.dirname, '../web');
   const indexPath = path.join(webPath, 'index.html');
 
   if (!existsSync(indexPath)) {
-    console.error('Web UI assets missing. Please reinstall Foundry: npm install -g @dhzh/foundry');
+    output.error('Web UI assets missing. Please reinstall Foundry: npm install -g @dhzh/foundry');
     exit(1);
   }
 
   const application = createApplication();
-  const app = createSettingsApi(application.settingsService);
+  const app = createSettingsRoutes(application.settingsService);
   app.use('/*', serveStatic({ root: webPath }));
 
   try {

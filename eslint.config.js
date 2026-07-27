@@ -9,6 +9,11 @@ export default defineConfig({
         },
       },
     },
+    unicorn: {
+      overrides: {
+        'unicorn/max-nested-calls': 'off',
+      },
+    },
   },
   ignorePatterns: ['./.agents'],
 });

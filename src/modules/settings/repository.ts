@@ -1,30 +1,31 @@
 import type { SqliteStorage } from '../../storage/sqlite-storage';
-import { getSettingFullKey, settingsRegistry } from './registry';
-import type { SettingsRepository, StoredSetting } from './types';
+import { settingsRegistry } from './registry';
+import type { SettingsRepository } from './types';
 
-const settingsTableName = 'settings';
+const tableName = 'settings';
 
-export function ensureSettingsModule(storage: SqliteStorage): void {
+export function ensureSettingsModule(storage: SqliteStorage) {
   storage.database.exec(`
-    CREATE TABLE IF NOT EXISTS ${settingsTableName} (
-      key TEXT PRIMARY KEY NOT NULL,
+    CREATE TABLE IF NOT EXISTS ${tableName} (
+      "group" TEXT NOT NULL,
+      name TEXT NOT NULL,
       payload TEXT NOT NULL,
       created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY ("group", name)
     )
   `);
 
   const insertDefault = storage.database.prepare(`
-    INSERT OR IGNORE INTO ${settingsTableName}
-      (key, payload, created_at, updated_at)
-    VALUES (?, ?, ?, ?)
+    INSERT OR IGNORE INTO ${tableName} ("group", name, payload, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?)
   `);
   const now = Date.now();
-
   storage.transaction(() => {
     for (const setting of settingsRegistry) {
       insertDefault.run(
-        getSettingFullKey(setting),
+        setting.group,
+        setting.name,
         JSON.stringify({ value: setting.defaultValue }),
         now,
         now,
@@ -34,27 +35,35 @@ export function ensureSettingsModule(storage: SqliteStorage): void {
 }
 
 export function createSettingsRepository(storage: SqliteStorage): SettingsRepository {
-  const selectByKey = storage.database.prepare(`
-    SELECT key, payload, created_at, updated_at
-    FROM ${settingsTableName}
-    WHERE key = ?
-  `);
+  const selectSql = (wheres: readonly string[] = []) => `
+    SELECT * FROM ${tableName}
+    ${wheres.length > 0
+        ? `WHERE ${wheres.map((w) => `${w} = ?`).join(' AND ')}`
+        : ''
+    }
+`;
+  const select = storage.database.prepare(selectSql());
+  const selectByGroupName = storage.database.prepare(selectSql(['"group"', 'name']));
+
   const upsert = storage.database.prepare(`
-    INSERT INTO ${settingsTableName}
-      (key, payload, created_at, updated_at)
-    VALUES (?, ?, ?, ?)
-    ON CONFLICT(key) DO UPDATE SET
+    INSERT INTO ${tableName} ("group", name, payload, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT("group", name) DO UPDATE SET
       payload = excluded.payload,
       updated_at = excluded.updated_at
   `);
 
   return {
-    get: (key) => {
-      const row = selectByKey.get(key) as StoredSetting | undefined;
-      return row;
+    get({ group, name }) {
+      return selectByGroupName.get(group, name) as ReturnType<SettingsRepository['get']>;
     },
-    upsert: (key, payload, now) => {
-      upsert.run(key, payload, now, now);
+    getAll() {
+      return select.all() as unknown as ReturnType<SettingsRepository['getAll']>;
+    },
+    upsert(group, name, payload) {
+      const now = Date.now();
+      const returns = upsert.run(group, name, payload, now, now);
+      return returns.changes === 1;
     },
   };
 }

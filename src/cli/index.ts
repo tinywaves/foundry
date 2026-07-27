@@ -2,6 +2,7 @@ import cac from 'cac';
 import process from 'node:process';
 import terminalLink from 'terminal-link';
 import { registerSettingsCommands } from '../modules/settings/command';
+import { output } from './output';
 import { startWebUiServer } from './server';
 
 const cli = cac('foundry');
@@ -17,7 +18,7 @@ cli
       webUi.url,
       { fallback: false },
     );
-    console.info(`Foundry workspace is running at ${linkedUrl}`);
+    output.info(`Foundry workspace is running at ${linkedUrl}`);
   });
 
 cli.help();
@@ -25,6 +26,6 @@ cli.help();
 try {
   cli.parse();
 } catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
+  output.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 }

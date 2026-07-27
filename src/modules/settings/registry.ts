@@ -1,46 +1,36 @@
 import { z } from 'zod';
 import type { ZodType } from 'zod';
-import type { JsonValue } from './types';
+import { settingGroupSeparator } from './constants';
 
-type SettingDefinition<T extends JsonValue> = {
+type SettingDefinition = {
   group: string;
-  key: string;
-  defaultValue: T;
-  schema: ZodType<T>;
+  name: string;
+  defaultValue: unknown;
+  schema: ZodType;
   secret: boolean;
-  options: readonly string[];
 };
-
-const settingGroupSeparator = '.';
-
-const themeValues = ['system', 'light', 'dark'] as const;
-const themeSchema = z.enum(themeValues);
-
-type Theme = z.infer<typeof themeSchema>;
 
 export const settingsRegistry = [
   {
     group: 'ui',
-    key: 'theme',
+    name: 'theme',
     defaultValue: 'system',
-    schema: themeSchema,
+    schema: z.enum(['system', 'light', 'dark']),
     secret: false,
-    options: themeValues,
   },
-] as const satisfies ReadonlyArray<SettingDefinition<Theme>>;
+  {
+    group: 'ui',
+    name: 'pointer',
+    defaultValue: true,
+    schema: z.boolean(),
+    secret: false,
+  },
+] as const satisfies readonly SettingDefinition[];
 
-type RegisteredSetting = (typeof settingsRegistry)[number];
-
-export function getSettingFullKey(
-  setting: Pick<SettingDefinition<JsonValue>, 'group' | 'key'>,
-): string {
-  return `${setting.group}${settingGroupSeparator}${setting.key}`;
+export function findSettingDefinition(group: string, name: string) {
+  return settingsRegistry.find((setting) => setting.group === group && setting.name === name);
 }
 
-export function findSettingDefinition(
-  fullKey: string,
-): RegisteredSetting | undefined {
-  return settingsRegistry.find(
-    (setting) => getSettingFullKey(setting) === fullKey,
-  );
+export function getSettingKey(group: string, name: string): string {
+  return `${group}${settingGroupSeparator}${name}`;
 }

@@ -6,7 +6,8 @@
 agents, and workflows. It is published as a CLI-only package containing
 `bin/`, `dist/cli/`, and `dist/web/`.
 
-The CLI is built with `cac`, Hono, and `@hono/node-server`. The private
+The CLI is built with `cac`, Hono, `@hono/node-server`, `consola`, and
+`cli-table3`. Hono request validation uses `@hono/zod-validator`. The private
 `packages/web/` workspace is a React 19 application built with Rsbuild 2 and
 React Compiler.
 
@@ -14,7 +15,7 @@ React Compiler.
 
 - This is the repository's single agent guidance file.
 - It applies to the root CLI, the `packages/web/` workspace, build
-  configuration, tests, documentation, and generated output.
+  configuration, documentation, and generated output.
 - Keep developer commands and project documentation rooted at the repository
   level rather than duplicating them inside workspace packages.
 
@@ -23,6 +24,7 @@ React Compiler.
 - `pnpm-workspace.yaml` - pnpm workspace definition and shared dependency
   catalog.
 - `src/cli/` - `cac` entrypoint and Hono static server.
+- `src/cli/output.ts` - shared CLI logging, raw output, and table rendering.
 - `src/modules/` - domain modules containing their service, repository, API
   routes, CLI command, registry, and shared types.
 - `src/storage/` - shared local storage infrastructure.
@@ -38,7 +40,7 @@ React Compiler.
   `dist/cli/index.mjs`.
 - `dist/cli/` - generated CLI bundle from tsdown.
 - `dist/web/` - generated Web production build served by the CLI.
-- Root config - TypeScript, ESLint, Vitest, Commitlint, Husky, and tsdown.
+- Root config - TypeScript, ESLint, Commitlint, Husky, and tsdown.
 
 Do not manually edit generated files under `dist/`.
 
@@ -82,11 +84,11 @@ Do not manually edit generated files under `dist/`.
   independently reviewable slices with explicit checkpoints.
 - Before each slice, state its goal, expected file scope, and verification
   approach.
-- Implement one slice at a time, then report the changed files, test results,
-  and remaining risks.
+- Implement one slice at a time, then report the changed files, verification
+  results, and remaining risks.
 - Wait for the user's confirmation before starting the next slice. Do not
   implement the entire plan in one pass merely because a plan already exists.
-- Keep each slice buildable or testable in isolation whenever practical, and
+- Keep each slice buildable and reviewable in isolation whenever practical, and
   avoid mixing unrelated refactors into a review slice.
 
 ## Engineering Scope And Abstraction
@@ -95,9 +97,7 @@ Do not manually edit generated files under `dist/`.
   speculative options, providers, adapters, strategy objects, and abstraction
   layers unless the current requirement needs them.
 - Shape production APIs around confirmed product requirements, not around
-  possible future use cases or test convenience.
-- Keep test isolation in the test layer. Use mocks, fixtures, or test
-  environments instead of adding production options solely to control tests.
+  possible future use cases or verification convenience.
 - Prefer functions, pure functions, function factories, and module composition
   in application code. Do not introduce classes, inheritance, or abstract base
   types unless a concrete lifecycle or library requirement justifies them.
@@ -189,8 +189,6 @@ From the repository root:
 - `pnpm run dev:web` - start Rsbuild and open the Web UI at
   `http://localhost:3000`.
 - `pnpm run lint` / `pnpm run lint-fix` - check or fix ESLint issues.
-- `pnpm run test` / `pnpm run test:dev` / `pnpm run test:coverage` - run
-  Vitest.
 
 ## Web UI
 
@@ -228,20 +226,30 @@ Reference documentation:
 
 `src/cli/` is a local executable, not a reusable library.
 
-- Use `cac` for command parsing, `terminal-link` for clickable URLs, and
-  `console.info` for startup messages.
+- Use `cac` for command parsing and `terminal-link` for clickable URLs.
+- Route CLI logging, raw values, errors, and tables through
+  `src/cli/output.ts`.
+- Use `consola` through the shared output module and `cli-table3` for tabular
+  command output.
 - Keep `startWebUiServer()` direct and linear.
 - Serve files from `dist/web/` through Hono and `serveStatic`.
 - Keep the default server on `127.0.0.1:7777` unless the task changes its
   public behavior.
-- On fatal startup errors, print an installed-user-facing message with
-  `console.error` and exit with status 1.
+- On fatal startup errors, print an installed-user-facing message through
+  `output.error` and exit with status 1.
 
 ## Tests
 
-Vitest is configured to pass when no tests exist. Add focused tests under
-`test/` when behavior warrants coverage, especially for shared logic or CLI
-behavior.
+Automated tests are not part of the default implementation workflow.
+
+- Do not add, restore, or maintain automated tests unless the user explicitly
+  requests a test-specific task.
+- Do not create `test/`, `*.test.*`, or `*.spec.*` files as part of normal
+  implementation work.
+- Verify changes with the narrowest relevant combination of static review,
+  type checking, linting, builds, command execution, and manual workflow
+  checks.
+- Do not run test commands as part of the default completion workflow.
 
 ## Commits
 

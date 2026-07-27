@@ -5,8 +5,8 @@ An AI-native local developer runtime for tools, skills, agents, and workflows.
 Foundry is distributed as a CLI package. It starts a local Hono server and
 serves the bundled React Web UI from `dist/web/`.
 
-The Web UI is built with Astryx and currently provides a minimal React 19
-starter surface using the Astryx neutral theme.
+The Web UI is built with Astryx and provides the local Foundry administration
+shell, including the Settings surface.
 
 ## Requirements
 
@@ -50,8 +50,6 @@ pnpm run build:web      # Build only dist/web/
 pnpm run dev:cli        # Run the CLI from source in watch mode
 pnpm run dev:web        # Start the Rsbuild Web UI development server
 pnpm run lint           # Run ESLint
-pnpm run test           # Run Vitest once
-pnpm run test:coverage  # Run Vitest with coverage
 ```
 
 ## Run A Production Build
@@ -71,6 +69,24 @@ pnpm dlx @dhzh/foundry
 
 The `foundry` executable listens on `127.0.0.1:7777` and prints a clickable
 local URL when it starts.
+
+## Settings
+
+The Settings capability is available through the Web UI and the module-level
+CLI command:
+
+Current registered settings are `ui.theme` and `ui.pointer`.
+
+```sh
+foundry settings list
+foundry settings get ui.theme
+foundry settings set ui.theme dark
+foundry settings reset ui.theme
+```
+
+Use `--raw` when only command values or boolean mutation results are needed.
+The installable [`foundry-settings`](skills/foundry-settings/SKILL.md) Skill is
+the automation wrapper for this CLI surface.
 
 ## Web UI
 
@@ -99,6 +115,8 @@ the CLI can serve them next to its bundled output.
 |------|------|
 | `specs/plans/` | Numbered implementation plans and their naming convention |
 | `src/cli/` | CLI entrypoint and Hono static server |
+| `src/modules/settings/` | Settings registry, repository, service, routes, and CLI command |
+| `skills/foundry-settings/` | Installable Skill wrapping the Settings CLI command |
 | `packages/web/` | Rsbuild + React Web UI workspace |
 | `packages/web/src/index.tsx` | Browser entrypoint |
 | `packages/web/src/app.tsx` | Root React component |

@@ -3,36 +3,35 @@ import type { JSONType } from 'zod';
 export type JsonValue = JSONType;
 
 export type SettingInput = {
-  key: string;
+  group: string;
+  name: string;
   value: unknown;
 };
 
-export type SettingEntry = {
-  key: string;
+export type SettingOutput = {
   group: string;
-  value: JsonValue;
-  valid: boolean;
-  secret: boolean;
-  options: readonly string[];
-  created_at: number;
-  updated_at: number;
+  name: string;
+  key: string;
+  value: JSONType;
 };
 
 export type SettingsService = {
-  get: (key: string) => SettingEntry;
-  list: () => SettingEntry[];
-  setMany: (entries: readonly SettingInput[]) => SettingEntry[];
-  resetMany: (keys: readonly string[]) => SettingEntry[];
+  get: (group: string, name: string) => SettingOutput;
+  list: () => SettingOutput[];
+  setMany: (entries: readonly SettingInput[]) => void;
+  resetMany: (keys: ReadonlyArray<Pick<SettingInput, 'group' | 'name'>>) => void;
 };
 
-export type StoredSetting = {
-  key: string;
+interface SettingRecord {
+  group: string;
+  name: string;
   payload: string;
   created_at: number;
   updated_at: number;
-};
+}
 
 export type SettingsRepository = {
-  get: (key: string) => StoredSetting | undefined;
-  upsert: (key: string, payload: string, now: number) => void;
+  get: (options: { group: string; name: string }) => SettingRecord | undefined;
+  getAll: () => SettingRecord[];
+  upsert: (group: string, name: string, payload: string) => boolean;
 };

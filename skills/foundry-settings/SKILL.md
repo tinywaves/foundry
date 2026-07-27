@@ -13,19 +13,20 @@ capability. Do not access the database or implement settings logic directly.
 | Key | Purpose | Allowed values | Default |
 | --- | --- | --- | --- |
 | `ui.theme` | Web UI color theme | `system`, `light`, `dark` | `system` |
+| `ui.pointer` | Pointer preference | `true`, `false` | `true` |
 
 Use only the values listed above when changing a setting. Do not invent keys
 or values.
 
 ## Commands
 
-Always use `--json` so command output remains machine-readable.
+Use `--raw` when the task only needs values or boolean mutation results.
 
 ```text
-foundry settings list --json
-foundry settings get <key> --json
-foundry settings set <key> <value> --json
-foundry settings reset <key> --json
+foundry settings list [--raw]
+foundry settings get <key> [--raw]
+foundry settings set <key> <value> [--raw]
+foundry settings reset <key> [--raw]
 ```
 
 - Use `list` to inspect every available setting.
@@ -36,31 +37,11 @@ foundry settings reset <key> --json
 Examples:
 
 ```text
-foundry settings get ui.theme --json
-foundry settings set ui.theme dark --json
-foundry settings reset ui.theme --json
+foundry settings get ui.theme --raw
+foundry settings set ui.theme dark --raw
+foundry settings reset ui.theme --raw
 ```
 
-`list` returns a JSON array. `get`, `set`, and `reset` return one JSON object
-with this shape:
-
-```json
-{
-  "key": "ui.theme",
-  "group": "ui",
-  "value": "dark",
-  "valid": true,
-  "secret": false,
-  "options": ["system", "light", "dark"],
-  "created_at": 0,
-  "updated_at": 0
-}
-```
-
-The timestamps are UTC Unix epoch milliseconds. Their example value above is
-illustrative.
-
-A successful response with `"valid": false` is readable stored data whose
-business value is invalid, not a command failure. Report that state without
-silently resetting it. An unsupported key, an unsupported value, or a command
-execution failure is an actual failure and should be surfaced to the user.
+Without `--raw`, `get` and `list` render `Key` and `Value` columns. With
+`--raw`, `get` prints only the value and `list` prints each setting value.
+`set` and `reset` print `true` or `false` to indicate the mutation result.

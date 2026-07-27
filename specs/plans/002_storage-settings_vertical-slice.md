@@ -2,29 +2,31 @@
 
 ## Summary
 
-Design and implement Foundry's first durable local storage system, then prove
-it with one complete Settings capability: `ui.theme`.
-
-This plan keeps the scope intentionally narrow. The storage layer is SQLite
-only, the storage root is one hidden local directory, and the only business
-module in scope is `settings`. The first Settings slice must run through the
-same shared `settingsService` from the Web UI, Hono API, CLI, and
+Implement Foundry's local SQLite storage foundation and expose Settings as one
+complete capability across the Web UI, Hono API, CLI, and
 `foundry-settings` Skill.
+
+Settings use a small static registry, a `(group, name)` identity, and a JSON
+payload envelope. The shared `settingsService` remains intentionally narrow:
+it reads values, lists stored settings, writes submitted values, and resets
+registered settings to their defaults.
 
 ## Goals
 
 - Establish one local Foundry storage root.
-- Use one SQLite database as the first storage backend.
+- Use one SQLite database as the storage backend.
 - Keep storage initialization idempotent and transaction-based.
-- Keep storage behavior behind module repositories and an application service.
-- Define a static Settings registry in code.
-- Store Settings values as `{ "value": ... }` envelopes.
-- Persist default Settings during initialization.
-- Repair structural payload damage with defaults.
-- Preserve business-invalid values and return `valid: false`.
-- Run the first real Settings slice for `ui.theme`.
-- Expose the same capability through Web UI, Hono API, CLI, and Skill.
-- Keep the implementation small enough to review in slices.
+- Keep Settings data access behind its repository and application service.
+- Define Settings statically in a registry.
+- Identify settings by `group` and `name`.
+- Derive display keys such as `ui.theme` from registry components.
+- Store values as `{ "value": ... }` JSON envelopes.
+- Seed registered defaults during initialization.
+- Return registered defaults when stored payloads cannot be read through their
+  schema.
+- Expose Settings through Web UI, Hono API, CLI, and Skill.
+- Keep the implementation direct and avoid speculative configuration
+  abstractions.
 
 ## Non-Goals
 
@@ -36,21 +38,18 @@ This plan does not implement:
 - Agent, Session, Profile, or Workspace modules.
 - Multi-user support.
 - Multilingual settings.
-- Root relocation through Settings.
-- JSON storage as an alternate backend.
-- Migration tooling between storage backends.
+- Storage-root relocation through Settings.
+- JSON files as an alternate storage backend.
+- A migration framework.
 - Secret encryption or provider integration.
-- Unknown-setting lifecycle rules such as expiry or tombstones.
-- Custom theme packs or theme scheduling.
+- Dynamic or plugin-defined settings.
+- Unknown-setting expiry or tombstones.
 
 ## Product Boundaries
 
 Foundry remains a local, single-user runtime.
 
-There is one shared storage system, but each module owns its own repository and
-service. There is no universal "query everything" layer for all modules.
-
-Every user-facing capability in this plan follows the same pattern:
+Every user-facing Settings path uses the same application service:
 
 ```text
 Web UI -> Hono API route -> settingsService
@@ -58,16 +57,16 @@ CLI    -> settings command -> settingsService
 Skill  -> settings CLI command
 ```
 
-The Web API and CLI must use the same `settingsService`. The Skill wraps the
-module-level CLI command and must not access storage, repositories, or the
+The Hono routes and CLI command call `settingsService`. The Skill wraps the
+module-level CLI command and does not access storage, repositories, or the
 service directly.
 
-Domain code lives under `src/modules/`. Settings is therefore implemented as
-one cohesive module:
+Settings is implemented as one domain module:
 
 ```text
 src/modules/settings/
 ├── command.ts
+├── constants.ts
 ├── registry.ts
 ├── repository.ts
 ├── routes.ts
@@ -75,8 +74,8 @@ src/modules/settings/
 └── types.ts
 ```
 
-Shared Settings contracts live in `types.ts`. Types used only by one
-implementation file remain local to that file.
+Shared Settings contracts live in `types.ts`. File-private schemas and helpers
+remain next to their consumers.
 
 ## Storage Root
 
@@ -86,215 +85,211 @@ Foundry uses one hidden directory as its local storage root:
 ~/.foundry
 ```
 
-The root is derived from the current user's home directory on every supported
-platform. There is no `bootstrap.json`, no `Library/Application Support`
-pointer file, and no separate relocation layer in this plan.
+The root is derived from the current user's home directory. Runtime APIs do not
+accept a storage-root option or pass a path through the application composition
+chain.
 
-The storage path is fixed for this plan. Runtime APIs do not accept a storage
-root option or pass a path through the application composition chain. Tests
-may isolate filesystem access with module mocks, but that is not a product
-configuration surface.
-
-The storage root is the complete local application state for this stage of the
-project.
-
-The first physical layout is intentionally minimal:
+The initial physical layout is:
 
 ```text
 ~/.foundry/
 └── foundry.sqlite
 ```
 
-SQLite sidecar files stay next to the database file. `files/` and
-`temporary/` are not part of this plan.
+SQLite sidecar files remain next to the database.
 
 ## Storage Initialization
 
-Application startup orchestrates independent ensure steps. `ensureStorage`
-stays thin and delegates to specific checks instead of owning every branch.
-
-Conceptually:
+Application startup owns storage initialization and module setup:
 
 ```text
 createApplication()
   -> ensureStorage()
        -> ensureStorageRoot()
        -> ensureDatabase()
-  -> ensureModules()
+  -> createSqliteStorage()
+  -> createSettingsService()
        -> ensureSettingsModule()
-  -> create settingsService
+       -> createSettingsRepository()
   -> return application context
 ```
 
 Rules:
 
-- A missing storage root is created.
-- A missing database is created.
-- A partially initialized database is completed.
-- Settings defaults are seeded on first initialization.
-- Any repair write happens in a transaction.
-- A startup failure stops the server or CLI command.
-
-The startup path does not validate business correctness of default values at
-boot time. Default values are trusted code, while database reads handle
-structural corruption and business validation separately.
+- Create the storage root when it is missing.
+- Create the SQLite database when it is missing.
+- Run the database integrity check before creating module services.
+- Create the Settings table when it is missing.
+- Seed every registered default with `INSERT OR IGNORE`.
+- Run seed writes in one transaction.
+- Stop startup when initialization fails.
 
 ## SQLite Backend
 
 The first backend is one SQLite database at `~/.foundry/foundry.sqlite`.
 
-SQLite-specific details stay inside storage and repository layers. They do not
-leak into the CLI, API, Web UI, or Skill surface.
+SQLite-specific behavior stays inside `src/storage/` and module repositories.
+The backend provides:
 
-The backend must support:
+- synchronous local access through `node:sqlite`;
+- explicit transactions;
+- integrity checks;
+- a finite busy timeout;
+- idempotent close behavior.
 
-- transactions;
-- atomic writes;
-- basic integrity checks;
-- brief local contention without turning concurrency into a product feature.
-
-This plan does not introduce a migration framework or a `foundry_migrations`
-table yet.
+This plan does not introduce a migration table or generalized migration
+framework.
 
 ## Settings Registry
 
-Settings are defined statically in code.
+Settings are declared statically in `registry.ts`.
 
-For this plan, the only active setting is:
+Each definition contains:
 
-```text
-ui.theme
-```
+- `group`;
+- `name`;
+- `defaultValue`;
+- a Zod `schema`;
+- `secret` presentation metadata kept inside the registry.
 
-The registry defines the business schema, default value, and metadata needed
-by the service and Web UI. The full key is derived from the registry
-components rather than stored as a second source of truth.
+The active settings are:
 
-The registry remains small and explicit. Dynamic providers, plugin-defined
-settings, and late-bound settings sources are out of scope.
+| Key | Schema | Default |
+| --- | --- | --- |
+| `ui.theme` | `system`, `light`, or `dark` | `system` |
+| `ui.pointer` | boolean | `true` |
+
+The full key is derived with `getSettingKey(group, name)`. It is a CLI and
+presentation identifier rather than the persisted row identity.
 
 ## Settings Storage Model
 
-Settings are stored in a dedicated SQLite table.
+Settings are stored in one module-owned table with these columns:
 
-The row identity is module-owned and stable. The logical value is always stored
-as a JSON envelope:
+- `group`;
+- `name`;
+- `payload`;
+- `created_at`;
+- `updated_at`.
+
+The composite primary key is `(group, name)`.
+
+The logical value is stored as a JSON envelope:
 
 ```json
 { "value": "dark" }
 ```
 
-The outward business value for `ui.theme` is just `dark`. The storage envelope
-keeps the persisted structure explicit and easy to repair.
+`created_at` and `updated_at` are integer Unix epoch milliseconds. They remain
+repository data and are not part of the service output.
 
-The service also stores `created_at` and `updated_at` as integer millisecond
-timestamps.
+Repository operations are:
 
-Rules:
+```text
+get({ group, name })
+getAll()
+upsert(group, name, payload)
+```
 
-- `created_at` and `updated_at` are numbers, not SQL datetime types.
-- Missing records are backfilled with defaults.
-- Structural corruption is repaired with defaults.
-- Business-invalid values are preserved.
-- Reset writes the default back into the record rather than deleting it.
+`upsert` preserves the original `created_at` value on conflict and refreshes
+`updated_at`.
 
-## Read And Repair Rules
+## Settings Read Model
 
-The `settingsService` applies the following read rules:
+The service reads a record with the schema from its registry definition:
 
-1. No database record exists:
-   - use the default value;
-   - write the default envelope back in a transaction;
-   - return the default as valid.
-2. `JSON.parse(payload)` fails:
-   - use the default value;
-   - write the default envelope back in a transaction;
-   - return the default as valid.
-3. JSON parses, but the result is not an object with its own `value` field:
-   - use the default value;
-   - write the default envelope back in a transaction;
-   - return the default as valid.
-4. The envelope is structurally valid:
-   - read the raw `value`;
-   - validate it against the registered schema;
-   - if valid, return `valid: true`;
-   - if invalid, return the raw value with `valid: false`;
-   - do not overwrite the stored value.
+1. Resolve the requested `(group, name)` definition.
+2. Parse the stored JSON payload.
+3. Validate `{ value }` with the registered schema.
+4. Return the parsed value when validation succeeds.
+5. Return the registered default when the record is missing or the payload
+   cannot be read through the schema.
 
-Structural repair is storage behavior. Business validation is service behavior.
-If a value is readable but invalid, the caller gets the raw value plus a
-validation flag instead of a hard failure.
+Read fallback does not expose a separate validity flag and does not write a
+repair record.
+
+`list()` reads stored rows and returns the same simplified output shape as
+`get()`.
 
 ## Settings Service Contract
 
-The service is the shared use-case layer for all surfaces.
+The service is the shared use-case boundary for all Settings surfaces.
 
-Initial operations:
+Operations:
 
 ```text
-get(key)
+get(group, name)
+list()
 setMany(entries)
 resetMany(keys)
-list()
 ```
 
-The service returns a serializable entry shape that includes at least:
+Input shapes:
 
-- `key`
-- `value`
-- `valid`
-- `created_at`
-- `updated_at`
+```ts
+type SettingInput = {
+  group: string;
+  name: string;
+  value: unknown;
+};
+```
 
-Write behavior:
+```ts
+type SettingKey = {
+  group: string;
+  name: string;
+};
+```
 
-- Unknown keys are rejected.
-- Invalid writes are rejected atomically.
-- A successful batch writes only the submitted keys.
-- `resetMany` writes defaults back into existing rows.
-- Successful writes return the updated entries.
+Output shape:
 
-Read behavior:
+```ts
+type SettingOutput = {
+  group: string;
+  name: string;
+  key: string;
+  value: JSONType;
+};
+```
 
-- `get` returns one entry.
-- `list` returns all registered entries.
-- Business-invalid stored values remain readable with `valid: false`.
+Behavior:
 
-The service does not expose database primitives or schema internals to the
-Web UI or CLI.
-
-## Secret Reservation
-
-The registry may mark a setting as secret metadata, but this plan does not add
-security policy.
-
-No encryption, redaction, or provider integration is introduced here. The Web
-UI only needs to use a password-style input when a setting is marked secret.
+- `get` returns one simplified setting output.
+- `list` returns simplified outputs for stored settings.
+- `setMany` writes submitted values in one transaction.
+- `resetMany` resolves registered definitions and writes their defaults in one
+  transaction.
+- Mutation methods return `void`; transport layers choose their own success
+  representation.
+- The service does not expose database objects, timestamps, schemas, or
+  registry definitions.
 
 ## CLI
 
 The CLI owns one module-level command:
 
 ```text
-foundry settings get ui.theme
-foundry settings set ui.theme dark
-foundry settings reset ui.theme
-foundry settings list
+foundry settings get <key> [--raw]
+foundry settings list [--raw]
+foundry settings set <key> <value> [--raw]
+foundry settings reset <key> [--raw]
 ```
 
-The command is the automation contract for the Skill.
+The dotted key is parsed at the CLI boundary into `group` and `name`.
 
-JSON output is supported for the settings command. Non-JSON output can stay
-human-friendly, but it must not be the only surface for programmatic use.
+Output behavior:
 
-CLI failure means the command or service failed. A readable setting with
-`valid: false` is still a successful command result.
+- Non-raw `get` and `list` render a `Key` and `Value` table.
+- Raw `get` prints only the setting value.
+- Raw `list` prints each setting value.
+- `set` and `reset` print a boolean mutation result.
+- CLI output is routed through `src/cli/output.ts`.
+
+The CLI command remains the automation contract used by the Skill.
 
 ## Hono API
 
-The local API stays intentionally small and thin.
-
-Required routes:
+The local API exposes:
 
 ```text
 GET  /api/settings
@@ -304,158 +299,162 @@ POST /api/settings/reset
 
 Behavior:
 
-- `GET /api/settings` returns all settings.
-- `POST /api/settings` accepts
-  `[{ "key": "ui.theme", "value": "dark" }]` and applies only the changed
-  keys sent by the Web UI.
-- `POST /api/settings/reset` accepts `{ "keys": ["ui.theme"] }` and resets
-  the requested keys to defaults.
-- Routes call `settingsService` only.
-- Routes do not access SQLite directly.
+- `GET /api/settings` returns `SettingOutput[]`.
+- `POST /api/settings` accepts:
 
-The API is for the Web UI and local automation, not a public REST design.
+```json
+[
+  {
+    "group": "ui",
+    "name": "theme",
+    "value": "dark"
+  }
+]
+```
+
+- `POST /api/settings/reset` accepts:
+
+```json
+{
+  "keys": [
+    {
+      "group": "ui",
+      "name": "theme"
+    }
+  ]
+}
+```
+
+- Mutation routes return `true` after the service call completes.
+- Request bodies are validated with `@hono/zod-validator`.
+- Invalid request shapes return HTTP 400 with Zod issues.
+- Service failures return HTTP 500 with a short error payload.
+- Routes call `settingsService` only.
 
 ## Web UI
 
-The existing shell stays in place, but the Settings route becomes real.
+The Settings page consumes the Hono API through the typed `hc` client and uses
+TanStack React Query for remote-state lifecycle.
 
-The Web app should have a `pages/` directory, with a dedicated Settings page
-and room for other pages to follow.
+The page:
 
-`SettingsPage` should:
+- loads the Settings list;
+- identifies settings by their derived `key`;
+- submits updates as `{ group, name, value }` entries;
+- submits resets as `{ group, name }` keys;
+- refreshes or invalidates the Settings query after a successful boolean
+  mutation result;
+- does not access SQLite or the service directly.
 
-- load all settings on mount;
-- render the `ui.theme` control;
-- submit only changed values;
-- use the reset route for reset actions;
-- reflect `valid: false` without inventing extra validation rules;
-- leave invalid selections visibly unselected when the schema does not match;
-- keep Web UI behavior aligned with the service response.
-
-The Web UI uses Hono's typed `hc` client for the HTTP transport and TanStack
-React Query for remote-state lifecycle, caching, retries, and mutations. It
-does not use Effect or hand-written `fetch` wrappers for API requests, reach
-into storage, or call the service directly.
+Presentation choices such as selectors and switches remain Web UI concerns.
+The service output intentionally does not include control options or validity
+metadata.
 
 ## Application Wiring
 
-The application composition layer owns startup and shutdown.
-
-Conceptually:
+The application composition layer owns startup and shutdown:
 
 ```text
 createApplication()
   -> ensureStorage()
-  -> ensureModules()
-  -> create settingsService
-  -> inject settingsService into Hono routes and CLI commands
-  -> return context with close()
+  -> createSqliteStorage()
+  -> createSettingsService()
+  -> expose settingsService in the application context
 ```
 
-The same service instance powers both the Web route layer and the CLI command
-layer.
-
-One-shot CLI commands close the application context after execution. The Web
-server keeps the context open for the lifetime of the process.
+The Web server creates Settings routes with the shared service. One-shot CLI
+commands create an application context, run one action, and close the context
+in a `finally` block.
 
 ## Skill
 
-Add one `foundry-settings` Skill for the module-level `foundry settings`
-command. Store the installable Skill at
-`skills/foundry-settings/SKILL.md`; `.agents/skills/` is reserved for
-repository-local agent guidance and is not a distribution location.
+The installable Skill lives at `skills/foundry-settings/SKILL.md`.
 
-The Skill:
+It:
 
-- wraps the `settings` CLI command;
-- exposes its subcommands and options;
+- wraps `foundry settings`;
+- exposes `get`, `list`, `set`, `reset`, and `--raw`;
+- documents the registered keys and values;
 - delegates all work to the installed CLI;
-- does not implement storage, validation, or repository logic on its own.
+- does not duplicate repository or service behavior.
 
 ## Implementation Sequence And Review Checkpoints
 
 ### Slice 1: Storage foundation
 
-Implement only the storage substrate:
-
 - hidden storage-root resolution;
-- root creation;
-- SQLite file creation;
+- root and database creation;
+- SQLite storage wrapper;
 - transaction support;
 - integrity checks;
-- application context lifecycle primitives.
-
-This slice has no user-facing Settings capability.
+- application context lifecycle.
 
 ### Slice 2: Settings vertical slice
 
-Implement the full `ui.theme` capability as one connected delivery slice:
-
-- static Settings registry;
+- static registry and shared key separator;
 - Settings table and repository;
-- `settingsService`;
-- `foundry settings` command;
-- Hono GET/POST/reset routes;
-- `/settings` Web UI page;
-- `foundry-settings` Skill;
-- focused tests around the real SQLite-backed path.
+- simplified `settingsService`;
+- module-level CLI command;
+- shared CLI output module;
+- validated Hono routes;
+- Settings Web UI integration;
+- installable `foundry-settings` Skill.
 
-The capability is not complete until Web, API, CLI, service, storage, and Skill
-all work together.
+The capability is complete only when Web UI, API, CLI, service, storage, and
+Skill use the same contract.
 
 ## Verification
 
-Storage verification:
+Use implementation review and executable workflow checks rather than automated
+tests.
 
-- the storage root resolves to `~/.foundry`;
-- a missing root is created;
-- a missing database is created;
-- startup is idempotent;
-- transactions commit atomically and roll back on failure;
-- integrity failure stops startup.
+Storage checks:
 
-Settings verification:
+- storage paths resolve under `~/.foundry`;
+- initialization creates missing storage;
+- module initialization seeds registered defaults;
+- transactions and close behavior remain direct and contained.
 
-- `ui.theme` is seeded with its default;
-- missing records backfill to defaults;
-- parse failures backfill to defaults;
-- malformed envelopes backfill to defaults;
-- business-invalid values are preserved with `valid: false`;
-- reset writes the default back into the row;
-- list returns the registered setting.
+Settings checks:
 
-Capability verification:
+- service inputs and outputs match the documented `group/name` contract;
+- the persisted payload remains a `{ value }` envelope;
+- read fallback returns registry defaults;
+- reset writes registry defaults;
+- CLI tables and raw output match the command contract;
+- Hono request schemas match the Web client payloads;
+- the Skill invokes only the Settings CLI.
 
-- CLI `get`, `set`, `reset`, and `list` work;
-- Hono routes use the same `settingsService`;
-- Web UI loads and updates `ui.theme`;
-- the Skill wraps the CLI command only;
-- no Web UI code touches storage directly.
+Repository checks:
 
-Repository verification:
-
+- static review of changed files;
+- relevant TypeScript checks;
 - `pnpm run lint`;
-- focused Vitest coverage for storage and settings behavior;
-- `pnpm run build`;
+- `pnpm run build` when CLI/Web integration changes;
 - `git diff --check`.
+
+Do not add or restore automated tests for this plan unless the user explicitly
+requests a separate test-only task.
 
 ## Dependency Changes
 
 1. Dependencies to remove: None
 2. Dev dependencies to remove: None
 3. Dependencies to add:
-   - root `package.json`: `zod` for Settings value schemas;
-   - `packages/web/package.json`: `hono` for the typed `hc` API client;
-   - `packages/web/package.json`: `@tanstack/react-query` for Web remote-state
+   - root `package.json`: `zod` for Settings schemas;
+   - root `package.json`: `@hono/zod-validator` for Hono request validation;
+   - root `package.json`: `cli-table3` for CLI tables;
+   - root `package.json`: `consola` for shared CLI output;
+   - `packages/web/package.json`: `hono` for the typed `hc` client;
+   - `packages/web/package.json`: `@tanstack/react-query` for remote-state
      management.
 4. Dev dependencies to add: None
 
 ## Assumptions
 
 - Foundry remains a local, single-user runtime.
-- `ui.theme` is the first and only active setting in this plan.
+- `ui.theme` and `ui.pointer` are the active registered settings.
 - The storage root is the complete local application state for this stage.
-- Backups and restores will be handled by a later plan.
-- The first backend is SQLite.
-- The Web UI keeps the current shell but gains a real Settings page.
-- The CLI and Skill surface are part of the same delivery slice.
+- SQLite remains the only storage backend.
+- The CLI command is the automation contract for the Skill.
+- Automated tests are not part of the default implementation workflow.

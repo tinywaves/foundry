@@ -263,6 +263,9 @@ Automated tests are not part of the default implementation workflow.
 - Run `pnpm run lint` for code changes when practical.
 - Run `pnpm run build` when changing CLI/Web integration, build configuration,
   or production output behavior.
+- After verification that starts a server on port `7777`, stop that server and
+  confirm the port is released before finishing. Agents must not leave port
+  `7777` occupied.
 
 <!-- ASTRYX:START -->
 Astryx v0.1.7 · 90+ components

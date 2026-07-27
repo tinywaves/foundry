@@ -12,6 +12,11 @@ export default defineConfig({
   html: {
     title: 'Foundry',
   },
+  server: {
+    proxy: {
+      '/api': 'http://127.0.0.1:7777',
+    },
+  },
   output: {
     distPath: path.resolve(import.meta.dirname, '../../dist/web'),
   },

@@ -21,23 +21,29 @@ pnpm install
 
 ## Development
 
-Start the Web UI development server with Rsbuild:
+Start both the CLI API server and the Rsbuild Web UI:
 
 ```sh
+pnpm run dev
+```
+
+This runs both development processes. The CLI listens on
+[http://127.0.0.1:7777](http://127.0.0.1:7777) and provides the API only.
+The Rsbuild Web UI opens at [http://localhost:3000](http://localhost:3000);
+its `/api/*` requests are proxied to the CLI without changing the request
+path. Press `Ctrl-C` to stop both processes.
+
+The individual processes are also available when needed:
+
+```sh
+pnpm run dev:cli
 pnpm run dev:web
 ```
 
-Rsbuild opens the browser at [http://localhost:3000](http://localhost:3000).
-
-To run the CLI against the local Web UI, build the static assets first and then
-start the CLI in watch mode:
-
-```sh
-pnpm run build:web
-pnpm run dev:cli
-```
-
-The CLI serves the Web UI at [http://127.0.0.1:7777](http://127.0.0.1:7777).
+`dev:cli` sets `FOUNDRY_DEV=true`, so it only serves the API and does not require
+Web UI assets. `dev:web` provides the Web UI and proxies API requests to the
+CLI development server. To serve the Web UI from the CLI instead, build the
+package and run the production executable.
 
 ## Commands
 
@@ -47,6 +53,7 @@ Run these commands from the repository root:
 pnpm run build          # Build the CLI and Web UI
 pnpm run build:cli      # Build only dist/cli/
 pnpm run build:web      # Build only dist/web/
+pnpm run dev             # Run the CLI API and Web UI development servers
 pnpm run dev:cli        # Run the CLI from source in watch mode
 pnpm run dev:web        # Start the Rsbuild Web UI development server
 pnpm run lint           # Run ESLint
@@ -114,7 +121,8 @@ the CLI can serve them next to its bundled output.
 | Path | Role |
 |------|------|
 | `specs/plans/` | Numbered implementation plans and their naming convention |
-| `src/cli/` | CLI entrypoint and Hono static server |
+| `src/cli/` | CLI entrypoint, environment configuration, and Hono API/static server |
+| `src/cli/env.ts` | Development environment flags used by the CLI server |
 | `src/modules/settings/` | Settings registry, repository, service, routes, and CLI command |
 | `skills/foundry-settings/` | Installable Skill wrapping the Settings CLI command |
 | `packages/web/` | Rsbuild + React Web UI workspace |

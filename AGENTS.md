@@ -72,8 +72,18 @@ Do not manually edit generated files under `dist/`.
 
 ## Implementation Plans
 
+- When a change should be planned, prioritize the `plan-task-workflow` skill
+  before drafting or updating the plan files.
 - Follow `specs/plans/README.md` as the single source of truth for where
   implementation plans are saved and how they are named and structured.
+- Create or update the relevant implementation plan before changing
+  production code. Plans are numbered directories, not standalone Markdown
+  files. Each plan directory contains an `index.md` and independently
+  reviewable task files named `task1-<description>.md`,
+  `task2-<description>.md`, and so on.
+- Use `index.md` to define the planned task sequence before implementation
+  begins. Mark a task complete there only after its implementation and
+  verification are complete.
 - Keep implementation plans synchronized with confirmed design decisions and
   the code. When an agreed architecture or behavior changes, update the
   corresponding plan as part of the same change.
@@ -84,9 +94,13 @@ Do not manually edit generated files under `dist/`.
   independently reviewable slices with explicit checkpoints.
 - Before each slice, state its goal, expected file scope, and verification
   approach.
-- Implement one slice at a time, then report the changed files, verification
-  results, and remaining risks.
-- Wait for the user's confirmation before starting the next slice. Do not
+- Before starting a task, read its task document and all prerequisite task
+  documents. Update the current task document with the confirmed scope,
+  design, file boundaries, and verification approach before editing code.
+- Implement one task at a time, then report the changed files, verification
+  results, and remaining risks. Mark the completed task in the plan
+  `index.md` only after that report is complete.
+- Wait for the user's confirmation before starting the next task. Do not
   implement the entire plan in one pass merely because a plan already exists.
 - Keep each slice buildable and reviewable in isolation whenever practical, and
   avoid mixing unrelated refactors into a review slice.

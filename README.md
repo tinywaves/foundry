@@ -120,7 +120,7 @@ the CLI can serve them next to its bundled output.
 
 | Path | Role |
 |------|------|
-| `specs/plans/` | Numbered implementation plans and their naming convention |
+| `specs/plans/` | Numbered implementation plan directories and task conventions |
 | `src/cli/` | CLI entrypoint, environment configuration, and Hono API/static server |
 | `src/cli/env.ts` | Development environment flags used by the CLI server |
 | `src/modules/settings/` | Settings registry, repository, service, routes, and CLI command |

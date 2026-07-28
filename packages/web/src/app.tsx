@@ -6,24 +6,27 @@ import {
   Routes,
   matchPath,
   useLocation,
+  useNavigate,
 } from 'react-router';
-import type { LinkProps } from 'react-router';
+import type { LinkProps, Location } from 'react-router';
 import { AppShell } from '@astryxdesign/core/AppShell';
+import { Button } from '@astryxdesign/core/Button';
 import { Center } from '@astryxdesign/core/Center';
 import { EmptyState } from '@astryxdesign/core/EmptyState';
 import { Heading } from '@astryxdesign/core/Heading';
+import { Icon } from '@astryxdesign/core/Icon';
 import {
   SideNav,
   SideNavHeading,
   SideNavItem,
   SideNavSection,
 } from '@astryxdesign/core/SideNav';
-import { StackItem } from '@astryxdesign/core/Stack';
+import { Stack, StackItem } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { VStack } from '@astryxdesign/core/VStack';
 import SettingsPage from './pages/settings';
 
-type SectionId = 'dashboard' | 'skills' | 'settings';
+type SectionId = 'dashboard' | 'skills';
 
 interface NavigationItem {
   id: SectionId;
@@ -34,10 +37,14 @@ interface NavigationItem {
 const NAVIGATION = [
   { id: 'dashboard', label: 'Dashboard', path: '/dashboard' },
   { id: 'skills', label: 'Skills', path: '/skills' },
-  { id: 'settings', label: 'Settings', path: '/settings' },
 ] as const satisfies readonly NavigationItem[];
 
 const DEFAULT_SECTION = NAVIGATION[0];
+const SETTINGS_PATH = '/settings';
+
+interface SettingsLocationState {
+  returnLocation?: Location;
+}
 
 interface RouterLinkProps extends Omit<LinkProps, 'to'> {
   href?: string;
@@ -52,6 +59,23 @@ function RouterLink({
   return <Link ref={ref} to={href} {...props} />;
 }
 
+function SettingsRouterLink({
+  href = SETTINGS_PATH,
+  ref,
+  ...props
+}: RouterLinkProps) {
+  const location = useLocation();
+
+  return (
+    <Link
+      ref={ref}
+      to={href}
+      {...props}
+      state={{ returnLocation: location }}
+    />
+  );
+}
+
 function Navigation() {
   const { pathname } = useLocation();
 
@@ -62,6 +86,17 @@ function Navigation() {
           <SideNavHeading
             heading="Foundry"
             superheading="Administration"
+          />
+        )
+      }
+      footer={
+        (
+          <SideNavItem
+            as={SettingsRouterLink}
+            href={SETTINGS_PATH}
+            icon={<Icon icon="wrench" color="inherit" size="sm" />}
+            label="Settings"
+            size="sm"
           />
         )
       }
@@ -101,7 +136,47 @@ function SectionPlaceholder({ section }: { section: NavigationItem }) {
   );
 }
 
-export default function App() {
+function SettingsRoutePage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const settingsLocationState = location.state as SettingsLocationState | null;
+  const returnLocation = settingsLocationState?.returnLocation;
+
+  function returnToApp() {
+    if (returnLocation) {
+      void navigate(-1);
+
+      return;
+    }
+
+    void navigate(DEFAULT_SECTION.path, { replace: true });
+  }
+
+  return (
+    <AppShell
+      contentPadding={6}
+      height="fill"
+      variant="section"
+    >
+      <VStack gap={6} height="100%">
+        <Stack direction="horizontal">
+          <Button
+            icon={<Icon icon="chevronLeft" color="primary" size="sm" />}
+            label="Back to app"
+            onClick={returnToApp}
+            size="sm"
+            variant="ghost"
+          />
+        </Stack>
+        <StackItem size="fill">
+          <SettingsPage />
+        </StackItem>
+      </VStack>
+    </AppShell>
+  );
+}
+
+function ApplicationShell() {
   return (
     <AppShell
       contentPadding={6}
@@ -119,11 +194,7 @@ export default function App() {
           <Route
             key={section.id}
             path={section.path}
-            element={
-              section.id === 'settings'
-                ? <SettingsPage />
-                : <SectionPlaceholder section={section} />
-            }
+            element={<SectionPlaceholder section={section} />}
           />
         ))}
         <Route
@@ -132,5 +203,14 @@ export default function App() {
         />
       </Routes>
     </AppShell>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path={SETTINGS_PATH} element={<SettingsRoutePage />} />
+      <Route path="*" element={<ApplicationShell />} />
+    </Routes>
   );
 }

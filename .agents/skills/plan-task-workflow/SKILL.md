@@ -1,44 +1,57 @@
 ---
 name: plan-task-workflow
-description: Plan substantial work as numbered plan directories with an index and task files, then execute one task at a time with prerequisite review and index checkboxes.
+description: Plan substantial work as numbered plan directories, settle the index before creating task files, then execute one task at a time with prerequisite review and index checkboxes.
 disable-model-invocation: true
 ---
 
 # Plan Task Workflow
 
-Use this skill when a change should be broken into a plan directory with an
-`index.md` and multiple task files under `specs/plans/`.
+Use this skill when a change should be broken into a plan directory under
+`specs/plans/`. Create task files only after the plan index and task breakdown
+have been discussed and confirmed.
 
 ## Workflow
 
 1. Start in conversation, not files.
-2. Use the discussion to discover the rough task boundaries and the likely
-   task count.
-3. Confirm the task breakdown before creating plan files.
-4. Create or update the plan directory only after the task list is settled.
-5. Write `index.md` first and list every intended task in execution order.
-6. Create one task file per task, using `task1-<description>.md`,
-   `task2-<description>.md`, and so on.
-7. Treat each task file as a living implementation plan for that task.
-8. Before starting a task, read its file and all prerequisite task files.
-9. Update the current task file with confirmed scope, constraints, file scope,
-   and verification before editing code.
-10. Implement one task at a time.
-11. After implementation and verification, mark the task complete in
-    `index.md`.
-12. Wait for user confirmation before starting the next task.
+2. Use the discussion to discover the rough plan boundaries and whether the
+   work should become one plan or multiple plans.
+3. If the user asks to reserve plan containers before details are settled,
+   create only the plan directory and `index.md`.
+4. In an unsettled `index.md`, include the plan goal and an empty `Tasks`
+   section. Do not add task links, task names, or task checkboxes yet.
+5. Continue the design discussion until the `index.md` goal, scope, and task
+   sequence are confirmed.
+6. Only after the `index.md` content is confirmed, populate the `Tasks`
+   section with every intended task in execution order.
+7. Do not create any `taskN-<description>.md` file until that specific task is
+   about to be discussed or implemented.
+8. Before creating `task1-<description>.md`, discuss and confirm Task 1's
+   scope, boundaries, and verification approach.
+9. Write Task 1's task file, then read it back before editing production code.
+10. Implement Task 1 only.
+11. After Task 1 implementation and verification, report the changed files,
+    verification results, and remaining risks.
+12. Mark Task 1 complete in `index.md` only after that report is complete.
+13. Wait for user confirmation before discussing and creating the next task
+    file, then repeat the same flow for Task 2 and later tasks.
 
 ## Rules
 
 - `index.md` is the plan-level progress tracker.
+- An unsettled plan may have an empty `Tasks` section, but it must not contain
+  invented task entries.
+- Do not create placeholder task files just to reserve names.
+- Create a task file only after that task's scope has been explicitly
+  discussed or confirmed.
 - Task files are as important as the index and should preserve the reasoning
   needed by later tasks.
 - Do not silently expand a task beyond its file.
 - Do not skip prerequisite task review.
 - Do not mark a task complete in `index.md` until the task has been reported
   complete.
-- The first version of each task file may be a structured placeholder while the
-  task is still being planned.
+- The first version of each task file may contain open questions, but it must
+  be grounded in the current task discussion rather than speculative future
+  work.
 - Every task file must use the same section layout.
 - Required task sections, in order:
   1. `Status`

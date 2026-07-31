@@ -141,8 +141,10 @@ jobs:
             exit 1
           fi
 
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" "${ARTIFACTS[@]}" --clobber
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${ARTIFACTS[@]}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
             exit 0
           fi
 
@@ -151,4 +153,6 @@ jobs:
             RELEASE_FLAGS+=(--prerelease)
           fi
 
-          gh release create "$GITHUB_REF_NAME" "${ARTIFACTS[@]}" "${RELEASE_FLAGS[@]}"
+          gh release create "$GITHUB_REF_NAME" "${ARTIFACTS[@]}" \
+            "${RELEASE_FLAGS[@]}" \
+            --repo "$GITHUB_REPOSITORY"

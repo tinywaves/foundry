@@ -7,14 +7,10 @@
       "skillPath": "skills/productivity/grill-me/SKILL.md",
       "computedHash": "f361db4e15e6bfd562a9282b1dccda513910a50061f9e838ce017be9c69dde3f"
     },
-    "rsbuild-best-practices": {
-      "source": "rstackjs/agent-skills",
-      "sourceType": "github",
-      "computedHash": "2f1de26a27367666c49d16b114d31dbf78dc71f02b3e0784b1e3bf90f4e6e90b"
-    },
     "vercel-react-best-practices": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
+      "skillPath": "skills/react-best-practices/SKILL.md",
       "computedHash": "3219a1944e404ffc14d1d9d6aef6dd2e3855b81387ee0a044ccbfe14d34c2357"
     }
   }

@@ -1,10 +1,6 @@
 allowBuilds:
+  electron: true
+  electron-winstaller: true
   esbuild: true
   unrs-resolver: true
 minimumReleaseAge: 0
-packages:
-  - 'packages/*'
-catalog:
-  '@types/node': ^26.1.0
-  hono: ^4.12.27
-  typescript: ^6.0.3

@@ -1,0 +1,5 @@
+# If these files (ESLint flat config files) are not included in .npmignore,
+# they will be published, and importing devDependencies in published files will trigger `n/no-unpublished-import` errors.
+eslint.config.js
+eslint.config.mjs
+electron.vite.config.ts

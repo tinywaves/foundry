@@ -6,7 +6,6 @@
 
   // Disable the default formatter, use eslint instead
   "prettier.enable": false,
-  "editor.formatOnSave": false,
 
   // Auto fix
   "editor.codeActionsOnSave": {
@@ -106,12 +105,11 @@
   "[vue]": {
     "editor.defaultFormatter": "dbaeumer.vscode-eslint"
   },
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
   "cSpell.words": [
-    "astryxdesign",
     "bumpp",
-    "esbuild",
-    "rsbuild",
-    "unrs"
-  ],
-  "js/ts.tsdk.path": "node_modules/typescript/lib"
+    "electronjs",
+    "nsis",
+    "shopt"
+  ]
 }

@@ -1,7 +1,8 @@
 {
-  "name": "@dhzh/foundry",
-  "type": "module",
+  "name": "foundry",
+  "type": "commonjs",
   "version": "0.0.3-beta.2",
+  "main": "./out/main/index.js",
   "packageManager": "pnpm@11.9.0",
   "devEngines": {
     "packageManager": {
@@ -24,63 +25,49 @@
   "homepage": "https://github.com/tinywaves/foundry",
   "keywords": [
     "agent",
-    "cli",
     "ai"
   ],
-  "bin": {
-    "foundry": "./bin/index.js"
-  },
-  "files": [
-    "bin",
-    "dist"
-  ],
+  "files": [],
   "repository": {
     "url": "git+https://github.com/tinywaves/foundry.git",
     "type": "git"
   },
   "sideEffects": false,
   "scripts": {
-    "build": "pnpm run build:cli && pnpm run build:web",
-    "build:cli": "tsdown",
-    "build:web": "pnpm run --filter web build",
-    "dev": "pnpm run dev:web & web_pid=$!; pnpm run dev:cli & cli_pid=$!; trap 'kill $web_pid $cli_pid 2>/dev/null' INT TERM EXIT; wait",
-    "dev:cli": "FOUNDRY_DEV=true tsx watch --clear-screen=true src/cli/index.ts",
-    "dev:web": "pnpm run --filter web dev",
+    "build": "npm run typecheck && electron-vite build",
+    "build:linux": "electron-vite build && electron-builder --linux",
+    "build:mac": "electron-vite build && electron-builder --mac",
+    "build:unpack": "npm run build && electron-builder --dir",
+    "build:win": "npm run build && electron-builder --win",
+    "dev": "electron-vite dev",
+    "postinstall": "electron-builder install-app-deps",
     "lint": "eslint",
     "lint-fix": "eslint --fix .",
-    "prepack": "pnpm run build",
-    "prepare": "husky",
-    "release": "bumpp",
-    "release:publish": "pnpm release && pnpm publish --access public",
-    "test": "vitest run",
-    "test:coverage": "pnpm run test --coverage",
-    "test:dev": "vitest"
-  },
-  "devDependencies": {
-    "@astryxdesign/cli": "^0.1.7",
-    "@commitlint/cli": "^21.0.2",
-    "@commitlint/config-conventional": "^21.0.2",
-    "@dhzh/eslint-config": "^2.1.1",
-    "@types/node": "catalog:",
-    "@vitest/coverage-v8": "^4.1.9",
-    "bumpp": "^11.1.0",
-    "changelogithub": "^14.0.0",
-    "eslint": "^10.5.0",
-    "husky": "^9.1.7",
-    "lint-staged": "^17.0.7",
-    "tsdown": "^0.22.2",
-    "tsx": "^4.22.4",
-    "typescript": "catalog:",
-    "vitest": "^4.1.9"
+    "start": "electron-vite preview",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false"
   },
   "dependencies": {
-    "@hono/node-server": "^2.0.8",
-    "@hono/zod-validator": "^0.9.0",
-    "cac": "^7.0.0",
-    "cli-table3": "^0.6.5",
-    "consola": "^3.4.2",
-    "hono": "catalog:",
-    "terminal-link": "^5.0.0",
-    "zod": "^4.4.3"
+    "@electron-toolkit/preload": "^3.0.2",
+    "@electron-toolkit/utils": "^4.0.0",
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "@dhzh/eslint-config": "^2.4.2",
+    "@electron-toolkit/tsconfig": "^2.0.0",
+    "@types/node": "^22.19.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "bumpp": "^12.1.1",
+    "electron": "^39.2.6",
+    "electron-builder": "^26.0.12",
+    "electron-vite": "^5.0.0",
+    "eslint": "^10.6.0",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.6"
   }
 }

@@ -107,6 +107,8 @@
   },
   "js/ts.tsdk.path": "node_modules/typescript/lib",
   "cSpell.words": [
+    "astryx",
+    "astryxdesign",
     "bumpp",
     "changelogithub",
     "electronjs",

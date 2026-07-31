@@ -50,11 +50,14 @@
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false"
   },
   "dependencies": {
+    "@astryxdesign/core": "^0.2.0",
+    "@astryxdesign/theme-neutral": "^0.2.0",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "electron-updater": "^6.3.9"
   },
   "devDependencies": {
+    "@astryxdesign/cli": "^0.2.0",
     "@dhzh/eslint-config": "^2.4.2",
     "@electron-toolkit/tsconfig": "^2.0.0",
     "@types/node": "^22.19.1",

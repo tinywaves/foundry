@@ -43,6 +43,7 @@
     "postinstall": "electron-builder install-app-deps",
     "lint": "eslint",
     "lint-fix": "eslint --fix .",
+    "release": "bumpp",
     "start": "electron-vite preview",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",

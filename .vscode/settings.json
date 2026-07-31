@@ -108,6 +108,7 @@
   "js/ts.tsdk.path": "node_modules/typescript/lib",
   "cSpell.words": [
     "bumpp",
+    "changelogithub",
     "electronjs",
     "nsis",
     "shopt"

@@ -40,6 +40,7 @@
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
     "dev": "electron-vite dev",
+    "dev:watch": "electron-vite dev --watch",
     "postinstall": "electron-builder install-app-deps",
     "lint": "eslint",
     "lint-fix": "eslint --fix .",

@@ -62,6 +62,12 @@ After code changes, run checks appropriate to the affected area. At minimum, run
 - Before adding a dependency, verify that the existing dependencies cannot satisfy the requirement, then update `pnpm-lock.yaml`.
 - Add comments only when they explain intent or a non-obvious constraint.
 
+## Styling
+
+- Use StyleX as the project's styling system.
+- Prefer StyleX styles and design tokens for renderer UI. Do not introduce standalone CSS files, CSS modules, Tailwind, or other styling systems unless explicitly required by an existing third-party integration.
+- Keep style definitions close to the component that owns them and use typed StyleX APIs rather than ad hoc string-based class names.
+
 ## Electron Security
 
 - Preserve the existing context-isolation and preload architecture. Do not disable security isolation for convenience.
@@ -106,7 +112,7 @@ RULES:
 - Frame first: pick the shell (AppShell / Layout+LayoutPanel) and budget regions in px BEFORE writing content (`astryx docs layout`).
 - Dense data = rows (Table, List/Item) edge-to-edge — never Card-wrapped list items. Card = dashboard widgets, galleries, settings groups only.
 - Status → StatusDot/Token; Badge only for counts and enumerated states, never decoration.
-- Custom styling: component props first; else style/className with tokens — var(--color-*|--spacing-*|--radius-*). No raw hex/px. (No StyleX/Tailwind compiler here — don't use xstyle/utility classes.)
+- Custom styling: use component props first; otherwise use StyleX with the project's design tokens. Do not use raw hex/px values or xstyle/utility classes.
 - Tokens for every value (`astryx docs tokens`). Brand/accent via `astryx theme` — never override --color-* in :root.
 - SELF-CHECK before you finish: re-read the file and replace any raw <div>/<span> layout, imported .css/@apply, or hardcoded value (#hex, 16px) with the component or a token (var(--color-*|--spacing-*|…)). If unsure a component/prop exists, run `astryx component <Name>` / `astryx search "<thing>"`; don't hand-roll CSS.
 

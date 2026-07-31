@@ -31,6 +31,11 @@ Do not replace the existing framework, build tool, package manager, or TypeScrip
 
 The renderer uses the `@renderer/*` path alias. Prefer it for imports inside `src/renderer/src`.
 
+## Documentation
+
+- Write all project documentation in English, including plans, task documents, architecture notes, and repository guides.
+- Preserve package names, API names, code identifiers, and other technical terms exactly as written in source code or upstream documentation.
+
 ## Development Commands
 
 ```bash

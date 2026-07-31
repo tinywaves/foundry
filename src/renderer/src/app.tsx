@@ -1,5 +1,10 @@
+import { AppShell } from '@astryxdesign/core/AppShell';
 import { Center } from '@astryxdesign/core/Center';
 import { Markdown } from '@astryxdesign/core/Markdown';
+import { SideNav } from '@astryxdesign/core/SideNav';
+import { StackItem, VStack } from '@astryxdesign/core/Stack';
+import { Text } from '@astryxdesign/core/Text';
+import { WindowDragRegion } from '@renderer/components/window-drag-region';
 
 const sources = {
   abc1: {
@@ -39,12 +44,42 @@ const content = [
   '- GDP: $1.93 trillion[jkl4]',
 ].join('\n');
 
+const sidebarResizeConfig = {
+  defaultWidth: 260,
+  minWidth: 200,
+  maxWidth: 400,
+};
+
 export default function App() {
+  const isMacOS = globalThis.electron.process.platform === 'darwin';
+
   return (
-    <Center width="100%" style={{ maxWidth: 450 }}>
-      <Markdown sources={sources} density="compact" headingLevelStart={3}>
-        {content}
-      </Markdown>
-    </Center>
+    <AppShell
+      height="fill"
+      variant="section"
+      contentPadding={0}
+      mobileNav={{ breakpoint: 'none', hasToggle: false }}
+      sideNav={(
+        <VStack height="100%">
+          {isMacOS && <WindowDragRegion />}
+          <StackItem size="fill">
+            <SideNav collapsible={false} resizable={sidebarResizeConfig}>
+              <Text>Sidebar</Text>
+            </SideNav>
+          </StackItem>
+        </VStack>
+      )}
+    >
+      <VStack height="100%">
+        {isMacOS && <WindowDragRegion />}
+        <StackItem size="fill" isScrollable>
+          <Center axis="horizontal" width="100%" maxWidth={450}>
+            <Markdown sources={sources} density="compact" headingLevelStart={3}>
+              {content}
+            </Markdown>
+          </Center>
+        </StackItem>
+      </VStack>
+    </AppShell>
   );
 }

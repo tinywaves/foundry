@@ -88,7 +88,7 @@ After the user approves the task design, replace the stub with:
 <Concrete implementation design, ownership boundaries, contracts, data flow,
 failure behavior, compatibility, and important file-level impact.>
 
-## Complement
+## Findings
 
 None.
 
@@ -119,21 +119,32 @@ None.
 
 Keep acceptance criteria about observable completion, not implementation activity. "Add a file" is a deliverable; "the application rejects invalid input through the approved boundary" is an acceptance criterion.
 
-## Complement Entries
+## Finding Entries
 
-Use Complement for confirmed changes discovered after the initial task design. Preserve previous entries and append new ones:
+Record material factual observations discovered during implementation or verification that could not reasonably have been identified earlier through repository inspection, documentation, research, or design review. Findings are append-only and do not change the approved design by themselves:
 
 ```markdown
-## Complement
+## Findings
 
-### YYYY-MM-DD: <Short Decision Title>
+### YYYY-MM-DD: <Short Finding Title>
 
-- Discovery: <What changed or proved false>
-- Decision: <Confirmed adjustment>
-- Impact: <Affected scope, contracts, dependencies, or verification>
+- Observation: <What was observed or proved false>
+- Evidence: <How it was established>
+- Consequence: <Whether the approved design is affected>
+- Disposition: `Pending review.`
 ```
 
-Do not use Complement as a scratchpad. A material complement requires persistence confirmation and a new execution confirmation.
+Do not use Findings as a scratchpad or to backfill a planning omission. If a Finding affects the approved design, pause and request confirmation before changing the task.
+
+When a confirmed response to a Finding changes implementation details, update `Detail` and the other affected task sections. Preserve the Finding as the factual reason for the change. If the Goal, Scope, Out of Scope, Acceptance Criteria, or task chain must change, use plan change control or create a separate plan.
+
+After the task is completed, review every Finding whose disposition is still pending. Update only its `Disposition` after the user decides:
+
+- `No follow-up.`
+- `Candidate for a new plan.`
+- `Moved to Plan <NNN>.` after the new plan is persisted.
+
+The Findings review does not reopen the completed task or authorize implementation. Any implementation arising from a completed task's Finding must go through a new plan with the normal persistence and execution confirmations.
 
 ## Dependency Entries
 
@@ -166,6 +177,7 @@ For a completed task:
 - check its Acceptance Criteria
 - record actual verification results under Verification
 - check its entry in `index.md`
+- review unresolved Findings after completion without reopening the task
 
 For a blocked task:
 

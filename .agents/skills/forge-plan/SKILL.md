@@ -28,7 +28,12 @@ Treat an argument containing only digits as a plan number. Treat any other non-e
 - Prefer more connected tasks over fewer oversized tasks. Every task must produce a handoff consumed by the next task.
 - Detail only the first unchecked task. If it cannot be designed without detailing the next task, pause and evaluate whether the two tasks should be merged.
 - Treat the Tasks checklist in `index.md` as the only source of execution order and completion. Do not duplicate a current-task field in the plan status.
-- Never silently delete plan history, task files, earlier decisions, or confirmed complements.
+- Identify reasonably foreseeable user-visible consequences, interaction states, platform differences, and acceptance boundaries before execution. Do not defer predictable product decisions until implementation.
+- Record material facts that could not reasonably have been discovered before execution as Findings. Keep implementation design in `Detail`; do not create a separate amendment section for implementation details.
+- Do not use Findings to backfill requirements, acceptance criteria, or consequences that should reasonably have been identified during plan shaping or task design.
+- Once a task is completed, do not broaden or reinterpret its scope through Findings. Put independently valuable follow-up behavior in a new plan.
+- Review every unresolved Finding after the current task is completed. Keep the completed task closed; if the user decides that a Finding requires implementation, shape that work as a new plan.
+- Never silently delete plan history, task files, earlier decisions, or recorded Findings.
 
 ## Stage 1: Shape a New Plan
 
@@ -51,6 +56,10 @@ Do not design concrete schemas, function signatures, IPC payloads, database tabl
 ### Grill the Goal
 
 Ask a small set of high-leverage questions per round. Challenge ambiguity, conflicting requirements, hidden scope, and missing acceptance boundaries. Summarize settled decisions between rounds so the user can correct drift.
+
+Review the proposed outcome from the user's perspective before designing the task chain. Cover the normal flow and any reasonably foreseeable states or side effects relevant to the goal, including interaction behavior, layout consequences, failure behavior, and platform differences. Ask the user to decide any behavior that affects acceptance; do not silently classify it as a future implementation detail.
+
+Distinguish the requested outcome from possible follow-up enhancements. If a behavior is required for the stated outcome to be coherent or usable, resolve it in the current plan. If it is independently valuable and can be accepted separately, explicitly place it out of scope or propose it as a separate goal.
 
 Do not use task count as the size limit. Treat the plan as too large when it has more than one independently reviewable outcome, more than one independent acceptance boundary, or multiple workstreams that could be delivered separately.
 
@@ -114,7 +123,7 @@ Read `index.md`, then inspect tasks in checklist order:
    - `ready`: ask whether to execute it, revise its design, or pause.
    - `in-progress`: inspect the repository and recorded design, then continue implementation.
    - `blocked`: re-evaluate whether the blocker still exists before proceeding.
-4. If every task is checked, verify terminal statuses and treat the plan as completed.
+4. If every task is checked, verify terminal statuses, treat the plan as completed, and review any Findings whose disposition is still pending.
 5. If the plan is `paused` or `cancelled`, require an explicit decision before changing that state.
 
 If a task-design interview was interrupted before persistence, its status remains `pending`; restart the interview using the persisted plan and current repository state.
@@ -134,6 +143,16 @@ Read the task's direct architectural context and relevant callers before grillin
 Read [dependency-evaluation.md](references/dependency-evaluation.md) whenever a new third-party dependency may be useful. Current online research is mandatory before recommending a new dependency.
 
 Build the task design using the detailed schema in [document-schema.md](references/document-schema.md). Ensure its Deliverables, Acceptance Criteria, Verification, and Handoff are concrete enough to review.
+
+Before requesting task-design confirmation, perform a completeness review:
+
+- walk through the complete user-visible or system-visible result
+- identify predictable consequences of the selected implementation approach
+- cover relevant interaction states, failure states, and platform variants
+- trace every acceptance criterion to a deliverable and verification step
+- confirm which adjacent behaviors remain intentionally unchanged or out of scope
+
+Resolve every acceptance-affecting question before execution. If the review exposes independently valuable work, split it into a separate plan or task at the appropriate confirmation gate instead of postponing the decision until implementation.
 
 If implementation details from the next task are required, stop. Explain the boundary failure and ask whether to merge the tasks. Do not quietly broaden the current task.
 
@@ -158,16 +177,50 @@ The execution confirmation authorizes:
 
 Do not request another confirmation for routine status transitions covered by that execution approval.
 
-If implementation reveals a material scope change, a new dependency, a changed contract, or an invalid assumption:
+When implementation or verification reveals a material fact that could not reasonably have been discovered from repository inspection, documentation, research, or the pre-execution completeness review, record it in the task's `Findings` section. A Finding is an observation and its evidence; it does not change the approved design or authorize additional work. Examples include an undocumented platform limitation, incompatible dependency behavior, or a contract that differs from the inspected source.
+
+If a Finding requires an in-scope implementation-design adjustment:
 
 1. Pause implementation.
-2. Explain the discovery.
+2. Record the factual observation in `Findings`.
+3. Explain the Finding and the proposed implementation-detail adjustment.
+4. Return to task design.
+5. Request confirmation for the proposed adjustment.
+6. After confirmation, update `Detail` and any other affected task sections while preserving the Finding that explains the change.
+7. Request execution confirmation again.
+
+If a Finding requires changing the plan's Goal, Scope, Out of Scope, Acceptance Criteria, or task chain:
+
+1. Pause implementation.
+2. Record and explain the Finding.
 3. Return to task design.
-4. Add a dated, append-only Complement after confirmation.
-5. Update affected task sections without erasing earlier decisions.
-6. Request execution confirmation again.
+4. Treat the required change as plan change control or a separate plan, depending on whether it remains one independently reviewable outcome.
+
+If a Finding does not change the approved design, record it and continue according to the existing task design.
+
+If the issue was reasonably foreseeable, treat it as a planning gap rather than a Finding. Acknowledge the omission, pause execution, and ask the user whether to revise the current uncompleted task or keep the behavior out of scope. Do not present post-hoc scope expansion as an implementation discovery.
+
+After a task is marked `completed`, its confirmed scope and acceptance boundary are closed. Proceed to the Findings review before proposing additional implementation. Do not reopen the task to implement a Finding.
 
 When verification cannot pass, record the concrete blocker and set the task to `blocked`; do not mark it completed.
+
+## Stage 6: Review Findings After Task Completion
+
+Run this review after the current task is marked `completed`.
+
+If the task has no Findings, state that clearly and continue according to the plan checklist. If it has Findings with a pending disposition:
+
+1. Present each Finding's observation, evidence, and consequence.
+2. Explain whether it suggests independently reviewable follow-up behavior without treating that recommendation as an approved requirement.
+3. Ask the user whether the Finding needs no follow-up or should be shaped into a new plan.
+4. Record the confirmed disposition in the completed task:
+   - `No follow-up.`
+   - `Candidate for a new plan.`
+   - `Moved to Plan <NNN>.` after that plan is persisted.
+
+Keep the completed task and its acceptance criteria unchanged throughout this review.
+
+If the user decides implementation is necessary, begin Stage 1 for a new bounded goal. Apply every normal interview and confirmation gate, including explicit confirmation of the complete blueprint before persistence. Do not create or execute the new plan automatically. If multiple Findings imply independently valuable outcomes, propose separate plans and ask the user which one to shape first.
 
 ## Status Model
 

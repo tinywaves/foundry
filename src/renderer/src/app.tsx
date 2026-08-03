@@ -63,7 +63,6 @@ export default function App() {
       )}
     >
       <VStack height="100%">
-        {isMacOS && <WindowDragRegion />}
         <StackItem size="fill" isScrollable>
           <Routes>
             <Route path={routePaths.dashboard} element={<DashboardPage />} />

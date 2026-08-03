@@ -13,12 +13,13 @@ import foundryIcon from '../../../resources/icon.png?url';
 
 const styles = stylex.create({
   brandHeading: {
-    paddingInline: spacingVars['--spacing-1'],
+    paddingInlineStart: spacingVars['--spacing-2'],
+    paddingInlineEnd: spacingVars['--spacing-1'],
   },
   brandIcon: {
     display: 'block',
-    width: spacingVars['--spacing-12'],
-    height: spacingVars['--spacing-12'],
+    width: spacingVars['--spacing-10'],
+    height: spacingVars['--spacing-10'],
     objectFit: 'contain',
   },
   sideNav: {
@@ -66,33 +67,37 @@ export default function App() {
                 />
               )}
             >
-              <SideNavItem
-                as={Link}
-                label="Dashboard"
-                icon="viewColumns"
-                href={routePaths.dashboard}
-                isSelected={pathname === routePaths.dashboard}
-              />
-              <SideNavItem
-                as={Link}
-                label="Skills"
-                icon="wrench"
-                href={routePaths.skills}
-                isSelected={pathname === routePaths.skills}
-              />
-              <SideNavItem
-                label="Agents Switch"
-                icon="arrowsUpDown"
-                collapsible={{ defaultIsCollapsed: true }}
-              >
+              <VStack gap={1}>
                 <SideNavItem
                   as={Link}
-                  label="Providers"
-                  href={routePaths.agentsSwitchProviders}
-                  isSelected={pathname === routePaths.agentsSwitchProviders}
-                  size="sm"
+                  label="Dashboard"
+                  icon="viewColumns"
+                  href={routePaths.dashboard}
+                  isSelected={pathname === routePaths.dashboard}
                 />
-              </SideNavItem>
+                <SideNavItem
+                  as={Link}
+                  label="Skills"
+                  icon="wrench"
+                  href={routePaths.skills}
+                  isSelected={pathname === routePaths.skills}
+                />
+                <SideNavItem
+                  label="Agents Switch"
+                  icon="arrowsUpDown"
+                  collapsible={{ defaultIsCollapsed: true }}
+                >
+                  <VStack gap={1}>
+                    <SideNavItem
+                      as={Link}
+                      label="Providers"
+                      href={routePaths.agentsSwitchProviders}
+                      isSelected={pathname === routePaths.agentsSwitchProviders}
+                      size="sm"
+                    />
+                  </VStack>
+                </SideNavItem>
+              </VStack>
             </SideNav>
           </StackItem>
         </VStack>

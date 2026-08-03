@@ -12,6 +12,7 @@ Use these schemas whenever Forge Plan creates or updates persisted plan document
 - Numbers: start at `001` and pad to at least three digits
 
 Do not reuse deleted plan numbers. Keep task numbers aligned with checklist order. Never renumber a task after it leaves `pending`.
+Derive the task slug from the task display title. Keep the task heading (`# Task NNN: <Task Name>`) and filename synchronized; if either changes, rename the task file and update every document reference in the same change.
 
 ## Plan Index
 
@@ -51,6 +52,7 @@ Create `index.md` with this structure:
 ```
 
 Use the checklist as the only source of task order and completion. Do not add a `Current Task` field.
+Each checklist label and link must match the corresponding task document title and filename.
 
 Update the plan state to `in-progress` when the first detailed task is persisted. Set it to `completed` only after every checklist item is checked and every task has a terminal status.
 

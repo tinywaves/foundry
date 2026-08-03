@@ -65,6 +65,7 @@ After code changes, run checks appropriate to the affected area. At minimum, run
 - Use `node:path` and the existing `import.meta.dirname` pattern for main-process paths. Do not depend on the current working directory.
 - Follow the existing ESLint and formatting style. Use `pnpm lint-fix` for mechanical fixes when appropriate.
 - Before adding a dependency, verify that the existing dependencies cannot satisfy the requirement, then update `pnpm-lock.yaml`.
+- Install new dependencies without specifying a version so pnpm resolves the current latest release: use `pnpm add <package>` for runtime dependencies and `pnpm add <package> -D` for development dependencies.
 - Add comments only when they explain intent or a non-obvious constraint.
 
 ## Styling

@@ -110,6 +110,7 @@ docs/<plan-number>_<goal-slug>/
 ```
 
 Use English kebab-case for directory and file slugs. Keep document prose in the user's language. Preserve package names, API names, and code identifiers verbatim.
+Derive each task file's `<task-slug>` from the task's display title. The task heading in the document and the task filename must stay synchronized: when a task title or slug changes, rename the file and update every plan-index or cross-document reference in the same change.
 
 Initialize the plan as `ready` and every task as `pending`. Task files contain only the task title and Status section until their individual designs are confirmed.
 

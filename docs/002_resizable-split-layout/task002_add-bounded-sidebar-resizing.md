@@ -20,7 +20,7 @@ Define a named sidebar resize configuration outside the `App` component with:
 
 Pass this configuration to the existing `SideNav` through its `resizable` prop and explicitly keep `collapsible={false}`. Do not provide `autoSaveId`, so the adjusted width remains local to the current renderer lifetime and resets to 260px after a reload. Do not provide `onWidthChange`, because no application-owned resize state or side effect is required.
 
-Use the resize handle rendered internally by `SideNav`. The handle will remain an overlay at the inline-end edge of the sidebar content below the 48-logical-pixel `WindowDragRegion`. The top region will remain dedicated to Electron window dragging and will not become part of the resize handle. As the `SideNav` width changes, the enclosing sidebar column and its top drag region will follow the new width, while the main content area will consume the remaining horizontal space.
+Use the resize handle rendered internally by `SideNav`. The handle will remain an overlay at the inline-end edge of the sidebar content below the 28-logical-pixel `WindowDragRegion`. The top region will remain dedicated to Electron window dragging and will not become part of the resize handle. As the `SideNav` width changes, the enclosing sidebar column and its top drag region will follow the new width, while the main content area will consume the remaining horizontal space.
 
 Rely on Astryx's existing pointer and keyboard behavior:
 
@@ -33,11 +33,21 @@ Rely on Astryx's existing pointer and keyboard behavior:
 
 Because `collapsible` remains disabled, pointer and keyboard input cannot reduce the sidebar below 200px or transition it into a collapsed state.
 
-Preserve the existing `AppShell`, stacks, `WindowDragRegion` instances, sidebar placeholder, Markdown example, scrolling behavior, and platform condition. Do not add custom resize state, pointer handlers, StyleX styles, IPC channels, preload APIs, dependencies, or test infrastructure.
+Preserve the existing `AppShell`, stacks, `WindowDragRegion` instances, sidebar placeholder, Markdown example, scrolling behavior, and platform condition. Add one local StyleX style to the sidebar root with `overflowX: 'clip'` so the resize handle's fractional overflow does not propagate to the scrollable `LayoutPanel`. Do not add custom resize state, pointer handlers, IPC channels, preload APIs, dependencies, test infrastructure, or unrelated styling.
 
 ## Findings
 
 None.
+
+## Maintenance Adjustments
+
+### 2026-08-03: Contain Resize Handle Overflow
+
+- Change: The sidebar root now uses `overflowX: 'clip'` so fractional resize-handle overflow does not propagate to the scrollable `LayoutPanel`.
+- Previous state: The sidebar root allowed visible horizontal overflow, causing the 260px panel to report a 261px scroll width.
+- Reason: Astryx's overlay resize handle extends its hit area by half a logical pixel, which the browser rounds into one additional scroll pixel.
+- Documentation impact: Updated Plan 002 and Task 002 to include the clipping behavior, deliverable, acceptance statement, and verification.
+- Verification: Electron DOM inspection confirmed the panel changed from `clientWidth: 260` and `scrollWidth: 261` to matching 260px values while resizing remained available.
 
 ## Dependencies
 
@@ -49,6 +59,7 @@ None.
 - Pointer-accessible bounded sidebar resizing through Astryx's built-in resize handle.
 - Keyboard-accessible bounded resizing through the focusable separator.
 - Preserved non-collapsible and non-persistent sidebar behavior.
+- No horizontal sidebar scrollbar caused by the resize handle's fractional overflow.
 - Preserved split-shell, window-drag, Markdown, and platform behavior from Task 001.
 
 ## Acceptance Criteria
@@ -63,6 +74,7 @@ None.
 - [x] Reloading the renderer restores the sidebar to 260px instead of persisting the previous width.
 - [x] The sidebar's top drag region follows the resized column width, while the main content area uses the remaining width.
 - [x] The resize handle remains below the macOS window drag region, and the top region continues to drag the Electron window.
+- [x] The sidebar does not display a horizontal scrollbar at the default, minimum, or maximum width.
 - [x] The existing Markdown content, scrolling behavior, macOS traffic lights, and Windows/Linux native title bar behavior remain unchanged.
 - [x] Type checking, renderer-source linting, the production build, and manual resize interaction checks pass.
 
@@ -71,11 +83,11 @@ None.
 - Collapsing, hiding, or automatically minimizing the sidebar.
 - Persisting or restoring a user-selected sidebar width.
 - Application-owned resize state, callbacks, analytics, or side effects.
-- Extending the resize handle through the 48-logical-pixel window drag region.
+- Extending the resize handle through the 28-logical-pixel window drag region.
 - Changing the `WindowDragRegion` component or title bar behavior.
 - Changing the sidebar placeholder or Markdown example.
 - Adding navigation, routing, production sidebar content, or responsive drawer behavior.
-- Main-process, preload, IPC, security, packaging, dependency, or styling changes.
+- Main-process, preload, IPC, security, packaging, dependency, or unrelated styling changes.
 - Adding a new automated test framework.
 
 ## Handoff
@@ -96,8 +108,11 @@ Completing this task will finish Plan 002 and leave a stable resizable split she
   - Confirmed `ArrowRight` changes the width by 10px and Shift-plus-ArrowRight changes it by 50px.
   - Confirmed `Home` reaches 200px, `End` reaches 400px, and further arrow input remains clamped at both bounds.
   - Confirmed pointer dragging reaches both bounds without collapsing the sidebar.
-  - Confirmed both top drag regions keep a 48px height, with widths of 260px/640px at the default, 200px/700px at the minimum, and 400px/500px at the maximum.
+  - Confirmed both top drag regions keep equal heights and follow their column widths at the default, minimum, and maximum sidebar sizes.
   - Confirmed the Markdown example remains rendered and reload resets the width to 260px.
+- Passed in an Electron renderer through the Chrome DevTools Protocol:
+  - Confirmed the drag regions use a 28px height.
+  - Confirmed the sidebar `LayoutPanel` reports equal `clientWidth` and `scrollWidth` values of 260px after applying horizontal clipping.
 - Passed by inspection: the macOS-only condition and the unchanged `WindowDragRegion` preserve the Task 001 title-bar behavior; Windows and Linux continue to omit the custom drag regions.
 - Expected repository-level blockers remain:
   - `pnpm typecheck` and `pnpm build` invoke npm scripts, which fail because npm rejects the repository's pnpm `devEngines.packageManager` requirement.

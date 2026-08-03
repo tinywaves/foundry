@@ -4,7 +4,14 @@ import { Markdown } from '@astryxdesign/core/Markdown';
 import { SideNav } from '@astryxdesign/core/SideNav';
 import { StackItem, VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
+import * as stylex from '@stylexjs/stylex';
 import { WindowDragRegion } from '@renderer/components/window-drag-region';
+
+const styles = stylex.create({
+  sideNav: {
+    overflowX: 'clip',
+  },
+});
 
 const sources = {
   abc1: {
@@ -60,7 +67,7 @@ export default function App() {
       contentPadding={0}
       mobileNav={{ breakpoint: 'none', hasToggle: false }}
       sideNav={(
-        <VStack height="100%">
+        <VStack height="100%" xstyle={styles.sideNav}>
           {isMacOS && <WindowDragRegion />}
           <StackItem size="fill">
             <SideNav collapsible={false} resizable={sidebarResizeConfig}>

@@ -14,7 +14,7 @@ interface ElectronAppRegionStyle extends CSSProperties {
 const styles = stylex.create({
   root: {
     flexShrink: 0,
-    height: spacingVars['--spacing-12'],
+    height: spacingVars['--spacing-7'],
   },
 });
 

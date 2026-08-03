@@ -13,7 +13,7 @@ Build the non-resizable two-column application shell, including macOS-only windo
 Create `src/renderer/src/components/window-drag-region.tsx` as a reusable renderer component. It will:
 
 - Fill the width of its owning column.
-- Use `spacingVars['--spacing-12']` for a fixed 48-logical-pixel height.
+- Use `spacingVars['--spacing-7']` for a fixed 28-logical-pixel height.
 - Mark its outer surface with Electron's `-webkit-app-region: drag`.
 - Accept optional React children and place them in a right-aligned, `fit-content` wrapper marked with `-webkit-app-region: no-drag`.
 - Use Astryx `Stack` primitives for structure and StyleX for component-owned styles.
@@ -25,7 +25,7 @@ Update `src/renderer/src/app.tsx` to use an Astryx `AppShell` as the full-height
 - Disable mobile navigation transformation with `mobileNav={{ breakpoint: 'none', hasToggle: false }}` so the sidebar remains inline at narrow window widths.
 - Compose the sidebar slot as a full-height vertical stack containing a macOS-only `WindowDragRegion` followed by a fill-height, fixed-width `SideNav`.
 - Put the temporary `Sidebar` placeholder in the `SideNav` content area.
-- Do not place the drag region in `SideNav.header`, because that slot adds block padding and would make the top region taller than the approved 48 logical pixels.
+- Do not place the drag region in `SideNav.header`, because that slot adds block padding and would make the top region taller than the approved 28 logical pixels.
 - Keep `SideNav` non-resizable and non-collapsible in this task. Its existing 260px width is the stable handoff for Task 002.
 - Compose the main area as a full-height vertical stack containing a separate macOS-only `WindowDragRegion` followed by an independently scrollable content region.
 - Move the existing Markdown example into the main content region without changing its `sources`, generated Markdown string, density, or heading behavior.
@@ -43,6 +43,16 @@ The implementation was manually verified on macOS by the user after the Computer
 
 None.
 
+## Maintenance Adjustments
+
+### 2026-08-03: Refine Drag Region Height
+
+- Change: `WindowDragRegion` now uses `spacingVars['--spacing-7']` for a 28-logical-pixel height.
+- Previous state: The approved implementation used `spacingVars['--spacing-12']` for a 48-logical-pixel height.
+- Reason: Manual comparison showed that 28 logical pixels provides the intended macOS traffic-light alignment without unnecessary vertical space.
+- Documentation impact: Updated Plan 002 and Tasks 001 and 002 wherever they described the drag-region height.
+- Verification: The user manually verified that 28px is the intended rendered height.
+
 ## Dependencies
 
 None.
@@ -57,7 +67,7 @@ None.
 
 ## Acceptance Criteria
 
-- [x] On macOS, the application displays a left sidebar and right content area with equal-height 48-logical-pixel top regions.
+- [x] On macOS, the application displays a left sidebar and right content area with equal-height 28-logical-pixel top regions.
 - [x] Dragging an unoccupied part of either top region moves the Electron window.
 - [x] Interactive children rendered by `WindowDragRegion` remain clickable because their wrapper is excluded from window dragging.
 - [x] The native macOS traffic lights remain visible and are vertically aligned within the sidebar's top region.
@@ -102,6 +112,7 @@ Task 002 will consume the completed `AppShell` and `SideNav` structure, preserve
 - `pnpm exec electron-vite build` — passed.
 - `pnpm dev` — started the Electron development window; the process was stopped after the manual verification bridge timed out.
 - Manual macOS verification — passed; the user confirmed the window layout and interaction behavior.
+- Manual drag-region height refinement — passed; the user confirmed that 28px is the intended height.
 - `pnpm typecheck` and `pnpm build` — blocked by the repository's existing `npm`/`devEngines` package-manager mismatch.
 - `pnpm lint` — blocked by the repository's existing typed-linting configuration when it scans generated `out/` JavaScript; renderer-source lint passed directly.
 - Computer Use inspection — blocked after repeated timeouts from the macOS accessibility bridge.

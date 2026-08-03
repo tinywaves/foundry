@@ -146,6 +146,28 @@ After the task is completed, review every Finding whose disposition is still pen
 
 The Findings review does not reopen the completed task or authorize implementation. Any implementation arising from a completed task's Finding must go through a new plan with the normal persistence and execution confirmations.
 
+## Maintenance Adjustments
+
+Use a Maintenance Adjustment only for a narrow fix or parameter refinement made outside an active task after the affected task is completed. The change must preserve the existing goal, scope, task chain, and independently reviewable outcome.
+
+Before writing one, confirm that the user authorized documentation synchronization. Then update any current-state statements that would otherwise be stale and append this section to the affected completed task:
+
+```markdown
+## Maintenance Adjustments
+
+### YYYY-MM-DD: <Short Adjustment Title>
+
+- Change: <What changed in the implementation and current behavior>
+- Previous state: <The superseded value, behavior, or constraint>
+- Reason: <Why the adjustment was needed>
+- Documentation impact: <Which plan or task statements were synchronized>
+- Verification: <Evidence that the adjusted behavior works>
+```
+
+Maintenance Adjustments are append-only. Add new dated entries below existing ones. Do not remove the previous state from the record, change task status or checklist completion, or use maintenance to introduce a new outcome.
+
+If the adjustment changes the plan goal, task chain, independently reviewable outcome, or materially broadens scope, do not write a Maintenance Adjustment. Shape a new plan instead.
+
 ## Dependency Entries
 
 When a new dependency is approved, summarize the research from `dependency-evaluation.md`:

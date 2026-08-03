@@ -1,6 +1,6 @@
 ---
 name: forge-plan
-description: Interview-driven workflow for turning a product or engineering goal into a small, reviewable plan and a strictly connected sequence of implementation tasks. Use when the user explicitly invokes forge-plan with a new goal or a plan number, wants to shape requirements before implementation, resume a persisted plan, detail the next task, or execute an approved task only after a separate confirmation.
+description: Interview-driven workflow for turning a product or engineering goal into a small, reviewable plan and a strictly connected sequence of implementation tasks. Use when the user explicitly invokes forge-plan with a new goal or a plan number, wants to shape requirements before implementation, resume a persisted plan, detail or execute an approved task, or assess whether a small out-of-task adjustment requires persisted documentation updates.
 ---
 
 # Forge Plan
@@ -29,10 +29,13 @@ Treat an argument containing only digits as a plan number. Treat any other non-e
 - Detail only the first unchecked task. If it cannot be designed without detailing the next task, pause and evaluate whether the two tasks should be merged.
 - Treat the Tasks checklist in `index.md` as the only source of execution order and completion. Do not duplicate a current-task field in the plan status.
 - Identify reasonably foreseeable user-visible consequences, interaction states, platform differences, and acceptance boundaries before execution. Do not defer predictable product decisions until implementation.
-- Record material facts that could not reasonably have been discovered before execution as Findings. Keep implementation design in `Detail`; do not create a separate amendment section for implementation details.
+- Record material facts that could not reasonably have been discovered before execution as Findings. Keep active-task implementation design in `Detail`; reserve Maintenance Adjustments for narrow changes made after task completion.
 - Do not use Findings to backfill requirements, acceptance criteria, or consequences that should reasonably have been identified during plan shaping or task design.
 - Once a task is completed, do not broaden or reinterpret its scope through Findings. Put independently valuable follow-up behavior in a new plan.
 - Review every unresolved Finding after the current task is completed. Keep the completed task closed; if the user decides that a Finding requires implementation, shape that work as a new plan.
+- After any fix, polish, parameter change, or other implementation adjustment made outside an active approved task, perform a documentation impact assessment before finalizing. Inspect the relevant persisted plan and task documents for stale behavior, values, constraints, decisions, acceptance statements, and verification records.
+- If an out-of-task adjustment requires documentation changes, do not assume code execution approval also authorizes plan-document edits. Explain which documents need synchronization and request explicit confirmation unless the user already authorized both implementation and documentation updates.
+- Keep out-of-task maintenance narrow. If the change creates a new independently reviewable outcome, changes the plan goal or task chain, or materially broadens scope, shape it as a new plan instead of recording it as maintenance.
 - Never silently delete plan history, task files, earlier decisions, or recorded Findings.
 
 ## Stage 1: Shape a New Plan
@@ -221,6 +224,28 @@ If the task has no Findings, state that clearly and continue according to the pl
 Keep the completed task and its acceptance criteria unchanged throughout this review.
 
 If the user decides implementation is necessary, begin Stage 1 for a new bounded goal. Apply every normal interview and confirmation gate, including explicit confirmation of the complete blueprint before persistence. Do not create or execute the new plan automatically. If multiple Findings imply independently valuable outcomes, propose separate plans and ask the user which one to shape first.
+
+## Out-of-Task Maintenance
+
+Use this path when the user directly requests a narrow fix or adjustment outside an active approved task, including post-completion visual tuning, parameter corrections, and small implementation fixes.
+
+Before finalizing the implementation:
+
+1. Verify that the change preserves the existing goal, scope, task chain, and independently reviewable outcome. If it does not, return to Stage 1.
+2. Inspect the relevant persisted plan index and task documents.
+3. Decide whether the change makes any documented behavior, constant, constraint, decision, deliverable, acceptance statement, or verification result stale.
+4. Report the assessment even when no documentation update is required.
+5. When synchronization is required, identify the affected documents and request explicit confirmation unless documentation changes were already authorized.
+
+After documentation synchronization is authorized, read [document-schema.md](references/document-schema.md) and:
+
+- update current-state statements that would otherwise be inaccurate
+- append a dated Maintenance Adjustment to each affected completed task
+- preserve the superseded value or decision in that record
+- record the reason and verification evidence
+- keep task status, checklist completion, and task order unchanged
+
+Do not use a Maintenance Adjustment to hide new product behavior, broaden completed scope, or bypass a new plan.
 
 ## Status Model
 

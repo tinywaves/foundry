@@ -34,8 +34,8 @@ Treat an argument containing only digits as a plan number. Treat any other non-e
 - Do not use Findings to backfill requirements, acceptance criteria, or consequences that should reasonably have been identified during plan shaping or task design.
 - Once a task is completed, do not broaden or reinterpret its scope through Findings. Put independently valuable follow-up behavior in a new plan.
 - Review every unresolved Finding after the current task is completed. Keep the completed task closed; if the user decides that a Finding requires implementation, shape that work as a new plan.
-- After any fix, polish, parameter change, or other implementation adjustment made outside an active approved task, perform a documentation impact assessment before finalizing. Inspect the relevant persisted plan and task documents for stale behavior, values, constraints, decisions, acceptance statements, and verification records.
-- If an out-of-task adjustment requires documentation changes, do not assume code execution approval also authorizes plan-document edits. Explain which documents need synchronization and request explicit confirmation unless the user already authorized both implementation and documentation updates.
+- After any fix, polish, parameter change, or other implementation adjustment made outside an active approved task, pause before finalizing and ask the user whether to synchronize the relevant persisted plan and task documents. Identify the available documentation targets and any stale behavior, values, constraints, decisions, acceptance statements, or verification records that would be updated.
+- A user's direct request to implement an out-of-task maintenance adjustment authorizes the implementation, but does not authorize documentation synchronization. Request explicit confirmation for documentation synchronization after each maintenance adjustment, even when the user previously approved synchronization for an earlier adjustment.
 - Keep out-of-task maintenance narrow. If the change creates a new independently reviewable outcome, changes the plan goal or task chain, or materially broadens scope, shape it as a new plan instead of recording it as maintenance.
 - Never silently delete plan history, task files, earlier decisions, or recorded Findings.
 
@@ -235,17 +235,16 @@ Before finalizing the implementation:
 
 1. Verify that the change preserves the existing goal, scope, task chain, and independently reviewable outcome. If it does not, return to Stage 1.
 2. Inspect the relevant persisted plan index and task documents.
-3. Decide whether the change makes any documented behavior, constant, constraint, decision, deliverable, acceptance statement, or verification result stale.
-4. Report the assessment even when no documentation update is required.
-5. When synchronization is required, identify the affected documents and request explicit confirmation unless documentation changes were already authorized.
-
-After documentation synchronization is authorized, read [document-schema.md](references/document-schema.md) and:
-
-- update current-state statements that would otherwise be inaccurate
-- append a dated Maintenance Adjustment to each affected completed task
-- preserve the superseded value or decision in that record
-- record the reason and verification evidence
-- keep task status, checklist completion, and task order unchanged
+3. Tell the user which persisted documents are available for synchronization and summarize the stale statements that would be changed.
+4. Ask the user explicitly whether to synchronize the documentation for this specific maintenance adjustment.
+5. If the user confirms synchronization, read [document-schema.md](references/document-schema.md), then:
+   - update current-state statements that would otherwise be inaccurate
+   - append a timestamped-to-the-second Maintenance Adjustment to each affected completed task
+   - preserve the superseded value or decision in that record
+   - record the reason and verification evidence
+   - keep task status, checklist completion, and task order unchanged
+6. If the user declines synchronization, do not modify the persisted plan or task documents and report that documentation synchronization was declined for this adjustment.
+7. If no relevant persisted plan or task exists, report that no documentation target was available and do not ask for confirmation.
 
 Do not use a Maintenance Adjustment to hide new product behavior, broaden completed scope, or bypass a new plan.
 

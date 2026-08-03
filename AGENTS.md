@@ -56,6 +56,8 @@ pnpm build:linux
 
 After code changes, run checks appropriate to the affected area. At minimum, run `pnpm typecheck` and `pnpm lint`; run `pnpm build` when changing build configuration, main-process code, preload code, or packaging behavior.
 
+For UI changes, do not launch the application or use browser, screenshot, accessibility-tree, or desktop automation to verify visual correctness. The user performs final visual inspection and acceptance. Continue to run applicable non-visual checks such as type checking, linting, builds, and automated behavior tests.
+
 ## Coding Conventions
 
 - Use TypeScript and avoid introducing untyped `any`. If an Electron API is not accurately represented by the current types, add a type declaration or a narrow local type.

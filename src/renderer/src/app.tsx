@@ -1,6 +1,7 @@
 import { AppShell } from '@astryxdesign/core/AppShell';
-import { SideNav, SideNavItem } from '@astryxdesign/core/SideNav';
+import { SideNav, SideNavHeading, SideNavItem } from '@astryxdesign/core/SideNav';
 import { StackItem, VStack } from '@astryxdesign/core/Stack';
+import { spacingVars } from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router';
 import { WindowDragRegion } from '@renderer/components/window-drag-region';
@@ -8,8 +9,18 @@ import { DashboardPage } from '@renderer/pages/dashboard-page';
 import { ProvidersPage } from '@renderer/pages/providers-page';
 import { SkillsPage } from '@renderer/pages/skills-page';
 import { routePaths } from '@renderer/routes';
+import foundryIcon from '../../../resources/icon.png?url';
 
 const styles = stylex.create({
+  brandHeading: {
+    paddingInline: spacingVars['--spacing-1'],
+  },
+  brandIcon: {
+    display: 'block',
+    width: spacingVars['--spacing-12'],
+    height: spacingVars['--spacing-12'],
+    objectFit: 'contain',
+  },
   sideNav: {
     overflowX: 'clip',
   },
@@ -35,7 +46,26 @@ export default function App() {
         <VStack height="100%" xstyle={styles.sideNav}>
           {isMacOS && <WindowDragRegion />}
           <StackItem size="fill">
-            <SideNav collapsible={false} resizable={sidebarResizeConfig}>
+            <SideNav
+              collapsible={false}
+              resizable={sidebarResizeConfig}
+              header={(
+                <SideNavHeading
+                  as={Link}
+                  heading="Foundry"
+                  headingHref={routePaths.dashboard}
+                  xstyle={styles.brandHeading}
+                  icon={(
+                    <img
+                      {...stylex.props(styles.brandIcon)}
+                      src={foundryIcon}
+                      alt=""
+                      draggable={false}
+                    />
+                  )}
+                />
+              )}
+            >
               <SideNavItem
                 as={Link}
                 label="Dashboard"

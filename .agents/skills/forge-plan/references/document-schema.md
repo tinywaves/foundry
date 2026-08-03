@@ -152,12 +152,12 @@ The Findings review does not reopen the completed task or authorize implementati
 
 Use a Maintenance Adjustment only for a narrow fix or parameter refinement made outside an active task after the affected task is completed. The change must preserve the existing goal, scope, task chain, and independently reviewable outcome.
 
-Before writing one, confirm that the user authorized documentation synchronization. Then update any current-state statements that would otherwise be stale and append this section to the affected completed task:
+A user's direct request to implement an out-of-task maintenance adjustment authorizes the implementation but does not authorize documentation synchronization. After each maintenance adjustment, identify the relevant documentation targets and ask the user explicitly whether to synchronize this specific adjustment. Only after confirmation should you update stale current-state statements and append this section to the affected completed task:
 
 ```markdown
 ## Maintenance Adjustments
 
-### YYYY-MM-DD: <Short Adjustment Title>
+### YYYY-MM-DD HH:mm:ss: <Short Adjustment Title>
 
 - Change: <What changed in the implementation and current behavior>
 - Previous state: <The superseded value, behavior, or constraint>
@@ -166,7 +166,9 @@ Before writing one, confirm that the user authorized documentation synchronizati
 - Verification: <Evidence that the adjusted behavior works>
 ```
 
-Maintenance Adjustments are append-only. Add new dated entries below existing ones. Do not remove the previous state from the record, change task status or checklist completion, or use maintenance to introduce a new outcome.
+Capture the repository's local time when writing the adjustment and format the heading exactly to second precision as `YYYY-MM-DD HH:mm:ss: <Short Adjustment Title>`.
+
+Maintenance Adjustments are append-only. Add new second-precision timestamped entries below existing ones only after the user confirms synchronization for that adjustment. Do not remove the previous state from the record, change task status or checklist completion, or use maintenance to introduce a new outcome. If the user declines synchronization, leave the persisted documents unchanged and report that decision.
 
 If the adjustment changes the plan goal, task chain, independently reviewable outcome, or materially broadens scope, do not write a Maintenance Adjustment. Shape a new plan instead.
 

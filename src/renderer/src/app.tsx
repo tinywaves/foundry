@@ -4,8 +4,8 @@ import { StackItem, VStack } from '@astryxdesign/core/Stack';
 import * as stylex from '@stylexjs/stylex';
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router';
 import { WindowDragRegion } from '@renderer/components/window-drag-region';
-import { AgentsSwitchPage } from '@renderer/pages/agents-switch-page';
 import { DashboardPage } from '@renderer/pages/dashboard-page';
+import { ProvidersPage } from '@renderer/pages/providers-page';
 import { SkillsPage } from '@renderer/pages/skills-page';
 import { routePaths } from '@renderer/routes';
 
@@ -51,12 +51,18 @@ export default function App() {
                 isSelected={pathname === routePaths.skills}
               />
               <SideNavItem
-                as={Link}
                 label="Agents Switch"
                 icon="arrowsUpDown"
-                href={routePaths.agentsSwitch}
-                isSelected={pathname === routePaths.agentsSwitch}
-              />
+                collapsible={{ defaultIsCollapsed: true }}
+              >
+                <SideNavItem
+                  as={Link}
+                  label="Providers"
+                  href={routePaths.agentsSwitchProviders}
+                  isSelected={pathname === routePaths.agentsSwitchProviders}
+                  size="sm"
+                />
+              </SideNavItem>
             </SideNav>
           </StackItem>
         </VStack>
@@ -67,7 +73,11 @@ export default function App() {
           <Routes>
             <Route path={routePaths.dashboard} element={<DashboardPage />} />
             <Route path={routePaths.skills} element={<SkillsPage />} />
-            <Route path={routePaths.agentsSwitch} element={<AgentsSwitchPage />} />
+            <Route
+              path={routePaths.agentsSwitch}
+              element={<Navigate to={routePaths.agentsSwitchProviders} replace />}
+            />
+            <Route path={routePaths.agentsSwitchProviders} element={<ProvidersPage />} />
             <Route path="*" element={<Navigate to={routePaths.dashboard} replace />} />
           </Routes>
         </StackItem>

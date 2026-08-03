@@ -18,6 +18,7 @@ Treat an argument containing only digits as a plan number. Treat any other non-e
 
 ## Non-Negotiable Rules
 
+- Discover and read all applicable `AGENTS.md` files before planning or changing repository files. When an `AGENTS.md` instruction conflicts with this skill, follow the most specific applicable `AGENTS.md`; it takes precedence for repository conventions, documentation language, formatting, naming, styling, commands, verification, and other implementation constraints. If no applicable `AGENTS.md` specifies the matter, follow this skill and the user's language preference.
 - Grill the user in focused rounds. Turn vague intent into explicit decisions instead of filling important gaps silently.
 - Read the repository, existing documentation, dependency manifests, and Git state before asking questions answerable from local context.
 - Keep all exploration read-only until the relevant persistence confirmation.
@@ -109,7 +110,7 @@ docs/<plan-number>_<goal-slug>/
 └── ...
 ```
 
-Use English kebab-case for directory and file slugs. Keep document prose in the user's language. Preserve package names, API names, and code identifiers verbatim.
+Use English kebab-case for directory and file slugs. Write document prose according to the most specific applicable `AGENTS.md`; when no applicable repository instruction specifies a documentation language, use the user's language. Preserve package names, API names, and code identifiers verbatim.
 Derive each task file's `<task-slug>` from the task's display title. The task heading in the document and the task filename must stay synchronized: when a task title or slug changes, rename the file and update every plan-index or cross-document reference in the same change.
 
 Initialize the plan as `ready` and every task as `pending`. Task files contain only the task title and Status section until their individual designs are confirmed.

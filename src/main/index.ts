@@ -4,8 +4,11 @@ import process from 'node:process';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import icon from '../../resources/icon.png?asset';
 import { identifier } from './constants';
+import { ProviderSubsystem } from './providers/provider-subsystem';
 
-function createWindow(): void {
+const providerSubsystem = new ProviderSubsystem();
+
+function createWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
@@ -18,6 +21,8 @@ function createWindow(): void {
       sandbox: false,
     },
   });
+
+  providerSubsystem.registerWindow(mainWindow);
 
   mainWindow.on('ready-to-show', () => mainWindow.show());
 
@@ -33,6 +38,8 @@ function createWindow(): void {
   } else {
     void mainWindow.loadFile(path.join(import.meta.dirname, '../renderer/index.html'));
   }
+
+  return mainWindow;
 }
 
 // This method will be called when Electron has finished
@@ -49,6 +56,7 @@ void app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window);
   });
 
+  providerSubsystem.initialize(path.join(app.getPath('userData'), 'foundry.sqlite'));
   createWindow();
 
   app.on('activate', () => {
@@ -59,6 +67,8 @@ void app.whenReady().then(() => {
     }
   });
 });
+
+app.on('will-quit', () => providerSubsystem.close());
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits

@@ -1,6 +1,7 @@
 allowBuilds:
   '@astryxdesign/cli': true
   '@astryxdesign/core': true
+  better-sqlite3: false
   electron: true
   electron-winstaller: true
   esbuild: true

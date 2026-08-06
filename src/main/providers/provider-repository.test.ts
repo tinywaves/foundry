@@ -1,0 +1,407 @@
+import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import test from 'node:test';
+import Database from 'better-sqlite3';
+import type {
+  ClaudeCodeModelConfigV1,
+  CreateProviderInput,
+  ProviderApiErrorCode,
+  ProviderAvatar,
+} from '../../shared/provider-contract';
+import { openProviderDatabase, PROVIDER_SCHEMA_VERSION } from './provider-database';
+import { ProviderOperationError } from './provider-error';
+import { ProviderRepository } from './provider-repository';
+
+const pngAvatar: ProviderAvatar = {
+  mimeType: 'image/png',
+  bytes: Uint8Array.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),
+};
+
+const jpegAvatar: ProviderAvatar = {
+  mimeType: 'image/jpeg',
+  bytes: Uint8Array.from([0xFF, 0xD8, 0xFF]),
+};
+
+function createClaudeModelConfig(): ClaudeCodeModelConfigV1 {
+  return {
+    version: 1,
+    sonnet: { displayName: 'Sonnet', requestModel: 'claude-sonnet' },
+    opus: { displayName: 'Opus', requestModel: 'claude-opus' },
+    fable: { displayName: 'Fable', requestModel: 'claude-fable' },
+    haiku: { displayName: 'Haiku', requestModel: 'claude-haiku' },
+    subagent: { requestModel: 'claude-haiku' },
+    defaultFallbackModel: 'claude-sonnet',
+  };
+}
+
+function createCodexInput(overrides: Partial<Extract<CreateProviderInput, { runtime: 'codex' }>> = {}) {
+  return {
+    runtime: 'codex' as const,
+    name: 'Custom Provider',
+    baseUrl: 'https://api.example.com/v1',
+    apiKey: 'secret-api-key',
+    remark: null,
+    officialWebsite: null,
+    modelConfig: { version: 1 as const, defaultModel: 'gpt-default' },
+    ...overrides,
+  };
+}
+
+function createClaudeInput(
+  overrides: Partial<Extract<CreateProviderInput, { runtime: 'claude-code' }>> = {},
+) {
+  return {
+    runtime: 'claude-code' as const,
+    name: 'Custom Provider',
+    baseUrl: 'https://claude.example.com',
+    apiKey: null,
+    remark: null,
+    officialWebsite: null,
+    modelConfig: createClaudeModelConfig(),
+    ...overrides,
+  };
+}
+
+function assertProviderError(
+  operation: () => unknown,
+  code: ProviderApiErrorCode,
+  field?: string,
+): ProviderOperationError {
+  let caught: ProviderOperationError | undefined;
+  assert.throws(operation, (error: unknown) => {
+    if (!(error instanceof ProviderOperationError)) {
+      return false;
+    }
+    caught = error;
+    return error.code === code && (field === undefined || error.fields?.[0]?.field === field);
+  });
+  assert.ok(caught);
+  return caught;
+}
+
+function openTestRepository() {
+  const database = openProviderDatabase(':memory:');
+  return {
+    database,
+    repository: new ProviderRepository(database),
+  };
+}
+
+void test('migrates transactionally and rejects unsupported future versions without changing their data', () => {
+  const database = openProviderDatabase(':memory:');
+  assert.equal(database.pragma('user_version', { simple: true }), PROVIDER_SCHEMA_VERSION);
+  assert.equal(database.pragma('quick_check', { simple: true }), 'ok');
+  database.close();
+
+  const directory = mkdtempSync(path.join(tmpdir(), 'foundry-provider-version-'));
+  const filename = path.join(directory, 'foundry.sqlite');
+  const futureDatabase = new Database(filename);
+  futureDatabase.exec('CREATE TABLE sentinel (value TEXT NOT NULL); INSERT INTO sentinel VALUES (\'keep\');');
+  futureDatabase.pragma(`user_version = ${PROVIDER_SCHEMA_VERSION + 1}`);
+  futureDatabase.close();
+
+  assertProviderError(() => openProviderDatabase(filename), 'unsupported-database-version');
+  const unchangedFutureDatabase = new Database(filename, { readonly: true });
+  assert.equal(
+    unchangedFutureDatabase.pragma('user_version', { simple: true }),
+    PROVIDER_SCHEMA_VERSION + 1,
+  );
+  assert.equal(unchangedFutureDatabase.prepare('SELECT value FROM sentinel').pluck().get(), 'keep');
+  unchangedFutureDatabase.close();
+
+  const blockedFilename = path.join(directory, 'blocked.sqlite');
+  const blockedDatabase = new Database(blockedFilename);
+  blockedDatabase.exec('CREATE TABLE providers (sentinel TEXT NOT NULL); INSERT INTO providers VALUES (\'keep\');');
+  blockedDatabase.close();
+  assertProviderError(() => openProviderDatabase(blockedFilename), 'storage-unavailable');
+  const unchangedBlockedDatabase = new Database(blockedFilename, { readonly: true });
+  assert.equal(unchangedBlockedDatabase.pragma('user_version', { simple: true }), 0);
+  assert.equal(
+    unchangedBlockedDatabase.prepare('SELECT sentinel FROM providers').pluck().get(),
+    'keep',
+  );
+  unchangedBlockedDatabase.close();
+  rmSync(directory, { recursive: true, force: true });
+});
+
+void test('isolates runtimes, allows duplicate names, and returns sensitive data only from explicit methods', () => {
+  const { database, repository } = openTestRepository();
+  try {
+    const firstCodex = repository.createProvider(createCodexInput({
+      name: ' Shared Name ',
+      remark: ' ',
+      officialWebsite: ' https://example.com/providers?runtime=codex#setup ',
+      avatar: pngAvatar,
+    }));
+    const secondCodex = repository.createProvider(createCodexInput({ name: 'Shared Name' }));
+    const claude = repository.createProvider(createClaudeInput({ name: 'Shared Name' }));
+    database.prepare('UPDATE providers SET created_at = ? WHERE id = ?').run(100, firstCodex.id);
+    database.prepare('UPDATE providers SET created_at = ? WHERE id = ?').run(200, secondCodex.id);
+    repository.updateProvider({ ...createCodexInput({ name: 'Shared Name' }), id: firstCodex.id });
+
+    const codexProviders = repository.listProviders('codex');
+    const claudeProviders = repository.listProviders('claude-code');
+    assert.equal(codexProviders.length, 2);
+    assert.equal(claudeProviders.length, 1);
+    assert.deepEqual(codexProviders.map((provider) => provider.id), [secondCodex.id, firstCodex.id]);
+    assert.equal(claudeProviders[0]?.id, claude.id);
+    assert.equal(firstCodex.source, 'user-custom');
+    assert.equal(firstCodex.name, 'Shared Name');
+    assert.equal(firstCodex.remark, null);
+    assert.equal(firstCodex.baseUrl, 'https://api.example.com/v1');
+    assert.equal(firstCodex.officialWebsite, 'https://example.com/providers?runtime=codex#setup');
+    assert.equal(firstCodex.apiKeySuffix, '-key');
+    assert.equal(firstCodex.hasApiKey, true);
+    assert.equal(firstCodex.hasCustomAvatar, true);
+    assert.equal(Object.hasOwn(firstCodex, 'apiKey'), false);
+    assert.equal(Object.hasOwn(firstCodex, 'avatar'), false);
+
+    const detail = repository.getProviderForEdit(firstCodex.id);
+    assert.equal(detail.apiKey, 'secret-api-key');
+    assert.equal(repository.getProviderApiKey(firstCodex.id), 'secret-api-key');
+    assert.deepEqual(detail.modelConfig, { version: 1, defaultModel: 'gpt-default' });
+    assert.deepEqual(repository.getProviderForEdit(claude.id).modelConfig, createClaudeModelConfig());
+    assert.deepEqual(repository.getProviderAvatar(firstCodex.id), pngAvatar);
+  } finally {
+    database.close();
+  }
+});
+
+void test('validates URLs, models, API keys, and avatar content at the repository boundary', () => {
+  const { database, repository } = openTestRepository();
+  try {
+    assertProviderError(
+      () => repository.createProvider(createCodexInput({ baseUrl: 'https://api.example.com?key=value' })),
+      'invalid-input',
+      'baseUrl',
+    );
+    assertProviderError(
+      () => repository.createProvider(createCodexInput({ baseUrl: 'https://user@example.com' })),
+      'invalid-input',
+      'baseUrl',
+    );
+    assertProviderError(
+      () => repository.createProvider(createCodexInput({ modelConfig: { version: 1, defaultModel: ' ' } })),
+      'invalid-input',
+      'modelConfig.defaultModel',
+    );
+    assertProviderError(
+      () => repository.createProvider({
+        ...createCodexInput(),
+        avatar: { mimeType: 'image/png', bytes: jpegAvatar.bytes },
+      }),
+      'invalid-input',
+      'avatar.bytes',
+    );
+    assertProviderError(
+      () => repository.createProvider({
+        ...createCodexInput(),
+        avatar: { mimeType: 'image/png', bytes: new Uint8Array((2 * 1024 * 1024) + 1) },
+      }),
+      'invalid-input',
+      'avatar.bytes',
+    );
+
+    const whitespaceKey = repository.createProvider(createCodexInput({ apiKey: '  key with spaces  ' }));
+    const emptyKey = repository.createProvider(createCodexInput({ apiKey: '' }));
+    const unicodeKey = repository.createProvider(createCodexInput({ apiKey: 'key-1🔑2🔑3🔑4🔑5🔑' }));
+    assert.equal(repository.getProviderForEdit(whitespaceKey.id).apiKey, '  key with spaces  ');
+    assert.equal(repository.getProviderForEdit(emptyKey.id).apiKey, null);
+    assert.equal(unicodeKey.apiKeySuffix, '4🔑5🔑');
+    assert.equal(repository.getProviderForEdit(unicodeKey.id).apiKey, 'key-1🔑2🔑3🔑4🔑5🔑');
+  } finally {
+    database.close();
+  }
+});
+
+void test('preserves, removes, and replaces avatars while preventing runtime changes', () => {
+  const { database, repository } = openTestRepository();
+  try {
+    const created = repository.createProvider(createCodexInput({ avatar: pngAvatar }));
+    repository.updateProvider({
+      ...createCodexInput({ name: 'Updated', avatar: undefined }),
+      id: created.id,
+    });
+    assert.deepEqual(repository.getProviderAvatar(created.id), pngAvatar);
+
+    repository.updateProvider({ ...createCodexInput({ avatar: null }), id: created.id });
+    assert.equal(repository.getProviderAvatar(created.id), null);
+
+    repository.updateProvider({ ...createCodexInput({ avatar: jpegAvatar }), id: created.id });
+    assert.deepEqual(repository.getProviderAvatar(created.id), jpegAvatar);
+
+    assertProviderError(
+      () => repository.updateProvider({ ...createClaudeInput(), id: created.id }),
+      'invalid-input',
+      'runtime',
+    );
+  } finally {
+    database.close();
+  }
+});
+
+void test('persists connection summaries, preserves them for metadata edits, and rejects stale writes', () => {
+  const { database, repository } = openTestRepository();
+  try {
+    const created = repository.createProvider(createCodexInput());
+    const initialTarget = repository.getProviderConnectionTarget(created.id);
+    const connected = repository.recordProviderConnectionSummary(initialTarget, {
+      status: 'connected',
+      lastTestedAt: 1000,
+      lastError: null,
+    });
+    assert.deepEqual(connected.connection, {
+      status: 'connected',
+      lastTestedAt: 1000,
+      lastError: null,
+    });
+
+    const metadataUpdate = repository.updateProvider({
+      ...createCodexInput({
+        name: 'Renamed Provider',
+        remark: 'Metadata only',
+        officialWebsite: 'https://example.com/provider',
+      }),
+      id: created.id,
+    });
+    assert.equal(metadataUpdate.connection.status, 'connected');
+    assert.equal(metadataUpdate.connection.lastTestedAt, 1000);
+
+    const staleTarget = repository.getProviderConnectionTarget(created.id);
+    const connectionUpdate = repository.updateProvider({
+      ...createCodexInput({ baseUrl: 'https://new-api.example.com/v1' }),
+      id: created.id,
+    });
+    assert.deepEqual(connectionUpdate.connection, {
+      status: 'never-tested',
+      lastTestedAt: null,
+      lastError: null,
+    });
+    assertProviderError(
+      () => repository.recordProviderConnectionSummary(staleTarget, {
+        status: 'failed',
+        lastTestedAt: 2000,
+        lastError: 'HTTP 401 Unauthorized',
+      }),
+      'conflict',
+    );
+
+    const currentTarget = repository.getProviderConnectionTarget(created.id);
+    const failed = repository.recordProviderConnectionSummary(currentTarget, {
+      status: 'failed',
+      lastTestedAt: 3000,
+      lastError: 'HTTP 401 Unauthorized',
+    });
+    assert.deepEqual(failed.connection, {
+      status: 'failed',
+      lastTestedAt: 3000,
+      lastError: 'HTTP 401 Unauthorized',
+    });
+
+    const modelUpdate = repository.updateProvider({
+      ...createCodexInput({
+        baseUrl: 'https://new-api.example.com/v1',
+        modelConfig: { version: 1, defaultModel: 'gpt-new' },
+      }),
+      id: created.id,
+    });
+    assert.equal(modelUpdate.connection.status, 'never-tested');
+
+    const modelTarget = repository.getProviderConnectionTarget(created.id);
+    repository.recordProviderConnectionSummary(modelTarget, {
+      status: 'connected',
+      lastTestedAt: 4000,
+      lastError: null,
+    });
+    const keyUpdate = repository.updateProvider({
+      ...createCodexInput({
+        baseUrl: 'https://new-api.example.com/v1',
+        apiKey: 'new-secret-key',
+        modelConfig: { version: 1, defaultModel: 'gpt-new' },
+      }),
+      id: created.id,
+    });
+    assert.equal(keyUpdate.connection.status, 'never-tested');
+  } finally {
+    database.close();
+  }
+});
+
+void test('soft delete retains the complete row and excludes it from every normal operation', () => {
+  const { database, repository } = openTestRepository();
+  try {
+    const created = repository.createProvider(createCodexInput({
+      avatar: pngAvatar,
+      remark: 'Keep this',
+      officialWebsite: 'https://example.com/provider',
+    }));
+    repository.deleteProvider(created.id);
+
+    assert.deepEqual(repository.listProviders('codex'), []);
+    assertProviderError(() => repository.getProviderForEdit(created.id), 'not-found');
+    assertProviderError(() => repository.getProviderAvatar(created.id), 'not-found');
+    assertProviderError(() => repository.getProviderApiKey(created.id), 'not-found');
+    assertProviderError(() => repository.getProviderConnectionTarget(created.id), 'not-found');
+    assertProviderError(
+      () => repository.updateProvider({ ...createCodexInput(), id: created.id }),
+      'not-found',
+    );
+    assertProviderError(() => repository.deleteProvider(created.id), 'not-found');
+
+    const row = database.prepare<[string], {
+      api_key: string;
+      avatar_data: Buffer;
+      deleted_at: number;
+      model_config_json: string;
+      remark: string;
+    }>(`
+      SELECT api_key, avatar_data, deleted_at, model_config_json, remark
+      FROM providers
+      WHERE id = ?
+    `).get(created.id);
+    assert.ok(row);
+    assert.equal(row.api_key, 'secret-api-key');
+    assert.deepEqual(row.avatar_data, Buffer.from(pngAvatar.bytes));
+    assert.equal(row.remark, 'Keep this');
+    assert.ok(row.deleted_at > 0);
+    assert.deepEqual(JSON.parse(row.model_config_json), { version: 1, defaultModel: 'gpt-default' });
+  } finally {
+    database.close();
+  }
+});
+
+void test('maps unreadable files and invalid stored model data to non-sensitive corruption errors', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'foundry-provider-corrupt-'));
+  const filename = path.join(directory, 'foundry.sqlite');
+  writeFileSync(filename, 'not a sqlite database');
+  assertProviderError(() => openProviderDatabase(filename), 'storage-corrupt');
+  rmSync(directory, { recursive: true, force: true });
+
+  const { database, repository } = openTestRepository();
+  try {
+    const created = repository.createProvider(createCodexInput());
+    database.pragma('ignore_check_constraints = ON');
+    database.prepare('UPDATE providers SET model_config_json = ? WHERE id = ?')
+      .run('{"version":1,"defaultModel":""}', created.id);
+    const error = assertProviderError(() => repository.listProviders('codex'), 'storage-corrupt');
+    assert.equal(error.message.includes('secret-api-key'), false);
+
+    database.prepare('UPDATE providers SET model_config_json = ?, avatar_mime_type = ?, avatar_data = ? WHERE id = ?')
+      .run(
+        '{"version":1,"defaultModel":"gpt-default"}',
+        'image/png',
+        Buffer.from(jpegAvatar.bytes),
+        created.id,
+      );
+    assertProviderError(() => repository.getProviderAvatar(created.id), 'storage-corrupt');
+
+    database.prepare('UPDATE providers SET avatar_mime_type = NULL, avatar_data = NULL, api_key = ? WHERE id = ?')
+      .run(Buffer.from('not text'), created.id);
+    assertProviderError(() => repository.getProviderForEdit(created.id), 'storage-corrupt');
+  } finally {
+    database.close();
+  }
+});

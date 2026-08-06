@@ -1,8 +1,7 @@
-import type { ElectronAPI } from '@electron-toolkit/preload';
+import type { FoundryApi } from '../shared/provider-contract';
 
 declare global {
   interface Window {
-    electron: ElectronAPI;
-    api: unknown;
+    api: FoundryApi;
   }
 }

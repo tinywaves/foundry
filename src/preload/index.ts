@@ -1,24 +1,59 @@
-import { contextBridge } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron';
 import process from 'node:process';
-import { electronAPI } from '@electron-toolkit/preload';
+import type {
+  FoundryApi,
+  FoundryPlatform,
+  ProviderApi,
+  ProviderApiResult,
+} from '../shared/provider-contract';
+import { providerIpcChannels } from '../shared/provider-contract';
 
-// Custom APIs for renderer
-const api = {};
+type ProviderIpcChannel = typeof providerIpcChannels[keyof typeof providerIpcChannels];
+const foundryPlatforms = new Set<FoundryPlatform>(['darwin', 'linux', 'win32']);
+
+function getFoundryPlatform(): FoundryPlatform {
+  if (foundryPlatforms.has(process.platform as FoundryPlatform)) {
+    return process.platform as FoundryPlatform;
+  }
+  throw new Error('Unsupported Electron platform.');
+}
+
+function invokeProvider<T>(channel: ProviderIpcChannel, argument: unknown): Promise<ProviderApiResult<T>> {
+  return ipcRenderer.invoke(channel, argument) as Promise<ProviderApiResult<T>>;
+}
+
+const providers: ProviderApi = {
+  listProviders: (runtime) => invokeProvider(providerIpcChannels.list, runtime),
+  getProviderForEdit: (id) => invokeProvider(providerIpcChannels.getForEdit, id),
+  getProviderAvatar: (id) => invokeProvider(providerIpcChannels.getAvatar, id),
+  selectProviderAvatar: () => invokeProvider(providerIpcChannels.selectAvatar, undefined),
+  createProvider: (input) => invokeProvider(providerIpcChannels.create, input),
+  updateProvider: (input) => invokeProvider(providerIpcChannels.update, input),
+  deleteProvider: (id) => invokeProvider(providerIpcChannels.delete, id),
+  revealProviderApiKey: (id) => invokeProvider(providerIpcChannels.revealApiKey, id),
+  copyProviderApiKey: (id) => invokeProvider(providerIpcChannels.copyApiKey, id),
+  testSavedProviderConnection: (id) => invokeProvider(providerIpcChannels.testSavedConnection, id),
+  testDraftProviderConnection: (input) => invokeProvider(
+    providerIpcChannels.testDraftConnection,
+    input,
+  ),
+};
+
+const api: FoundryApi = {
+  platform: getFoundryPlatform(),
+  providers,
+};
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
 // just add to the DOM global.
 if (process.contextIsolated) {
   try {
-    contextBridge.exposeInMainWorld('electron', electronAPI);
     contextBridge.exposeInMainWorld('api', api);
   } catch (error) {
     console.error(error);
   }
 } else {
-  // @ts-ignore (define in dts)
-  // eslint-disable-next-line unicorn/no-global-object-property-assignment
-  globalThis.electron = electronAPI;
   // @ts-ignore (define in dts)
   // eslint-disable-next-line unicorn/no-global-object-property-assignment
   globalThis.api = api;

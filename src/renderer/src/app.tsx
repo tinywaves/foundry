@@ -3,6 +3,7 @@ import { SideNav, SideNavHeading, SideNavItem } from '@astryxdesign/core/SideNav
 import { StackItem, VStack } from '@astryxdesign/core/Stack';
 import { spacingVars } from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
+import { ArrowUpDown, LayoutDashboard, Wrench } from 'lucide-react';
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router';
 import { WindowDragRegion } from '@renderer/components/window-drag-region';
 import { DashboardPage } from '@renderer/pages/dashboard-page';
@@ -34,7 +35,7 @@ const sidebarResizeConfig = {
 };
 
 export default function App() {
-  const isMacOS = globalThis.electron.process.platform === 'darwin';
+  const isMacOS = globalThis.api.platform === 'darwin';
   const { pathname } = useLocation();
 
   return (
@@ -71,20 +72,20 @@ export default function App() {
                 <SideNavItem
                   as={Link}
                   label="Dashboard"
-                  icon="viewColumns"
+                  icon={LayoutDashboard}
                   href={routePaths.dashboard}
                   isSelected={pathname === routePaths.dashboard}
                 />
                 <SideNavItem
                   as={Link}
                   label="Skills"
-                  icon="wrench"
+                  icon={Wrench}
                   href={routePaths.skills}
                   isSelected={pathname === routePaths.skills}
                 />
                 <SideNavItem
                   label="Agents Switch"
-                  icon="arrowsUpDown"
+                  icon={ArrowUpDown}
                   collapsible={{ defaultIsCollapsed: true }}
                 >
                   <VStack gap={1}>

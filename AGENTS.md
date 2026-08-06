@@ -75,6 +75,7 @@ For UI changes, do not launch the application or use browser, screenshot, access
 - Use StyleX as the project's styling system.
 - Prefer StyleX styles and design tokens for renderer UI. Do not introduce standalone CSS files, CSS modules, Tailwind, or other styling systems unless explicitly required by an existing third-party integration.
 - Keep style definitions close to the component that owns them and use typed StyleX APIs rather than ad hoc string-based class names.
+- Use `lucide-react` for application-authored icons. When Lucide provides a suitable icon, do not use Astryx semantic icon strings or hand-authored SVGs. Icons rendered internally by unmodified Astryx components remain owned by Astryx.
 
 ## Electron Security
 

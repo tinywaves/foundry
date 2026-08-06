@@ -15,6 +15,7 @@ files:
   - '!{eslint.config.mjs,skills-lock.json}'
 asarUnpack:
   - resources/**
+  - node_modules/better-sqlite3/prebuilds/**
 win:
   executableName: foundry
 nsis:
@@ -23,6 +24,7 @@ nsis:
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
 mac:
+  x64ArchFiles: '**/better-sqlite3/prebuilds/darwin-*.node'
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.

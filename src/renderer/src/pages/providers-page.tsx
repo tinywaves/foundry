@@ -8,6 +8,7 @@ import { StackItem, VStack } from '@astryxdesign/core/Stack';
 import { Tab, TabList } from '@astryxdesign/core/TabList';
 import { useToast } from '@astryxdesign/core/Toast';
 import * as stylex from '@stylexjs/stylex';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, ServerCog } from 'lucide-react';
 import {
   useCallback,
@@ -18,6 +19,12 @@ import {
 import type { ProviderRuntime, ProviderSummary } from '../../../shared/provider-contract';
 import { ProviderDialog } from './providers/provider-dialog';
 import type { ProviderDialogRequest } from './providers/provider-dialog';
+import {
+  ProviderRequestError,
+  removeProviderDetail,
+  resetProviderList,
+  resolveProviderRequest,
+} from './providers/provider-query';
 import {
   LoadingProviderTable,
   ProviderTable,
@@ -49,71 +56,76 @@ const styles = stylex.create({
   },
 });
 
-function updateIdSet(current: ReadonlySet<string>, id: string, isPresent: boolean): Set<string> {
-  const next = new Set(current);
-  if (isPresent) {
-    next.add(id);
-  } else {
-    next.delete(id);
-  }
-  return next;
-}
-
 export function ProvidersPage() {
+  const queryClient = useQueryClient();
   const showToast = useToast();
   const [runtime, setRuntime] = useState<ProviderRuntime>('codex');
   const [dialogRequest, setDialogRequest] = useState<ProviderDialogRequest>();
   const [revealedApiKey, setRevealedApiKey] = useState<{ id: string; value: string }>();
-  const [revealingProviderId, setRevealingProviderId] = useState<string>();
-  const [copyingProviderIds, setCopyingProviderIds] = useState<Set<string>>(() => new Set());
-  const [testingProviderIds, setTestingProviderIds] = useState<Set<string>>(() => new Set());
   const [providerToDelete, setProviderToDelete] = useState<ProviderSummary>();
-  const [deletingProviderId, setDeletingProviderId] = useState<string>();
   const dialogKeyRef = useRef(0);
-  const pageRevisionRef = useRef(0);
-  const revealRequestRef = useRef(0);
   const revealTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const isMountedRef = useRef(true);
-  const codexProviderList = useProviderList('codex');
-  const claudeCodeProviderList = useProviderList('claude-code');
-  const { state, avatarUrls, reload, replaceProvider } = runtime === 'codex'
-    ? codexProviderList
-    : claudeCodeProviderList;
+  const { state } = useProviderList(runtime);
+  const {
+    isPending: isRevealingApiKey,
+    mutate: revealProviderApiKey,
+    reset: resetRevealProviderApiKey,
+    variables: revealingProvider,
+  } = useMutation<string, ProviderRequestError, ProviderSummary>({
+    mutationFn: async (provider) => {
+      const apiKey = await resolveProviderRequest<string | null>(
+        () => globalThis.api.providers.revealProviderApiKey(provider.id),
+        'The API key could not be revealed.',
+      );
+      if (apiKey === null) {
+        throw new ProviderRequestError('Provider does not have an API key.');
+      }
+      return apiKey;
+    },
+  });
+  const {
+    isPending: isDeletingProvider,
+    mutate: deleteProvider,
+    reset: resetDeleteProvider,
+    variables: deletingProvider,
+  } = useMutation<undefined, ProviderRequestError, ProviderSummary>({
+    mutationFn: (provider) => resolveProviderRequest<undefined>(
+      () => globalThis.api.providers.deleteProvider(provider.id),
+      'The Provider could not be deleted.',
+    ),
+    onSuccess: (_, provider) => {
+      void resetProviderList(queryClient, provider.runtime);
+    },
+  });
+  const revealingProviderId = isRevealingApiKey ? revealingProvider.id : undefined;
+  const deletingProviderId = isDeletingProvider ? deletingProvider.id : undefined;
+
+  const clearRevealTimer = useCallback(() => {
+    if (revealTimerRef.current === undefined) {
+      return;
+    }
+    clearTimeout(revealTimerRef.current);
+    revealTimerRef.current = undefined;
+  }, []);
 
   const clearRevealedApiKey = useCallback(() => {
-    revealRequestRef.current += 1;
-    if (revealTimerRef.current !== undefined) {
-      clearTimeout(revealTimerRef.current);
-      revealTimerRef.current = undefined;
-    }
+    clearRevealTimer();
+    resetRevealProviderApiKey();
     setRevealedApiKey(undefined);
-    setRevealingProviderId(undefined);
-  }, []);
+  }, [clearRevealTimer, resetRevealProviderApiKey]);
 
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-      revealRequestRef.current += 1;
-      if (revealTimerRef.current !== undefined) {
-        clearTimeout(revealTimerRef.current);
-      }
-    };
-  }, []);
+  useEffect(() => () => clearRevealTimer(), [clearRevealTimer]);
 
   const resetPageActions = useCallback(() => {
-    pageRevisionRef.current += 1;
     clearRevealedApiKey();
-    setCopyingProviderIds(new Set());
-    setTestingProviderIds(new Set());
+    resetDeleteProvider();
     setProviderToDelete(undefined);
-    setDeletingProviderId(undefined);
-  }, [clearRevealedApiKey]);
+  }, [clearRevealedApiKey, resetDeleteProvider]);
 
   const reloadProviders = useCallback(() => {
     resetPageActions();
-    reload();
-  }, [reload, resetPageActions]);
+    void resetProviderList(queryClient, runtime);
+  }, [queryClient, resetPageActions, runtime]);
 
   const showOperationError = useCallback((body: string, uniqueID: string) => {
     showToast({ body, type: 'error', uniqueID });
@@ -127,160 +139,85 @@ export function ProvidersPage() {
     setRuntime(value);
   };
 
+  const disposeCurrentDialogDetail = useCallback(() => {
+    if (dialogRequest?.mode === 'edit') {
+      removeProviderDetail(
+        queryClient,
+        dialogRequest.provider.runtime,
+        dialogRequest.provider.id,
+      );
+    }
+  }, [dialogRequest, queryClient]);
+
   const openAddDialog = () => {
+    disposeCurrentDialogDetail();
     setDialogRequest({ key: ++dialogKeyRef.current, mode: 'add', runtime });
   };
 
   const openEditDialog = useCallback((provider: ProviderSummary) => {
+    disposeCurrentDialogDetail();
     clearRevealedApiKey();
     setDialogRequest({ key: ++dialogKeyRef.current, mode: 'edit', provider });
-  }, [clearRevealedApiKey]);
+  }, [clearRevealedApiKey, disposeCurrentDialogDetail]);
 
-  const handleCopyApiKey = useCallback(async (provider: ProviderSummary) => {
-    const revision = pageRevisionRef.current;
-    setCopyingProviderIds((current) => updateIdSet(current, provider.id, true));
-    try {
-      const result = await globalThis.api.providers.copyProviderApiKey(provider.id);
-      if (!isMountedRef.current || revision !== pageRevisionRef.current) {
-        return;
-      }
-      if (!result.ok) {
-        showOperationError(result.error.message, `provider-copy-${provider.id}`);
-        return;
-      }
-      showToast({ body: 'API key copied', uniqueID: `provider-copy-${provider.id}` });
-    } catch {
-      if (isMountedRef.current && revision === pageRevisionRef.current) {
-        showOperationError('The API key could not be copied.', `provider-copy-${provider.id}`);
-      }
-    } finally {
-      if (isMountedRef.current && revision === pageRevisionRef.current) {
-        setCopyingProviderIds((current) => updateIdSet(current, provider.id, false));
-      }
-    }
-  }, [showOperationError, showToast]);
-
-  const handleToggleRevealApiKey = useCallback(async (provider: ProviderSummary) => {
+  const handleToggleRevealApiKey = useCallback((provider: ProviderSummary) => {
     if (revealedApiKey?.id === provider.id) {
       clearRevealedApiKey();
       return;
     }
 
     clearRevealedApiKey();
-    const requestId = ++revealRequestRef.current;
-    const revision = pageRevisionRef.current;
-    setRevealingProviderId(provider.id);
-    try {
-      const result = await globalThis.api.providers.revealProviderApiKey(provider.id);
-      if (
-        !isMountedRef.current
-        || requestId !== revealRequestRef.current
-        || revision !== pageRevisionRef.current
-      ) {
-        return;
-      }
-      if (!result.ok) {
-        showOperationError(result.error.message, `provider-reveal-${provider.id}`);
-        return;
-      }
-      if (result.value === null) {
-        showOperationError('Provider does not have an API key.', `provider-reveal-${provider.id}`);
-        return;
-      }
-
-      setRevealedApiKey({ id: provider.id, value: result.value });
-      revealTimerRef.current = setTimeout(() => {
-        if (requestId === revealRequestRef.current) {
+    revealProviderApiKey(provider, {
+      onError: (error) => {
+        showOperationError(error.message, `provider-reveal-${provider.id}`);
+      },
+      onSuccess: (apiKey) => {
+        setRevealedApiKey({ id: provider.id, value: apiKey });
+        resetRevealProviderApiKey();
+        clearRevealTimer();
+        revealTimerRef.current = setTimeout(() => {
           clearRevealedApiKey();
-        }
-      }, REVEAL_DURATION_MS);
-    } catch {
-      if (
-        isMountedRef.current
-        && requestId === revealRequestRef.current
-        && revision === pageRevisionRef.current
-      ) {
-        showOperationError('The API key could not be revealed.', `provider-reveal-${provider.id}`);
-      }
-    } finally {
-      if (
-        isMountedRef.current
-        && requestId === revealRequestRef.current
-        && revision === pageRevisionRef.current
-      ) {
-        setRevealingProviderId(undefined);
-      }
-    }
-  }, [clearRevealedApiKey, revealedApiKey, showOperationError]);
-
-  const handleTestConnection = useCallback(async (provider: ProviderSummary) => {
-    const revision = pageRevisionRef.current;
-    setTestingProviderIds((current) => updateIdSet(current, provider.id, true));
-    try {
-      const result = await globalThis.api.providers.testSavedProviderConnection(provider.id);
-      if (!isMountedRef.current || revision !== pageRevisionRef.current) {
-        return;
-      }
-      if (!result.ok) {
-        showOperationError(result.error.message, `provider-test-${provider.id}`);
-        return;
-      }
-      if (
-        result.value.id !== provider.id
-        || result.value.runtime !== runtime
-        || result.value.source !== 'user-custom'
-      ) {
-        showOperationError('The connection result was invalid.', `provider-test-${provider.id}`);
-        return;
-      }
-      replaceProvider(result.value);
-    } catch {
-      if (isMountedRef.current && revision === pageRevisionRef.current) {
-        showOperationError('The connection could not be tested.', `provider-test-${provider.id}`);
-      }
-    } finally {
-      if (isMountedRef.current && revision === pageRevisionRef.current) {
-        setTestingProviderIds((current) => updateIdSet(current, provider.id, false));
-      }
-    }
-  }, [replaceProvider, runtime, showOperationError]);
+        }, REVEAL_DURATION_MS);
+      },
+    });
+  }, [
+    clearRevealTimer,
+    clearRevealedApiKey,
+    revealProviderApiKey,
+    revealedApiKey?.id,
+    resetRevealProviderApiKey,
+    showOperationError,
+  ]);
 
   const handleDelete = useCallback((provider: ProviderSummary) => {
     setProviderToDelete(provider);
   }, []);
 
-  const handleConfirmDelete = useCallback(async () => {
-    if (!providerToDelete || deletingProviderId) {
+  const handleConfirmDelete = useCallback(() => {
+    if (!providerToDelete || isDeletingProvider) {
       return;
     }
     const provider = providerToDelete;
-    const revision = pageRevisionRef.current;
-    setDeletingProviderId(provider.id);
-    try {
-      const result = await globalThis.api.providers.deleteProvider(provider.id);
-      if (!isMountedRef.current || revision !== pageRevisionRef.current) {
-        return;
-      }
-      if (!result.ok) {
-        showOperationError(result.error.message, `provider-delete-${provider.id}`);
-        return;
-      }
-
-      showToast({ body: 'Provider deleted', uniqueID: `provider-delete-${provider.id}` });
-      reloadProviders();
-    } catch {
-      if (isMountedRef.current && revision === pageRevisionRef.current) {
-        showOperationError('The Provider could not be deleted.', `provider-delete-${provider.id}`);
-      }
-    } finally {
-      if (isMountedRef.current && revision === pageRevisionRef.current) {
-        setDeletingProviderId(undefined);
-      }
-    }
-  }, [deletingProviderId, providerToDelete, reloadProviders, showOperationError, showToast]);
+    deleteProvider(provider, {
+      onError: (error) => {
+        showOperationError(error.message, `provider-delete-${provider.id}`);
+      },
+      onSuccess: () => {
+        showToast({ body: 'Provider deleted', uniqueID: `provider-delete-${provider.id}` });
+        resetPageActions();
+      },
+    });
+  }, [
+    deleteProvider,
+    isDeletingProvider,
+    providerToDelete,
+    resetPageActions,
+    showOperationError,
+    showToast,
+  ]);
 
   let content;
-  if (state === undefined || state.status === 'loading') {
+  if (state.status === 'loading') {
     content = <LoadingProviderTable runtime={runtime} />;
   } else if (state.status === 'error') {
     content = (
@@ -312,18 +249,14 @@ export function ProvidersPage() {
   } else {
     content = (
       <ProviderTable
+        key={runtime}
         providers={state.providers}
-        avatarUrls={avatarUrls}
         runtime={runtime}
         revealedApiKey={revealedApiKey}
         revealingProviderId={revealingProviderId}
-        copyingProviderIds={copyingProviderIds}
-        testingProviderIds={testingProviderIds}
         deletingProviderId={deletingProviderId}
         onEdit={openEditDialog}
-        onCopyApiKey={(provider) => void handleCopyApiKey(provider)}
-        onToggleRevealApiKey={(provider) => void handleToggleRevealApiKey(provider)}
-        onTestConnection={(provider) => void handleTestConnection(provider)}
+        onToggleRevealApiKey={handleToggleRevealApiKey}
         onDelete={handleDelete}
       />
     );
@@ -361,7 +294,7 @@ export function ProvidersPage() {
           onClose={() => setDialogRequest(undefined)}
           onSaved={(savedRuntime) => {
             if (savedRuntime === runtime) {
-              reloadProviders();
+              resetPageActions();
             }
           }}
         />
@@ -369,7 +302,7 @@ export function ProvidersPage() {
       <AlertDialog
         isOpen={providerToDelete !== undefined}
         onOpenChange={(isOpen) => {
-          if (!isOpen && deletingProviderId === undefined) {
+          if (!isOpen && !isDeletingProvider) {
             setProviderToDelete(undefined);
           }
         }}
@@ -379,8 +312,8 @@ export function ProvidersPage() {
           : 'This Provider will be removed from Foundry.'}
         actionLabel="Delete provider"
         actionVariant="destructive"
-        isActionLoading={deletingProviderId !== undefined}
-        onAction={() => void handleConfirmDelete()}
+        isActionLoading={isDeletingProvider}
+        onAction={handleConfirmDelete}
       />
     </VStack>
   );

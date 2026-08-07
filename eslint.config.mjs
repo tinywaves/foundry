@@ -10,5 +10,5 @@ export default defineConfig({
       },
     },
   },
-  ignorePatterns: ['./.agents'],
+  ignorePatterns: ['./.agents', './dist', './out'],
 });

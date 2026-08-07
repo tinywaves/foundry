@@ -15,6 +15,7 @@ import {
 import type { TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
+import { useToast } from '@astryxdesign/core/Toast';
 import {
   borderVars,
   colorVars,
@@ -22,6 +23,11 @@ import {
   spacingVars,
 } from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
+import {
+  useIsMutating,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { Copy, Eye, EyeOff, Info } from 'lucide-react';
 import { useMemo } from 'react';
 import type {
@@ -29,7 +35,15 @@ import type {
   ProviderRuntime,
   ProviderSummary,
 } from '../../../../shared/provider-contract';
+import {
+  getSavedProviderTestMutationKey,
+  isMatchingCustomProvider,
+  ProviderRequestError,
+  replaceCachedProvider,
+  resolveProviderRequest,
+} from './provider-query';
 import { providerRuntimeLabels } from './provider-runtime';
+import { useProviderAvatarUrl } from './use-provider-avatar-url';
 
 const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
   dateStyle: 'short',
@@ -90,16 +104,11 @@ const styles = stylex.create({
 interface ProviderTableRow extends Record<string, unknown> {
   id: string;
   provider: ProviderSummary;
-  avatarUrl: string | undefined;
   revealedApiKey: string | undefined;
   isRevealing: boolean;
-  isCopying: boolean;
-  isTesting: boolean;
   isDeleting: boolean;
   onEdit: (provider: ProviderSummary) => void;
-  onCopyApiKey: (provider: ProviderSummary) => void;
   onToggleRevealApiKey: (provider: ProviderSummary) => void;
-  onTestConnection: (provider: ProviderSummary) => void;
   onDelete: (provider: ProviderSummary) => void;
 }
 
@@ -153,7 +162,8 @@ function getStatusPresentation(status: ProviderConnectionStatus): {
   }
 }
 
-function ProviderName({ provider, avatarUrl }: ProviderTableRow) {
+function ProviderName({ provider }: ProviderTableRow) {
+  const avatarUrl = useProviderAvatarUrl(provider);
   const website = getExternalWebsite(provider.officialWebsite);
   const hasMetadata = provider.remark !== null || website !== null;
   const nameCell = (
@@ -219,10 +229,20 @@ function ProviderApiKey({
   provider,
   revealedApiKey,
   isRevealing,
-  isCopying,
-  onCopyApiKey,
   onToggleRevealApiKey,
 }: ProviderTableRow) {
+  const showToast = useToast();
+  const { isPending: isCopying, mutate: copyApiKey } = useMutation<
+    undefined,
+    ProviderRequestError,
+    ProviderSummary
+  >({
+    mutationFn: (currentProvider) => resolveProviderRequest<undefined>(
+      () => globalThis.api.providers.copyProviderApiKey(currentProvider.id),
+      'The API key could not be copied.',
+    ),
+  });
+
   if (!provider.hasApiKey) {
     return <Text type="code" color="secondary">Not set</Text>;
   }
@@ -242,7 +262,23 @@ function ProviderApiKey({
         variant="ghost"
         size="sm"
         isLoading={isCopying}
-        onClick={() => onCopyApiKey(provider)}
+        onClick={() => {
+          if (isCopying) {
+            return;
+          }
+          copyApiKey(provider, {
+            onError: (error) => {
+              showToast({
+                body: error.message,
+                type: 'error',
+                uniqueID: `provider-copy-${provider.id}`,
+              });
+            },
+            onSuccess: () => {
+              showToast({ body: 'API key copied', uniqueID: `provider-copy-${provider.id}` });
+            },
+          });
+        }}
       />
       <IconButton
         label={`${isRevealed ? 'Hide' : 'Reveal'} API key for ${provider.name}`}
@@ -257,7 +293,11 @@ function ProviderApiKey({
   );
 }
 
-function ProviderStatus({ provider, isTesting }: ProviderTableRow) {
+function ProviderStatus({ provider }: ProviderTableRow) {
+  const isTesting = useIsMutating({
+    exact: true,
+    mutationKey: getSavedProviderTestMutationKey(provider),
+  }) > 0;
   const status = isTesting
     ? { label: 'Testing', variant: 'neutral' as const }
     : getStatusPresentation(provider.connection.status);
@@ -307,6 +347,70 @@ function ProviderStatus({ provider, isTesting }: ProviderTableRow) {
   );
 }
 
+function ProviderActions({
+  provider,
+  isDeleting,
+  onEdit,
+  onDelete,
+}: ProviderTableRow) {
+  const queryClient = useQueryClient();
+  const showToast = useToast();
+  const { isPending: isTesting, mutate: testConnection } = useMutation<
+    ProviderSummary,
+    ProviderRequestError,
+    ProviderSummary
+  >({
+    mutationKey: getSavedProviderTestMutationKey(provider),
+    mutationFn: async (currentProvider) => {
+      const testedProvider = await resolveProviderRequest<ProviderSummary>(
+        () => globalThis.api.providers.testSavedProviderConnection(currentProvider.id),
+        'The connection could not be tested.',
+      );
+      if (!isMatchingCustomProvider(
+        testedProvider,
+        currentProvider.runtime,
+        currentProvider.id,
+      )) {
+        throw new ProviderRequestError('The connection result was invalid.');
+      }
+      return testedProvider;
+    },
+    onSuccess: (testedProvider, currentProvider) => {
+      replaceCachedProvider(queryClient, currentProvider.runtime, testedProvider);
+    },
+  });
+
+  return (
+    <MoreMenu
+      label={`More actions for ${provider.name}`}
+      size="sm"
+      isDisabled={isTesting || isDeleting}
+      items={[
+        { label: 'Edit', onClick: () => onEdit(provider) },
+        {
+          label: 'Test connection',
+          onClick: () => {
+            if (isTesting) {
+              return;
+            }
+            testConnection(provider, {
+              onError: (error) => {
+                showToast({
+                  body: error.message,
+                  type: 'error',
+                  uniqueID: `provider-test-${provider.id}`,
+                });
+              },
+            });
+          },
+        },
+        { type: 'divider' },
+        { label: 'Delete', onClick: () => onDelete(provider) },
+      ]}
+    />
+  );
+}
+
 const providerColumns: Array<TableColumn<ProviderTableRow>> = [
   {
     key: 'name',
@@ -342,26 +446,7 @@ const providerColumns: Array<TableColumn<ProviderTableRow>> = [
     width: pixel(56),
     align: 'center',
     resizable: false,
-    renderCell: ({
-      provider,
-      isTesting,
-      isDeleting,
-      onEdit,
-      onTestConnection,
-      onDelete,
-    }) => (
-      <MoreMenu
-        label={`More actions for ${provider.name}`}
-        size="sm"
-        isDisabled={isTesting || isDeleting}
-        items={[
-          { label: 'Edit', onClick: () => onEdit(provider) },
-          { label: 'Test connection', onClick: () => onTestConnection(provider) },
-          { type: 'divider' },
-          { label: 'Delete', onClick: () => onDelete(provider) },
-        ]}
-      />
-    ),
+    renderCell: (row) => <ProviderActions {...row} />,
   },
 ];
 
@@ -473,60 +558,40 @@ const loadingColumns: Array<TableColumn<LoadingTableRow>> = [
 
 export function ProviderTable({
   providers,
-  avatarUrls,
   runtime,
   revealedApiKey,
   revealingProviderId,
-  copyingProviderIds,
-  testingProviderIds,
   deletingProviderId,
   onEdit,
-  onCopyApiKey,
   onToggleRevealApiKey,
-  onTestConnection,
   onDelete,
 }: {
   providers: ProviderSummary[];
-  avatarUrls: Record<string, string>;
   runtime: ProviderRuntime;
   revealedApiKey: { id: string; value: string } | undefined;
   revealingProviderId: string | undefined;
-  copyingProviderIds: ReadonlySet<string>;
-  testingProviderIds: ReadonlySet<string>;
   deletingProviderId: string | undefined;
   onEdit: (provider: ProviderSummary) => void;
-  onCopyApiKey: (provider: ProviderSummary) => void;
   onToggleRevealApiKey: (provider: ProviderSummary) => void;
-  onTestConnection: (provider: ProviderSummary) => void;
   onDelete: (provider: ProviderSummary) => void;
 }) {
   const rows = useMemo<ProviderTableRow[]>(() => providers.map((provider) => ({
     id: provider.id,
     provider,
-    avatarUrl: avatarUrls[provider.id],
     revealedApiKey: revealedApiKey?.id === provider.id ? revealedApiKey.value : undefined,
     isRevealing: revealingProviderId === provider.id,
-    isCopying: copyingProviderIds.has(provider.id),
-    isTesting: testingProviderIds.has(provider.id),
     isDeleting: deletingProviderId === provider.id,
     onEdit,
-    onCopyApiKey,
     onToggleRevealApiKey,
-    onTestConnection,
     onDelete,
   })), [
-    avatarUrls,
-    copyingProviderIds,
     deletingProviderId,
-    onCopyApiKey,
     onDelete,
     onEdit,
-    onTestConnection,
     onToggleRevealApiKey,
     providers,
     revealedApiKey,
     revealingProviderId,
-    testingProviderIds,
   ]);
 
   return (

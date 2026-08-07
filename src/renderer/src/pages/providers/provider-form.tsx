@@ -168,7 +168,7 @@ export function ProviderForm({
   isDisabled: boolean;
   isSelectingAvatar: boolean;
   onFieldChange: (field: ProviderFormField, value: string) => void;
-  onSelectAvatar: () => Promise<void>;
+  onSelectAvatar: () => void;
   onRemoveAvatar: () => void;
   onSubmit: () => void;
 }) {

@@ -4,6 +4,8 @@ import type { ProviderAvatarSelection } from '../../shared/provider-contract';
 import {
   createProviderFormValues,
   getProviderAvatarUpdate,
+  getProviderFormApiErrorState,
+  isValidProviderConnectionSummary,
   setProviderFormField,
   validateProviderConnectionForm,
   validateProviderForm,
@@ -145,4 +147,63 @@ void test('validates only connection fields for a draft Provider test', () => {
   const invalid = validateProviderConnectionForm(values);
   assert.equal(invalid.ok, false);
   assert.equal(invalid.errors.baseUrl, 'Base URL cannot contain a query or fragment.');
+});
+
+void test('projects Provider API errors into form, avatar, and general messages', () => {
+  const projected = getProviderFormApiErrorState({
+    code: 'invalid-input',
+    message: 'Provider input is invalid.',
+    fields: [
+      { field: 'name', message: 'Name is invalid.' },
+      { field: 'avatar.bytes', message: 'Avatar is invalid.' },
+      { field: 'unsupported', message: 'Unsupported field.' },
+    ],
+  });
+  assert.deepEqual(projected, {
+    formErrors: { name: 'Name is invalid.' },
+    avatarError: 'Avatar is invalid.',
+    generalError: 'Provider input is invalid.',
+  });
+
+  assert.deepEqual(getProviderFormApiErrorState({
+    code: 'invalid-input',
+    message: 'Known fields are invalid.',
+    fields: [{ field: 'baseUrl', message: 'Base URL is invalid.' }],
+  }), {
+    formErrors: { baseUrl: 'Base URL is invalid.' },
+    avatarError: undefined,
+    generalError: undefined,
+  });
+  assert.equal(getProviderFormApiErrorState({
+    code: 'internal',
+    message: 'Provider could not be saved.',
+  }).generalError, 'Provider could not be saved.');
+});
+
+void test('accepts only complete connected or failed draft-test results', () => {
+  assert.equal(isValidProviderConnectionSummary({
+    status: 'connected',
+    lastTestedAt: 1,
+    lastError: null,
+  }), true);
+  assert.equal(isValidProviderConnectionSummary({
+    status: 'failed',
+    lastTestedAt: 1,
+    lastError: 'Unavailable',
+  }), true);
+  assert.equal(isValidProviderConnectionSummary({
+    status: 'never-tested',
+    lastTestedAt: null,
+    lastError: null,
+  }), false);
+  assert.equal(isValidProviderConnectionSummary({
+    status: 'connected',
+    lastTestedAt: 1,
+    lastError: 'Unexpected',
+  }), false);
+  assert.equal(isValidProviderConnectionSummary({
+    status: 'failed',
+    lastTestedAt: 1,
+    lastError: null,
+  }), false);
 });

@@ -1,6 +1,8 @@
 import type {
   CreateProviderInput,
+  ProviderApiError,
   ProviderAvatarSelection,
+  ProviderConnectionSummary,
   ProviderConnectionTestInput,
   ProviderDetail,
   ProviderRuntime,
@@ -52,6 +54,12 @@ export type ProviderFormField
     | 'modelConfig.defaultFallbackModel';
 
 export type ProviderFormErrors = Partial<Record<ProviderFormField, string>>;
+
+export interface ProviderFormApiErrorState {
+  formErrors: ProviderFormErrors;
+  avatarError: string | undefined;
+  generalError: string | undefined;
+}
 
 export type ProviderAvatarIntent
   = | { kind: 'preserve' }
@@ -110,6 +118,38 @@ function isClaudeMappingProperty(value: string | undefined): value is ClaudeMapp
 
 export function isProviderFormField(value: string): value is ProviderFormField {
   return providerFormFields.has(value as ProviderFormField);
+}
+
+export function getProviderFormApiErrorState(
+  error: ProviderApiError,
+): ProviderFormApiErrorState {
+  const formErrors: ProviderFormErrors = {};
+  let avatarError: string | undefined;
+  let hasUnknownField = false;
+  const fieldErrors = error.fields ?? [];
+  for (const fieldError of fieldErrors) {
+    if (isProviderFormField(fieldError.field)) {
+      formErrors[fieldError.field] = fieldError.message;
+    } else if (fieldError.field === 'avatar' || fieldError.field.startsWith('avatar.')) {
+      avatarError = fieldError.message;
+    } else {
+      hasUnknownField = true;
+    }
+  }
+  return {
+    formErrors,
+    avatarError,
+    generalError: hasUnknownField || fieldErrors.length === 0 ? error.message : undefined,
+  };
+}
+
+export function isValidProviderConnectionSummary(
+  connection: ProviderConnectionSummary,
+): boolean {
+  return connection.status !== 'never-tested'
+    && connection.lastTestedAt !== null
+    && (connection.status !== 'connected' || connection.lastError === null)
+    && (connection.status !== 'failed' || connection.lastError !== null);
 }
 
 export function createProviderFormValues(runtime: ProviderRuntime): ProviderFormValues {

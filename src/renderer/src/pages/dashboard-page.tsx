@@ -301,7 +301,7 @@ export function DashboardPage() {
           <VStack gap={3}>
             <HStack hAlign="between" vAlign="center" gap={3}>
               <Heading level={2}>Agent Runtime Status</Heading>
-              <Link href={routePaths.agentRuntimesProviders} isStandalone>
+              <Link href={routePaths.agentRuntimeProviders} isStandalone>
                 Manage Providers
               </Link>
             </HStack>

@@ -1,16 +1,25 @@
 import { AlertDialog } from '@astryxdesign/core/AlertDialog';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
-import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
+import { Code } from '@astryxdesign/core/Code';
+import { Dialog } from '@astryxdesign/core/Dialog';
+import { Heading } from '@astryxdesign/core/Heading';
+import { HoverCard } from '@astryxdesign/core/HoverCard';
+import { Icon } from '@astryxdesign/core/Icon';
+import { IconButton } from '@astryxdesign/core/IconButton';
 import {
   Layout,
   LayoutContent,
   LayoutFooter,
+  LayoutHeader,
 } from '@astryxdesign/core/Layout';
 import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
 import { Spinner } from '@astryxdesign/core/Spinner';
+import { StatusDot } from '@astryxdesign/core/StatusDot';
+import { Text } from '@astryxdesign/core/Text';
 import { useToast } from '@astryxdesign/core/Toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { X } from 'lucide-react';
 import {
   useCallback,
   useEffect,
@@ -56,7 +65,6 @@ import {
   resetProviderList,
   resolveProviderRequest,
 } from './provider-query';
-import { providerRuntimeLabels } from './provider-runtime';
 
 export type ProviderDialogRequest
   = | {
@@ -72,7 +80,6 @@ export type ProviderDialogRequest
 
 interface AvatarView {
   url?: string;
-  fileName?: string;
 }
 
 type StoredAvatarState
@@ -85,6 +92,11 @@ interface ProviderDialogProps {
   onSaved: (runtime: ProviderRuntime) => void;
 }
 
+interface ConnectionTestFeedback {
+  variant: 'success' | 'error';
+  message: string;
+}
+
 const STORED_AVATAR_WARNING
   = 'The stored avatar could not be loaded. Saving will preserve it unless you remove or replace it.';
 
@@ -93,6 +105,68 @@ function getRequestRuntime(request: ProviderDialogRequest): ProviderRuntime {
     return request.provider.runtime;
   }
   return request.runtime;
+}
+
+function getConnectionTestFeedback(
+  result: ProviderConnectionSummary | undefined,
+  error: string | undefined,
+): ConnectionTestFeedback | undefined {
+  if (error !== undefined) {
+    return { variant: 'error', message: `Connection test failed: ${error}` };
+  }
+  if (result?.status === 'connected') {
+    return { variant: 'success', message: 'Connection successful' };
+  }
+  if (result?.status === 'failed') {
+    return {
+      variant: 'error',
+      message: `Connection failed: ${result.lastError ?? 'Unknown error'}`,
+    };
+  }
+  return undefined;
+}
+
+function ConnectionTestMethod({ runtime }: { runtime: ProviderRuntime }) {
+  return (
+    <VStack gap={1.5} maxWidth="min(48ch, 80vw)">
+      {runtime === 'codex'
+        ? (
+            <Text type="body" display="block" textWrap="pretty">
+              {'Sends a '}
+              <Code>GET</Code>
+              {' request to '}
+              <Code>/models</Code>
+              {'. When provided, the API key is sent as '}
+              <Code>Authorization: Bearer &lt;API key&gt;</Code>
+              .
+            </Text>
+          )
+        : (
+            <Text type="body" display="block" textWrap="pretty">
+              {'Sends a '}
+              <Code>GET</Code>
+              {' request to '}
+              <Code>/v1/models</Code>
+              {', or '}
+              <Code>/models</Code>
+              {' when the Base URL ends in '}
+              <Code>/v1</Code>
+              {'. Authentication uses '}
+              <Code>x-api-key</Code>
+              {' and '}
+              <Code>anthropic-version: 2023-06-01</Code>
+              .
+            </Text>
+          )}
+      <Text type="supporting" display="block" textWrap="pretty">
+        {'Any '}
+        <Code>2xx</Code>
+        {' response passes. Redirects fail. Timeout: '}
+        <Code>15s</Code>
+        .
+      </Text>
+    </VStack>
+  );
 }
 
 function focusFirstFormError(formId: string, errors: ProviderFormErrors): void {
@@ -114,6 +188,7 @@ function ProviderDialogFrame({
   isFormReady,
   isSaving = false,
   isTesting = false,
+  connectionFeedback,
   onClose,
   onTestConnection,
 }: {
@@ -123,13 +198,14 @@ function ProviderDialogFrame({
   isFormReady: boolean;
   isSaving?: boolean;
   isTesting?: boolean;
+  connectionFeedback?: ConnectionTestFeedback;
   onClose: () => void;
   onTestConnection?: () => void;
 }) {
-  const runtime = getRequestRuntime(request);
   const title = request.mode === 'add' ? 'Add Provider' : 'Edit Provider';
-  const subtitle = `${providerRuntimeLabels[runtime]} Provider`;
+  const titleId = useId();
   const saveLabel = request.mode === 'add' ? 'Add Provider' : 'Save Changes';
+  const runtime = getRequestRuntime(request);
   const handleClose = () => {
     if (!isSaving) {
       onClose();
@@ -147,27 +223,68 @@ function ProviderDialogFrame({
       purpose={isSaving ? 'required' : 'form'}
       width={720}
       maxHeight="85vh"
+      aria-labelledby={titleId}
     >
       <Layout
         header={(
-          <DialogHeader
-            title={title}
-            subtitle={subtitle}
-            onOpenChange={isSaving ? undefined : handleClose}
-          />
+          <LayoutHeader hasDivider>
+            <HStack gap={3} hAlign="between" vAlign="center">
+              <Heading
+                id={titleId}
+                level={3}
+                accessibilityLevel={2}
+                maxLines={1}
+                tabIndex={-1}
+                data-autofocus
+              >
+                {title}
+              </Heading>
+              {!isSaving && (
+                <IconButton
+                  label="Close Provider Dialog"
+                  tooltip="Close"
+                  icon={<Icon icon={X} size="sm" color="inherit" />}
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClose}
+                />
+              )}
+            </HStack>
+          </LayoutHeader>
         )}
-        content={<LayoutContent isScrollable padding={6}>{content}</LayoutContent>}
+        content={<LayoutContent isScrollable>{content}</LayoutContent>}
         footer={(
           <LayoutFooter hasDivider>
             <HStack gap={2} width="100%" vAlign="center">
-              <Button
-                label="Test Connection"
-                variant="secondary"
-                isDisabled={!isFormReady || isSaving}
-                isLoading={isTesting}
-                onClick={onTestConnection}
-              />
-              <StackItem size="fill" />
+              <HoverCard
+                placement="above"
+                alignment="start"
+                focusTrigger="always"
+                hasHoverIndication={false}
+                label="Connection test method"
+                content={<ConnectionTestMethod runtime={runtime} />}
+              >
+                <Button
+                  label="Test Connection"
+                  variant="secondary"
+                  isDisabled={!isFormReady || isSaving}
+                  isLoading={isTesting}
+                  onClick={onTestConnection}
+                />
+              </HoverCard>
+              {connectionFeedback && (
+                <StatusDot
+                  variant={connectionFeedback.variant}
+                  label={connectionFeedback.message}
+                />
+              )}
+              <StackItem size="fill">
+                {connectionFeedback && (
+                  <Text type="supporting" maxLines={1} hasTruncateTooltip>
+                    {connectionFeedback.message}
+                  </Text>
+                )}
+              </StackItem>
               <Button
                 label="Cancel"
                 variant="ghost"
@@ -281,11 +398,11 @@ function ProviderDialogFormSession({
     previewUrlRef.current = undefined;
   }, []);
 
-  const showAvatar = useCallback((avatar: ProviderAvatar, fileName?: string) => {
+  const showAvatar = useCallback((avatar: ProviderAvatar) => {
     const url = createProviderAvatarUrl(avatar);
     revokePreviewUrl();
     previewUrlRef.current = url;
-    setAvatarView({ url, fileName });
+    setAvatarView({ url });
   }, [revokePreviewUrl]);
 
   useEffect(() => () => revokePreviewUrl(), [revokePreviewUrl]);
@@ -365,7 +482,7 @@ function ProviderDialogFormSession({
         if (selection === null) {
           return;
         }
-        showAvatar(selection.avatar, selection.fileName);
+        showAvatar(selection.avatar);
         setAvatarIntent({ kind: 'replace', selection });
       },
     });
@@ -442,6 +559,9 @@ function ProviderDialogFormSession({
   const connectionError = testError !== null && baseUrlTestError === undefined
     ? testError.message
     : undefined;
+  const connectionFeedback = isTesting
+    ? undefined
+    : getConnectionTestFeedback(connectionResult, connectionError);
 
   const hasAvatar = avatarIntent.kind === 'replace'
     || (hasStoredAvatar && avatarIntent.kind !== 'remove');
@@ -461,23 +581,6 @@ function ProviderDialogFormSession({
       {generalError && (
         <Banner status="error" title="Couldn't Save Provider" description={generalError} />
       )}
-      {connectionError && (
-        <Banner status="error" title="Couldn't Test Connection" description={connectionError} />
-      )}
-      {connectionResult?.status === 'connected' && (
-        <Banner
-          status="success"
-          title="Connection Successful"
-          description="The endpoint accepted the connection request."
-        />
-      )}
-      {connectionResult?.status === 'failed' && (
-        <Banner
-          status="error"
-          title="Connection Failed"
-          description={connectionResult.lastError}
-        />
-      )}
       {hasStoredAvatarWarning && (
         <Banner status="warning" title="Avatar Unavailable" description={STORED_AVATAR_WARNING} />
       )}
@@ -486,7 +589,6 @@ function ProviderDialogFormSession({
         values={values}
         errors={formErrors}
         avatarUrl={avatarView.url}
-        avatarFileName={avatarView.fileName}
         avatarError={avatarError}
         hasAvatar={hasAvatar}
         isDisabled={isSaving}
@@ -508,6 +610,7 @@ function ProviderDialogFormSession({
         isFormReady
         isSaving={isSaving}
         isTesting={isTesting}
+        connectionFeedback={connectionFeedback}
         onClose={requestClose}
         onTestConnection={handleTestConnection}
       />

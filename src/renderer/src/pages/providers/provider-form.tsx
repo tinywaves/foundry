@@ -1,15 +1,18 @@
-import { Avatar } from '@astryxdesign/core/Avatar';
-import { Button } from '@astryxdesign/core/Button';
 import { Field } from '@astryxdesign/core/Field';
 import { FormLayout } from '@astryxdesign/core/FormLayout';
-import { Heading } from '@astryxdesign/core/Heading';
-import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
+import { Icon } from '@astryxdesign/core/Icon';
+import { IconButton } from '@astryxdesign/core/IconButton';
+import { InputGroup, InputGroupText } from '@astryxdesign/core/InputGroup';
+import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { proportional, Table } from '@astryxdesign/core/Table';
 import type { TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
 import { TextArea } from '@astryxdesign/core/TextArea';
 import { TextInput } from '@astryxdesign/core/TextInput';
-import { useId, useMemo } from 'react';
+import { Thumbnail } from '@astryxdesign/core/Thumbnail';
+import * as stylex from '@stylexjs/stylex';
+import { Eye, EyeOff } from 'lucide-react';
+import { useId, useMemo, useState } from 'react';
 import type {
   ProviderFormErrors,
   ProviderFormField,
@@ -59,6 +62,67 @@ const claudeModelRows: ClaudeModelRow[] = [
 
 function getErrorStatus(message: string | undefined) {
   return message ? { type: 'error' as const, message } : undefined;
+}
+
+const styles = stylex.create({
+  disabledInputGroup: {
+    // TextInput and IconButton already provide their own disabled treatment.
+    opacity: 1,
+  },
+});
+
+function ApiKeyInput({
+  value,
+  error,
+  isDisabled,
+  onChange,
+}: {
+  value: string;
+  error: string | undefined;
+  isDisabled: boolean;
+  onChange: (value: string) => void;
+}) {
+  const [isVisible, setIsVisible] = useState(false);
+  const status = getErrorStatus(error);
+  const visibilityLabel = isVisible ? 'Hide API key' : 'Show API key';
+
+  return (
+    <InputGroup
+      label="API key"
+      isOptional
+      isDisabled={isDisabled}
+      status={status}
+      xstyle={isDisabled ? styles.disabledInputGroup : undefined}
+    >
+      <TextInput
+        label="Value"
+        isLabelHidden
+        type={isVisible ? 'text' : 'password'}
+        isDisabled={isDisabled}
+        htmlName="apiKey"
+        value={value}
+        status={status}
+        onChange={(nextValue) => {
+          if (nextValue === '') {
+            setIsVisible(false);
+          }
+          onChange(nextValue);
+        }}
+      />
+      <InputGroupText>
+        <IconButton
+          type="button"
+          label={visibilityLabel}
+          tooltip={visibilityLabel}
+          icon={<Icon icon={isVisible ? EyeOff : Eye} size="sm" color="inherit" />}
+          variant="ghost"
+          size="sm"
+          isDisabled={isDisabled || value === ''}
+          onClick={() => setIsVisible((current) => !current)}
+        />
+      </InputGroupText>
+    </InputGroup>
+  );
 }
 
 function ClaudeModelFields({
@@ -151,7 +215,6 @@ export function ProviderForm({
   values,
   errors,
   avatarUrl,
-  avatarFileName,
   avatarError,
   hasAvatar,
   isDisabled,
@@ -165,7 +228,6 @@ export function ProviderForm({
   values: ProviderFormValues;
   errors: ProviderFormErrors;
   avatarUrl: string | undefined;
-  avatarFileName: string | undefined;
   avatarError: string | undefined;
   hasAvatar: boolean;
   isDisabled: boolean;
@@ -177,7 +239,6 @@ export function ProviderForm({
 }) {
   const avatarGroupId = useId();
   const avatarLabelId = useId();
-  const avatarDescription = avatarFileName ?? (hasAvatar ? 'Custom avatar' : 'Default avatar');
 
   return (
     <VStack
@@ -189,8 +250,7 @@ export function ProviderForm({
         onSubmit();
       }}
     >
-      <VStack as="section" gap={3}>
-        <Heading level={3}>Details</Heading>
+      <VStack as="section" aria-label="Provider details">
         <FormLayout>
           <Field
             label="Avatar"
@@ -209,33 +269,16 @@ export function ProviderForm({
               vAlign="center"
               wrap="wrap"
             >
-              <Avatar src={avatarUrl} alt="Provider avatar preview" size="lg" tooltip={false} />
-              <StackItem size="fill">
-                <VStack gap={1}>
-                  <Text type="supporting" color="secondary" maxLines={1}>
-                    {avatarDescription}
-                  </Text>
-                  <HStack gap={1} wrap="wrap">
-                    <Button
-                      label={hasAvatar ? 'Replace' : 'Choose Image'}
-                      variant="secondary"
-                      size="sm"
-                      isDisabled={isDisabled}
-                      isLoading={isSelectingAvatar}
-                      clickAction={onSelectAvatar}
-                    />
-                    {hasAvatar && (
-                      <Button
-                        label="Remove"
-                        variant="ghost"
-                        size="sm"
-                        isDisabled={isDisabled || isSelectingAvatar}
-                        onClick={onRemoveAvatar}
-                      />
-                    )}
-                  </HStack>
-                </VStack>
-              </StackItem>
+              <Thumbnail
+                src={avatarUrl}
+                alt="Provider avatar preview"
+                label="Provider avatar picker"
+                isDisabled={isDisabled || isSelectingAvatar}
+                isLoading={isSelectingAvatar}
+                showRemoveOn="always"
+                onClick={onSelectAvatar}
+                onRemove={hasAvatar ? onRemoveAvatar : undefined}
+              />
             </HStack>
           </Field>
           <TextInput
@@ -269,8 +312,7 @@ export function ProviderForm({
         </FormLayout>
       </VStack>
 
-      <VStack as="section" gap={3}>
-        <Heading level={3}>Connection</Heading>
+      <VStack as="section" aria-label="Provider connection">
         <FormLayout>
           <TextInput
             label="Base URL"
@@ -281,21 +323,16 @@ export function ProviderForm({
             status={getErrorStatus(errors.baseUrl)}
             onChange={(value) => onFieldChange('baseUrl', value)}
           />
-          <TextInput
-            label="API key"
-            type="password"
-            isOptional
-            isDisabled={isDisabled}
-            htmlName="apiKey"
+          <ApiKeyInput
             value={values.apiKey}
-            status={getErrorStatus(errors.apiKey)}
+            error={errors.apiKey}
+            isDisabled={isDisabled}
             onChange={(value) => onFieldChange('apiKey', value)}
           />
         </FormLayout>
       </VStack>
 
-      <VStack as="section" gap={3}>
-        <Heading level={3}>Models</Heading>
+      <VStack as="section" aria-label="Provider models">
         {values.runtime === 'codex'
           ? (
               <TextInput

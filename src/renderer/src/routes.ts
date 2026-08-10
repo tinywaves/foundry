@@ -1,6 +1,6 @@
 export const routePaths = {
   dashboard: '/',
   skills: '/skills',
-  agentRuntimes: '/agent-runtimes',
-  agentRuntimesProviders: '/agent-runtimes/providers',
+  agentRuntime: '/agent-runtime',
+  agentRuntimeProviders: '/agent-runtime/providers',
 } as const;

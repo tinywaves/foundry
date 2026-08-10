@@ -13,7 +13,7 @@ import {
   spacingVars,
 } from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
-import { LayoutDashboard, ServerCog, Wrench } from 'lucide-react';
+import { LayoutDashboard, Plug, Wrench } from 'lucide-react';
 import { Link as RouterLink, Navigate, Route, Routes, useLocation } from 'react-router';
 import { WindowDragRegion } from '@renderer/components/window-drag-region';
 import { DashboardPage } from '@renderer/pages/dashboard-page';
@@ -125,14 +125,14 @@ export default function App() {
                       isSelected={pathname === routePaths.skills}
                     />
                   </VStack>
-                  <SideNavSection title="Agent Runtimes">
+                  <SideNavSection title="Agent Runtime">
                     <VStack gap={1}>
                       <SideNavItem
                         as={RouterLink}
                         label="Providers"
-                        icon={ServerCog}
-                        href={routePaths.agentRuntimesProviders}
-                        isSelected={pathname === routePaths.agentRuntimesProviders}
+                        icon={Plug}
+                        href={routePaths.agentRuntimeProviders}
+                        isSelected={pathname === routePaths.agentRuntimeProviders}
                       />
                     </VStack>
                   </SideNavSection>
@@ -155,10 +155,10 @@ export default function App() {
               <Route path={routePaths.dashboard} element={<DashboardPage />} />
               <Route path={routePaths.skills} element={<SkillsPage />} />
               <Route
-                path={routePaths.agentRuntimes}
-                element={<Navigate to={routePaths.agentRuntimesProviders} replace />}
+                path={routePaths.agentRuntime}
+                element={<Navigate to={routePaths.agentRuntimeProviders} replace />}
               />
-              <Route path={routePaths.agentRuntimesProviders} element={<ProvidersPage />} />
+              <Route path={routePaths.agentRuntimeProviders} element={<ProvidersPage />} />
               <Route path="*" element={<Navigate to={routePaths.dashboard} replace />} />
             </Routes>
           </StackItem>

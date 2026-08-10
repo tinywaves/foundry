@@ -4,11 +4,12 @@ import { Button } from '@astryxdesign/core/Button';
 import { EmptyState } from '@astryxdesign/core/EmptyState';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Icon } from '@astryxdesign/core/Icon';
+import { Section } from '@astryxdesign/core/Section';
 import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
 import { Tab, TabList } from '@astryxdesign/core/TabList';
 import { useToast } from '@astryxdesign/core/Toast';
 import { Toolbar } from '@astryxdesign/core/Toolbar';
-import { Tooltip } from '@astryxdesign/core/Tooltip';
+import { spacingVars } from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, ServerCog } from 'lucide-react';
@@ -51,6 +52,11 @@ const styles = stylex.create({
   },
   emptyState: {
     minHeight: '100%',
+  },
+  runtimeIcon: {
+    display: 'block',
+    width: spacingVars['--spacing-4'],
+    height: spacingVars['--spacing-4'],
   },
 });
 
@@ -281,61 +287,56 @@ export function ProvidersPage() {
 
   return (
     <VStack width="100%" height="100%" xstyle={styles.page}>
-      <Toolbar
-        label="Provider Controls"
-        size="md"
-        gap={2}
-        dividers={['bottom']}
-        startContent={(
-          <HStack gap={3} vAlign="center">
-            <Heading level={1}>Providers</Heading>
-            <TabList
-              value={runtime}
-              onChange={handleRuntimeChange}
-              aria-label="Runtime"
-            >
-              <Tooltip content="Codex" placement="below">
-                <Tab
-                  value="codex"
-                  label="Codex"
-                  isLabelHidden
-                  icon={(
-                    <img
-                      src={providerRuntimeIconUrls.codex}
-                      alt=""
-                      width={16}
-                      height={16}
-                      draggable={false}
-                    />
-                  )}
-                />
-              </Tooltip>
-              <Tooltip content="Claude Code" placement="below">
-                <Tab
-                  value="claude-code"
-                  label="Claude Code"
-                  isLabelHidden
-                  icon={(
-                    <img
-                      src={providerRuntimeIconUrls['claude-code']}
-                      alt=""
-                      width={16}
-                      height={16}
-                      draggable={false}
-                    />
-                  )}
-                />
-              </Tooltip>
-            </TabList>
-          </HStack>
-        )}
-        endContent={(
+      <Section padding={4} paddingBlock={2}>
+        <HStack gap={3} hAlign="between" vAlign="center">
+          <Heading level={3} accessibilityLevel={1}>Providers</Heading>
           <Button
             label="Add Provider"
             variant="primary"
             icon={<Icon icon={Plus} size="sm" color="inherit" />}
             onClick={openAddDialog}
           />
+        </HStack>
+      </Section>
+      <Toolbar
+        label="Provider Runtime"
+        size="sm"
+        startContent={(
+          <TabList
+            value={runtime}
+            size="sm"
+            onChange={handleRuntimeChange}
+            aria-label="Runtime"
+          >
+            <Tab
+              value="codex"
+              label="Codex"
+              icon={(
+                <img
+                  {...stylex.props(styles.runtimeIcon)}
+                  src={providerRuntimeIconUrls.codex}
+                  alt=""
+                  width={16}
+                  height={16}
+                  draggable={false}
+                />
+              )}
+            />
+            <Tab
+              value="claude-code"
+              label="Claude Code"
+              icon={(
+                <img
+                  {...stylex.props(styles.runtimeIcon)}
+                  src={providerRuntimeIconUrls['claude-code']}
+                  alt=""
+                  width={16}
+                  height={16}
+                  draggable={false}
+                />
+              )}
+            />
+          </TabList>
         )}
       />
       <StackItem size="fill" xstyle={styles.content}>

@@ -4,9 +4,11 @@ import { Button } from '@astryxdesign/core/Button';
 import { EmptyState } from '@astryxdesign/core/EmptyState';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Icon } from '@astryxdesign/core/Icon';
-import { StackItem, VStack } from '@astryxdesign/core/Stack';
+import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
 import { Tab, TabList } from '@astryxdesign/core/TabList';
 import { useToast } from '@astryxdesign/core/Toast';
+import { Toolbar } from '@astryxdesign/core/Toolbar';
+import { Tooltip } from '@astryxdesign/core/Tooltip';
 import * as stylex from '@stylexjs/stylex';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, ServerCog } from 'lucide-react';
@@ -16,6 +18,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useSearchParams } from 'react-router';
 import type { ProviderRuntime, ProviderSummary } from '../../../shared/provider-contract';
 import { ProviderDialog } from './providers/provider-dialog';
 import type { ProviderDialogRequest } from './providers/provider-dialog';
@@ -29,23 +32,18 @@ import {
   LoadingProviderTable,
   ProviderTable,
 } from './providers/provider-table';
-import { providerRuntimeLabels } from './providers/provider-runtime';
+import {
+  providerRuntimeIconUrls,
+  providerRuntimeLabels,
+} from './providers/provider-runtime';
 import { useProviderList } from './providers/use-provider-list';
 
 const REVEAL_DURATION_MS = 30_000;
+const RUNTIME_QUERY_PARAM = 'runtime';
 
 const styles = stylex.create({
   page: {
     minWidth: 0,
-  },
-  header: {
-    flexShrink: 0,
-  },
-  tabList: {
-    width: '100%',
-  },
-  addButton: {
-    marginInlineStart: 'auto',
   },
   content: {
     minWidth: 0,
@@ -56,10 +54,16 @@ const styles = stylex.create({
   },
 });
 
+function getProviderRuntime(value: string | null): ProviderRuntime {
+  return value === 'claude-code' ? value : 'codex';
+}
+
 export function ProvidersPage() {
   const queryClient = useQueryClient();
   const showToast = useToast();
-  const [runtime, setRuntime] = useState<ProviderRuntime>('codex');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const runtimeParam = searchParams.get(RUNTIME_QUERY_PARAM);
+  const runtime = getProviderRuntime(runtimeParam);
   const [dialogRequest, setDialogRequest] = useState<ProviderDialogRequest>();
   const [revealedApiKey, setRevealedApiKey] = useState<{ id: string; value: string }>();
   const [providerToDelete, setProviderToDelete] = useState<ProviderSummary>();
@@ -91,7 +95,7 @@ export function ProvidersPage() {
   } = useMutation<undefined, ProviderRequestError, ProviderSummary>({
     mutationFn: (provider) => resolveProviderRequest<undefined>(
       () => globalThis.api.providers.deleteProvider(provider.id),
-      'The Provider could not be deleted.',
+      'The provider could not be deleted.',
     ),
     onSuccess: (_, provider) => {
       void resetProviderList(queryClient, provider.runtime);
@@ -99,6 +103,17 @@ export function ProvidersPage() {
   });
   const revealingProviderId = isRevealingApiKey ? revealingProvider.id : undefined;
   const deletingProviderId = isDeletingProvider ? deletingProvider.id : undefined;
+
+  useEffect(() => {
+    if (runtimeParam === runtime) {
+      return;
+    }
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set(RUNTIME_QUERY_PARAM, runtime);
+      return next;
+    }, { replace: true });
+  }, [runtime, runtimeParam, setSearchParams]);
 
   const clearRevealTimer = useCallback(() => {
     if (revealTimerRef.current === undefined) {
@@ -136,7 +151,9 @@ export function ProvidersPage() {
       return;
     }
     resetPageActions();
-    setRuntime(value);
+    const next = new URLSearchParams(searchParams);
+    next.set(RUNTIME_QUERY_PARAM, value);
+    setSearchParams(next, { replace: true });
   };
 
   const disposeCurrentDialogDetail = useCallback(() => {
@@ -224,8 +241,8 @@ export function ProvidersPage() {
       <Banner
         status="error"
         container="section"
-        title={`Couldn't load ${providerRuntimeLabels[runtime]} providers`}
-        description={state.message}
+        title={`Couldn't Load ${providerRuntimeLabels[runtime]} Providers`}
+        description={`${state.message} Retry to refresh this runtime.`}
         endContent={<Button label="Retry" variant="ghost" onClick={reloadProviders} />}
       />
     );
@@ -233,12 +250,12 @@ export function ProvidersPage() {
     content = (
       <EmptyState
         headingLevel={2}
-        title={`No ${providerRuntimeLabels[runtime]} providers yet`}
+        title={`No ${providerRuntimeLabels[runtime]} Providers Yet`}
         icon={<Icon icon={ServerCog} size="lg" color="secondary" />}
         xstyle={styles.emptyState}
         actions={(
           <Button
-            label="Add provider"
+            label="Add Provider"
             variant="secondary"
             icon={<Icon icon={Plus} size="sm" color="inherit" />}
             onClick={openAddDialog}
@@ -264,26 +281,63 @@ export function ProvidersPage() {
 
   return (
     <VStack width="100%" height="100%" xstyle={styles.page}>
-      <VStack gap={4} padding={6} xstyle={styles.header}>
-        <Heading level={1}>Providers</Heading>
-        <TabList
-          value={runtime}
-          onChange={handleRuntimeChange}
-          hasDivider
-          aria-label="Provider runtime"
-          xstyle={styles.tabList}
-        >
-          <Tab value="codex" label="Codex" />
-          <Tab value="claude-code" label="Claude Code" />
+      <Toolbar
+        label="Provider Controls"
+        size="md"
+        gap={2}
+        dividers={['bottom']}
+        startContent={(
+          <HStack gap={3} vAlign="center">
+            <Heading level={1}>Providers</Heading>
+            <TabList
+              value={runtime}
+              onChange={handleRuntimeChange}
+              aria-label="Runtime"
+            >
+              <Tooltip content="Codex" placement="below">
+                <Tab
+                  value="codex"
+                  label="Codex"
+                  isLabelHidden
+                  icon={(
+                    <img
+                      src={providerRuntimeIconUrls.codex}
+                      alt=""
+                      width={16}
+                      height={16}
+                      draggable={false}
+                    />
+                  )}
+                />
+              </Tooltip>
+              <Tooltip content="Claude Code" placement="below">
+                <Tab
+                  value="claude-code"
+                  label="Claude Code"
+                  isLabelHidden
+                  icon={(
+                    <img
+                      src={providerRuntimeIconUrls['claude-code']}
+                      alt=""
+                      width={16}
+                      height={16}
+                      draggable={false}
+                    />
+                  )}
+                />
+              </Tooltip>
+            </TabList>
+          </HStack>
+        )}
+        endContent={(
           <Button
-            label="Add provider"
+            label="Add Provider"
             variant="primary"
             icon={<Icon icon={Plus} size="sm" color="inherit" />}
-            xstyle={styles.addButton}
             onClick={openAddDialog}
           />
-        </TabList>
-      </VStack>
+        )}
+      />
       <StackItem size="fill" xstyle={styles.content}>
         {content}
       </StackItem>
@@ -306,11 +360,11 @@ export function ProvidersPage() {
             setProviderToDelete(undefined);
           }
         }}
-        title="Delete provider?"
+        title="Delete Provider?"
         description={providerToDelete
-          ? `${providerToDelete.name} will be removed from Foundry's active Provider list.`
-          : 'This Provider will be removed from Foundry.'}
-        actionLabel="Delete provider"
+          ? `${providerToDelete.name} will be removed from Foundry.`
+          : 'This provider will be removed from Foundry.'}
+        actionLabel="Delete Provider"
         actionVariant="destructive"
         isActionLoading={isDeletingProvider}
         onAction={handleConfirmDelete}

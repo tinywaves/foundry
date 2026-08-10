@@ -113,7 +113,7 @@ export function getProviderDetailQueryOptions(provider: ProviderSummary) {
       if (
         !isMatchingCustomProvider(detail, provider.runtime, provider.id)
       ) {
-        throw new ProviderRequestError('The selected Provider detail did not match this row.');
+        throw new ProviderRequestError('The selected provider did not match this row.');
       }
       return detail;
     },

@@ -1,3 +1,4 @@
+import { AlertDialog } from '@astryxdesign/core/AlertDialog';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
@@ -94,6 +95,18 @@ function getRequestRuntime(request: ProviderDialogRequest): ProviderRuntime {
   return request.runtime;
 }
 
+function focusFirstFormError(formId: string, errors: ProviderFormErrors): void {
+  const fields = Object.keys(errors) as ProviderFormField[];
+  if (fields.length === 0) {
+    return;
+  }
+  const field = fields[0];
+  queueMicrotask(() => {
+    const form = document.getElementById(formId);
+    form?.querySelector<HTMLElement>(`[name="${CSS.escape(field)}"]`)?.focus();
+  });
+}
+
 function ProviderDialogFrame({
   request,
   content,
@@ -114,8 +127,9 @@ function ProviderDialogFrame({
   onTestConnection?: () => void;
 }) {
   const runtime = getRequestRuntime(request);
-  const title = request.mode === 'add' ? 'Add provider' : 'Edit provider';
-  const subtitle = `${providerRuntimeLabels[runtime]} custom provider`;
+  const title = request.mode === 'add' ? 'Add Provider' : 'Edit Provider';
+  const subtitle = `${providerRuntimeLabels[runtime]} Provider`;
+  const saveLabel = request.mode === 'add' ? 'Add Provider' : 'Save Changes';
   const handleClose = () => {
     if (!isSaving) {
       onClose();
@@ -147,7 +161,7 @@ function ProviderDialogFrame({
           <LayoutFooter hasDivider>
             <HStack gap={2} width="100%" vAlign="center">
               <Button
-                label="Test connection"
+                label="Test Connection"
                 variant="secondary"
                 isDisabled={!isFormReady || isSaving}
                 isLoading={isTesting}
@@ -161,7 +175,7 @@ function ProviderDialogFrame({
                 onClick={handleClose}
               />
               <Button
-                label="Save"
+                label={saveLabel}
                 variant="primary"
                 type="submit"
                 form={formId}
@@ -192,11 +206,13 @@ function ProviderDialogFormSession({
   const queryClient = useQueryClient();
   const showToast = useToast();
   const previewUrlRef = useRef<string | undefined>(undefined);
+  const [initialValuesSnapshot] = useState(() => JSON.stringify(initialValues));
   const [values, setValues] = useState(initialValues);
   const [formErrors, setFormErrors] = useState<ProviderFormErrors>({});
   const [avatarError, setAvatarError] = useState<string>();
   const [avatarIntent, setAvatarIntent] = useState<ProviderAvatarIntent>({ kind: 'preserve' });
   const [avatarView, setAvatarView] = useState<AvatarView>({});
+  const [isDiscardConfirmationOpen, setIsDiscardConfirmationOpen] = useState(false);
   const {
     error: saveError,
     isPending: isSaving,
@@ -207,17 +223,17 @@ function ProviderDialogFormSession({
       const savedProvider = request.mode === 'add'
         ? await resolveProviderRequest<ProviderSummary>(
             () => globalThis.api.providers.createProvider(input),
-            'The Provider could not be saved.',
+            'The provider could not be saved.',
           )
         : await resolveProviderRequest<ProviderSummary>(
             () => globalThis.api.providers.updateProvider({
               ...input,
               id: request.provider.id,
             }),
-            'The Provider could not be saved.',
+            'The provider could not be saved.',
           );
       if (!isMatchingCustomProvider(savedProvider, runtime)) {
-        throw new ProviderRequestError('The saved Provider response was invalid.');
+        throw new ProviderRequestError('The saved provider response was invalid.');
       }
       return savedProvider;
     },
@@ -315,6 +331,7 @@ function ProviderDialogFormSession({
     if (!validation.ok) {
       resetTestConnection();
       setFormErrors((current) => ({ ...current, ...validation.errors }));
+      focusFirstFormError(formId, validation.errors);
       return;
     }
 
@@ -324,11 +341,13 @@ function ProviderDialogFormSession({
           fieldError.field === 'baseUrl'
         ));
         if (baseUrlError) {
-          setFormErrors((current) => ({ ...current, baseUrl: baseUrlError.message }));
+          const nextErrors = { baseUrl: baseUrlError.message };
+          setFormErrors((current) => ({ ...current, ...nextErrors }));
+          focusFirstFormError(formId, nextErrors);
         }
       },
     });
-  }, [isTesting, resetTestConnection, testConnection, values]);
+  }, [formId, isTesting, resetTestConnection, testConnection, values]);
 
   const handleSelectAvatar = useCallback(() => {
     if (isSelectingAvatar) {
@@ -367,6 +386,7 @@ function ProviderDialogFormSession({
     if (!validation.ok) {
       resetSave();
       setFormErrors(validation.errors);
+      focusFirstFormError(formId, validation.errors);
       return;
     }
 
@@ -384,6 +404,7 @@ function ProviderDialogFormSession({
         const errorState = getProviderFormApiErrorState(error.apiError);
         setFormErrors(errorState.formErrors);
         setAvatarError(errorState.avatarError);
+        focusFirstFormError(formId, errorState.formErrors);
       },
       onSuccess: () => {
         showToast({
@@ -396,6 +417,7 @@ function ProviderDialogFormSession({
     });
   }, [
     avatarIntent,
+    formId,
     isSaving,
     onClose,
     onSaved,
@@ -425,30 +447,39 @@ function ProviderDialogFormSession({
     || (hasStoredAvatar && avatarIntent.kind !== 'remove');
   const hasStoredAvatarWarning = avatarIntent.kind === 'preserve'
     && storedAvatarState.status === 'error';
+  const hasUnsavedChanges = JSON.stringify(values) !== initialValuesSnapshot
+    || avatarIntent.kind !== 'preserve';
+  const requestClose = () => {
+    if (hasUnsavedChanges) {
+      setIsDiscardConfirmationOpen(true);
+      return;
+    }
+    onClose();
+  };
   const content = (
     <VStack gap={4}>
       {generalError && (
-        <Banner status="error" title="Couldn't save provider" description={generalError} />
+        <Banner status="error" title="Couldn't Save Provider" description={generalError} />
       )}
       {connectionError && (
-        <Banner status="error" title="Couldn't test connection" description={connectionError} />
+        <Banner status="error" title="Couldn't Test Connection" description={connectionError} />
       )}
       {connectionResult?.status === 'connected' && (
         <Banner
           status="success"
-          title="Connection successful"
-          description="The Provider endpoint accepted the connection request."
+          title="Connection Successful"
+          description="The endpoint accepted the connection request."
         />
       )}
       {connectionResult?.status === 'failed' && (
         <Banner
           status="error"
-          title="Connection failed"
+          title="Connection Failed"
           description={connectionResult.lastError}
         />
       )}
       {hasStoredAvatarWarning && (
-        <Banner status="warning" title="Avatar unavailable" description={STORED_AVATAR_WARNING} />
+        <Banner status="warning" title="Avatar Unavailable" description={STORED_AVATAR_WARNING} />
       )}
       <ProviderForm
         formId={formId}
@@ -469,16 +500,27 @@ function ProviderDialogFormSession({
   );
 
   return (
-    <ProviderDialogFrame
-      request={request}
-      content={content}
-      formId={formId}
-      isFormReady
-      isSaving={isSaving}
-      isTesting={isTesting}
-      onClose={onClose}
-      onTestConnection={handleTestConnection}
-    />
+    <>
+      <ProviderDialogFrame
+        request={request}
+        content={content}
+        formId={formId}
+        isFormReady
+        isSaving={isSaving}
+        isTesting={isTesting}
+        onClose={requestClose}
+        onTestConnection={handleTestConnection}
+      />
+      <AlertDialog
+        isOpen={isDiscardConfirmationOpen}
+        onOpenChange={setIsDiscardConfirmationOpen}
+        title="Discard Changes?"
+        description="Your unsaved provider changes will be lost."
+        actionLabel="Discard Changes"
+        actionVariant="destructive"
+        onAction={onClose}
+      />
+    </>
   );
 }
 
@@ -505,7 +547,7 @@ function EditProviderDialog({ request, onClose, onSaved }: ProviderDialogProps &
         request={request}
         content={(
           <VStack hAlign="center" padding={8}>
-            <Spinner label="Loading provider details" />
+            <Spinner label="Loading provider details…" />
           </VStack>
         )}
         isFormReady={false}
@@ -520,8 +562,8 @@ function EditProviderDialog({ request, onClose, onSaved }: ProviderDialogProps &
         content={(
           <Banner
             status="error"
-            title="Couldn't load provider details"
-            description={detailQuery.error.message}
+            title="Couldn't Load Provider Details"
+            description={`${detailQuery.error.message} Retry to load this provider.`}
             endContent={<Button label="Retry" variant="ghost" onClick={handleRetry} />}
           />
         )}

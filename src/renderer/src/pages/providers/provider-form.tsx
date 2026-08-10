@@ -91,6 +91,7 @@ function ClaudeModelFields({
               isLabelHidden
               isRequired
               isDisabled={isDisabled}
+              htmlName={displayNameField}
               value={getProviderFormField(values, displayNameField)}
               status={getErrorStatus(errors[displayNameField])}
               statusVariant="tooltip"
@@ -109,6 +110,7 @@ function ClaudeModelFields({
           isLabelHidden
           isRequired
           isDisabled={isDisabled}
+          htmlName={requestModelField}
           value={getProviderFormField(values, requestModelField)}
           status={getErrorStatus(errors[requestModelField])}
           statusVariant="tooltip"
@@ -135,6 +137,7 @@ function ClaudeModelFields({
         label="Default fallback model"
         isRequired
         isDisabled={isDisabled}
+        htmlName="modelConfig.defaultFallbackModel"
         value={values.modelConfig.defaultFallbackModel}
         status={getErrorStatus(errors['modelConfig.defaultFallbackModel'])}
         onChange={(value) => onFieldChange('modelConfig.defaultFallbackModel', value)}
@@ -187,7 +190,7 @@ export function ProviderForm({
       }}
     >
       <VStack as="section" gap={3}>
-        <Heading level={3}>Provider</Heading>
+        <Heading level={3}>Details</Heading>
         <FormLayout>
           <Field
             label="Avatar"
@@ -214,7 +217,7 @@ export function ProviderForm({
                   </Text>
                   <HStack gap={1} wrap="wrap">
                     <Button
-                      label={hasAvatar ? 'Replace' : 'Choose image'}
+                      label={hasAvatar ? 'Replace' : 'Choose Image'}
                       variant="secondary"
                       size="sm"
                       isDisabled={isDisabled}
@@ -239,6 +242,7 @@ export function ProviderForm({
             label="Name"
             isRequired
             isDisabled={isDisabled}
+            htmlName="name"
             value={values.name}
             status={getErrorStatus(errors.name)}
             onChange={(value) => onFieldChange('name', value)}
@@ -247,6 +251,7 @@ export function ProviderForm({
             label="Remark"
             isOptional
             isDisabled={isDisabled}
+            htmlName="remark"
             value={values.remark}
             status={getErrorStatus(errors.remark)}
             rows={3}
@@ -256,6 +261,7 @@ export function ProviderForm({
             label="Official website"
             isOptional
             isDisabled={isDisabled}
+            htmlName="officialWebsite"
             value={values.officialWebsite}
             status={getErrorStatus(errors.officialWebsite)}
             onChange={(value) => onFieldChange('officialWebsite', value)}
@@ -270,6 +276,7 @@ export function ProviderForm({
             label="Base URL"
             isRequired
             isDisabled={isDisabled}
+            htmlName="baseUrl"
             value={values.baseUrl}
             status={getErrorStatus(errors.baseUrl)}
             onChange={(value) => onFieldChange('baseUrl', value)}
@@ -279,6 +286,7 @@ export function ProviderForm({
             type="password"
             isOptional
             isDisabled={isDisabled}
+            htmlName="apiKey"
             value={values.apiKey}
             status={getErrorStatus(errors.apiKey)}
             onChange={(value) => onFieldChange('apiKey', value)}
@@ -294,6 +302,7 @@ export function ProviderForm({
                 label="Default model"
                 isRequired
                 isDisabled={isDisabled}
+                htmlName="modelConfig.defaultModel"
                 value={values.modelConfig.defaultModel}
                 status={getErrorStatus(errors['modelConfig.defaultModel'])}
                 onChange={(value) => onFieldChange('modelConfig.defaultModel', value)}

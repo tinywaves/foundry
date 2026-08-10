@@ -1,10 +1,20 @@
 import { AppShell } from '@astryxdesign/core/AppShell';
-import { SideNav, SideNavHeading, SideNavItem } from '@astryxdesign/core/SideNav';
+import { Link as AstryxLink } from '@astryxdesign/core/Link';
+import {
+  SideNav,
+  SideNavHeading,
+  SideNavItem,
+  SideNavSection,
+} from '@astryxdesign/core/SideNav';
 import { StackItem, VStack } from '@astryxdesign/core/Stack';
-import { spacingVars } from '@astryxdesign/core/theme/tokens.stylex';
+import {
+  colorVars,
+  radiusVars,
+  spacingVars,
+} from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
-import { ArrowUpDown, LayoutDashboard, Wrench } from 'lucide-react';
-import { Link, Navigate, Route, Routes, useLocation } from 'react-router';
+import { LayoutDashboard, ServerCog, Wrench } from 'lucide-react';
+import { Link as RouterLink, Navigate, Route, Routes, useLocation } from 'react-router';
 import { WindowDragRegion } from '@renderer/components/window-drag-region';
 import { DashboardPage } from '@renderer/pages/dashboard-page';
 import { ProvidersPage } from '@renderer/pages/providers-page';
@@ -26,6 +36,24 @@ const styles = stylex.create({
   sideNav: {
     overflowX: 'clip',
   },
+  skipLink: {
+    position: 'fixed',
+    zIndex: 1,
+    insetBlockStart: spacingVars['--spacing-2'],
+    insetInlineStart: spacingVars['--spacing-2'],
+    paddingBlock: spacingVars['--spacing-1'],
+    paddingInline: spacingVars['--spacing-2'],
+    borderRadius: radiusVars['--radius-element'],
+    backgroundColor: colorVars['--color-background-surface'],
+    transform: {
+      'default': 'translateY(-200%)',
+      ':focus-visible': 'translateY(0)',
+    },
+  },
+  main: {
+    minWidth: 0,
+    minHeight: 0,
+  },
 });
 
 const sidebarResizeConfig = {
@@ -39,85 +67,103 @@ export default function App() {
   const { pathname } = useLocation();
 
   return (
-    <AppShell
-      height="fill"
-      variant="section"
-      contentPadding={0}
-      mobileNav={{ breakpoint: 'none', hasToggle: false }}
-      sideNav={(
-        <VStack height="100%" xstyle={styles.sideNav}>
-          {isMacOS && <WindowDragRegion />}
-          <StackItem size="fill">
-            <SideNav
-              collapsible={false}
-              resizable={sidebarResizeConfig}
-              header={(
-                <SideNavHeading
-                  as={Link}
-                  heading="Foundry"
-                  headingHref={routePaths.dashboard}
-                  xstyle={styles.brandHeading}
-                  icon={(
-                    <img
-                      {...stylex.props(styles.brandIcon)}
-                      src={foundryIcon}
-                      alt=""
-                      draggable={false}
-                    />
-                  )}
-                />
-              )}
-            >
-              <VStack gap={1}>
-                <SideNavItem
-                  as={Link}
-                  label="Dashboard"
-                  icon={LayoutDashboard}
-                  href={routePaths.dashboard}
-                  isSelected={pathname === routePaths.dashboard}
-                />
-                <SideNavItem
-                  as={Link}
-                  label="Skills"
-                  icon={Wrench}
-                  href={routePaths.skills}
-                  isSelected={pathname === routePaths.skills}
-                />
-                <SideNavItem
-                  label="Agents Switch"
-                  icon={ArrowUpDown}
-                  collapsible={{ defaultIsCollapsed: true }}
-                >
+    <>
+      <AstryxLink
+        as="a"
+        href="#main-content"
+        isStandalone
+        xstyle={styles.skipLink}
+      >
+        Skip to Main Content
+      </AstryxLink>
+      <AppShell
+        height="fill"
+        variant="section"
+        contentPadding={0}
+        mobileNav={{ breakpoint: 'none', hasToggle: false }}
+        sideNav={(
+          <VStack height="100%" xstyle={styles.sideNav}>
+            {isMacOS && <WindowDragRegion />}
+            <StackItem size="fill">
+              <SideNav
+                collapsible={false}
+                resizable={sidebarResizeConfig}
+                header={(
+                  <SideNavHeading
+                    as={RouterLink}
+                    heading="Foundry"
+                    headingHref={routePaths.dashboard}
+                    xstyle={styles.brandHeading}
+                    icon={(
+                      <img
+                        {...stylex.props(styles.brandIcon)}
+                        src={foundryIcon}
+                        alt=""
+                        width={40}
+                        height={40}
+                        fetchPriority="high"
+                        draggable={false}
+                      />
+                    )}
+                  />
+                )}
+              >
+                <VStack gap={3}>
                   <VStack gap={1}>
                     <SideNavItem
-                      as={Link}
-                      label="Providers"
-                      href={routePaths.agentsSwitchProviders}
-                      isSelected={pathname === routePaths.agentsSwitchProviders}
-                      size="sm"
+                      as={RouterLink}
+                      label="Dashboard"
+                      icon={LayoutDashboard}
+                      href={routePaths.dashboard}
+                      isSelected={pathname === routePaths.dashboard}
+                    />
+                    <SideNavItem
+                      as={RouterLink}
+                      label="Skills"
+                      icon={Wrench}
+                      href={routePaths.skills}
+                      isSelected={pathname === routePaths.skills}
                     />
                   </VStack>
-                </SideNavItem>
-              </VStack>
-            </SideNav>
+                  <SideNavSection title="Agents Switch">
+                    <VStack gap={1}>
+                      <SideNavItem
+                        as={RouterLink}
+                        label="Providers"
+                        icon={ServerCog}
+                        href={routePaths.agentsSwitchProviders}
+                        isSelected={pathname === routePaths.agentsSwitchProviders}
+                      />
+                    </VStack>
+                  </SideNavSection>
+                </VStack>
+              </SideNav>
+            </StackItem>
+          </VStack>
+        )}
+      >
+        <VStack height="100%">
+          <StackItem
+            as="main"
+            id="main-content"
+            tabIndex={-1}
+            size="fill"
+            isScrollable
+            xstyle={styles.main}
+          >
+            <Routes>
+              <Route path={routePaths.dashboard} element={<DashboardPage />} />
+              <Route path={routePaths.skills} element={<SkillsPage />} />
+              <Route
+                path={routePaths.agentsSwitch}
+                element={<Navigate to={routePaths.agentsSwitchProviders} replace />}
+              />
+              <Route path={routePaths.agentsSwitchProviders} element={<ProvidersPage />} />
+              <Route path="*" element={<Navigate to={routePaths.dashboard} replace />} />
+            </Routes>
           </StackItem>
         </VStack>
-      )}
-    >
-      <VStack height="100%">
-        <StackItem size="fill" isScrollable>
-          <Routes>
-            <Route path={routePaths.dashboard} element={<DashboardPage />} />
-            <Route path={routePaths.skills} element={<SkillsPage />} />
-            <Route
-              path={routePaths.agentsSwitch}
-              element={<Navigate to={routePaths.agentsSwitchProviders} replace />}
-            />
-            <Route path={routePaths.agentsSwitchProviders} element={<ProvidersPage />} />
-            <Route path="*" element={<Navigate to={routePaths.dashboard} replace />} />
-          </Routes>
-        </StackItem>
-      </VStack>
-    </AppShell>
+      </AppShell>
+    </>
   );
 }

@@ -212,7 +212,7 @@ function ProviderName({ provider }: ProviderTableRow) {
               <Text type="supporting" weight="medium" display="block">
                 Official website
               </Text>
-              <Link href={website} isExternalLink isStandalone maxLines={2}>
+              <Link as="a" href={website} isExternalLink isStandalone maxLines={2}>
                 {website}
               </Link>
             </>
@@ -257,7 +257,7 @@ function ProviderApiKey({
       </StackItem>
       <IconButton
         label={`Copy API key for ${provider.name}`}
-        tooltip="Copy API key"
+        tooltip="Copy API Key"
         icon={<Icon icon={Copy} size="sm" color="inherit" />}
         variant="ghost"
         size="sm"
@@ -282,7 +282,7 @@ function ProviderApiKey({
       />
       <IconButton
         label={`${isRevealed ? 'Hide' : 'Reveal'} API key for ${provider.name}`}
-        tooltip={isRevealed ? 'Hide API key' : 'Reveal API key'}
+        tooltip={isRevealed ? 'Hide API Key' : 'Reveal API Key'}
         icon={<Icon icon={isRevealed ? EyeOff : Eye} size="sm" color="inherit" />}
         variant="ghost"
         size="sm"
@@ -299,7 +299,7 @@ function ProviderStatus({ provider }: ProviderTableRow) {
     mutationKey: getSavedProviderTestMutationKey(provider),
   }) > 0;
   const status = isTesting
-    ? { label: 'Testing', variant: 'neutral' as const }
+    ? { label: 'Testing…', variant: 'neutral' as const }
     : getStatusPresentation(provider.connection.status);
   const statusLine = (
     <HStack
@@ -388,7 +388,7 @@ function ProviderActions({
       items={[
         { label: 'Edit', onClick: () => onEdit(provider) },
         {
-          label: 'Test connection',
+          label: 'Test Connection',
           onClick: () => {
             if (isTesting) {
               return;
@@ -430,7 +430,7 @@ const providerColumns: Array<TableColumn<ProviderTableRow>> = [
   },
   {
     key: 'apiKey',
-    header: 'API key',
+    header: 'API Key',
     width: pixel(192),
     renderCell: (row) => <ProviderApiKey {...row} />,
   },
@@ -617,7 +617,7 @@ export function LoadingProviderTable({ runtime }: { runtime: ProviderRuntime }) 
       idKey="id"
       density="balanced"
       dividers="rows"
-      aria-label={`Loading ${providerRuntimeLabels[runtime]} providers`}
+      aria-label={`Loading ${providerRuntimeLabels[runtime]} providers…`}
       aria-busy="true"
     />
   );

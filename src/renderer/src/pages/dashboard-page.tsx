@@ -267,7 +267,7 @@ export function DashboardPage() {
           <Banner
             status="error"
             container="section"
-            title="Couldn't Load All Runtime Data"
+            title="Couldn't Load All Agent Runtime Data"
             description={`${errorMessages.join(' ')} Retry to refresh the dashboard.`}
             endContent={<Button label="Retry" variant="ghost" onClick={retry} />}
           />
@@ -300,8 +300,8 @@ export function DashboardPage() {
         <Section variant="transparent" padding={0}>
           <VStack gap={3}>
             <HStack hAlign="between" vAlign="center" gap={3}>
-              <Heading level={2}>Runtime Status</Heading>
-              <Link href={routePaths.agentsSwitchProviders} isStandalone>
+              <Heading level={2}>Agent Runtime Status</Heading>
+              <Link href={routePaths.agentRuntimesProviders} isStandalone>
                 Manage Providers
               </Link>
             </HStack>
@@ -312,7 +312,7 @@ export function DashboardPage() {
               rowCount={runtimeRows.length}
               density="balanced"
               dividers="rows"
-              aria-label="Provider runtime health"
+              aria-label="Agent runtime provider health"
               aria-busy={isLoading || undefined}
             />
           </VStack>

@@ -1,6 +1,6 @@
 export const routePaths = {
   dashboard: '/',
   skills: '/skills',
-  agentsSwitch: '/agents-switch',
-  agentsSwitchProviders: '/agents-switch/providers',
+  agentRuntimes: '/agent-runtimes',
+  agentRuntimesProviders: '/agent-runtimes/providers',
 } as const;

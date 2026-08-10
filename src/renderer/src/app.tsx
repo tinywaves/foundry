@@ -125,14 +125,14 @@ export default function App() {
                       isSelected={pathname === routePaths.skills}
                     />
                   </VStack>
-                  <SideNavSection title="Agents Switch">
+                  <SideNavSection title="Agent Runtimes">
                     <VStack gap={1}>
                       <SideNavItem
                         as={RouterLink}
                         label="Providers"
                         icon={ServerCog}
-                        href={routePaths.agentsSwitchProviders}
-                        isSelected={pathname === routePaths.agentsSwitchProviders}
+                        href={routePaths.agentRuntimesProviders}
+                        isSelected={pathname === routePaths.agentRuntimesProviders}
                       />
                     </VStack>
                   </SideNavSection>
@@ -155,10 +155,10 @@ export default function App() {
               <Route path={routePaths.dashboard} element={<DashboardPage />} />
               <Route path={routePaths.skills} element={<SkillsPage />} />
               <Route
-                path={routePaths.agentsSwitch}
-                element={<Navigate to={routePaths.agentsSwitchProviders} replace />}
+                path={routePaths.agentRuntimes}
+                element={<Navigate to={routePaths.agentRuntimesProviders} replace />}
               />
-              <Route path={routePaths.agentsSwitchProviders} element={<ProvidersPage />} />
+              <Route path={routePaths.agentRuntimesProviders} element={<ProvidersPage />} />
               <Route path="*" element={<Navigate to={routePaths.dashboard} replace />} />
             </Routes>
           </StackItem>

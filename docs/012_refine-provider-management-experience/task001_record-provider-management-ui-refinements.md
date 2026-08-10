@@ -6,7 +6,7 @@
 
 ## Goal
 
-Capture the final implementation decisions for the twelve Provider-management optimizations and provide a stable reference for future UI work.
+Capture the final implementation decisions for the thirteen Provider-management optimizations and provide a stable reference for future UI work.
 
 ## Final Refinements
 
@@ -73,6 +73,10 @@ Remove the connection-test success and failure Banners from the scrollable form 
 
 Save errors and avatar warnings remain in the form because they belong to different workflows.
 
+### 13. Vertically align Claude Code model-role labels
+
+Set the Claude Code model-mapping `Table` to `verticalAlign="middle"`. Role labels such as `Sonnet`, `Opus`, and `Haiku` now align with the visual center of the taller input controls in the same row instead of sticking to the row's top edge. The table's row dividers, column widths, input behavior, and model data remain unchanged.
+
 ## Dependencies
 
 - Existing Astryx `Section`, `Toolbar`, `Layout`, `Thumbnail`, `InputGroup`, `Code`, `HoverCard`, `StatusDot`, and text components.
@@ -88,6 +92,7 @@ Save errors and avatar warnings remain in the form because they belong to differ
 - Local API-key reveal control.
 - Runtime-specific connection-test method hover card.
 - Footer-adjacent connection-test result feedback.
+- Vertically centered Claude Code model-role labels.
 - CSP and storage behavior documented without changing avatar persistence format.
 
 ## Acceptance Criteria
@@ -103,6 +108,7 @@ Save errors and avatar warnings remain in the form because they belong to differ
 - [x] API keys can be revealed and hidden in the form without changing persistence or list exposure.
 - [x] Hovering or focusing Test Connection explains the actual runtime-specific request method.
 - [x] Connection-test success and failure feedback appears beside the Test Connection action.
+- [x] Claude Code model-role labels are vertically centered with their row inputs.
 - [x] `pnpm typecheck`, `pnpm lint`, and `git diff --check` pass.
 
 ## Out of Scope

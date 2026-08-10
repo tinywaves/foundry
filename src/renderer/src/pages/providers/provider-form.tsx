@@ -194,7 +194,7 @@ function ClaudeModelFields({
         rowCount={claudeModelRows.length}
         density="balanced"
         dividers="rows"
-        verticalAlign="top"
+        verticalAlign="middle"
         aria-label="Claude Code model mappings"
       />
       <TextInput

@@ -10,7 +10,7 @@ Record and preserve the twelve completed Provider-management UI refinements deli
 
 ## Detail
 
-The Providers page now presents a clearer page header and a compact runtime switcher. Provider dialogs use a smaller, intentional header with a single divider, omit redundant visual section headings, and keep the form focused on the fields themselves. Avatar selection previews the selected image immediately and makes the preview the primary interaction. API keys can be revealed transiently in the form.
+The Providers page now presents a clearer page header and a compact runtime switcher. Provider dialogs use a smaller, intentional header with a single divider, omit redundant visual section headings, and keep the form focused on the fields themselves. Claude Code model-role labels are vertically centered with their row inputs. Avatar selection previews the selected image immediately and makes the preview the primary interaction. API keys can be revealed transiently in the form.
 
 Connection testing remains a draft-provider `GET` request owned by the existing main-process tester. The dialog explains that method through a hover/focus card and renders the latest test result beside the Test Connection action so users do not need to scroll back to the form top.
 
@@ -18,6 +18,7 @@ Connection testing remains a draft-provider `GET` request owned by the existing 
 
 - Provider navigation icon and Providers page hierarchy.
 - Provider dialog header, dividers, section semantics, and footer actions.
+- Claude Code model mapping row alignment.
 - Avatar preview and picker interaction.
 - API-key password/text visibility control.
 - Connection-test method explanation and inline result feedback.

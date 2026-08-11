@@ -81,6 +81,7 @@ export interface ProviderSummary {
   hasApiKey: boolean;
   apiKeySuffix: string | null;
   hasCustomAvatar: boolean;
+  isInUse: boolean;
   connection: ProviderConnectionSummary;
   createdAt: number;
   updatedAt: number;
@@ -144,8 +145,6 @@ export type ProviderApiResult<T>
   = | { ok: true; value: T }
     | { ok: false; error: ProviderApiError };
 
-export type FoundryPlatform = 'darwin' | 'linux' | 'win32';
-
 export interface ProviderApi {
   listProviders: (runtime: ProviderRuntime) => Promise<ProviderApiResult<ProviderSummary[]>>;
   getProviderForEdit: (id: string) => Promise<ProviderApiResult<ProviderDetail>>;
@@ -160,9 +159,4 @@ export interface ProviderApi {
   testDraftProviderConnection: (
     input: ProviderConnectionTestInput,
   ) => Promise<ProviderApiResult<ProviderConnectionSummary>>;
-}
-
-export interface FoundryApi {
-  platform: FoundryPlatform;
-  providers: ProviderApi;
 }

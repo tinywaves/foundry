@@ -29,6 +29,7 @@ import {
   resolveProviderRequest,
 } from './providers/provider-query';
 import type { ProviderRequestError } from './providers/provider-query';
+import { canInitiateProviderDeletion } from './providers/provider-usage';
 import {
   LoadingProviderCardList,
   ProviderCardList,
@@ -38,6 +39,7 @@ import {
 } from './providers/provider-runtime';
 import { ProviderRuntimeIcon } from './providers/provider-runtime-icon';
 import { useProviderList } from './providers/use-provider-list';
+import { resetRuntimeProviderState } from './runtimes/runtime-query';
 
 const RUNTIME_QUERY_PARAM = 'runtime';
 
@@ -149,17 +151,27 @@ export function ProvidersPage() {
   }, [disposeCurrentDialogDetail]);
 
   const handleDelete = useCallback((provider: ProviderSummary) => {
+    if (!canInitiateProviderDeletion(provider)) {
+      return;
+    }
     setProviderToDelete(provider);
   }, []);
 
   const handleConfirmDelete = useCallback(() => {
-    if (!providerToDelete || isDeletingProvider) {
+    if (
+      !providerToDelete
+      || isDeletingProvider
+      || !canInitiateProviderDeletion(providerToDelete)
+    ) {
       return;
     }
     const provider = providerToDelete;
     deleteProvider(provider, {
       onError: (error) => {
         showOperationError(error.message, `provider-delete-${provider.id}`);
+        if (error.apiError?.code === 'conflict') {
+          void resetRuntimeProviderState(queryClient, provider.runtime);
+        }
       },
       onSuccess: () => {
         showToast({ body: 'Provider deleted', uniqueID: `provider-delete-${provider.id}` });
@@ -170,6 +182,7 @@ export function ProvidersPage() {
     deleteProvider,
     isDeletingProvider,
     providerToDelete,
+    queryClient,
     resetPageActions,
     showOperationError,
     showToast,

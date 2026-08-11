@@ -1,9 +1,5 @@
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-import Database from 'better-sqlite3';
 import { test } from 'vitest';
 import type {
   ClaudeCodeModelConfigV1,
@@ -11,7 +7,8 @@ import type {
   ProviderApiErrorCode,
   ProviderAvatar,
 } from '../../shared/provider-contract';
-import { openProviderDatabase, PROVIDER_SCHEMA_VERSION } from './provider-database';
+import { RuntimeRepository } from '../runtimes/runtime-repository';
+import { openFoundryDatabase } from '../storage/foundry-database';
 import { ProviderOperationError } from './provider-error';
 import { ProviderRepository } from './provider-repository';
 
@@ -83,49 +80,12 @@ function assertProviderError(
 }
 
 function openTestRepository() {
-  const database = openProviderDatabase(':memory:');
+  const database = openFoundryDatabase(':memory:');
   return {
     database,
     repository: new ProviderRepository(database),
   };
 }
-
-test('migrates transactionally and rejects unsupported future versions without changing their data', () => {
-  const database = openProviderDatabase(':memory:');
-  assert.equal(database.pragma('user_version', { simple: true }), PROVIDER_SCHEMA_VERSION);
-  assert.equal(database.pragma('quick_check', { simple: true }), 'ok');
-  database.close();
-
-  const directory = mkdtempSync(path.join(tmpdir(), 'foundry-provider-version-'));
-  const filename = path.join(directory, 'foundry.sqlite');
-  const futureDatabase = new Database(filename);
-  futureDatabase.exec('CREATE TABLE sentinel (value TEXT NOT NULL); INSERT INTO sentinel VALUES (\'keep\');');
-  futureDatabase.pragma(`user_version = ${PROVIDER_SCHEMA_VERSION + 1}`);
-  futureDatabase.close();
-
-  assertProviderError(() => openProviderDatabase(filename), 'unsupported-database-version');
-  const unchangedFutureDatabase = new Database(filename, { readonly: true });
-  assert.equal(
-    unchangedFutureDatabase.pragma('user_version', { simple: true }),
-    PROVIDER_SCHEMA_VERSION + 1,
-  );
-  assert.equal(unchangedFutureDatabase.prepare('SELECT value FROM sentinel').pluck().get(), 'keep');
-  unchangedFutureDatabase.close();
-
-  const blockedFilename = path.join(directory, 'blocked.sqlite');
-  const blockedDatabase = new Database(blockedFilename);
-  blockedDatabase.exec('CREATE TABLE providers (sentinel TEXT NOT NULL); INSERT INTO providers VALUES (\'keep\');');
-  blockedDatabase.close();
-  assertProviderError(() => openProviderDatabase(blockedFilename), 'storage-unavailable');
-  const unchangedBlockedDatabase = new Database(blockedFilename, { readonly: true });
-  assert.equal(unchangedBlockedDatabase.pragma('user_version', { simple: true }), 0);
-  assert.equal(
-    unchangedBlockedDatabase.prepare('SELECT sentinel FROM providers').pluck().get(),
-    'keep',
-  );
-  unchangedBlockedDatabase.close();
-  rmSync(directory, { recursive: true, force: true });
-});
 
 test('isolates runtimes, allows duplicate names, and returns sensitive data only from explicit methods', () => {
   const { database, repository } = openTestRepository();
@@ -373,13 +333,34 @@ test('soft delete retains the complete row and excludes it from every normal ope
   }
 });
 
-test('maps unreadable files and invalid stored model data to non-sensitive corruption errors', () => {
-  const directory = mkdtempSync(path.join(tmpdir(), 'foundry-provider-corrupt-'));
-  const filename = path.join(directory, 'foundry.sqlite');
-  writeFileSync(filename, 'not a sqlite database');
-  assertProviderError(() => openProviderDatabase(filename), 'storage-corrupt');
-  rmSync(directory, { recursive: true, force: true });
+test('prevents deleting an In-use Provider until its Runtime association changes', () => {
+  const { database, repository } = openTestRepository();
+  const runtimes = new RuntimeRepository(database);
+  try {
+    const created = repository.createProvider(createCodexInput());
+    assert.equal(created.isInUse, false);
 
+    runtimes.recordProviderApplication('codex', created.id);
+    assert.equal(repository.getProviderForEdit(created.id).isInUse, true);
+    assertProviderError(() => repository.deleteProvider(created.id), 'conflict');
+
+    const preserved = database.prepare<[string], { deleted_at: number | null }>(`
+      SELECT deleted_at FROM providers WHERE id = ?
+    `).get(created.id);
+    assert.ok(preserved);
+    assert.equal(preserved.deleted_at, null);
+    assert.equal(runtimes.listRuntimes()[0]?.status, 'provider');
+
+    runtimes.recordOfficialDefaultApplication('codex');
+    assert.equal(repository.getProviderForEdit(created.id).isInUse, false);
+    repository.deleteProvider(created.id);
+    assertProviderError(() => repository.getProviderForEdit(created.id), 'not-found');
+  } finally {
+    database.close();
+  }
+});
+
+test('maps invalid stored model data to non-sensitive corruption errors', () => {
   const { database, repository } = openTestRepository();
   try {
     const created = repository.createProvider(createCodexInput());

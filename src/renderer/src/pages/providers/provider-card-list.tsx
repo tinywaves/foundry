@@ -6,9 +6,8 @@ import { IconButton } from '@astryxdesign/core/IconButton';
 import { Link } from '@astryxdesign/core/Link';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
-import { StatusDot } from '@astryxdesign/core/StatusDot';
 import { Text } from '@astryxdesign/core/Text';
-import { Tooltip } from '@astryxdesign/core/Tooltip';
+import { Token } from '@astryxdesign/core/Token';
 import { useToast } from '@astryxdesign/core/Toast';
 import {
   borderVars,
@@ -20,10 +19,10 @@ import * as stylex from '@stylexjs/stylex';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Pencil, PlugZap, Trash2 } from 'lucide-react';
 import type {
-  ProviderConnectionStatus,
   ProviderRuntime,
   ProviderSummary,
 } from '../../../../shared/provider-contract';
+import { ProviderConnectionStatus } from './provider-connection-status';
 import {
   getSavedProviderTestMutationKey,
   isMatchingCustomProvider,
@@ -32,12 +31,8 @@ import {
   resolveProviderRequest,
 } from './provider-query';
 import { providerRuntimeLabels } from './provider-runtime';
+import { canInitiateProviderDeletion } from './provider-usage';
 import { useProviderAvatarUrl } from './use-provider-avatar-url';
-
-const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
-  dateStyle: 'short',
-  timeStyle: 'short',
-});
 
 const LOADING_CARD_COUNT = 4;
 const SKELETONS_PER_CARD = 7;
@@ -73,24 +68,6 @@ const styles = stylex.create({
     },
     outlineOffset: spacingVars['--spacing-1'],
   },
-  statusTrigger: {
-    width: 'fit-content',
-    borderRadius: radiusVars['--radius-element'],
-    cursor: 'help',
-    outlineWidth: {
-      'default': 0,
-      ':focus-visible': borderVars['--border-width'],
-    },
-    outlineStyle: {
-      'default': 'none',
-      ':focus-visible': 'solid',
-    },
-    outlineColor: {
-      'default': null,
-      ':focus-visible': colorVars['--color-accent'],
-    },
-    outlineOffset: spacingVars['--spacing-1'],
-  },
 });
 
 interface ProviderCardProps {
@@ -98,11 +75,6 @@ interface ProviderCardProps {
   isDeleting: boolean;
   onEdit: (provider: ProviderSummary) => void;
   onDelete: (provider: ProviderSummary) => void;
-}
-
-function formatLastTested(timestamp: number): string {
-  const date = new Date(timestamp);
-  return Number.isNaN(date.getTime()) ? 'Unknown' : dateTimeFormatter.format(date);
 }
 
 function getExternalWebsite(value: string | null): string | null {
@@ -114,23 +86,6 @@ function getExternalWebsite(value: string | null): string | null {
     return protocol === 'http:' || protocol === 'https:' ? value : null;
   } catch {
     return null;
-  }
-}
-
-function getStatusPresentation(status: ProviderConnectionStatus): {
-  label: string;
-  variant: 'neutral' | 'success' | 'error';
-} {
-  switch (status) {
-    case 'connected': {
-      return { label: 'Connected', variant: 'success' };
-    }
-    case 'failed': {
-      return { label: 'Failed', variant: 'error' };
-    }
-    case 'never-tested': {
-      return { label: 'Never tested', variant: 'neutral' };
-    }
   }
 }
 
@@ -186,46 +141,6 @@ function ProviderName({ provider }: { provider: ProviderSummary }) {
     >
       {name}
     </HoverCard>
-  );
-}
-
-function ProviderStatus({ provider }: { provider: ProviderSummary }) {
-  const status = getStatusPresentation(provider.connection.status);
-  const details = [
-    provider.connection.lastTestedAt === null
-      ? null
-      : `Last tested ${formatLastTested(provider.connection.lastTestedAt)}`,
-    provider.connection.lastError === null
-      ? null
-      : `Failure: ${provider.connection.lastError}`,
-  ].filter((detail): detail is string => detail !== null);
-  const hasDetails = details.length > 0;
-  const statusLine = (
-    <HStack
-      gap={2}
-      vAlign="center"
-      tabIndex={hasDetails ? 0 : undefined}
-      aria-label={hasDetails ? `${status.label}. ${details.join('. ')}` : status.label}
-      xstyle={hasDetails && styles.statusTrigger}
-    >
-      <StatusDot variant={status.variant} label={status.label} />
-      <Text type="supporting" weight="medium" maxLines={1}>{status.label}</Text>
-    </HStack>
-  );
-
-  if (!hasDetails) {
-    return statusLine;
-  }
-
-  return (
-    <Tooltip
-      content={details.join(' · ')}
-      placement="above"
-      focusTrigger="always"
-      hasHoverIndication={false}
-    >
-      {statusLine}
-    </Tooltip>
   );
 }
 
@@ -299,12 +214,17 @@ function ProviderActions({
       />
       <IconButton
         label={`Delete ${provider.name}`}
-        tooltip="Delete Provider"
+        tooltip={provider.isInUse ? 'Provider is in use' : 'Delete Provider'}
         icon={<Icon icon={Trash2} size="sm" color="inherit" />}
         variant="ghost"
         size="sm"
-        isDisabled={isBusy}
-        onClick={() => onDelete(provider)}
+        isDisabled={isBusy || !canInitiateProviderDeletion(provider)}
+        onClick={() => {
+          if (isBusy || !canInitiateProviderDeletion(provider)) {
+            return;
+          }
+          onDelete(provider);
+        }}
       />
     </HStack>
   );
@@ -326,8 +246,9 @@ function ProviderCard({
           <VStack gap={1} width="100%">
             <HStack gap={2} vAlign="center" width="100%">
               <ProviderName provider={provider} />
+              {provider.isInUse && <Token label="In use" color="green" size="sm" />}
               <StackItem>
-                <ProviderStatus provider={provider} />
+                <ProviderConnectionStatus provider={provider} />
               </StackItem>
             </HStack>
             <Link

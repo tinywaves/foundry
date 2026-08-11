@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { MutationObserver, QueryClient } from '@tanstack/react-query';
 import { test } from 'vitest';
+import type { FoundryApi } from '../../../../shared/foundry-contract';
 import type {
-  FoundryApi,
   ProviderApi,
   ProviderApiError,
   ProviderDetail,
@@ -45,6 +45,7 @@ function createProvider(
     hasApiKey: true,
     apiKeySuffix: '1234',
     hasCustomAvatar: false,
+    isInUse: false,
     connection,
     createdAt: 1,
     updatedAt: 1,
@@ -85,6 +86,11 @@ function installProviderApi(overrides: Partial<ProviderApi>): void {
     value: {
       platform: 'darwin',
       providers,
+      runtimes: {
+        listRuntimes: () => rejectedProviderCall(),
+        previewRuntimeConfiguration: () => rejectedProviderCall(),
+        applyRuntimeConfiguration: () => rejectedProviderCall(),
+      },
     } satisfies FoundryApi,
   });
 }

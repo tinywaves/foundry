@@ -38,6 +38,7 @@ interface ProviderSummaryRow {
   has_api_key: number;
   api_key_suffix: string | null;
   has_custom_avatar: number;
+  is_in_use: number;
   model_config_version: number;
   model_config_json: string;
   connection_status: ProviderConnectionStatus;
@@ -87,6 +88,12 @@ const summaryColumns = `
   CASE WHEN api_key IS NULL THEN 0 ELSE 1 END AS has_api_key,
   CASE WHEN api_key IS NULL THEN NULL ELSE substr(api_key, -4) END AS api_key_suffix,
   CASE WHEN avatar_data IS NULL THEN 0 ELSE 1 END AS has_custom_avatar,
+  CASE WHEN EXISTS (
+    SELECT 1
+    FROM runtime_applications
+    WHERE runtime_applications.target_kind = 'provider'
+      AND runtime_applications.provider_id = providers.id
+  ) THEN 1 ELSE 0 END AS is_in_use,
   model_config_version,
   model_config_json,
   connection_status,
@@ -192,6 +199,7 @@ export class ProviderRepository {
       hasApiKey: row.has_api_key === 1,
       apiKeySuffix: row.api_key_suffix,
       hasCustomAvatar: row.has_custom_avatar === 1,
+      isInUse: row.is_in_use === 1,
       connection: {
         status: row.connection_status,
         lastTestedAt: row.last_tested_at,
@@ -215,7 +223,7 @@ export class ProviderRepository {
       row.api_key_suffix,
       row.last_test_error,
     ].every(isNullableString);
-    const hasValidFlags = [row.has_api_key, row.has_custom_avatar]
+    const hasValidFlags = [row.has_api_key, row.has_custom_avatar, row.is_in_use]
       .every((value) => value === 0 || value === 1);
     const hasValidTimestamps = [row.created_at, row.updated_at]
       .every((value) => Number.isSafeInteger(value) && value >= 0);
@@ -558,6 +566,18 @@ export class ProviderRepository {
     this.execute(() => {
       const id = parseProviderId(idInput);
       this.database.transaction(() => {
+        const inUse = this.database.prepare<[string], { id: string }>(`
+          SELECT providers.id
+          FROM providers
+          INNER JOIN runtime_applications
+            ON runtime_applications.target_kind = 'provider'
+            AND runtime_applications.provider_id = providers.id
+          WHERE providers.id = ? AND providers.deleted_at IS NULL
+        `).get(id);
+        if (inUse) {
+          throw new ProviderOperationError('conflict', 'Provider is in use and cannot be deleted.');
+        }
+
         const now = Date.now();
         const result = this.database.prepare(`
           UPDATE providers

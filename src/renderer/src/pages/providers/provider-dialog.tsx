@@ -37,6 +37,7 @@ import type {
   ProviderRuntime,
   ProviderSummary,
 } from '../../../../shared/provider-contract';
+import type { RuntimeSummary } from '../../../../shared/runtime-contract';
 import { createProviderAvatarUrl } from './provider-avatar-url';
 import {
   createProviderFormValues,
@@ -44,6 +45,7 @@ import {
   getProviderAvatarUpdate,
   getProviderFormApiErrorState,
   hasProviderFormChanges,
+  hasRuntimeEffectiveProviderChanges,
   isValidProviderConnectionSummary,
   setProviderFormField,
   validateProviderConnectionForm,
@@ -67,6 +69,11 @@ import {
   resolveProviderRequest,
 } from './provider-query';
 import { providerRuntimeLabels } from './provider-runtime';
+import type { RuntimeRequestError } from '../runtimes/runtime-query';
+import {
+  applyRuntimeConfiguration,
+  resetRuntimeProviderState,
+} from '../runtimes/runtime-query';
 
 export type ProviderDialogRequest
   = | {
@@ -96,6 +103,11 @@ interface ProviderDialogProps {
 
 interface ConnectionTestFeedback {
   variant: 'success' | 'error';
+  message: string;
+}
+
+interface ProviderApplyFailure {
+  provider: ProviderSummary;
   message: string;
 }
 
@@ -190,9 +202,12 @@ function ProviderDialogFrame({
   formId,
   isFormReady,
   isSaving = false,
+  isApplying = false,
   isTesting = false,
+  hasApplyFailure = false,
   connectionFeedback,
   onClose,
+  onRetryApply,
   onTestConnection,
 }: {
   request: ProviderDialogRequest;
@@ -201,17 +216,23 @@ function ProviderDialogFrame({
   formId?: string;
   isFormReady: boolean;
   isSaving?: boolean;
+  isApplying?: boolean;
   isTesting?: boolean;
+  hasApplyFailure?: boolean;
   connectionFeedback?: ConnectionTestFeedback;
   onClose: () => void;
+  onRetryApply?: () => void;
   onTestConnection?: () => void;
 }) {
   const title = request.mode === 'add' ? 'Add Provider' : 'Edit Provider';
   const titleId = useId();
-  const saveLabel = request.mode === 'add' ? 'Add Provider' : 'Save Changes';
+  const saveLabel = isApplying
+    ? 'Apply Provider'
+    : (request.mode === 'add' ? 'Add Provider' : 'Save Changes');
   const runtime = activeRuntime ?? getRequestRuntime(request);
+  const isBusy = isSaving || isApplying;
   const handleClose = () => {
-    if (!isSaving) {
+    if (!isBusy) {
       onClose();
     }
   };
@@ -224,7 +245,7 @@ function ProviderDialogFrame({
           handleClose();
         }
       }}
-      purpose={isSaving ? 'required' : 'form'}
+      purpose={isBusy ? 'required' : 'form'}
       width={720}
       maxHeight="85vh"
       aria-labelledby={titleId}
@@ -243,7 +264,7 @@ function ProviderDialogFrame({
               >
                 {title}
               </Heading>
-              {!isSaving && (
+              {!isBusy && (
                 <IconButton
                   label="Close Provider Dialog"
                   tooltip="Close"
@@ -259,51 +280,70 @@ function ProviderDialogFrame({
         content={<LayoutContent isScrollable>{content}</LayoutContent>}
         footer={(
           <LayoutFooter hasDivider>
-            <HStack gap={2} width="100%" vAlign="center">
-              <HoverCard
-                placement="above"
-                alignment="start"
-                focusTrigger="always"
-                hasHoverIndication={false}
-                label="Connection test method"
-                content={<ConnectionTestMethod runtime={runtime} />}
-              >
-                <Button
-                  label="Test Connection"
-                  variant="secondary"
-                  isDisabled={!isFormReady || isSaving}
-                  isLoading={isTesting}
-                  onClick={onTestConnection}
-                />
-              </HoverCard>
-              {connectionFeedback && (
-                <StatusDot
-                  variant={connectionFeedback.variant}
-                  label={connectionFeedback.message}
-                />
-              )}
-              <StackItem size="fill">
-                {connectionFeedback && (
-                  <Text type="supporting" maxLines={1} hasTruncateTooltip>
-                    {connectionFeedback.message}
-                  </Text>
+            {hasApplyFailure
+              ? (
+                  <HStack gap={2} width="100%" hAlign="end" vAlign="center">
+                    <Button
+                      label="Close"
+                      variant="ghost"
+                      isDisabled={isApplying}
+                      onClick={handleClose}
+                    />
+                    <Button
+                      label="Retry Apply"
+                      variant="primary"
+                      isLoading={isApplying}
+                      onClick={onRetryApply}
+                    />
+                  </HStack>
+                )
+              : (
+                  <HStack gap={2} width="100%" vAlign="center">
+                    <HoverCard
+                      placement="above"
+                      alignment="start"
+                      focusTrigger="always"
+                      hasHoverIndication={false}
+                      label="Connection test method"
+                      content={<ConnectionTestMethod runtime={runtime} />}
+                    >
+                      <Button
+                        label="Test Connection"
+                        variant="secondary"
+                        isDisabled={!isFormReady || isBusy}
+                        isLoading={isTesting}
+                        onClick={onTestConnection}
+                      />
+                    </HoverCard>
+                    {connectionFeedback && (
+                      <StatusDot
+                        variant={connectionFeedback.variant}
+                        label={connectionFeedback.message}
+                      />
+                    )}
+                    <StackItem size="fill">
+                      {connectionFeedback && (
+                        <Text type="supporting" maxLines={1} hasTruncateTooltip>
+                          {connectionFeedback.message}
+                        </Text>
+                      )}
+                    </StackItem>
+                    <Button
+                      label="Cancel"
+                      variant="ghost"
+                      isDisabled={isBusy}
+                      onClick={handleClose}
+                    />
+                    <Button
+                      label={saveLabel}
+                      variant="primary"
+                      type="submit"
+                      form={formId}
+                      isDisabled={!isFormReady}
+                      isLoading={isBusy}
+                    />
+                  </HStack>
                 )}
-              </StackItem>
-              <Button
-                label="Cancel"
-                variant="ghost"
-                isDisabled={isSaving}
-                onClick={handleClose}
-              />
-              <Button
-                label={saveLabel}
-                variant="primary"
-                type="submit"
-                form={formId}
-                isDisabled={!isFormReady}
-                isLoading={isSaving}
-              />
-            </HStack>
           </LayoutFooter>
         )}
       />
@@ -335,6 +375,7 @@ function ProviderDialogFormSession({
   const [avatarView, setAvatarView] = useState<AvatarView>({});
   const [isDiscardConfirmationOpen, setIsDiscardConfirmationOpen] = useState(false);
   const [pendingRuntime, setPendingRuntime] = useState<ProviderRuntime>();
+  const [applyFailure, setApplyFailure] = useState<ProviderApplyFailure>();
   const {
     error: saveError,
     isPending: isSaving,
@@ -362,6 +403,15 @@ function ProviderDialogFormSession({
     onSuccess: (_, input) => {
       void resetProviderList(queryClient, input.runtime);
     },
+  });
+  const {
+    isPending: isApplyingProvider,
+    mutate: applySavedProviderMutation,
+  } = useMutation<RuntimeSummary, RuntimeRequestError, ProviderSummary>({
+    mutationFn: (provider) => applyRuntimeConfiguration({
+      runtime: provider.runtime,
+      target: { kind: 'provider', providerId: provider.id },
+    }),
   });
   const {
     data: connectionResult,
@@ -501,8 +551,42 @@ function ProviderDialogFormSession({
     setAvatarError(undefined);
   }, [hasStoredAvatar, revokePreviewUrl]);
 
+  const applySavedProvider = useCallback((provider: ProviderSummary) => {
+    if (isApplyingProvider) {
+      return;
+    }
+    applySavedProviderMutation(provider, {
+      onError: (error) => {
+        setApplyFailure({ provider, message: error.message });
+      },
+      onSuccess: () => {
+        void resetRuntimeProviderState(queryClient, provider.runtime);
+        const runtimeLabel = providerRuntimeLabels[provider.runtime];
+        showToast({
+          body: `Provider updated and applied to ${runtimeLabel}. Reopen ${runtimeLabel} to load the configuration.`,
+          uniqueID: `provider-edit-apply-${provider.id}`,
+        });
+        onSaved(provider.runtime);
+        onClose();
+      },
+    });
+  }, [
+    applySavedProviderMutation,
+    isApplyingProvider,
+    onClose,
+    onSaved,
+    queryClient,
+    showToast,
+  ]);
+
+  const handleRetryApply = useCallback(() => {
+    if (applyFailure !== undefined) {
+      applySavedProvider(applyFailure.provider);
+    }
+  }, [applyFailure, applySavedProvider]);
+
   const handleSave = useCallback(() => {
-    if (isSaving) {
+    if (isSaving || isApplyingProvider || applyFailure !== undefined) {
       return;
     }
     const validation = validateProviderForm(values);
@@ -519,6 +603,8 @@ function ProviderDialogFormSession({
       ...validation.input,
       ...getProviderAvatarUpdate(avatarIntent),
     };
+    const hasRuntimeEffectiveChanges = request.mode === 'edit'
+      && hasRuntimeEffectiveProviderChanges(input, initialValuesSnapshot);
     saveProvider(input, {
       onError: (error) => {
         if (error.apiError === undefined) {
@@ -530,6 +616,12 @@ function ProviderDialogFormSession({
         focusFirstFormError(formId, errorState.formErrors);
       },
       onSuccess: (savedProvider) => {
+        setInitialValuesSnapshot(values);
+        setAvatarIntent({ kind: 'preserve' });
+        if (hasRuntimeEffectiveChanges && savedProvider.isInUse) {
+          applySavedProvider(savedProvider);
+          return;
+        }
         showToast({
           body: request.mode === 'add' ? 'Provider added' : 'Provider updated',
           uniqueID: `provider-${request.mode}-success`,
@@ -540,11 +632,15 @@ function ProviderDialogFormSession({
     });
   }, [
     avatarIntent,
+    applySavedProvider,
     formId,
+    initialValuesSnapshot,
+    isApplyingProvider,
     isSaving,
     onClose,
     onSaved,
     request,
+    applyFailure,
     resetSave,
     saveProvider,
     showToast,
@@ -639,6 +735,10 @@ function ProviderDialogFormSession({
       = 'Wait for the provider to finish saving before switching runtime.';
   }
   const requestClose = () => {
+    if (applyFailure !== undefined) {
+      onClose();
+      return;
+    }
     if (hasUnsavedChanges) {
       setIsDiscardConfirmationOpen(true);
       return;
@@ -647,6 +747,13 @@ function ProviderDialogFormSession({
   };
   const content = (
     <VStack gap={4}>
+      {applyFailure && (
+        <Banner
+          status="error"
+          title="Provider saved, but couldn't apply"
+          description={applyFailure.message}
+        />
+      )}
       {generalError && (
         <Banner status="error" title="Couldn't Save Provider" description={generalError} />
       )}
@@ -660,9 +767,9 @@ function ProviderDialogFormSession({
         avatarUrl={avatarView.url}
         avatarError={avatarError}
         hasAvatar={hasAvatar}
-        isDisabled={isSaving}
+        isDisabled={isSaving || isApplyingProvider || applyFailure !== undefined}
         isSelectingAvatar={isSelectingAvatar}
-        isRuntimeChangeDisabled={isSaving || isTesting}
+        isRuntimeChangeDisabled={isSaving || isApplyingProvider || isTesting}
         runtimeChangeDisabledMessage={runtimeChangeDisabledMessage}
         onFieldChange={handleFieldChange}
         onRuntimeChange={request.mode === 'add' ? requestRuntimeChange : undefined}
@@ -682,9 +789,12 @@ function ProviderDialogFormSession({
         formId={formId}
         isFormReady
         isSaving={isSaving}
+        isApplying={isApplyingProvider}
         isTesting={isTesting}
+        hasApplyFailure={applyFailure !== undefined}
         connectionFeedback={connectionFeedback}
         onClose={requestClose}
+        onRetryApply={handleRetryApply}
         onTestConnection={handleTestConnection}
       />
       <AlertDialog

@@ -1,4 +1,5 @@
 import type { ProviderApiError, ProviderApiErrorCode, ProviderFieldError } from '../../shared/provider-contract';
+import { FoundryStorageError } from '../storage/storage-error';
 
 export class ProviderOperationError extends Error {
   readonly code: ProviderApiErrorCode;
@@ -27,6 +28,10 @@ export function invalidProviderField(field: string, message: string): never {
 export function toProviderOperationError(error: unknown): ProviderOperationError {
   if (error instanceof ProviderOperationError) {
     return error;
+  }
+
+  if (error instanceof FoundryStorageError) {
+    return new ProviderOperationError(error.code, error.message);
   }
 
   const sqliteCode = getSqliteErrorCode(error);

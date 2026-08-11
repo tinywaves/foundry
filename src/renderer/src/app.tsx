@@ -13,13 +13,14 @@ import {
   spacingVars,
 } from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
-import { LayoutDashboard, Plug, Wrench } from 'lucide-react';
+import { Bot, LayoutDashboard, Plug, Wrench } from 'lucide-react';
 import { Link as RouterLink, Navigate, Route, Routes, useLocation } from 'react-router';
 import { WindowDragRegion } from '@renderer/components/window-drag-region';
 import { DashboardPage } from '@renderer/pages/dashboard-page';
 import { ProvidersPage } from '@renderer/pages/providers-page';
+import { RuntimesPage } from '@renderer/pages/runtimes-page';
 import { SkillsPage } from '@renderer/pages/skills-page';
-import { routePaths } from '@renderer/routes';
+import { agentRuntimeDestinations, routePaths } from '@renderer/routes';
 import foundryIcon from '../../../resources/icon.png?url';
 
 const styles = stylex.create({
@@ -60,6 +61,11 @@ const sidebarResizeConfig = {
   defaultWidth: 200,
   minWidth: 200,
   maxWidth: 400,
+};
+
+const agentRuntimeIcons = {
+  providers: Plug,
+  runtimes: Bot,
 };
 
 export default function App() {
@@ -127,13 +133,16 @@ export default function App() {
                   </VStack>
                   <SideNavSection title="Agent Runtime">
                     <VStack gap={1}>
-                      <SideNavItem
-                        as={RouterLink}
-                        label="Providers"
-                        icon={Plug}
-                        href={routePaths.agentRuntimeProviders}
-                        isSelected={pathname === routePaths.agentRuntimeProviders}
-                      />
+                      {agentRuntimeDestinations.map((destination) => (
+                        <SideNavItem
+                          key={destination.id}
+                          as={RouterLink}
+                          label={destination.label}
+                          icon={agentRuntimeIcons[destination.id]}
+                          href={destination.path}
+                          isSelected={pathname === destination.path}
+                        />
+                      ))}
                     </VStack>
                   </SideNavSection>
                 </VStack>
@@ -156,8 +165,9 @@ export default function App() {
               <Route path={routePaths.skills} element={<SkillsPage />} />
               <Route
                 path={routePaths.agentRuntime}
-                element={<Navigate to={routePaths.agentRuntimeProviders} replace />}
+                element={<Navigate to={routePaths.agentRuntimeRuntimes} replace />}
               />
+              <Route path={routePaths.agentRuntimeRuntimes} element={<RuntimesPage />} />
               <Route path={routePaths.agentRuntimeProviders} element={<ProvidersPage />} />
               <Route path="*" element={<Navigate to={routePaths.dashboard} replace />} />
             </Routes>

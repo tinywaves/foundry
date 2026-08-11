@@ -213,6 +213,9 @@ importers:
       '@astryxdesign/theme-neutral':
         specifier: ^0.2.0
         version: 0.2.0(@astryxdesign/core@0.2.0(@stylexjs/stylex@0.19.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)
+      '@decimalturn/toml-patch':
+        specifier: ^3.0.2
+        version: 3.0.2
       '@electron-toolkit/preload':
         specifier: ^3.0.2
         version: 3.0.2(electron@39.8.10(supports-color@7.2.0))
@@ -551,6 +554,10 @@ packages:
   '@clack/prompts@1.7.0':
     resolution: {integrity: sha512-y7/yvZ2TPAnR9+jnc00klvNNLkJiXFFrQA/hlLCcxA9a2A4zQIOimyFQ9XfwYKiGD1fb5GY8vbKIIgO8d5Tb2A==}
     engines: {node: '>= 20.12.0'}
+
+  '@decimalturn/toml-patch@3.0.2':
+    resolution: {integrity: sha512-0qEaybovbKCOTCmOiXj7PgajYsoMhiphka0sjWqT/up5WE9LQF/SRDFcL65CG6IhyyxmKrxjcLROqgDNHMMGWw==}
+    engines: {node: '>=16'}
 
   '@dhzh/eslint-config@2.4.2':
     resolution: {integrity: sha512-5+NEB8TkezacjvgItvxjYhaqVFwV4BaBJcx4n049f4ZiviT5h4Tv/M15ZzZnYPxEFCW9MjfdJLbr9fLdFpZDFA==}
@@ -4719,6 +4726,8 @@ snapshots:
       fast-string-width: 3.0.2
       fast-wrap-ansi: 0.2.2
       sisteransi: 1.0.5
+
+  '@decimalturn/toml-patch@3.0.2': {}
 
   '@dhzh/eslint-config@2.4.2(@typescript-eslint/eslint-plugin@8.65.0(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3))(eslint@10.8.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3))(@typescript-eslint/parser@8.65.0(eslint@10.8.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3))(@typescript-eslint/utils@8.65.0(eslint@10.8.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3))(@vue/compiler-sfc@3.5.40)(eslint@10.8.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(tailwindcss@4.3.3)(typescript@5.9.3)':
     dependencies:

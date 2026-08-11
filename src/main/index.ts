@@ -4,9 +4,9 @@ import process from 'node:process';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import icon from '../../resources/icon.png?asset';
 import { identifier } from './constants';
-import { ProviderSubsystem } from './providers/provider-subsystem';
+import { FoundrySubsystem } from './foundry-subsystem';
 
-const providerSubsystem = new ProviderSubsystem();
+const foundrySubsystem = new FoundrySubsystem();
 
 function createWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
@@ -22,7 +22,7 @@ function createWindow(): BrowserWindow {
     },
   });
 
-  providerSubsystem.registerWindow(mainWindow);
+  foundrySubsystem.registerWindow(mainWindow);
 
   mainWindow.on('ready-to-show', () => mainWindow.show());
 
@@ -56,7 +56,10 @@ void app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window);
   });
 
-  providerSubsystem.initialize(path.join(app.getPath('userData'), 'foundry.sqlite'));
+  foundrySubsystem.initialize(
+    path.join(app.getPath('userData'), 'foundry.sqlite'),
+    app.getPath('home'),
+  );
   createWindow();
 
   app.on('activate', () => {
@@ -68,7 +71,7 @@ void app.whenReady().then(() => {
   });
 });
 
-app.on('will-quit', () => providerSubsystem.close());
+app.on('will-quit', () => foundrySubsystem.close());
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits

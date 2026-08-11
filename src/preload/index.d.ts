@@ -1,4 +1,4 @@
-import type { FoundryApi } from '../shared/provider-contract';
+import type { FoundryApi } from '../shared/foundry-contract';
 
 declare global {
   interface Window {

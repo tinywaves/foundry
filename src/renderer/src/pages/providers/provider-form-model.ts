@@ -442,6 +442,28 @@ export function validateProviderForm(values: ProviderFormValues): ProviderFormVa
   };
 }
 
+function getRuntimeEffectiveProviderInput(input: CreateProviderInput) {
+  return {
+    runtime: input.runtime,
+    name: input.name,
+    baseUrl: input.baseUrl,
+    apiKey: input.apiKey,
+    modelConfig: input.modelConfig,
+  };
+}
+
+export function hasRuntimeEffectiveProviderChanges(
+  input: CreateProviderInput,
+  initialValues: ProviderFormValues,
+): boolean {
+  const initial = validateProviderForm(initialValues);
+  if (!initial.ok) {
+    return true;
+  }
+  return JSON.stringify(getRuntimeEffectiveProviderInput(input))
+    !== JSON.stringify(getRuntimeEffectiveProviderInput(initial.input));
+}
+
 export function validateProviderConnectionForm(
   values: ProviderFormValues,
 ): ProviderConnectionFormValidation {

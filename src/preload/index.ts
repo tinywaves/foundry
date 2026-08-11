@@ -1,14 +1,16 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import process from 'node:process';
+import type { FoundryApi, FoundryPlatform } from '../shared/foundry-contract';
 import type {
-  FoundryApi,
-  FoundryPlatform,
   ProviderApi,
   ProviderApiResult,
 } from '../shared/provider-contract';
 import { providerIpcChannels } from '../shared/provider-contract';
+import type { RuntimeApi, RuntimeApiResult } from '../shared/runtime-contract';
+import { runtimeIpcChannels } from '../shared/runtime-contract';
 
 type ProviderIpcChannel = typeof providerIpcChannels[keyof typeof providerIpcChannels];
+type RuntimeIpcChannel = typeof runtimeIpcChannels[keyof typeof runtimeIpcChannels];
 const foundryPlatforms = new Set<FoundryPlatform>(['darwin', 'linux', 'win32']);
 
 function getFoundryPlatform(): FoundryPlatform {
@@ -39,9 +41,29 @@ const providers: ProviderApi = {
   ),
 };
 
+function invokeRuntime<T>(
+  channel: RuntimeIpcChannel,
+  argument?: unknown,
+): Promise<RuntimeApiResult<T>> {
+  return ipcRenderer.invoke(channel, argument) as Promise<RuntimeApiResult<T>>;
+}
+
+const runtimes: RuntimeApi = {
+  listRuntimes: () => invokeRuntime(runtimeIpcChannels.list),
+  previewRuntimeConfiguration: (input) => invokeRuntime(
+    runtimeIpcChannels.previewConfiguration,
+    input,
+  ),
+  applyRuntimeConfiguration: (input) => invokeRuntime(
+    runtimeIpcChannels.applyConfiguration,
+    input,
+  ),
+};
+
 const api: FoundryApi = {
   platform: getFoundryPlatform(),
   providers,
+  runtimes,
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

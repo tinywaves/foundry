@@ -6,6 +6,7 @@ import {
   getProviderAvatarUpdate,
   getProviderFormApiErrorState,
   hasProviderFormChanges,
+  hasRuntimeEffectiveProviderChanges,
   isValidProviderConnectionSummary,
   setProviderFormField,
   validateProviderConnectionForm,
@@ -90,6 +91,37 @@ test('detects changes against each runtime form baseline', () => {
     codexInitial,
     { kind: 'preserve' },
   ), true);
+});
+
+test('classifies display-only and Runtime-effective Provider edits', () => {
+  let initial = createProviderFormValues('codex');
+  initial = setProviderFormField(initial, 'name', 'Provider');
+  initial = setProviderFormField(initial, 'baseUrl', 'https://api.example.com');
+  initial = setProviderFormField(initial, 'apiKey', 'secret');
+  initial = setProviderFormField(initial, 'modelConfig.defaultModel', 'gpt-model');
+  const initialValidation = validateProviderForm(initial);
+  assertValid(initialValidation);
+  assert.equal(initialValidation.input.runtime, 'codex');
+  assert.equal(
+    hasRuntimeEffectiveProviderChanges(initialValidation.input, initial),
+    false,
+  );
+
+  const displayOnly = {
+    ...initialValidation.input,
+    remark: 'Display note',
+    officialWebsite: 'https://example.com',
+    avatar: pngSelection.avatar,
+  };
+  assert.equal(hasRuntimeEffectiveProviderChanges(displayOnly, initial), false);
+  assert.equal(hasRuntimeEffectiveProviderChanges({
+    ...displayOnly,
+    name: 'Renamed Provider',
+  }, initial), true);
+  assert.equal(hasRuntimeEffectiveProviderChanges({
+    ...displayOnly,
+    modelConfig: { version: 1, defaultModel: 'next-model' },
+  }, initial), true);
 });
 
 test('normalizes Codex form values without changing a non-empty API key', () => {

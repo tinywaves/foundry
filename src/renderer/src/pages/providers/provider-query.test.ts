@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
 import { MutationObserver, QueryClient } from '@tanstack/react-query';
+import { test } from 'vitest';
 import type {
   FoundryApi,
   ProviderApi,
@@ -97,7 +97,7 @@ function createQueryClient(): QueryClient {
   });
 }
 
-void test('adapts Provider API errors and unexpected rejections', async () => {
+test('adapts Provider API errors and unexpected rejections', async () => {
   const apiError: ProviderApiError = {
     code: 'invalid-input',
     message: 'Invalid Provider',
@@ -128,7 +128,7 @@ void test('adapts Provider API errors and unexpected rejections', async () => {
   );
 });
 
-void test('isolates Provider query keys by resource, runtime, and id', () => {
+test('isolates Provider query keys by resource, runtime, and id', () => {
   assert.deepEqual(providerQueryKeys.list('codex'), ['providers', 'list', 'codex']);
   assert.deepEqual(
     providerQueryKeys.list('claude-code'),
@@ -144,7 +144,7 @@ void test('isolates Provider query keys by resource, runtime, and id', () => {
   );
 });
 
-void test('isolates saved Provider test mutations by runtime and id', async () => {
+test('isolates saved Provider test mutations by runtime and id', async () => {
   const queryClient = createQueryClient();
   const codexProvider = createProvider('shared-id');
   const claudeProvider = createProvider('shared-id', 'claude-code');
@@ -182,7 +182,7 @@ void test('isolates saved Provider test mutations by runtime and id', async () =
   unsubscribeClaude();
 });
 
-void test('matches only the expected custom Provider response', () => {
+test('matches only the expected custom Provider response', () => {
   const provider = createProvider('provider-1');
   assert.equal(isMatchingCustomProvider(provider, 'codex'), true);
   assert.equal(isMatchingCustomProvider(provider, 'codex', provider.id), true);
@@ -194,7 +194,7 @@ void test('matches only the expected custom Provider response', () => {
   );
 });
 
-void test('filters list data and rejects mismatched Edit details', async () => {
+test('filters list data and rejects mismatched Edit details', async () => {
   const matching = createProvider('matching');
   const builtIn = createProvider('built-in', 'codex', 'foundry-built-in');
   const otherRuntime = createProvider('other-runtime', 'claude-code');
@@ -221,7 +221,7 @@ void test('filters list data and rejects mismatched Edit details', async () => {
   );
 });
 
-void test('replaces only an existing matching runtime row and resets one runtime cache', async () => {
+test('replaces only an existing matching runtime row and resets one runtime cache', async () => {
   const queryClient = createQueryClient();
   const codex = createProvider('codex-row');
   const claude = createProvider('claude-row', 'claude-code');
@@ -248,7 +248,7 @@ void test('replaces only an existing matching runtime row and resets one runtime
   assert.deepEqual(queryClient.getQueryData(providerQueryKeys.list('claude-code')), [claude]);
 });
 
-void test('removes sensitive detail data and ignores a late request result', async () => {
+test('removes sensitive detail data and ignores a late request result', async () => {
   const provider = createProvider('sensitive');
   const detail = createDetail(provider);
   let resolveRequest: ((value: ProviderDetail) => void) | undefined;
@@ -273,7 +273,7 @@ void test('removes sensitive detail data and ignores a late request result', asy
   assert.equal(queryClient.getQueryData(queryKey), undefined);
 });
 
-void test('uses the approved list, avatar, and sensitive-detail cache lifetimes', () => {
+test('uses the approved list, avatar, and sensitive-detail cache lifetimes', () => {
   const provider = createProvider('cache-policy');
   const listOptions = getProviderListQueryOptions('codex');
   const avatarOptions = getProviderAvatarQueryOptions('codex', provider.id);
@@ -287,7 +287,7 @@ void test('uses the approved list, avatar, and sensitive-detail cache lifetimes'
   assert.equal(detailOptions.gcTime, 0);
 });
 
-void test('mutation reset preserves cache callbacks and suppresses late observer callbacks', async () => {
+test('mutation reset preserves cache callbacks and suppresses late observer callbacks', async () => {
   const queryClient = createQueryClient();
   const mutation = Promise.withResolvers<string>();
   let cacheSuccesses = 0;

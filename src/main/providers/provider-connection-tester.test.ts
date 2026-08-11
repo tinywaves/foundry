@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import type { ProviderConnectionRequest } from './provider-connection-tester';
 import {
   PROVIDER_CONNECTION_TIMEOUT_MS,
   ProviderConnectionTester,
 } from './provider-connection-tester';
 
-void test('builds an authenticated Codex models request and accepts 2xx responses', async () => {
+test('builds an authenticated Codex models request and accepts 2xx responses', async () => {
   assert.equal(PROVIDER_CONNECTION_TIMEOUT_MS, 15_000);
   let requestedUrl: string | undefined;
   let requestInit: Parameters<ProviderConnectionRequest>[1] | undefined;
@@ -30,7 +30,7 @@ void test('builds an authenticated Codex models request and accepts 2xx response
   assert.deepEqual(summary, { status: 'connected', lastTestedAt: 1234, lastError: null });
 });
 
-void test('builds Claude Code paths and omits a missing API-key header', async () => {
+test('builds Claude Code paths and omits a missing API-key header', async () => {
   const requests: Array<{ url: string; headers: Record<string, string> }> = [];
   const tester = new ProviderConnectionTester((url, init) => {
     requests.push({ url, headers: init.headers });
@@ -60,7 +60,7 @@ void test('builds Claude Code paths and omits a missing API-key header', async (
   ]);
 });
 
-void test('returns bounded sanitized HTTP and redirect failures without response bodies', async () => {
+test('returns bounded sanitized HTTP and redirect failures without response bodies', async () => {
   const responses = [
     { status: 302, statusText: 'Found' },
     { status: 401, statusText: `Unauthorized\r\n${'x'.repeat(300)}` },
@@ -86,7 +86,7 @@ void test('returns bounded sanitized HTTP and redirect failures without response
   assert.equal(unauthorized.lastError.length, 160);
 });
 
-void test('distinguishes timeouts from generic network or TLS failures', async () => {
+test('distinguishes timeouts from generic network or TLS failures', async () => {
   const timeoutTester = new ProviderConnectionTester((_, init) => new Promise((_, reject) => {
     init.signal.addEventListener('abort', () => reject(new Error('secret timeout detail')));
   }), 1, () => 9012);

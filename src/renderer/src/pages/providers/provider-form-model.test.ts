@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import type { ProviderAvatarSelection } from '../../../../shared/provider-contract';
 import {
   createProviderFormValues,
@@ -33,7 +33,7 @@ function assertInvalid(
   assert.equal(result.ok, false);
 }
 
-void test('initializes runtime-specific Provider form values', () => {
+test('initializes runtime-specific Provider form values', () => {
   const codex = createProviderFormValues('codex');
   assert.deepEqual(codex.modelConfig, { defaultModel: '' });
 
@@ -48,7 +48,7 @@ void test('initializes runtime-specific Provider form values', () => {
   });
 });
 
-void test('detects changes against each runtime form baseline', () => {
+test('detects changes against each runtime form baseline', () => {
   const codexInitial = createProviderFormValues('codex');
   const claudeInitial = createProviderFormValues('claude-code');
 
@@ -92,7 +92,7 @@ void test('detects changes against each runtime form baseline', () => {
   ), true);
 });
 
-void test('normalizes Codex form values without changing a non-empty API key', () => {
+test('normalizes Codex form values without changing a non-empty API key', () => {
   let values = createProviderFormValues('codex');
   values = setProviderFormField(values, 'name', ' Custom Provider ');
   values = setProviderFormField(values, 'baseUrl', ' https://api.example.com/v1/ ');
@@ -118,7 +118,7 @@ void test('normalizes Codex form values without changing a non-empty API key', (
   });
 });
 
-void test('requires every Claude Code request model and builds the approved mapping', () => {
+test('requires every Claude Code request model and builds the approved mapping', () => {
   let values = createProviderFormValues('claude-code');
   values = setProviderFormField(values, 'name', 'Claude Provider');
   values = setProviderFormField(values, 'baseUrl', 'https://claude.example.com');
@@ -155,7 +155,7 @@ void test('requires every Claude Code request model and builds the approved mapp
   });
 });
 
-void test('rejects unsafe URLs and preserves the three avatar update states', () => {
+test('rejects unsafe URLs and preserves the three avatar update states', () => {
   let values = createProviderFormValues('codex');
   values = setProviderFormField(values, 'name', 'Provider');
   values = setProviderFormField(values, 'baseUrl', 'https://user@example.com?token=secret');
@@ -175,7 +175,7 @@ void test('rejects unsafe URLs and preserves the three avatar update states', ()
   );
 });
 
-void test('validates only connection fields for a draft Provider test', () => {
+test('validates only connection fields for a draft Provider test', () => {
   let values = createProviderFormValues('claude-code');
   values = setProviderFormField(values, 'baseUrl', ' https://claude.example.com/v1 ');
   values = setProviderFormField(values, 'apiKey', '  draft key  ');
@@ -194,7 +194,7 @@ void test('validates only connection fields for a draft Provider test', () => {
   assert.equal(invalid.errors.baseUrl, 'Base URL cannot contain a query or fragment.');
 });
 
-void test('projects Provider API errors into form, avatar, and general messages', () => {
+test('projects Provider API errors into form, avatar, and general messages', () => {
   const projected = getProviderFormApiErrorState({
     code: 'invalid-input',
     message: 'Provider input is invalid.',
@@ -225,7 +225,7 @@ void test('projects Provider API errors into form, avatar, and general messages'
   }).generalError, 'Provider could not be saved.');
 });
 
-void test('accepts only complete connected or failed draft-test results', () => {
+test('accepts only complete connected or failed draft-test results', () => {
   assert.equal(isValidProviderConnectionSummary({
     status: 'connected',
     lastTestedAt: 1,

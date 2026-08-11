@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
+import { test } from 'vitest';
 import { ProviderOperationError } from './provider-error';
 import {
   createProviderAvatarSelection,
@@ -40,7 +40,7 @@ function assertAvatarError(operation: () => unknown): ProviderOperationError {
   return caught;
 }
 
-void test('infers accepted avatar MIME types and exposes only a basename', () => {
+test('infers accepted avatar MIME types and exposes only a basename', () => {
   assert.deepEqual(createProviderAvatarSelection('/private/folder/avatar.png', pngBytes), {
     fileName: 'avatar.png',
     avatar: { mimeType: 'image/png', bytes: pngBytes },
@@ -49,7 +49,7 @@ void test('infers accepted avatar MIME types and exposes only a basename', () =>
   assert.equal(createProviderAvatarSelection('avatar.webp', webpBytes).avatar.mimeType, 'image/webp');
 });
 
-void test('rejects empty, unsupported, and oversized avatar payloads', () => {
+test('rejects empty, unsupported, and oversized avatar payloads', () => {
   assertAvatarError(() => createProviderAvatarSelection('empty.png', new Uint8Array()));
   assertAvatarError(() => createProviderAvatarSelection(
     'spoofed.png',
@@ -61,7 +61,7 @@ void test('rejects empty, unsupported, and oversized avatar payloads', () => {
   ));
 });
 
-void test('reads selected avatar bytes without returning its filesystem path', async () => {
+test('reads selected avatar bytes without returning its filesystem path', async () => {
   const directory = mkdtempSync(path.join(tmpdir(), 'foundry-avatar-picker-'));
   const filename = path.join(directory, 'private-avatar.png');
   try {

@@ -3,8 +3,8 @@ import { Buffer } from 'node:buffer';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
 import Database from 'better-sqlite3';
+import { test } from 'vitest';
 import type {
   ClaudeCodeModelConfigV1,
   CreateProviderInput,
@@ -90,7 +90,7 @@ function openTestRepository() {
   };
 }
 
-void test('migrates transactionally and rejects unsupported future versions without changing their data', () => {
+test('migrates transactionally and rejects unsupported future versions without changing their data', () => {
   const database = openProviderDatabase(':memory:');
   assert.equal(database.pragma('user_version', { simple: true }), PROVIDER_SCHEMA_VERSION);
   assert.equal(database.pragma('quick_check', { simple: true }), 'ok');
@@ -127,7 +127,7 @@ void test('migrates transactionally and rejects unsupported future versions with
   rmSync(directory, { recursive: true, force: true });
 });
 
-void test('isolates runtimes, allows duplicate names, and returns sensitive data only from explicit methods', () => {
+test('isolates runtimes, allows duplicate names, and returns sensitive data only from explicit methods', () => {
   const { database, repository } = openTestRepository();
   try {
     const firstCodex = repository.createProvider(createCodexInput({
@@ -170,7 +170,7 @@ void test('isolates runtimes, allows duplicate names, and returns sensitive data
   }
 });
 
-void test('validates URLs, models, API keys, and avatar content at the repository boundary', () => {
+test('validates URLs, models, API keys, and avatar content at the repository boundary', () => {
   const { database, repository } = openTestRepository();
   try {
     assertProviderError(
@@ -217,7 +217,7 @@ void test('validates URLs, models, API keys, and avatar content at the repositor
   }
 });
 
-void test('preserves, removes, and replaces avatars while preventing runtime changes', () => {
+test('preserves, removes, and replaces avatars while preventing runtime changes', () => {
   const { database, repository } = openTestRepository();
   try {
     const created = repository.createProvider(createCodexInput({ avatar: pngAvatar }));
@@ -243,7 +243,7 @@ void test('preserves, removes, and replaces avatars while preventing runtime cha
   }
 });
 
-void test('persists connection summaries, preserves them for metadata edits, and rejects stale writes', () => {
+test('persists connection summaries, preserves them for metadata edits, and rejects stale writes', () => {
   const { database, repository } = openTestRepository();
   try {
     const created = repository.createProvider(createCodexInput());
@@ -330,7 +330,7 @@ void test('persists connection summaries, preserves them for metadata edits, and
   }
 });
 
-void test('soft delete retains the complete row and excludes it from every normal operation', () => {
+test('soft delete retains the complete row and excludes it from every normal operation', () => {
   const { database, repository } = openTestRepository();
   try {
     const created = repository.createProvider(createCodexInput({
@@ -373,7 +373,7 @@ void test('soft delete retains the complete row and excludes it from every norma
   }
 });
 
-void test('maps unreadable files and invalid stored model data to non-sensitive corruption errors', () => {
+test('maps unreadable files and invalid stored model data to non-sensitive corruption errors', () => {
   const directory = mkdtempSync(path.join(tmpdir(), 'foundry-provider-corrupt-'));
   const filename = path.join(directory, 'foundry.sqlite');
   writeFileSync(filename, 'not a sqlite database');

@@ -9,7 +9,6 @@ import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
 import { Tab, TabList } from '@astryxdesign/core/TabList';
 import { useToast } from '@astryxdesign/core/Toast';
 import { Toolbar } from '@astryxdesign/core/Toolbar';
-import { spacingVars } from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, ServerCog } from 'lucide-react';
@@ -20,6 +19,7 @@ import {
   useState,
 } from 'react';
 import { useSearchParams } from 'react-router';
+import { providerRuntimes } from '../../../shared/provider-contract';
 import type { ProviderRuntime, ProviderSummary } from '../../../shared/provider-contract';
 import { ProviderDialog } from './providers/provider-dialog';
 import type { ProviderDialogRequest } from './providers/provider-dialog';
@@ -34,9 +34,9 @@ import {
   ProviderTable,
 } from './providers/provider-table';
 import {
-  providerRuntimeIconUrls,
   providerRuntimeLabels,
 } from './providers/provider-runtime';
+import { ProviderRuntimeIcon } from './providers/provider-runtime-icon';
 import { useProviderList } from './providers/use-provider-list';
 
 const REVEAL_DURATION_MS = 30_000;
@@ -52,11 +52,6 @@ const styles = stylex.create({
   },
   emptyState: {
     minHeight: '100%',
-  },
-  runtimeIcon: {
-    display: 'block',
-    width: spacingVars['--spacing-4'],
-    height: spacingVars['--spacing-4'],
   },
 });
 
@@ -152,14 +147,23 @@ export function ProvidersPage() {
     showToast({ body, type: 'error', uniqueID });
   }, [showToast]);
 
-  const handleRuntimeChange = (value: string) => {
-    if ((value !== 'codex' && value !== 'claude-code') || value === runtime) {
+  const selectRuntime = useCallback((nextRuntime: ProviderRuntime) => {
+    resetPageActions();
+    if (nextRuntime === runtime) {
       return;
     }
-    resetPageActions();
-    const next = new URLSearchParams(searchParams);
-    next.set(RUNTIME_QUERY_PARAM, value);
-    setSearchParams(next, { replace: true });
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set(RUNTIME_QUERY_PARAM, nextRuntime);
+      return next;
+    }, { replace: true });
+  }, [resetPageActions, runtime, setSearchParams]);
+
+  const handleRuntimeChange = (value: string) => {
+    if (!providerRuntimes.includes(value as ProviderRuntime)) {
+      return;
+    }
+    selectRuntime(value as ProviderRuntime);
   };
 
   const disposeCurrentDialogDetail = useCallback(() => {
@@ -308,34 +312,14 @@ export function ProvidersPage() {
             onChange={handleRuntimeChange}
             aria-label="Runtime"
           >
-            <Tab
-              value="codex"
-              label="Codex"
-              icon={(
-                <img
-                  {...stylex.props(styles.runtimeIcon)}
-                  src={providerRuntimeIconUrls.codex}
-                  alt=""
-                  width={16}
-                  height={16}
-                  draggable={false}
-                />
-              )}
-            />
-            <Tab
-              value="claude-code"
-              label="Claude Code"
-              icon={(
-                <img
-                  {...stylex.props(styles.runtimeIcon)}
-                  src={providerRuntimeIconUrls['claude-code']}
-                  alt=""
-                  width={16}
-                  height={16}
-                  draggable={false}
-                />
-              )}
-            />
+            {providerRuntimes.map((runtimeOption) => (
+              <Tab
+                key={runtimeOption}
+                value={runtimeOption}
+                label={providerRuntimeLabels[runtimeOption]}
+                icon={<ProviderRuntimeIcon runtime={runtimeOption} />}
+              />
+            ))}
           </TabList>
         )}
       />
@@ -347,11 +331,7 @@ export function ProvidersPage() {
           key={dialogRequest.key}
           request={dialogRequest}
           onClose={() => setDialogRequest(undefined)}
-          onSaved={(savedRuntime) => {
-            if (savedRuntime === runtime) {
-              resetPageActions();
-            }
-          }}
+          onSaved={selectRuntime}
         />
       )}
       <AlertDialog

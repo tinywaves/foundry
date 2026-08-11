@@ -43,6 +43,7 @@ import {
   createProviderFormValuesFromDetail,
   getProviderAvatarUpdate,
   getProviderFormApiErrorState,
+  hasProviderFormChanges,
   isValidProviderConnectionSummary,
   setProviderFormField,
   validateProviderConnectionForm,
@@ -65,6 +66,7 @@ import {
   resetProviderList,
   resolveProviderRequest,
 } from './provider-query';
+import { providerRuntimeLabels } from './provider-runtime';
 
 export type ProviderDialogRequest
   = | {
@@ -183,6 +185,7 @@ function focusFirstFormError(formId: string, errors: ProviderFormErrors): void {
 
 function ProviderDialogFrame({
   request,
+  activeRuntime,
   content,
   formId,
   isFormReady,
@@ -193,6 +196,7 @@ function ProviderDialogFrame({
   onTestConnection,
 }: {
   request: ProviderDialogRequest;
+  activeRuntime?: ProviderRuntime;
   content: ReactNode;
   formId?: string;
   isFormReady: boolean;
@@ -205,7 +209,7 @@ function ProviderDialogFrame({
   const title = request.mode === 'add' ? 'Add Provider' : 'Edit Provider';
   const titleId = useId();
   const saveLabel = request.mode === 'add' ? 'Add Provider' : 'Save Changes';
-  const runtime = getRequestRuntime(request);
+  const runtime = activeRuntime ?? getRequestRuntime(request);
   const handleClose = () => {
     if (!isSaving) {
       onClose();
@@ -317,19 +321,20 @@ function ProviderDialogFormSession({
   initialValues: ProviderFormValues;
   storedAvatarState: StoredAvatarState;
 }) {
-  const runtime = getRequestRuntime(request);
   const hasStoredAvatar = request.mode === 'edit' && request.provider.hasCustomAvatar;
   const formId = useId();
   const queryClient = useQueryClient();
   const showToast = useToast();
   const previewUrlRef = useRef<string | undefined>(undefined);
-  const [initialValuesSnapshot] = useState(() => JSON.stringify(initialValues));
+  const [runtime, setRuntime] = useState(() => getRequestRuntime(request));
+  const [initialValuesSnapshot, setInitialValuesSnapshot] = useState(() => initialValues);
   const [values, setValues] = useState(initialValues);
   const [formErrors, setFormErrors] = useState<ProviderFormErrors>({});
   const [avatarError, setAvatarError] = useState<string>();
   const [avatarIntent, setAvatarIntent] = useState<ProviderAvatarIntent>({ kind: 'preserve' });
   const [avatarView, setAvatarView] = useState<AvatarView>({});
   const [isDiscardConfirmationOpen, setIsDiscardConfirmationOpen] = useState(false);
+  const [pendingRuntime, setPendingRuntime] = useState<ProviderRuntime>();
   const {
     error: saveError,
     isPending: isSaving,
@@ -349,13 +354,13 @@ function ProviderDialogFormSession({
             }),
             'The provider could not be saved.',
           );
-      if (!isMatchingCustomProvider(savedProvider, runtime)) {
+      if (!isMatchingCustomProvider(savedProvider, input.runtime)) {
         throw new ProviderRequestError('The saved provider response was invalid.');
       }
       return savedProvider;
     },
-    onSuccess: () => {
-      void resetProviderList(queryClient, runtime);
+    onSuccess: (_, input) => {
+      void resetProviderList(queryClient, input.runtime);
     },
   });
   const {
@@ -383,6 +388,7 @@ function ProviderDialogFormSession({
   const {
     isPending: isSelectingAvatar,
     mutate: selectAvatar,
+    reset: resetSelectAvatar,
   } = useMutation<ProviderAvatarSelection | null, ProviderRequestError>({
     mutationFn: () => resolveProviderRequest(
       () => globalThis.api.providers.selectProviderAvatar(),
@@ -523,12 +529,12 @@ function ProviderDialogFormSession({
         setAvatarError(errorState.avatarError);
         focusFirstFormError(formId, errorState.formErrors);
       },
-      onSuccess: () => {
+      onSuccess: (savedProvider) => {
         showToast({
           body: request.mode === 'add' ? 'Provider added' : 'Provider updated',
           uniqueID: `provider-${request.mode}-success`,
         });
-        onSaved(runtime);
+        onSaved(savedProvider.runtime);
         onClose();
       },
     });
@@ -540,7 +546,6 @@ function ProviderDialogFormSession({
     onSaved,
     request,
     resetSave,
-    runtime,
     saveProvider,
     showToast,
     values,
@@ -567,8 +572,72 @@ function ProviderDialogFormSession({
     || (hasStoredAvatar && avatarIntent.kind !== 'remove');
   const hasStoredAvatarWarning = avatarIntent.kind === 'preserve'
     && storedAvatarState.status === 'error';
-  const hasUnsavedChanges = JSON.stringify(values) !== initialValuesSnapshot
-    || avatarIntent.kind !== 'preserve';
+  const hasUnsavedChanges = hasProviderFormChanges(
+    values,
+    initialValuesSnapshot,
+    avatarIntent,
+  );
+  const applyRuntimeChange = useCallback((nextRuntime: ProviderRuntime) => {
+    if (request.mode !== 'add' || nextRuntime === runtime) {
+      return;
+    }
+    const nextValues = createProviderFormValues(nextRuntime);
+    revokePreviewUrl();
+    resetSave();
+    resetTestConnection();
+    resetSelectAvatar();
+    setRuntime(nextRuntime);
+    setInitialValuesSnapshot(nextValues);
+    setValues(nextValues);
+    setFormErrors({});
+    setAvatarError(undefined);
+    setAvatarIntent({ kind: 'preserve' });
+    setAvatarView({});
+    setPendingRuntime(undefined);
+  }, [
+    request.mode,
+    resetSave,
+    resetSelectAvatar,
+    resetTestConnection,
+    revokePreviewUrl,
+    runtime,
+  ]);
+  const requestRuntimeChange = useCallback((nextRuntime: ProviderRuntime) => {
+    if (
+      request.mode !== 'add'
+      || nextRuntime === runtime
+      || isSaving
+      || isTesting
+    ) {
+      return;
+    }
+    if (hasUnsavedChanges) {
+      setPendingRuntime(nextRuntime);
+      return;
+    }
+    applyRuntimeChange(nextRuntime);
+  }, [
+    applyRuntimeChange,
+    hasUnsavedChanges,
+    isSaving,
+    isTesting,
+    request.mode,
+    runtime,
+  ]);
+  const confirmRuntimeChange = useCallback(() => {
+    if (pendingRuntime === undefined) {
+      return;
+    }
+    applyRuntimeChange(pendingRuntime);
+  }, [applyRuntimeChange, pendingRuntime]);
+  let runtimeChangeDisabledMessage: string | undefined;
+  if (isTesting) {
+    runtimeChangeDisabledMessage
+      = 'Wait for the connection test to finish before switching runtime.';
+  } else if (isSaving) {
+    runtimeChangeDisabledMessage
+      = 'Wait for the provider to finish saving before switching runtime.';
+  }
   const requestClose = () => {
     if (hasUnsavedChanges) {
       setIsDiscardConfirmationOpen(true);
@@ -593,7 +662,10 @@ function ProviderDialogFormSession({
         hasAvatar={hasAvatar}
         isDisabled={isSaving}
         isSelectingAvatar={isSelectingAvatar}
+        isRuntimeChangeDisabled={isSaving || isTesting}
+        runtimeChangeDisabledMessage={runtimeChangeDisabledMessage}
         onFieldChange={handleFieldChange}
+        onRuntimeChange={request.mode === 'add' ? requestRuntimeChange : undefined}
         onSelectAvatar={handleSelectAvatar}
         onRemoveAvatar={handleRemoveAvatar}
         onSubmit={handleSave}
@@ -605,6 +677,7 @@ function ProviderDialogFormSession({
     <>
       <ProviderDialogFrame
         request={request}
+        activeRuntime={runtime}
         content={content}
         formId={formId}
         isFormReady
@@ -623,6 +696,21 @@ function ProviderDialogFormSession({
         actionVariant="destructive"
         onAction={onClose}
       />
+      {pendingRuntime && (
+        <AlertDialog
+          isOpen
+          onOpenChange={(isOpen) => {
+            if (!isOpen) {
+              setPendingRuntime(undefined);
+            }
+          }}
+          title="Switch Runtime?"
+          description={`Switching to ${providerRuntimeLabels[pendingRuntime]} will clear the current Provider details.`}
+          actionLabel={`Switch to ${providerRuntimeLabels[pendingRuntime]}`}
+          actionVariant="destructive"
+          onAction={confirmRuntimeChange}
+        />
+      )}
     </>
   );
 }

@@ -20,9 +20,9 @@ import type { ReactNode } from 'react';
 import { routePaths } from '@renderer/routes';
 import type { ProviderRuntime } from '../../../shared/provider-contract';
 import {
-  providerRuntimeIconUrls,
   providerRuntimeLabels,
 } from './providers/provider-runtime';
+import { ProviderRuntimeIcon } from './providers/provider-runtime-icon';
 import { resetProviderList } from './providers/provider-query';
 import { useProviderList } from './providers/use-provider-list';
 
@@ -31,11 +31,6 @@ const EMPTY_VALUE = '\u{2014}';
 const styles = stylex.create({
   page: {
     minWidth: 0,
-  },
-  runtimeIcon: {
-    display: 'block',
-    width: spacingVars['--spacing-6'],
-    height: spacingVars['--spacing-6'],
   },
 });
 
@@ -191,14 +186,7 @@ const runtimeColumns: Array<TableColumn<RuntimeDashboardRow>> = [
     width: proportional(2),
     renderCell: ({ runtime }) => (
       <HStack gap={2} vAlign="center">
-        <img
-          {...stylex.props(styles.runtimeIcon)}
-          src={providerRuntimeIconUrls[runtime]}
-          alt=""
-          width={24}
-          height={24}
-          draggable={false}
-        />
+        <ProviderRuntimeIcon runtime={runtime} size="md" />
         <Text type="label">{providerRuntimeLabels[runtime]}</Text>
       </HStack>
     ),

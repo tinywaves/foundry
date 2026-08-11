@@ -284,6 +284,15 @@ export function getProviderAvatarUpdate(intent: ProviderAvatarIntent): {
   return { avatar: intent.kind === 'remove' ? null : intent.selection.avatar };
 }
 
+export function hasProviderFormChanges(
+  values: ProviderFormValues,
+  initialValues: ProviderFormValues,
+  avatarIntent: ProviderAvatarIntent,
+): boolean {
+  return JSON.stringify(values) !== JSON.stringify(initialValues)
+    || avatarIntent.kind !== 'preserve';
+}
+
 function addRequiredError(
   errors: ProviderFormErrors,
   field: ProviderFormField,

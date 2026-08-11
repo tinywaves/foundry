@@ -1,16 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { ProviderAvatarSelection } from '../../shared/provider-contract';
+import type { ProviderAvatarSelection } from '../../../../shared/provider-contract';
 import {
   createProviderFormValues,
   getProviderAvatarUpdate,
   getProviderFormApiErrorState,
+  hasProviderFormChanges,
   isValidProviderConnectionSummary,
   setProviderFormField,
   validateProviderConnectionForm,
   validateProviderForm,
-} from '../../renderer/src/pages/providers/provider-form-model';
-import type { ProviderFormValidation } from '../../renderer/src/pages/providers/provider-form-model';
+} from './provider-form-model';
+import type { ProviderFormValidation } from './provider-form-model';
 
 const pngSelection: ProviderAvatarSelection = {
   fileName: 'avatar.png',
@@ -45,6 +46,50 @@ void test('initializes runtime-specific Provider form values', () => {
     subagent: { requestModel: '' },
     defaultFallbackModel: '',
   });
+});
+
+void test('detects changes against each runtime form baseline', () => {
+  const codexInitial = createProviderFormValues('codex');
+  const claudeInitial = createProviderFormValues('claude-code');
+
+  assert.equal(hasProviderFormChanges(
+    codexInitial,
+    codexInitial,
+    { kind: 'preserve' },
+  ), false);
+  assert.equal(hasProviderFormChanges(
+    claudeInitial,
+    claudeInitial,
+    { kind: 'preserve' },
+  ), false);
+
+  const changedCodex = setProviderFormField(codexInitial, 'name', 'Provider');
+  assert.equal(hasProviderFormChanges(
+    changedCodex,
+    codexInitial,
+    { kind: 'preserve' },
+  ), true);
+  assert.equal(hasProviderFormChanges(
+    setProviderFormField(changedCodex, 'name', ''),
+    codexInitial,
+    { kind: 'preserve' },
+  ), false);
+
+  assert.equal(hasProviderFormChanges(
+    codexInitial,
+    codexInitial,
+    { kind: 'replace', selection: pngSelection },
+  ), true);
+  assert.equal(hasProviderFormChanges(
+    codexInitial,
+    codexInitial,
+    { kind: 'remove' },
+  ), true);
+  assert.equal(hasProviderFormChanges(
+    claudeInitial,
+    codexInitial,
+    { kind: 'preserve' },
+  ), true);
 });
 
 void test('normalizes Codex form values without changing a non-empty API key', () => {

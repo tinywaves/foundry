@@ -3,6 +3,10 @@ import { FormLayout } from '@astryxdesign/core/FormLayout';
 import { Icon } from '@astryxdesign/core/Icon';
 import { IconButton } from '@astryxdesign/core/IconButton';
 import { InputGroup, InputGroupText } from '@astryxdesign/core/InputGroup';
+import {
+  SegmentedControl,
+  SegmentedControlItem,
+} from '@astryxdesign/core/SegmentedControl';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { proportional, Table } from '@astryxdesign/core/Table';
 import type { TableColumn } from '@astryxdesign/core/Table';
@@ -13,12 +17,16 @@ import { Thumbnail } from '@astryxdesign/core/Thumbnail';
 import * as stylex from '@stylexjs/stylex';
 import { Eye, EyeOff } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
+import { providerRuntimes } from '../../../../shared/provider-contract';
+import type { ProviderRuntime } from '../../../../shared/provider-contract';
 import type {
   ProviderFormErrors,
   ProviderFormField,
   ProviderFormValues,
 } from './provider-form-model';
 import { getProviderFormField } from './provider-form-model';
+import { providerRuntimeLabels } from './provider-runtime';
+import { ProviderRuntimeIcon } from './provider-runtime-icon';
 
 interface ClaudeModelRow extends Record<string, unknown> {
   id: string;
@@ -219,7 +227,10 @@ export function ProviderForm({
   hasAvatar,
   isDisabled,
   isSelectingAvatar,
+  isRuntimeChangeDisabled,
+  runtimeChangeDisabledMessage,
   onFieldChange,
+  onRuntimeChange,
   onSelectAvatar,
   onRemoveAvatar,
   onSubmit,
@@ -232,13 +243,18 @@ export function ProviderForm({
   hasAvatar: boolean;
   isDisabled: boolean;
   isSelectingAvatar: boolean;
+  isRuntimeChangeDisabled: boolean;
+  runtimeChangeDisabledMessage: string | undefined;
   onFieldChange: (field: ProviderFormField, value: string) => void;
+  onRuntimeChange: ((runtime: ProviderRuntime) => void) | undefined;
   onSelectAvatar: () => void;
   onRemoveAvatar: () => void;
   onSubmit: () => void;
 }) {
   const avatarGroupId = useId();
   const avatarLabelId = useId();
+  const runtimeGroupId = useId();
+  const runtimeLabelId = useId();
 
   return (
     <VStack
@@ -252,6 +268,44 @@ export function ProviderForm({
     >
       <VStack as="section" aria-label="Provider details">
         <FormLayout>
+          {onRuntimeChange && (
+            <Field
+              label="Runtime"
+              inputID={runtimeGroupId}
+              labelID={runtimeLabelId}
+              isGroupLabel
+              isRequired
+            >
+              <HStack
+                id={runtimeGroupId}
+                role="group"
+                aria-labelledby={runtimeLabelId}
+                width="100%"
+              >
+                <SegmentedControl
+                  value={values.runtime}
+                  label="Provider runtime"
+                  layout="fill"
+                  isDisabled={isDisabled || isRuntimeChangeDisabled}
+                  disabledMessage={runtimeChangeDisabledMessage}
+                  onChange={(value) => {
+                    if (providerRuntimes.includes(value as ProviderRuntime)) {
+                      onRuntimeChange(value as ProviderRuntime);
+                    }
+                  }}
+                >
+                  {providerRuntimes.map((runtime) => (
+                    <SegmentedControlItem
+                      key={runtime}
+                      value={runtime}
+                      label={providerRuntimeLabels[runtime]}
+                      icon={<ProviderRuntimeIcon runtime={runtime} />}
+                    />
+                  ))}
+                </SegmentedControl>
+              </HStack>
+            </Field>
+          )}
           <Field
             label="Avatar"
             inputID={avatarGroupId}
@@ -324,6 +378,7 @@ export function ProviderForm({
             onChange={(value) => onFieldChange('baseUrl', value)}
           />
           <ApiKeyInput
+            key={values.runtime}
             value={values.apiKey}
             error={errors.apiKey}
             isDisabled={isDisabled}

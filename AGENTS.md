@@ -70,6 +70,15 @@ For UI changes, do not launch the application or use browser, screenshot, access
 - Install new dependencies without specifying a version so pnpm resolves the current latest release: use `pnpm add <package>` for runtime dependencies and `pnpm add <package> -D` for development dependencies.
 - Add comments only when they explain intent or a non-obvious constraint.
 
+## Reuse and Shared Definitions
+
+- Before introducing a component, helper, utility, constant, type, or validation rule, search the relevant code paths for an existing implementation with the same or closely related responsibility.
+- When the semantics, ownership, lifecycle, dependencies, and trust boundary align, reuse the existing implementation or extract the smallest stable shared definition as part of the current change.
+- Prefer sharing domain constants, pure types, and genuinely identical behavior from the narrowest appropriate module. Do not create a broad common module or speculative generic abstraction for possible future reuse.
+- Do not force reuse based only on similar appearance, naming, or syntax. Keep implementations separate when their interaction semantics, process ownership, security responsibilities, or change cadence differ.
+- Preserve renderer, preload, and main-process boundaries when evaluating reuse. Renderer-side user-experience validation and authoritative main-process validation may intentionally remain separate unless a shared pure definition preserves both responsibilities.
+- When no safe and meaningful reuse opportunity exists, keep the new implementation local and focused rather than weakening module boundaries to remove superficial duplication.
+
 ## Styling
 
 - Use StyleX as the project's styling system.

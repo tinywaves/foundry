@@ -8,7 +8,7 @@ import type {
   ProviderDetail,
   ProviderRuntime,
   ProviderSummary,
-} from '../../shared/provider-contract';
+} from '../../../../shared/provider-contract';
 import {
   getProviderAvatarQueryOptions,
   getProviderDetailQueryOptions,
@@ -21,7 +21,7 @@ import {
   replaceCachedProvider,
   resetProviderList,
   resolveProviderRequest,
-} from '../../renderer/src/pages/providers/provider-query';
+} from './provider-query';
 
 const connection = {
   status: 'never-tested' as const,
@@ -216,7 +216,7 @@ void test('filters list data and rejects mismatched Edit details', async () => {
     queryClient.fetchQuery(getProviderDetailQueryOptions(matching)),
     (error: unknown) => (
       error instanceof ProviderRequestError
-      && error.message === 'The selected Provider detail did not match this row.'
+      && error.message === 'The selected provider did not match this row.'
     ),
   );
 });

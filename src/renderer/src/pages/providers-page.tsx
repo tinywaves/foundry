@@ -24,22 +24,21 @@ import type { ProviderRuntime, ProviderSummary } from '../../../shared/provider-
 import { ProviderDialog } from './providers/provider-dialog';
 import type { ProviderDialogRequest } from './providers/provider-dialog';
 import {
-  ProviderRequestError,
   removeProviderDetail,
   resetProviderList,
   resolveProviderRequest,
 } from './providers/provider-query';
+import type { ProviderRequestError } from './providers/provider-query';
 import {
-  LoadingProviderTable,
-  ProviderTable,
-} from './providers/provider-table';
+  LoadingProviderCardList,
+  ProviderCardList,
+} from './providers/provider-card-list';
 import {
   providerRuntimeLabels,
 } from './providers/provider-runtime';
 import { ProviderRuntimeIcon } from './providers/provider-runtime-icon';
 import { useProviderList } from './providers/use-provider-list';
 
-const REVEAL_DURATION_MS = 30_000;
 const RUNTIME_QUERY_PARAM = 'runtime';
 
 const styles = stylex.create({
@@ -66,28 +65,9 @@ export function ProvidersPage() {
   const runtimeParam = searchParams.get(RUNTIME_QUERY_PARAM);
   const runtime = getProviderRuntime(runtimeParam);
   const [dialogRequest, setDialogRequest] = useState<ProviderDialogRequest>();
-  const [revealedApiKey, setRevealedApiKey] = useState<{ id: string; value: string }>();
   const [providerToDelete, setProviderToDelete] = useState<ProviderSummary>();
   const dialogKeyRef = useRef(0);
-  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const { state } = useProviderList(runtime);
-  const {
-    isPending: isRevealingApiKey,
-    mutate: revealProviderApiKey,
-    reset: resetRevealProviderApiKey,
-    variables: revealingProvider,
-  } = useMutation<string, ProviderRequestError, ProviderSummary>({
-    mutationFn: async (provider) => {
-      const apiKey = await resolveProviderRequest<string | null>(
-        () => globalThis.api.providers.revealProviderApiKey(provider.id),
-        'The API key could not be revealed.',
-      );
-      if (apiKey === null) {
-        throw new ProviderRequestError('Provider does not have an API key.');
-      }
-      return apiKey;
-    },
-  });
   const {
     isPending: isDeletingProvider,
     mutate: deleteProvider,
@@ -102,7 +82,6 @@ export function ProvidersPage() {
       void resetProviderList(queryClient, provider.runtime);
     },
   });
-  const revealingProviderId = isRevealingApiKey ? revealingProvider.id : undefined;
   const deletingProviderId = isDeletingProvider ? deletingProvider.id : undefined;
 
   useEffect(() => {
@@ -116,27 +95,10 @@ export function ProvidersPage() {
     }, { replace: true });
   }, [runtime, runtimeParam, setSearchParams]);
 
-  const clearRevealTimer = useCallback(() => {
-    if (revealTimerRef.current === undefined) {
-      return;
-    }
-    clearTimeout(revealTimerRef.current);
-    revealTimerRef.current = undefined;
-  }, []);
-
-  const clearRevealedApiKey = useCallback(() => {
-    clearRevealTimer();
-    resetRevealProviderApiKey();
-    setRevealedApiKey(undefined);
-  }, [clearRevealTimer, resetRevealProviderApiKey]);
-
-  useEffect(() => () => clearRevealTimer(), [clearRevealTimer]);
-
   const resetPageActions = useCallback(() => {
-    clearRevealedApiKey();
     resetDeleteProvider();
     setProviderToDelete(undefined);
-  }, [clearRevealedApiKey, resetDeleteProvider]);
+  }, [resetDeleteProvider]);
 
   const reloadProviders = useCallback(() => {
     resetPageActions();
@@ -183,38 +145,8 @@ export function ProvidersPage() {
 
   const openEditDialog = useCallback((provider: ProviderSummary) => {
     disposeCurrentDialogDetail();
-    clearRevealedApiKey();
     setDialogRequest({ key: ++dialogKeyRef.current, mode: 'edit', provider });
-  }, [clearRevealedApiKey, disposeCurrentDialogDetail]);
-
-  const handleToggleRevealApiKey = useCallback((provider: ProviderSummary) => {
-    if (revealedApiKey?.id === provider.id) {
-      clearRevealedApiKey();
-      return;
-    }
-
-    clearRevealedApiKey();
-    revealProviderApiKey(provider, {
-      onError: (error) => {
-        showOperationError(error.message, `provider-reveal-${provider.id}`);
-      },
-      onSuccess: (apiKey) => {
-        setRevealedApiKey({ id: provider.id, value: apiKey });
-        resetRevealProviderApiKey();
-        clearRevealTimer();
-        revealTimerRef.current = setTimeout(() => {
-          clearRevealedApiKey();
-        }, REVEAL_DURATION_MS);
-      },
-    });
-  }, [
-    clearRevealTimer,
-    clearRevealedApiKey,
-    revealProviderApiKey,
-    revealedApiKey?.id,
-    resetRevealProviderApiKey,
-    showOperationError,
-  ]);
+  }, [disposeCurrentDialogDetail]);
 
   const handleDelete = useCallback((provider: ProviderSummary) => {
     setProviderToDelete(provider);
@@ -245,7 +177,7 @@ export function ProvidersPage() {
 
   let content;
   if (state.status === 'loading') {
-    content = <LoadingProviderTable runtime={runtime} />;
+    content = <LoadingProviderCardList runtime={runtime} />;
   } else if (state.status === 'error') {
     content = (
       <Banner
@@ -275,15 +207,12 @@ export function ProvidersPage() {
     );
   } else {
     content = (
-      <ProviderTable
+      <ProviderCardList
         key={runtime}
         providers={state.providers}
         runtime={runtime}
-        revealedApiKey={revealedApiKey}
-        revealingProviderId={revealingProviderId}
         deletingProviderId={deletingProviderId}
         onEdit={openEditDialog}
-        onToggleRevealApiKey={handleToggleRevealApiKey}
         onDelete={handleDelete}
       />
     );

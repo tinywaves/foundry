@@ -12,7 +12,7 @@ Build a basic two-column Foundry interface with a resizable, non-collapsible sid
 
 The application interface will use two columns. The left sidebar will place a window drag region above temporary placeholder content. The right content area will use a drag region of the same height above the existing Markdown example.
 
-The sidebar will have a default width of 260px and can be resized through a separator handle. Its minimum width will be 200px and its maximum width will be 400px. Resizing will stop at either boundary. The sidebar will not be collapsible, and its adjusted width will not be persisted.
+The sidebar will start at its 200px minimum width and can be resized through a separator handle up to its 400px maximum. Resizing will stop at either boundary. The sidebar will not be collapsible, and its adjusted width will not be persisted.
 
 The window drag region will be encapsulated in a reusable `WindowDragRegion` component. The component will have a fixed height of 28 logical pixels and fill the width of its owning column. Its outer region will provide Electron window dragging. Optional interactive children will be wrapped in a `fit-content` container that is explicitly marked as a non-drag region so it continues to receive pointer input. Both columns will use drag regions of equal height so the native macOS traffic lights align naturally within the top area.
 
@@ -26,7 +26,7 @@ The sidebar column will clip horizontal overflow at its root so the Astryx resiz
 - Create a reusable `WindowDragRegion` component that supports interactive children.
 - Add equal-height Electron window drag regions at the top of both columns.
 - Support sidebar resizing through pointer and keyboard input.
-- Constrain the sidebar to a 200px minimum, a 400px maximum, and a 260px default width.
+- Constrain the sidebar to a 200px minimum and default width with a 400px maximum.
 - Prevent resize-handle overflow from producing a horizontal sidebar scrollbar.
 - Use Astryx, StyleX, and the project's existing design tokens for layout and styling.
 - Verify type checking, linting, builds, and the primary macOS interactions.
@@ -45,7 +45,7 @@ The sidebar column will clip horizontal overflow at its root so the Astryx resiz
 ## Decisions
 
 - The sidebar will be resizable but not collapsible, keeping its behavior simple and predictable.
-- The default sidebar width will be 260px, balancing sidebar content space with the main content area's available width.
+- The default sidebar width will equal the 200px minimum so the application starts with the most compact supported sidebar and leaves more width for main content.
 - The minimum sidebar width will be 200px, leaving enough room for placeholder content and future navigation.
 - The maximum sidebar width will be 400px, preventing the sidebar from excessively constraining the main content area.
 - Resizing will stop at the minimum and maximum boundaries without triggering another layout state.

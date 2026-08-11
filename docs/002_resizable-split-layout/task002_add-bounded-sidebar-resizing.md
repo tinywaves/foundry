@@ -14,11 +14,11 @@ Update only `src/renderer/src/app.tsx` to enable Astryx's built-in resizing on t
 
 Define a named sidebar resize configuration outside the `App` component with:
 
-- `defaultWidth: 260`
+- `defaultWidth: 200`
 - `minWidth: 200`
 - `maxWidth: 400`
 
-Pass this configuration to the existing `SideNav` through its `resizable` prop and explicitly keep `collapsible={false}`. Do not provide `autoSaveId`, so the adjusted width remains local to the current renderer lifetime and resets to 260px after a reload. Do not provide `onWidthChange`, because no application-owned resize state or side effect is required.
+Pass this configuration to the existing `SideNav` through its `resizable` prop and explicitly keep `collapsible={false}`. Keep `defaultWidth` and `minWidth` as independent configuration fields, each explicitly set to `200`. Do not provide `autoSaveId`, so the adjusted width remains local to the current renderer lifetime and resets to 200px after a reload. Do not provide `onWidthChange`, because no application-owned resize state or side effect is required.
 
 Use the resize handle rendered internally by `SideNav`. The handle will remain an overlay at the inline-end edge of the sidebar content below the 28-logical-pixel `WindowDragRegion`. The top region will remain dedicated to Electron window dragging and will not become part of the resize handle. As the `SideNav` width changes, the enclosing sidebar column and its top drag region will follow the new width, while the main content area will consume the remaining horizontal space.
 
@@ -49,13 +49,29 @@ None.
 - Documentation impact: Updated Plan 002 and Task 002 to include the clipping behavior, deliverable, acceptance statement, and verification.
 - Verification: Electron DOM inspection confirmed the panel changed from `clientWidth: 260` and `scrollWidth: 261` to matching 260px values while resizing remained available.
 
+### 2026-08-11 14:08:37: Start Sidebar at Minimum Width
+
+- Change: The sidebar now uses one shared 200px value for both `defaultWidth` and `minWidth`, so every non-persisted renderer load starts at the minimum supported width. The 400px maximum and all resize interactions remain unchanged.
+- Previous state: The sidebar started and reset at 260px while allowing users to resize it down to a separate 200px minimum.
+- Reason: The user requested that the default sidebar width equal its minimum so the application opens with a more compact navigation region.
+- Documentation impact: Updated the Plan 002 Detail, Scope, and Decisions plus the Task 002 Detail, Deliverables, and Acceptance Criteria. Historical implementation verification remains unchanged, while this record identifies the superseding current value. Task status, checklist completion, and order remain unchanged.
+- Verification: `pnpm typecheck`, `pnpm lint`, and `git diff --check` passed. Static inspection confirmed that `defaultWidth` and `minWidth` reference the same local 200px constant and `maxWidth` remains 400px. The application was not launched and no automated visual verification was performed under repository policy.
+
+### 2026-08-11 14:13:58: Keep Sidebar Width Fields Independent
+
+- Change: `defaultWidth` and `minWidth` are now independent configuration fields, each explicitly set to `200`; `maxWidth` remains `400`.
+- Previous state: Both fields referenced one shared local `200` constant.
+- Reason: The user requested separate configuration values even though their current numeric values are equal.
+- Documentation impact: Updated Task 002 Detail and Deliverables. Plan 002 remains accurate and unchanged; task status, checklist completion, and order remain unchanged.
+- Verification: `pnpm typecheck`, `pnpm lint`, and `git diff --check` passed. Static inspection confirmed separate numeric `defaultWidth: 200` and `minWidth: 200` entries. The application was not launched and no automated visual verification was performed.
+
 ## Dependencies
 
 None.
 
 ## Deliverables
 
-- A `SideNav` configured with a 260px default width, 200px minimum, and 400px maximum.
+- A `SideNav` configured with independent default and minimum fields both set to 200px, plus a 400px maximum.
 - Pointer-accessible bounded sidebar resizing through Astryx's built-in resize handle.
 - Keyboard-accessible bounded resizing through the focusable separator.
 - Preserved non-collapsible and non-persistent sidebar behavior.
@@ -64,14 +80,14 @@ None.
 
 ## Acceptance Criteria
 
-- [x] The sidebar starts at 260px when the renderer is loaded.
+- [x] The sidebar starts at the 200px minimum when the renderer is loaded.
 - [x] Pointer dragging resizes the sidebar continuously and stops at 200px and 400px.
 - [x] Dragging toward a width below 200px does not collapse or hide the sidebar.
 - [x] The resize handle is keyboard-focusable and exposes separator semantics with current, minimum, and maximum width values.
 - [x] `ArrowLeft` and `ArrowRight` resize the sidebar in 10px steps without crossing its bounds.
 - [x] `Shift` plus an arrow key resizes the sidebar in 50px steps without crossing its bounds.
 - [x] `Home` resizes the sidebar to 200px and `End` resizes it to 400px.
-- [x] Reloading the renderer restores the sidebar to 260px instead of persisting the previous width.
+- [x] Reloading the renderer restores the sidebar to the 200px minimum instead of persisting the previous width.
 - [x] The sidebar's top drag region follows the resized column width, while the main content area uses the remaining width.
 - [x] The resize handle remains below the macOS window drag region, and the top region continues to drag the Electron window.
 - [x] The sidebar does not display a horizontal scrollbar at the default, minimum, or maximum width.

@@ -57,7 +57,7 @@ const styles = stylex.create({
 });
 
 const sidebarResizeConfig = {
-  defaultWidth: 260,
+  defaultWidth: 200,
   minWidth: 200,
   maxWidth: 400,
 };

@@ -1,16 +1,17 @@
 import { Avatar } from '@astryxdesign/core/Avatar';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
+import { Grid } from '@astryxdesign/core/Grid';
 import { Heading } from '@astryxdesign/core/Heading';
+import { HoverCard } from '@astryxdesign/core/HoverCard';
 import { Icon } from '@astryxdesign/core/Icon';
 import { Link } from '@astryxdesign/core/Link';
-import { List, ListItem } from '@astryxdesign/core/List';
 import { Section } from '@astryxdesign/core/Section';
 import { Selector, SelectorOption } from '@astryxdesign/core/Selector';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
-import { StatusDot } from '@astryxdesign/core/StatusDot';
 import { Text } from '@astryxdesign/core/Text';
+import { Token } from '@astryxdesign/core/Token';
 import { useToast } from '@astryxdesign/core/Toast';
 import {
   sizeVars,
@@ -36,6 +37,7 @@ import { useProviderList } from './providers/use-provider-list';
 import { resetProviderList } from './providers/provider-query';
 import {
   getEffectiveRuntimeTarget,
+  getPersistedRuntimeTarget,
   getRuntimeConfigurationTarget,
   getRuntimeProviders,
   getRuntimeTargetOptions,
@@ -55,16 +57,17 @@ import { RuntimePreviewDialog } from './runtimes/runtime-preview-dialog';
 
 type ProviderListState = ReturnType<typeof useProviderList>['state'];
 
-const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-});
+const runtimeGridColumns = {
+  minWidth: 480,
+  max: 2,
+  repeat: 'fit',
+} as const;
 
 const styles = stylex.create({
   page: {
     minWidth: 0,
   },
-  list: {
+  runtimeGrid: {
     minWidth: 0,
   },
   runtimeRow: {
@@ -75,12 +78,16 @@ const styles = stylex.create({
     minWidth: 0,
     paddingBlockStart: spacingVars['--spacing-2'],
   },
-  currentState: {
-    minWidth: 0,
-  },
   selector: {
     minWidth: 0,
     maxWidth: `calc(${spacingVars['--spacing-12']} * 10)`,
+  },
+  changeLabel: {
+    flexShrink: 0,
+  },
+  selectorControl: {
+    flexGrow: 1,
+    minWidth: 0,
   },
 });
 
@@ -93,114 +100,91 @@ function RuntimeTitle({ runtime }: { runtime: ProviderRuntime }) {
   );
 }
 
-function formatAppliedAt(timestamp: number): string {
-  const date = new Date(timestamp);
-  return Number.isNaN(date.getTime())
-    ? 'Applied at an unknown time'
-    : `Applied ${dateTimeFormatter.format(date)}`;
-}
-
-function getCurrentProvider(
-  runtime: RuntimeSummary,
-  providerState: ProviderListState,
-): ProviderSummary | undefined {
-  if (runtime.status !== 'provider' || providerState.status !== 'success') {
-    return undefined;
-  }
-  return providerState.providers.find((provider) => provider.id === runtime.providerId);
-}
-
-function RuntimeCurrentState({
-  runtime,
-  providerState,
-}: {
-  runtime: RuntimeSummary;
-  providerState: ProviderListState;
-}) {
-  const provider = getCurrentProvider(runtime, providerState);
-  let label: string;
-  let statusVariant: 'neutral' | 'success' | 'accent';
-
-  switch (runtime.status) {
-    case 'not-managed': {
-      label = 'Not managed by Foundry';
-      statusVariant = 'neutral';
-      break;
-    }
-    case 'provider': {
-      label = provider?.name ?? runtime.providerId;
-      statusVariant = 'success';
-      break;
-    }
-    case 'official-default': {
-      label = 'Official Default';
-      statusVariant = 'accent';
-      break;
-    }
-  }
-
+function ProviderOptionName({ provider }: { provider: ProviderSummary }) {
   return (
-    <VStack gap={1} width="100%" xstyle={styles.currentState}>
-      <Text type="supporting" weight="medium" color="secondary">
-        Current configuration
+    <HoverCard
+      placement="end"
+      alignment="start"
+      focusTrigger="never"
+      label={`${provider.name} provider details`}
+      content={(
+        <VStack gap={2} maxWidth="min(44ch, 80vw)">
+          <VStack gap={0.5}>
+            <Text type="supporting" weight="medium" color="secondary">
+              Base URL
+            </Text>
+            <Text type="body" textWrap="pretty">
+              {provider.baseUrl}
+            </Text>
+          </VStack>
+          <VStack gap={0.5}>
+            <Text type="supporting" weight="medium" color="secondary">
+              Connection
+            </Text>
+            <ProviderConnectionStatus provider={provider} />
+          </VStack>
+        </VStack>
+      )}
+    >
+      <Text
+        type="inherit"
+        color="inherit"
+        maxLines={1}
+        aria-label={`${provider.name} provider details`}
+      >
+        {provider.name}
       </Text>
-      <HStack gap={2} vAlign="center" width="100%">
-        <StatusDot variant={statusVariant} label={label} />
-        <Text type="label" maxLines={1}>{label}</Text>
-      </HStack>
-      {runtime.status === 'provider' && (
-        <Text type="supporting" color="secondary" maxLines={1}>
-          {provider?.baseUrl ?? `Provider ID: ${runtime.providerId}`}
-        </Text>
-      )}
-      {runtime.appliedAt !== null && (
-        <Text type="supporting" color="secondary">
-          {formatAppliedAt(runtime.appliedAt)}
-        </Text>
-      )}
-    </VStack>
+    </HoverCard>
   );
 }
 
-function ProviderTargetOption({ provider }: { provider: ProviderSummary }) {
+function ProviderTargetOption({
+  provider,
+  isInUse,
+}: {
+  provider: ProviderSummary;
+  isInUse: boolean;
+}) {
   const avatarUrl = useProviderAvatarUrl(provider);
 
   return (
     <SelectorOption
-      icon={<Avatar src={avatarUrl} alt="" size="sm" tooltip={false} />}
-      label={provider.name}
-      description={provider.baseUrl}
-      endContent={<ProviderConnectionStatus provider={provider} />}
+      icon={<Avatar src={avatarUrl} alt="" size="xsm" tooltip={false} />}
+      label={<ProviderOptionName provider={provider} />}
+      endContent={isInUse ? <Token label="In use" color="green" size="sm" /> : undefined}
     />
   );
 }
 
-function OfficialDefaultOption({ runtime }: { runtime: ProviderRuntime }) {
+function OfficialDefaultOption({
+  runtime,
+  isInUse,
+}: {
+  runtime: ProviderRuntime;
+  isInUse: boolean;
+}) {
   return (
     <SelectorOption
       icon={<ProviderRuntimeIcon runtime={runtime} />}
       label="Official Default"
-      description={`Official ${providerRuntimeLabels[runtime]} configuration`}
+      endContent={isInUse ? <Token label="In use" color="green" size="sm" /> : undefined}
     />
   );
 }
 
 function LoadingTargetSelector({ index }: { index: number }) {
   return (
-    <VStack gap={1} width="100%" xstyle={styles.selector}>
-      <Skeleton
-        width="30%"
-        height={spacingVars['--spacing-3']}
-        radius={1}
-        index={index}
-      />
-      <Skeleton
-        width="100%"
-        height={sizeVars['--size-element-md']}
-        radius={2}
-        index={index + 1}
-      />
-    </VStack>
+    <HStack gap={2} vAlign="center" width="100%" xstyle={styles.selector}>
+      <Text type="label" xstyle={styles.changeLabel}>Use:</Text>
+      <VStack width="100%" xstyle={styles.selectorControl}>
+        <Skeleton
+          width="100%"
+          height={sizeVars['--size-element-md']}
+          radius={2}
+          index={index}
+        />
+      </VStack>
+    </HStack>
   );
 }
 
@@ -208,12 +192,14 @@ function RuntimeTargetSelector({
   runtime,
   providerState,
   value,
+  inUseTarget,
   onChange,
   onRetry,
 }: {
   runtime: ProviderRuntime;
   providerState: ProviderListState;
   value: string | undefined;
+  inUseTarget: string | undefined;
   onChange: (value: string) => void;
   onRetry: () => void;
 }) {
@@ -230,33 +216,48 @@ function RuntimeTargetSelector({
 
   return (
     <VStack gap={2} width="100%" xstyle={styles.selector}>
-      <Selector
-        label="Target Provider"
-        options={options}
-        value={value}
-        placeholder="Choose a Provider"
-        searchPlaceholder={`Search ${providerRuntimeLabels[runtime]} Providers`}
-        hasSearch
-        isDisabled={hasError}
-        disabledMessage={hasError ? 'Providers could not be loaded for this Runtime.' : undefined}
-        status={hasError ? { type: 'error', message: providerState.message } : undefined}
-        statusVariant="detached"
-        width="100%"
-        onChange={(nextValue) => {
-          if (isAvailableRuntimeTarget(nextValue, providersById)) {
-            onChange(nextValue);
-          }
-        }}
-        renderOption={(option) => {
-          if (option.value === OFFICIAL_DEFAULT_TARGET) {
-            return <OfficialDefaultOption runtime={runtime} />;
-          }
-          const provider = providersById.get(option.value);
-          return provider
-            ? <ProviderTargetOption provider={provider} />
-            : <SelectorOption label={option.label ?? option.value} />;
-        }}
-      />
+      <HStack gap={2} vAlign="center" width="100%">
+        <Text type="label" xstyle={styles.changeLabel}>Use:</Text>
+        <Selector
+          label="Use"
+          isLabelHidden
+          options={options}
+          value={value}
+          placeholder="Choose a Provider"
+          searchPlaceholder={`Search ${providerRuntimeLabels[runtime]} Providers`}
+          hasSearch
+          isDisabled={hasError}
+          disabledMessage={hasError ? 'Providers could not be loaded for this Runtime.' : undefined}
+          status={hasError ? { type: 'error', message: providerState.message } : undefined}
+          statusVariant="detached"
+          width="100%"
+          xstyle={styles.selectorControl}
+          onChange={(nextValue) => {
+            if (isAvailableRuntimeTarget(nextValue, providersById)) {
+              onChange(nextValue);
+            }
+          }}
+          renderOption={(option) => {
+            if (option.value === OFFICIAL_DEFAULT_TARGET) {
+              return (
+                <OfficialDefaultOption
+                  runtime={runtime}
+                  isInUse={inUseTarget === OFFICIAL_DEFAULT_TARGET}
+                />
+              );
+            }
+            const provider = providersById.get(option.value);
+            return provider
+              ? (
+                  <ProviderTargetOption
+                    provider={provider}
+                    isInUse={inUseTarget === provider.id}
+                  />
+                )
+              : <SelectorOption label={option.label ?? option.value} />;
+          }}
+        />
+      </HStack>
       {hasError && (
         <HStack hAlign="end">
           <Button
@@ -276,14 +277,14 @@ function RuntimeRow({
   providerState,
   target,
   onTargetChange,
-  onReview,
+  onApplyRequest,
   onRetryProviders,
 }: {
   runtime: RuntimeSummary;
   providerState: ProviderListState;
   target: string | undefined;
   onTargetChange: (value: string) => void;
-  onReview: (input: RuntimeConfigurationPreviewInput) => void;
+  onApplyRequest: (input: RuntimeConfigurationPreviewInput) => void;
   onRetryProviders: () => void;
 }) {
   const providers = providerState.status === 'success'
@@ -291,97 +292,90 @@ function RuntimeRow({
     : [];
   const providersById = new Map(providers.map((provider) => [provider.id, provider]));
   const hasChangedTarget = hasRuntimeTargetChange(runtime, target);
-  const canReview = providerState.status === 'success'
+  const canApply = providerState.status === 'success'
     && hasChangedTarget
     && isAvailableRuntimeTarget(target, providersById);
-  let reviewTooltip: string | undefined;
-  if (!canReview) {
+  let applyTooltip: string | undefined;
+  if (!canApply) {
     if (providerState.status !== 'success') {
-      reviewTooltip = 'Providers must be available before changes can be reviewed.';
+      applyTooltip = 'Providers must be available before a configuration can be applied.';
     } else if (target === undefined) {
-      reviewTooltip = 'Choose a target Provider first.';
+      applyTooltip = 'Choose a Provider to apply.';
     } else if (hasChangedTarget) {
-      reviewTooltip = 'The selected Provider is no longer available.';
+      applyTooltip = 'The selected Provider is no longer available.';
     } else {
-      reviewTooltip = 'Choose a target different from the current configuration.';
+      applyTooltip = 'Choose a configuration different from the one currently in use.';
     }
   }
 
   return (
-    <ListItem
+    <VStack
+      as="section"
+      gap={0}
+      width="100%"
       xstyle={styles.runtimeRow}
-      label={<RuntimeTitle runtime={runtime.runtime} />}
-      description={(
-        <VStack gap={4} width="100%" xstyle={styles.rowDescription}>
-          <RuntimeCurrentState runtime={runtime} providerState={providerState} />
-          <RuntimeTargetSelector
-            runtime={runtime.runtime}
-            providerState={providerState}
-            value={target}
-            onChange={onTargetChange}
-            onRetry={onRetryProviders}
-          />
-          <HStack hAlign="end" width="100%">
-            <Button
-              label="Review Changes"
-              variant="secondary"
-              isDisabled={!canReview}
-              tooltip={reviewTooltip}
-              onClick={() => {
-                if (canReview) {
-                  onReview({
-                    runtime: runtime.runtime,
-                    target: getRuntimeConfigurationTarget(target),
-                  });
-                }
-              }}
-            />
-          </HStack>
-        </VStack>
-      )}
-    />
+      aria-label={`${providerRuntimeLabels[runtime.runtime]} Runtime`}
+    >
+      <RuntimeTitle runtime={runtime.runtime} />
+      <HStack gap={3} vAlign="start" width="100%" xstyle={styles.rowDescription}>
+        <RuntimeTargetSelector
+          runtime={runtime.runtime}
+          providerState={providerState}
+          value={target}
+          inUseTarget={getPersistedRuntimeTarget(runtime)}
+          onChange={onTargetChange}
+          onRetry={onRetryProviders}
+        />
+        <Button
+          label="Apply..."
+          variant="secondary"
+          isDisabled={!canApply}
+          tooltip={applyTooltip}
+          onClick={() => {
+            if (canApply) {
+              onApplyRequest({
+                runtime: runtime.runtime,
+                target: getRuntimeConfigurationTarget(target),
+              });
+            }
+          }}
+        />
+      </HStack>
+    </VStack>
   );
 }
 
 function LoadingRuntimeList() {
   return (
-    <List
-      density="spacious"
-      hasDividers
-      xstyle={styles.list}
+    <Grid
+      columns={runtimeGridColumns}
+      columnGap={6}
+      rowGap={2}
+      width="100%"
+      xstyle={styles.runtimeGrid}
     >
       {providerRuntimes.map((runtime, index) => (
-        <ListItem
+        <VStack
+          as="section"
           key={runtime}
+          gap={0}
+          width="100%"
           xstyle={styles.runtimeRow}
-          label={<RuntimeTitle runtime={runtime} />}
-          description={(
-            <VStack gap={4} width="100%" xstyle={styles.rowDescription}>
-              <VStack gap={1} width="100%">
-                <Text type="supporting" weight="medium" color="secondary">
-                  Current configuration
-                </Text>
-                <Skeleton
-                  width="45%"
-                  height={spacingVars['--spacing-4']}
-                  radius={1}
-                  index={index * 4}
-                />
-              </VStack>
-              <LoadingTargetSelector index={index * 4 + 2} />
-              <HStack hAlign="end" width="100%">
-                <Skeleton
-                  width="25%"
-                  height={sizeVars['--size-element-md']}
-                  radius={2}
-                  index={index * 4 + 3}
-                />
-              </HStack>
-            </VStack>
-          )}
-        />
+          aria-label={`${providerRuntimeLabels[runtime]} Runtime`}
+        >
+          <RuntimeTitle runtime={runtime} />
+          <HStack gap={3} vAlign="start" width="100%" xstyle={styles.rowDescription}>
+            <LoadingTargetSelector index={index * 3} />
+            <Skeleton
+              width={sizeVars['--size-element-xl']}
+              height={sizeVars['--size-element-md']}
+              radius={2}
+              index={index * 3 + 2}
+            />
+          </HStack>
+        </VStack>
       ))}
-    </List>
+    </Grid>
   );
 }
 
@@ -420,10 +414,12 @@ export function RuntimesPage() {
     );
   } else {
     content = (
-      <List
-        density="spacious"
-        hasDividers
-        xstyle={styles.list}
+      <Grid
+        columns={runtimeGridColumns}
+        columnGap={6}
+        rowGap={2}
+        width="100%"
+        xstyle={styles.runtimeGrid}
       >
         {runtimeState.runtimes.map((runtime) => (
           <RuntimeRow
@@ -436,13 +432,13 @@ export function RuntimesPage() {
                 withRuntimeDraftTarget(current, runtime.runtime, target)
               ));
             }}
-            onReview={setPreviewInput}
+            onApplyRequest={setPreviewInput}
             onRetryProviders={() => {
               void resetProviderList(queryClient, runtime.runtime);
             }}
           />
         ))}
-      </List>
+      </Grid>
     );
   }
 

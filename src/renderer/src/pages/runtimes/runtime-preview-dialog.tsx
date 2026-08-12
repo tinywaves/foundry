@@ -1,7 +1,10 @@
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { Code } from '@astryxdesign/core/Code';
+import { Collapsible } from '@astryxdesign/core/Collapsible';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
+import { Grid } from '@astryxdesign/core/Grid';
+import { Heading } from '@astryxdesign/core/Heading';
 import { Icon } from '@astryxdesign/core/Icon';
 import { IconButton } from '@astryxdesign/core/IconButton';
 import {
@@ -9,20 +12,18 @@ import {
   LayoutContent,
   LayoutFooter,
 } from '@astryxdesign/core/Layout';
+import { List, ListItem } from '@astryxdesign/core/List';
 import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
 import { Spinner } from '@astryxdesign/core/Spinner';
 import { StatusDot } from '@astryxdesign/core/StatusDot';
-import { Table, proportional } from '@astryxdesign/core/Table';
-import type { TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
-import { Token } from '@astryxdesign/core/Token';
 import { spacingVars } from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useRef, useState } from 'react';
 import type {
-  RuntimeConfigurationChangeOperation,
   RuntimeConfigurationPreviewField,
   RuntimeConfigurationPreviewInput,
   RuntimeConfigurationPreviewValue,
@@ -43,19 +44,13 @@ type RevealState
     | { status: 'visible'; providerId: string; apiKey: string }
     | { status: 'error'; providerId: string; message: string };
 
-interface PreviewTableRow extends Record<string, unknown> {
-  key: string;
-  current: RuntimeConfigurationPreviewValue;
-  proposed: RuntimeConfigurationPreviewValue;
-  operation: RuntimeConfigurationChangeOperation;
+interface ConfigurationFieldGroup {
+  path: string | null;
+  fields: Array<{
+    field: RuntimeConfigurationPreviewField;
+    name: string;
+  }>;
 }
-
-const operationPresentation = {
-  'add': { label: 'Add', color: 'green' as const },
-  'update': { label: 'Update', color: 'blue' as const },
-  'remove': { label: 'Remove', color: 'red' as const },
-  'no-change': { label: 'No change', color: 'gray' as const },
-};
 
 const styles = stylex.create({
   content: {
@@ -64,37 +59,84 @@ const styles = stylex.create({
   loading: {
     minHeight: `calc(${spacingVars['--spacing-12']} * 5)`,
   },
-  table: {
+  list: {
     minWidth: 0,
+  },
+  nestedList: {
+    minWidth: 0,
+    paddingInlineStart: spacingVars['--spacing-3'],
   },
   value: {
     minWidth: 0,
-    overflowWrap: 'anywhere',
+    overflow: 'hidden',
+  },
+  arrow: {
+    flexShrink: 0,
+  },
+  diffGrid: {
+    gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)',
+    minWidth: 0,
   },
 });
 
-function MaskedSecret({ suffix }: { suffix: string | null }) {
-  return <Code>{suffix === null ? 'Configured' : `****${suffix}`}</Code>;
+function groupConfigurationFields(
+  fields: RuntimeConfigurationPreviewField[],
+): ConfigurationFieldGroup[] {
+  const groups: ConfigurationFieldGroup[] = [];
+  const groupsByPath = new Map<string | null, ConfigurationFieldGroup>();
+
+  for (const field of fields) {
+    const separatorIndex = field.key.lastIndexOf('.');
+    const path = separatorIndex === -1 ? null : field.key.slice(0, separatorIndex);
+    const name = separatorIndex === -1 ? field.key : field.key.slice(separatorIndex + 1);
+    let group = groupsByPath.get(path);
+    if (group === undefined) {
+      group = { path, fields: [] };
+      groupsByPath.set(path, group);
+      groups.push(group);
+    }
+    group.fields.push({ field, name });
+  }
+
+  return groups;
 }
 
 function PreviewValue({ value }: { value: RuntimeConfigurationPreviewValue }) {
+  let text: string;
+  let isCode = false;
+  let isSecondary = false;
   switch (value.kind) {
     case 'absent': {
-      return <Text type="supporting" color="secondary">Not set</Text>;
+      text = 'Not set';
+      isSecondary = true;
+      break;
     }
     case 'plain': {
-      return (
-        <Text type="supporting" xstyle={styles.value}>
-          <Code>{value.value}</Code>
-        </Text>
-      );
+      text = value.value;
+      isCode = true;
+      break;
     }
     case 'secret': {
-      return value.configured
-        ? <MaskedSecret suffix={value.suffix} />
-        : <Text type="supporting" color="secondary">Not configured</Text>;
+      text = value.configured
+        ? (value.suffix === null ? 'Configured' : `****${value.suffix}`)
+        : 'Not configured';
+      isCode = value.configured;
+      isSecondary = !value.configured;
+      break;
     }
   }
+
+  return (
+    <Text
+      type={isCode ? 'code' : 'supporting'}
+      color={isSecondary ? 'secondary' : 'primary'}
+      maxLines={1}
+      wordBreak="break-all"
+      xstyle={styles.value}
+    >
+      {text}
+    </Text>
+  );
 }
 
 function ProposedValue({
@@ -122,11 +164,18 @@ function ProposedValue({
     <VStack gap={1} width="100%" xstyle={styles.value}>
       <HStack gap={1} vAlign="center" width="100%">
         <StackItem size="fill">
-          <Text type="supporting" xstyle={styles.value}>
-            {isVisible
-              ? <Code>{revealState.apiKey}</Code>
-              : <MaskedSecret suffix={field.proposed.suffix} />}
-          </Text>
+          {isVisible
+            ? (
+                <Text
+                  type="code"
+                  maxLines={1}
+                  wordBreak="break-all"
+                  xstyle={styles.value}
+                >
+                  {revealState.apiKey}
+                </Text>
+              )
+            : <PreviewValue value={field.proposed} />}
         </StackItem>
         <IconButton
           label={isVisible ? 'Hide Provider API Key' : 'Reveal Provider API Key'}
@@ -157,6 +206,114 @@ function ProposedValue({
         </HStack>
       )}
     </VStack>
+  );
+}
+
+function ConfigurationFieldGroups({
+  fields,
+  renderDescription,
+}: {
+  fields: RuntimeConfigurationPreviewField[];
+  renderDescription: (field: RuntimeConfigurationPreviewField) => ReactNode;
+}) {
+  const groups = groupConfigurationFields(fields);
+  return (
+    <VStack gap={3} width="100%">
+      {groups.map((group) => (
+        <List
+          key={group.path ?? 'top-level'}
+          density="compact"
+          hasDividers
+          header={group.path === null
+            ? undefined
+            : <Text type="code" color="secondary">{group.path}</Text>}
+          xstyle={group.path === null ? styles.list : styles.nestedList}
+        >
+          {group.fields.map(({ field, name }) => (
+            <ListItem
+              key={field.key}
+              label={<Text type="code" color="secondary">{name}</Text>}
+              description={renderDescription(field)}
+            />
+          ))}
+        </List>
+      ))}
+    </VStack>
+  );
+}
+
+function ChangedFieldList({
+  fields,
+  providerId,
+  revealState,
+  onReveal,
+  onHide,
+}: {
+  fields: RuntimeConfigurationPreviewField[];
+  providerId: string | undefined;
+  revealState: RevealState;
+  onReveal: (providerId: string) => void;
+  onHide: () => void;
+}) {
+  return (
+    <VStack gap={2} width="100%">
+      <Heading level={5} accessibilityLevel={3}>Changes</Heading>
+      <ConfigurationFieldGroups
+        fields={fields}
+        renderDescription={(field) => (
+          <Grid
+            width="100%"
+            columnGap={2}
+            align="center"
+            xstyle={styles.diffGrid}
+          >
+            <StackItem>
+              <PreviewValue value={field.current} />
+            </StackItem>
+            <Icon
+              icon={ArrowRight}
+              size="xsm"
+              color="secondary"
+              xstyle={styles.arrow}
+            />
+            <StackItem>
+              <ProposedValue
+                field={field}
+                providerId={providerId}
+                revealState={revealState}
+                onReveal={onReveal}
+                onHide={onHide}
+              />
+            </StackItem>
+          </Grid>
+        )}
+      />
+    </VStack>
+  );
+}
+
+function UnchangedFieldList({
+  fields,
+}: {
+  fields: RuntimeConfigurationPreviewField[];
+}) {
+  const triggerLabel = `${fields.length} unchanged ${
+    fields.length === 1 ? 'setting' : 'settings'
+  }`;
+  return (
+    <Collapsible
+      trigger={(
+        <Text type="supporting" color="secondary">
+          {triggerLabel}
+        </Text>
+      )}
+      defaultIsOpen={false}
+    >
+      <ConfigurationFieldGroups
+        fields={fields}
+        renderDescription={(field) => <PreviewValue value={field.current} />}
+      />
+    </Collapsible>
   );
 }
 
@@ -250,54 +407,6 @@ export function RuntimePreviewDialog({
     }
   };
 
-  const columns: Array<TableColumn<PreviewTableRow>> = [
-    {
-      key: 'key',
-      header: 'Managed field',
-      width: proportional(2),
-      renderCell: ({ key }) => (
-        <Text type="supporting" xstyle={styles.value}>
-          <Code>{key}</Code>
-        </Text>
-      ),
-    },
-    {
-      key: 'current',
-      header: 'Current value',
-      width: proportional(1.5),
-      renderCell: ({ current }) => <PreviewValue value={current} />,
-    },
-    {
-      key: 'proposed',
-      header: 'Proposed value',
-      width: proportional(1.5),
-      renderCell: (field) => (
-        <ProposedValue
-          field={field}
-          providerId={providerId}
-          revealState={revealState}
-          onReveal={(id) => void reveal(id)}
-          onHide={clearReveal}
-        />
-      ),
-    },
-    {
-      key: 'operation',
-      header: 'Change',
-      width: proportional(1),
-      renderCell: ({ operation }) => {
-        const presentation = operationPresentation[operation];
-        return (
-          <Token
-            label={presentation.label}
-            color={presentation.color}
-            size="sm"
-          />
-        );
-      },
-    },
-  ];
-
   let content;
   if (previewQuery.isPending) {
     content = <PreviewLoading />;
@@ -320,9 +429,15 @@ export function RuntimePreviewDialog({
     );
   } else {
     const readyPreview = previewQuery.data;
-    const targetName = readyPreview.target.kind === 'provider'
-      ? readyPreview.target.name
-      : 'Official Default';
+    const changedFields = readyPreview.fields.filter(
+      (field) => field.operation !== 'no-change',
+    );
+    const unchangedFields = readyPreview.fields.filter(
+      (field) => field.operation === 'no-change',
+    );
+    const changeSummary = changedFields.length === 0
+      ? 'Configuration is already up to date in'
+      : `${changedFields.length} ${changedFields.length === 1 ? 'setting' : 'settings'} will change in`;
     content = (
       <VStack gap={4} width="100%" xstyle={styles.content}>
         {applyMutation.isError && (
@@ -332,44 +447,53 @@ export function RuntimePreviewDialog({
             description={applyMutation.error.message}
           />
         )}
-        <VStack gap={2} width="100%">
-          <HStack gap={2} wrap="wrap" vAlign="center">
-            <Text type="supporting" color="secondary">Target</Text>
-            <Text type="label">{targetName}</Text>
-            {readyPreview.target.kind === 'provider' && (
+        <Text type="body" textWrap="pretty">
+          {changeSummary}
+          {' '}
+          <Code>{readyPreview.file.path}</Code>
+        </Text>
+        {readyPreview.target.kind === 'provider' && (
+          <VStack gap={1} width="100%">
+            <HStack gap={2} wrap="wrap" vAlign="center">
+              <Text type="label">{readyPreview.target.name}</Text>
               <ProviderConnectionStatus
                 provider={{ connection: readyPreview.target.connection }}
               />
-            )}
-          </HStack>
-          {readyPreview.target.kind === 'provider' && (
-            <Text type="supporting" color="secondary" xstyle={styles.value}>
+            </HStack>
+            <Text
+              type="supporting"
+              color="secondary"
+              maxLines={1}
+              wordBreak="break-all"
+              xstyle={styles.value}
+            >
               {readyPreview.target.baseUrl}
             </Text>
-          )}
-          <HStack gap={2} wrap="wrap" vAlign="center">
-            <Text type="supporting" color="secondary">Configuration</Text>
-            <Code>{readyPreview.file.path}</Code>
-            <Text type="supporting" color="secondary">
-              {readyPreview.file.exists ? 'Existing file' : 'File not found'}
-            </Text>
-          </HStack>
-        </VStack>
-        <Table
-          data={readyPreview.fields.map((field): PreviewTableRow => ({ ...field }))}
-          columns={columns}
-          idKey="key"
-          rowCount={readyPreview.fields.length}
-          density="compact"
-          dividers="rows"
-          verticalAlign="top"
-          textOverflow="wrap"
-          aria-label={`${providerRuntimeLabels[input.runtime]} configuration changes`}
-          xstyle={styles.table}
-        />
+          </VStack>
+        )}
+        {changedFields.length > 0 && (
+          <ChangedFieldList
+            fields={changedFields}
+            providerId={providerId}
+            revealState={revealState}
+            onReveal={(id) => void reveal(id)}
+            onHide={clearReveal}
+          />
+        )}
+        {unchangedFields.length > 0 && <UnchangedFieldList fields={unchangedFields} />}
       </VStack>
     );
   }
+
+  const runtimeLabel = providerRuntimeLabels[input.runtime];
+  const dialogTitle = preview?.target.kind === 'provider'
+    ? `Apply ${preview.target.name} to ${runtimeLabel}?`
+    : (input.target.kind === 'official-default'
+        ? `Restore ${runtimeLabel} Defaults?`
+        : `Apply Provider to ${runtimeLabel}?`);
+  const changedFieldCount = preview?.fields.filter(
+    (field) => field.operation !== 'no-change',
+  ).length;
 
   return (
     <Dialog
@@ -380,13 +504,13 @@ export function RuntimePreviewDialog({
         }
       }}
       purpose={applyMutation.isPending ? 'required' : 'info'}
-      width={820}
+      width={800}
       maxHeight="85vh"
     >
       <Layout
         header={(
           <DialogHeader
-            title={`Review ${providerRuntimeLabels[input.runtime]} Changes`}
+            title={dialogTitle}
             onOpenChange={applyMutation.isPending
               ? undefined
               : (isOpen) => {
@@ -411,10 +535,11 @@ export function RuntimePreviewDialog({
                   label={applyMutation.isError
                     ? 'Retry Apply'
                     : (input.target.kind === 'provider'
-                        ? 'Apply Provider'
-                        : 'Restore Official Default')}
+                        ? `Apply to ${runtimeLabel}`
+                        : 'Restore Defaults')}
                   variant="primary"
                   isLoading={applyMutation.isPending}
+                  isDisabled={changedFieldCount === 0}
                   onClick={apply}
                 />
               )}

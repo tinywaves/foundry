@@ -245,8 +245,12 @@ function ProviderCard({
         <StackItem size="fill" xstyle={styles.content}>
           <VStack gap={1} width="100%">
             <HStack gap={2} vAlign="center" width="100%">
-              <ProviderName provider={provider} />
-              {provider.isInUse && <Token label="In use" color="green" size="sm" />}
+              <StackItem size="fill" xstyle={styles.content}>
+                <HStack gap={2} vAlign="center" width="100%">
+                  <ProviderName provider={provider} />
+                  {provider.isInUse && <Token label="In use" color="green" size="sm" />}
+                </HStack>
+              </StackItem>
               <StackItem>
                 <ProviderConnectionStatus provider={provider} />
               </StackItem>
@@ -326,12 +330,14 @@ function LoadingProviderCard({ index }: { index: number }) {
         <StackItem size="fill">
           <VStack gap={1} width="100%">
             <HStack gap={2} vAlign="center" width="100%">
-              <Skeleton
-                width="35%"
-                height={spacingVars['--spacing-4']}
-                radius={1}
-                index={skeletonIndex + 1}
-              />
+              <StackItem size="fill">
+                <Skeleton
+                  width="35%"
+                  height={spacingVars['--spacing-4']}
+                  radius={1}
+                  index={skeletonIndex + 1}
+                />
+              </StackItem>
               <Skeleton
                 width="18%"
                 height={spacingVars['--spacing-4']}

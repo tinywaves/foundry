@@ -282,6 +282,33 @@ test('validates a Codex preview with the current custom Provider key', () => {
   assert.equal(isRuntimeConfigurationPreview(mismatchedPaths, codexPreviewInput), false);
 });
 
+test('validates only Codex selection fields for an Official Default preview', () => {
+  const input: RuntimeConfigurationPreviewInput = {
+    runtime: 'codex',
+    target: { kind: 'official-default' },
+  };
+  const preview: RuntimeConfigurationPreview = {
+    runtime: 'codex',
+    target: { kind: 'official-default' },
+    file: { path: '~/.codex/config.toml', exists: true },
+    fields: ['model', 'model_provider', 'forced_login_method'].map((key) => ({
+      key,
+      current: { kind: 'plain', value: 'configured' },
+      proposed: { kind: 'absent' },
+      operation: 'remove',
+    })),
+  };
+
+  assert.equal(isRuntimeConfigurationPreview(preview, input), true);
+  preview.fields.push({
+    key: 'model_providers.custom.name',
+    current: { kind: 'plain', value: 'Custom' },
+    proposed: { kind: 'absent' },
+    operation: 'remove',
+  });
+  assert.equal(isRuntimeConfigurationPreview(preview, input), false);
+});
+
 test('rejects reordered fields and plaintext values in a secret preview row', async () => {
   const reordered = createCodexPreview();
   reordered.fields = reordered.fields.toReversed();

@@ -201,9 +201,29 @@ test('applies and restores Codex while preserving content and replacing the late
     assert.equal(restored.model, undefined);
     assert.equal(restored.model_provider, undefined);
     assert.equal(restored.forced_login_method, undefined);
-    assert.deepEqual(Object.keys(restoredProviders.custom), ['unowned']);
+    assert.equal(restoredProviders.custom.name, 'Managed Codex');
+    assert.equal(restoredProviders.custom.base_url, 'https://codex.example.com/v1');
+    assert.equal(restoredProviders.custom.wire_api, 'responses');
+    assert.equal(
+      restoredProviders.custom.experimental_bearer_token,
+      'codex-secret-1234',
+    );
     assert.equal(restoredProviders.custom.unowned, 'keep me');
     assert.equal(await readFile(`${configurationPath}.foundry-backup`, 'utf8'), secondVersion);
+
+    await applier.apply({
+      runtime: 'codex',
+      target: { kind: 'provider', providerId: codexProviderId },
+    });
+    const reapplied = parseToml(await readFile(configurationPath, 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    assert.equal(reapplied.model_provider, 'custom');
+    assert.equal(
+      (reapplied.model_providers as Record<string, unknown>).foundry_managed,
+      undefined,
+    );
 
     const configurationStat = await stat(configurationPath);
     const backupStat = await stat(`${configurationPath}.foundry-backup`);
@@ -222,12 +242,220 @@ test('applies and restores Codex while preserving content and replacing the late
         runtime: 'codex',
         target: { kind: 'official-default' },
       },
+      {
+        runtime: 'codex',
+        target: { kind: 'provider', providerId: codexProviderId },
+      },
     ]);
     const directoryEntries = await readdir(configurationDirectory);
     assert.equal(
       directoryEntries.some((name) => name.endsWith('.tmp')),
       false,
     );
+  } finally {
+    await removeTemporaryHome(home);
+  }
+});
+
+test('reuses the sole existing Codex Provider table when model_provider is absent', async () => {
+  const home = await createTemporaryHome();
+  const configurationDirectory = path.join(home, '.codex');
+  const configurationPath = path.join(configurationDirectory, 'config.toml');
+  const original = `# Keep this comment\napproval_policy = "on-request"\n\n[model_providers.custom]\nname = "Custom" # keep this too\nbase_url = "https://custom.example.com/v1"\nwire_api = "responses"\n`;
+  await mkdir(configurationDirectory, { recursive: true });
+  await writeFile(configurationPath, original);
+  const { recorder } = createRecorder();
+  const provider = createCodexProvider();
+  const applier = new RuntimeConfigurationApplier(
+    createPreviewer(home, [provider]),
+    recorder,
+  );
+
+  try {
+    await applier.apply({
+      runtime: 'codex',
+      target: { kind: 'provider', providerId: codexProviderId },
+    });
+    const updated = await readFile(configurationPath, 'utf8');
+    const parsed = parseToml(updated) as Record<string, unknown>;
+    const modelProviders = parsed.model_providers as Record<
+      string,
+      Record<string, unknown>
+    >;
+
+    assert.equal(parsed.model_provider, 'custom');
+    assert.equal(parsed.foundry_managed, undefined);
+    assert.equal(modelProviders.custom.name, 'Managed Codex');
+    assert.equal(
+      modelProviders.custom.base_url,
+      'https://codex.example.com/v1',
+    );
+    assert.equal(
+      modelProviders.custom.experimental_bearer_token,
+      'codex-secret-1234',
+    );
+    assert.equal(modelProviders.foundry_managed, undefined);
+    assert.ok(updated.includes('# Keep this comment'));
+    assert.ok(updated.includes('name = "Managed Codex" # keep this too'));
+  } finally {
+    await removeTemporaryHome(home);
+  }
+});
+
+test('reuses the sole existing Codex Provider table regardless of its key', async () => {
+  const home = await createTemporaryHome();
+  const configurationDirectory = path.join(home, '.codex');
+  const configurationPath = path.join(configurationDirectory, 'config.toml');
+  const original = `model_provider = "openai"\n\n[model_providers.openai]\nname = "OpenAI"\nunowned = "keep me"\n`;
+  await mkdir(configurationDirectory, { recursive: true });
+  await writeFile(configurationPath, original);
+  const { recorder } = createRecorder();
+  const applier = new RuntimeConfigurationApplier(
+    createPreviewer(home, [createCodexProvider()]),
+    recorder,
+  );
+
+  try {
+    await applier.apply({
+      runtime: 'codex',
+      target: { kind: 'provider', providerId: codexProviderId },
+    });
+    const parsed = parseToml(await readFile(configurationPath, 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    const modelProviders = parsed.model_providers as Record<
+      string,
+      Record<string, unknown>
+    >;
+
+    assert.equal(parsed.model_provider, 'openai');
+    assert.equal(modelProviders.openai.name, 'Managed Codex');
+    assert.equal(modelProviders.openai.unowned, 'keep me');
+    assert.equal(modelProviders.openai.base_url, 'https://codex.example.com/v1');
+    assert.equal(modelProviders.foundry_managed, undefined);
+    assert.equal(parsed.foundry_managed, undefined);
+  } finally {
+    await removeTemporaryHome(home);
+  }
+});
+
+test('creates foundry_managed only when Codex has no Provider table', async () => {
+  const home = await createTemporaryHome();
+  const configurationDirectory = path.join(home, '.codex');
+  const configurationPath = path.join(configurationDirectory, 'config.toml');
+  await mkdir(configurationDirectory, { recursive: true });
+  await writeFile(configurationPath, 'approval_policy = "on-request"\n');
+  const { recorder } = createRecorder();
+  const applier = new RuntimeConfigurationApplier(
+    createPreviewer(home, [createCodexProvider()]),
+    recorder,
+  );
+
+  try {
+    await applier.apply({
+      runtime: 'codex',
+      target: { kind: 'provider', providerId: codexProviderId },
+    });
+    const parsed = parseToml(await readFile(configurationPath, 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    const modelProviders = parsed.model_providers as Record<
+      string,
+      Record<string, unknown>
+    >;
+
+    assert.equal(parsed.model_provider, 'foundry_managed');
+    assert.deepEqual(Object.keys(modelProviders), ['foundry_managed']);
+    assert.equal(modelProviders.foundry_managed.name, 'Managed Codex');
+  } finally {
+    await removeTemporaryHome(home);
+  }
+});
+
+test('creates foundry_managed inside an existing empty Codex model_providers table', async () => {
+  const home = await createTemporaryHome();
+  const configurationDirectory = path.join(home, '.codex');
+  const configurationPath = path.join(configurationDirectory, 'config.toml');
+  await mkdir(configurationDirectory, { recursive: true });
+  await writeFile(configurationPath, 'model_providers = {}\n');
+  const { recorder } = createRecorder();
+  const applier = new RuntimeConfigurationApplier(
+    createPreviewer(home, [createCodexProvider()]),
+    recorder,
+  );
+
+  try {
+    await applier.apply({
+      runtime: 'codex',
+      target: { kind: 'provider', providerId: codexProviderId },
+    });
+    const parsed = parseToml(await readFile(configurationPath, 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    const modelProviders = parsed.model_providers as Record<
+      string,
+      Record<string, unknown>
+    >;
+
+    assert.equal(parsed.model_provider, 'foundry_managed');
+    assert.deepEqual(Object.keys(modelProviders), ['foundry_managed']);
+    assert.equal(modelProviders.foundry_managed.name, 'Managed Codex');
+    assert.equal(parsed.foundry_managed, undefined);
+  } finally {
+    await removeTemporaryHome(home);
+  }
+});
+
+test('switches Codex Providers by updating the same configuration Provider key', async () => {
+  const home = await createTemporaryHome();
+  const configurationDirectory = path.join(home, '.codex');
+  const configurationPath = path.join(configurationDirectory, 'config.toml');
+  const original = '[model_providers.custom]\nname = "Original"\n';
+  await mkdir(configurationDirectory, { recursive: true });
+  await writeFile(configurationPath, original);
+  const firstProvider = createCodexProvider();
+  const secondProvider: Extract<ProviderDetail, { runtime: 'codex' }> = {
+    ...createCodexProvider(),
+    id: '00000000-0000-4000-8000-000000000003',
+    name: 'Second Codex',
+    baseUrl: 'https://second.example.com/v1',
+    apiKey: 'second-secret-9876',
+    apiKeySuffix: '9876',
+    modelConfig: { version: 1, defaultModel: 'gpt-second' },
+  };
+  const { recorder } = createRecorder();
+  const applier = new RuntimeConfigurationApplier(
+    createPreviewer(home, [firstProvider, secondProvider]),
+    recorder,
+  );
+
+  try {
+    await applier.apply({
+      runtime: 'codex',
+      target: { kind: 'provider', providerId: firstProvider.id },
+    });
+    await applier.apply({
+      runtime: 'codex',
+      target: { kind: 'provider', providerId: secondProvider.id },
+    });
+    const parsed = parseToml(await readFile(configurationPath, 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    const modelProviders = parsed.model_providers as Record<
+      string,
+      Record<string, unknown>
+    >;
+
+    assert.equal(parsed.model, 'gpt-second');
+    assert.equal(parsed.model_provider, 'custom');
+    assert.deepEqual(Object.keys(modelProviders), ['custom']);
+    assert.equal(modelProviders.custom.name, 'Second Codex');
+    assert.equal(modelProviders.custom.base_url, 'https://second.example.com/v1');
+    assert.equal(modelProviders.custom.experimental_bearer_token, 'second-secret-9876');
   } finally {
     await removeTemporaryHome(home);
   }
@@ -257,6 +485,48 @@ test('restores Claude Code managed fields while preserving JSON style and unowne
     assert.ok(updated.endsWith('\r\n'));
     assert.equal(updated.replaceAll('\r\n', '').includes('\n'), false);
     assert.equal(await readFile(`${configurationPath}.foundry-backup`, 'utf8'), original);
+  } finally {
+    await removeTemporaryHome(home);
+  }
+});
+
+test('applies only managed Claude Code env fields and preserves unrelated settings', async () => {
+  const home = await createTemporaryHome();
+  const configurationDirectory = path.join(home, '.claude');
+  const configurationPath = path.join(configurationDirectory, 'settings.json');
+  await mkdir(configurationDirectory, { recursive: true });
+  await writeFile(configurationPath, JSON.stringify({
+    theme: 'dark',
+    env: {
+      UNRELATED: 'keep me',
+      ANTHROPIC_BASE_URL: 'https://old.example.com',
+      ANTHROPIC_AUTH_TOKEN: 'old-secret',
+    },
+  }, null, 2));
+  const { recorder } = createRecorder();
+  const applier = new RuntimeConfigurationApplier(
+    createPreviewer(home, [createClaudeProvider()]),
+    recorder,
+  );
+
+  try {
+    await applier.apply({
+      runtime: 'claude-code',
+      target: { kind: 'provider', providerId: claudeProviderId },
+    });
+    const parsed = JSON.parse(await readFile(configurationPath, 'utf8')) as {
+      theme: string;
+      env: Record<string, string>;
+    };
+
+    assert.equal(parsed.theme, 'dark');
+    assert.equal(parsed.env.UNRELATED, 'keep me');
+    assert.equal(parsed.env.ANTHROPIC_BASE_URL, 'https://claude.example.com');
+    assert.equal(parsed.env.ANTHROPIC_AUTH_TOKEN, 'claude-secret-5678');
+    assert.equal(parsed.env.ANTHROPIC_MODEL, 'claude-fallback');
+    assert.equal(parsed.env.ANTHROPIC_DEFAULT_SONNET_MODEL, 'claude-sonnet');
+    assert.equal(parsed.env.ANTHROPIC_DEFAULT_SONNET_MODEL_NAME, 'Sonnet');
+    assert.equal(parsed.env.CLAUDE_CODE_SUBAGENT_MODEL, 'claude-subagent');
   } finally {
     await removeTemporaryHome(home);
   }

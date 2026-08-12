@@ -155,7 +155,7 @@ unknown = "preserve me"
   assert.equal(JSON.stringify(preview).includes('preserve me'), false);
 });
 
-test('falls back from a Codex built-in Provider to foundry_managed', async () => {
+test('reuses the sole Codex custom Provider table when the active Provider is built-in', async () => {
   const provider = createCodexProvider();
   const previewer = createPreviewer(provider, () => Promise.resolve(`
 model = "gpt-5"
@@ -170,14 +170,72 @@ name = "Other"
     target: { kind: 'provider', providerId: provider.id },
   });
 
+  assert.equal(plan.configurationProviderKey, 'other');
+  assert.equal(plan.fields[1].proposedValue, 'other');
+  assert.deepEqual(plan.fields.slice(3).map((field) => field.key), [
+    'model_providers.other.name',
+    'model_providers.other.base_url',
+    'model_providers.other.wire_api',
+    'model_providers.other.experimental_bearer_token',
+  ]);
+});
+
+test('falls back to foundry_managed when Codex has no reusable custom Provider', async () => {
+  const provider = createCodexProvider();
+  const previewer = createPreviewer(provider, () => Promise.resolve(`
+model = "gpt-5"
+model_provider = "openai"
+`));
+
+  const plan = await previewer.createPlan({
+    runtime: 'codex',
+    target: { kind: 'provider', providerId: provider.id },
+  });
+
   assert.equal(plan.configurationProviderKey, 'foundry_managed');
   assert.equal(plan.fields[1].proposedValue, 'foundry_managed');
-  assert.deepEqual(plan.fields.slice(3).map((field) => field.key), [
-    'model_providers.foundry_managed.name',
-    'model_providers.foundry_managed.base_url',
-    'model_providers.foundry_managed.wire_api',
-    'model_providers.foundry_managed.experimental_bearer_token',
+});
+
+test('rejects an ambiguous Codex custom Provider table selection', async () => {
+  const provider = createCodexProvider();
+  const previewer = createPreviewer(provider, () => Promise.resolve(`
+[model_providers.first]
+name = "First"
+
+[model_providers.second]
+name = "Second"
+`));
+
+  await assertRuntimeError(
+    () => previewer.preview({
+      runtime: 'codex',
+      target: { kind: 'provider', providerId: provider.id },
+    }),
+    'configuration-invalid',
+  );
+});
+
+test('does not resolve or change a Codex Provider table for Official Default', async () => {
+  const previewer = createPreviewer(undefined, () => Promise.resolve(`
+[model_providers.custom]
+name = "Custom"
+base_url = "https://custom.example.com/v1"
+wire_api = "responses"
+`));
+
+  const plan = await previewer.createPlan({
+    runtime: 'codex',
+    target: { kind: 'official-default' },
+  });
+
+  assert.equal(plan.configurationProviderKey, null);
+  assert.deepEqual(plan.fields.map((field) => field.key), [
+    'model',
+    'model_provider',
+    'forced_login_method',
   ]);
+  assert.ok(plan.fields.every((field) => field.currentValue === undefined));
+  assert.ok(plan.fields.every((field) => field.proposedValue === undefined));
 });
 
 test('previews every Claude Code env mapping and removes an absent Provider key', async () => {
@@ -237,7 +295,7 @@ test('treats a missing file as empty for Official Default', async () => {
   assert.ok(preview.fields.every((field) => field.operation === 'no-change'));
 });
 
-test('previews removal of only managed Codex values for Official Default', async () => {
+test('previews removal of only Codex selection values for Official Default', async () => {
   const previewer = createPreviewer(undefined, () => Promise.resolve(`
 model = "custom-model"
 model_provider = "zode"
@@ -256,8 +314,14 @@ unowned = "preserve me"
     target: { kind: 'official-default' },
   });
 
-  assert.ok(preview.fields.every((field) => field.operation === 'remove'));
-  assert.equal(preview.fields[3].key, 'model_providers.zode.name');
+  assert.deepEqual(
+    preview.fields.map(({ key, operation }) => ({ key, operation })),
+    [
+      { key: 'model', operation: 'remove' },
+      { key: 'model_provider', operation: 'remove' },
+      { key: 'forced_login_method', operation: 'remove' },
+    ],
+  );
   assert.equal(JSON.stringify(preview).includes('disk-secret'), false);
   assert.equal(JSON.stringify(preview).includes('preserve me'), false);
   assert.equal(JSON.stringify(preview).includes('approval_policy'), false);

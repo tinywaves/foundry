@@ -18,7 +18,7 @@ import {
 } from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import { useQueryClient } from '@tanstack/react-query';
-import { RefreshCw } from 'lucide-react';
+import { ArrowRight, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { Link as RouterLink } from 'react-router';
 import { providerRuntimes } from '../../../shared/provider-contract';
@@ -83,6 +83,15 @@ const styles = stylex.create({
     maxWidth: `calc(${spacingVars['--spacing-12']} * 10)`,
   },
 });
+
+function RuntimeTitle({ runtime }: { runtime: ProviderRuntime }) {
+  return (
+    <HStack as="span" gap={2} vAlign="center">
+      <ProviderRuntimeIcon runtime={runtime} size="md" />
+      <Text type="large">{providerRuntimeLabels[runtime]}</Text>
+    </HStack>
+  );
+}
 
 function formatAppliedAt(timestamp: number): string {
   const date = new Date(timestamp);
@@ -301,8 +310,7 @@ function RuntimeRow({
   return (
     <ListItem
       xstyle={styles.runtimeRow}
-      startContent={<ProviderRuntimeIcon runtime={runtime.runtime} size="md" />}
-      label={providerRuntimeLabels[runtime.runtime]}
+      label={<RuntimeTitle runtime={runtime.runtime} />}
       description={(
         <VStack gap={4} width="100%" xstyle={styles.rowDescription}>
           <RuntimeCurrentState runtime={runtime} providerState={providerState} />
@@ -340,15 +348,13 @@ function LoadingRuntimeList() {
     <List
       density="spacious"
       hasDividers
-      header={<Heading level={4} accessibilityLevel={2}>Runtime configuration</Heading>}
       xstyle={styles.list}
     >
       {providerRuntimes.map((runtime, index) => (
         <ListItem
           key={runtime}
           xstyle={styles.runtimeRow}
-          startContent={<ProviderRuntimeIcon runtime={runtime} size="md" />}
-          label={providerRuntimeLabels[runtime]}
+          label={<RuntimeTitle runtime={runtime} />}
           description={(
             <VStack gap={4} width="100%" xstyle={styles.rowDescription}>
               <VStack gap={1} width="100%">
@@ -417,7 +423,6 @@ export function RuntimesPage() {
       <List
         density="spacious"
         hasDividers
-        header={<Heading level={4} accessibilityLevel={2}>Runtime configuration</Heading>}
         xstyle={styles.list}
       >
         {runtimeState.runtimes.map((runtime) => (
@@ -444,14 +449,24 @@ export function RuntimesPage() {
   return (
     <VStack width="100%" minHeight="100%" xstyle={styles.page}>
       <Section padding={4} paddingBlock={2}>
-        <HStack gap={3} hAlign="between" vAlign="center">
+        <HStack
+          gap={3}
+          minHeight={sizeVars['--size-element-md']}
+          hAlign="between"
+          vAlign="center"
+        >
           <Heading level={3} accessibilityLevel={1}>Runtimes</Heading>
           <Link
             as={RouterLink}
             href={routePaths.agentRuntimeProviders}
             isStandalone
+            color="primary"
+            weight="medium"
           >
-            Manage Providers
+            <HStack as="span" gap={1} vAlign="center">
+              Manage Providers
+              <Icon icon={ArrowRight} size="xsm" color="inherit" />
+            </HStack>
           </Link>
         </HStack>
       </Section>

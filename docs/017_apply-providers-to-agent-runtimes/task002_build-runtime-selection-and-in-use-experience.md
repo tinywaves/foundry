@@ -14,6 +14,16 @@ Add an `/agent-runtime/runtimes` route and a `Runtimes` SideNav item before `Pro
 
 Build the page as a quiet settings surface using Astryx `List` and `Item` rows rather than nested cards. The list contains exactly two fixed rows in the shared Runtime order: Codex and Claude Code. Each row presents the existing Runtime icon and label, the last successful state reported by `runtimes.listRuntimes()`, and a `Target Provider` Selector. The persisted state remains visually distinct from the draft selection and is presented as `Not managed by Foundry`, the associated Provider identity, or `Official Default`.
 
+Apply the accepted final UI refinements consistently to loaded and loading states:
+
+- Reserve a trailing region in each Provider card's identity row for connection status so names consume the remaining width and statuses align at the right instead of moving with name length.
+- Give the Runtimes page header the same minimum control height as the Providers header so both page titles keep the same top-edge position.
+- Present `Manage Providers` as a primary-colored, medium-weight directional link with a trailing ArrowRight icon so it reads as the next management action.
+- Remove the redundant `Runtime configuration` list header; the page title and row content already establish the section context.
+- Do not render the Runtime icon as independent `ListItem` start content, which would vertically center it against the entire tall configuration row.
+- Compose the Runtime icon and name together as the row label so the icon aligns directly with the name rather than with the selector and current-state content below it.
+- Render Runtime names at the larger text level so fixed identities such as Codex and Claude Code remain the strongest signal within each row.
+
 Initialize each Selector from the persisted Runtime state. A `not-managed` Runtime has no selected value and shows a `Choose a Provider` placeholder; a managed Runtime selects its associated Provider or `Official Default`. Place `Official Default` first, followed only by active Providers that belong to that Runtime. Use Astryx custom option rendering to show each Provider's icon, name, Base URL, and persisted connection status. Enable the Selector's built-in client-side search unconditionally; do not add a backend search API. A Runtime with no custom Providers still offers `Official Default`.
 
 Keep user selections as page-local draft overrides. Derive the displayed target from the draft override when present and otherwise from the persisted Runtime summary, instead of mirroring server state into Effect-managed component state. Selecting a target must not alter the persisted current-state presentation, Provider `isInUse` projection, or SQLite state. Draft overrides are intentionally discarded when the page unmounts or the application reloads. This stable draft model is the handoff for the Preview task.
@@ -38,6 +48,7 @@ None.
 
 - A Runtimes route, Agent Runtime navigation entry, and default Agent Runtime redirect.
 - A macOS Runtimes page with two fixed settings rows and a page-level Manage Providers action.
+- Accepted Runtimes and Provider-card hierarchy refinements with matching loading-state alignment.
 - Runtime query keys, request adaptation, loading, error, and retry state.
 - Runtime-scoped, always-searchable Target Provider Selectors with rich Provider options and Official Default.
 - A page-local draft target model that remains separate from persisted Runtime state.
@@ -55,6 +66,9 @@ None.
 - [x] Provider options expose icon, name, Base URL, and informational connection status without exposing an API key.
 - [x] Selecting a draft target changes no Runtime association, In-use marker, or external configuration, and the draft is discarded after leaving or reloading the page.
 - [x] Manage Providers appears once as a page-level action and navigates to the Providers destination without binding to one Runtime.
+- [x] The Runtimes header title aligns vertically with the Providers page title, and Manage Providers uses emphasized directional-link styling.
+- [x] Runtime rows omit the redundant list heading and compose each icon with a larger Runtime name at the top of the row instead of vertically centering a standalone icon against the full row.
+- [x] Provider connection status occupies a stable trailing region while the Provider name takes the remaining identity-row width; loading placeholders preserve the same alignment.
 - [x] An In-use Provider displays a green inline Token, remains editable and testable, and cannot initiate deletion from the UI.
 - [x] A backend `conflict` from a stale delete attempt produces clear feedback and refreshes the Runtime and affected Provider caches.
 - [x] Runtime loading, page-level Runtime failure, one-Runtime Provider failure, and an empty Provider inventory have stable and recoverable presentations.
@@ -78,7 +92,7 @@ Task 003 will consume the Runtime query state, Runtime-scoped Provider options, 
 
 ## Verification
 
-- `pnpm test` - Passed as part of the final Plan 017 verification: 13 test files and 68 tests.
+- `pnpm test` - Passed as part of the final Plan 017 verification: 13 test files and 78 tests.
 - `pnpm typecheck` - Passed for the main/preload and renderer TypeScript projects.
 - `pnpm lint` - Passed with only existing ESLint configuration deprecation notices.
 - `pnpm build` - Passed for the Electron main process, preload, and renderer production bundles.

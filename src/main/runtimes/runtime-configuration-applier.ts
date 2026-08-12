@@ -138,9 +138,9 @@ function setOwnString(
 
 function getPlanField(
   fields: RuntimeConfigurationPlanField[],
-  index: number,
+  key: string,
 ): RuntimeConfigurationPlanField {
-  const field = fields.at(index);
+  const field = fields.find((candidate) => candidate.key === key);
   if (!field) {
     throw new RuntimeOperationError('internal', 'Runtime configuration plan is incomplete.');
   }
@@ -167,56 +167,54 @@ function getOrCreateRecord(
 
 function applyCodexPlan(plan: RuntimeConfigurationPlan): Record<string, unknown> {
   const updated = cloneRecord(plan.source.values);
+  if (plan.target.kind === 'official-default') {
+    delete updated.model;
+    delete updated.model_provider;
+    delete updated.forced_login_method;
+    return updated;
+  }
+
+  setOwnString(updated, 'model', getPlanField(plan.fields, 'model').proposedValue);
+  setOwnString(
+    updated,
+    'model_provider',
+    getPlanField(plan.fields, 'model_provider').proposedValue,
+  );
+  setOwnString(
+    updated,
+    'forced_login_method',
+    getPlanField(plan.fields, 'forced_login_method').proposedValue,
+  );
   const providerKey = plan.configurationProviderKey;
   if (providerKey === null) {
     throw new RuntimeOperationError('internal', 'Codex configuration plan is incomplete.');
   }
-
-  setOwnString(updated, 'model', getPlanField(plan.fields, 0).proposedValue);
-  setOwnString(updated, 'model_provider', getPlanField(plan.fields, 1).proposedValue);
-  setOwnString(updated, 'forced_login_method', getPlanField(plan.fields, 2).proposedValue);
-
-  const providerFields = plan.fields.slice(3);
-  const hasProviderValues = providerFields.some((field) => field.proposedValue !== undefined);
-  const existingModelProviders = updated.model_providers;
-  if (existingModelProviders !== undefined && !isRecord(existingModelProviders)) {
-    throw new RuntimeOperationError(
-      'configuration-invalid',
-      'Codex model_providers must be a table.',
-    );
-  }
-  const modelProviders = hasProviderValues
-    ? getOrCreateRecord(updated, 'model_providers')
-    : existingModelProviders;
-  if (!isRecord(modelProviders)) {
-    return updated;
-  }
-
-  const existingProvider = modelProviders[providerKey];
-  if (existingProvider !== undefined && !isRecord(existingProvider)) {
-    throw new RuntimeOperationError(
-      'configuration-invalid',
-      'Codex configuration Provider must be a table.',
-    );
-  }
-  const provider = hasProviderValues
-    ? getOrCreateRecord(modelProviders, providerKey)
-    : existingProvider;
-  if (!isRecord(provider)) {
-    return updated;
-  }
-
-  setOwnString(provider, 'name', getPlanField(plan.fields, 3).proposedValue);
-  setOwnString(provider, 'base_url', getPlanField(plan.fields, 4).proposedValue);
-  setOwnString(provider, 'wire_api', getPlanField(plan.fields, 5).proposedValue);
+  const providerPath = `model_providers.${providerKey}`;
+  const modelProviders = getOrCreateRecord(updated, 'model_providers');
+  const provider = getOrCreateRecord(modelProviders, providerKey);
+  setOwnString(
+    provider,
+    'name',
+    getPlanField(plan.fields, `${providerPath}.name`).proposedValue,
+  );
+  setOwnString(
+    provider,
+    'base_url',
+    getPlanField(plan.fields, `${providerPath}.base_url`).proposedValue,
+  );
+  setOwnString(
+    provider,
+    'wire_api',
+    getPlanField(plan.fields, `${providerPath}.wire_api`).proposedValue,
+  );
   setOwnString(
     provider,
     'experimental_bearer_token',
-    getPlanField(plan.fields, 6).proposedValue,
+    getPlanField(
+      plan.fields,
+      `${providerPath}.experimental_bearer_token`,
+    ).proposedValue,
   );
-  if (Object.keys(provider).length === 0) {
-    delete modelProviders[providerKey];
-  }
   return updated;
 }
 
@@ -238,11 +236,11 @@ function applyClaudeCodePlan(plan: RuntimeConfigurationPlan): Record<string, unk
   }
 
   const managedKeys = runtimeConfigurationManagedFieldKeys['claude-code'];
-  for (const [index, key] of managedKeys.entries()) {
+  for (const key of managedKeys) {
     setOwnString(
       environment,
       key.slice('env.'.length),
-      getPlanField(plan.fields, index).proposedValue,
+      getPlanField(plan.fields, key).proposedValue,
     );
   }
   if (Object.keys(environment).length === 0) {
@@ -275,12 +273,14 @@ function stringifyJson(
   return hasTrailingNewline ? `${content}${newline}` : content;
 }
 
-function generateConfiguration(plan: RuntimeConfigurationPlan): {
+function generateConfiguration(
+  plan: RuntimeConfigurationPlan,
+  values: Record<string, unknown>,
+): {
   content: string;
   values: Record<string, unknown>;
 } {
   if (plan.runtime === 'codex') {
-    const values = applyCodexPlan(plan);
     return {
       content: plan.source.content === null
         ? stringifyToml(values)
@@ -288,7 +288,6 @@ function generateConfiguration(plan: RuntimeConfigurationPlan): {
       values,
     };
   }
-  const values = applyClaudeCodePlan(plan);
   return {
     content: stringifyJson(values, plan.source.content),
     values,
@@ -312,82 +311,20 @@ function parseGeneratedConfiguration(
   }
 }
 
-function removeCodexManagedValues(
-  values: Record<string, unknown>,
-  providerKey: string,
-): Record<string, unknown> {
-  const unowned = cloneRecord(values);
-  delete unowned.model;
-  delete unowned.model_provider;
-  delete unowned.forced_login_method;
-  const modelProviders = unowned.model_providers;
-  if (!isRecord(modelProviders)) {
-    return unowned;
-  }
-  const provider = modelProviders[providerKey];
-  if (!isRecord(provider)) {
-    return unowned;
-  }
-  delete provider.name;
-  delete provider.base_url;
-  delete provider.wire_api;
-  delete provider.experimental_bearer_token;
-  if (Object.keys(provider).length === 0) {
-    delete modelProviders[providerKey];
-  }
-  return unowned;
-}
-
-function removeClaudeCodeManagedValues(
-  values: Record<string, unknown>,
-): Record<string, unknown> {
-  const unowned = cloneRecord(values);
-  const environment = unowned.env;
-  if (!isRecord(environment)) {
-    return unowned;
-  }
-  const managedKeys = runtimeConfigurationManagedFieldKeys['claude-code'];
-  for (const key of managedKeys) {
-    delete environment[key.slice('env.'.length)];
-  }
-  if (Object.keys(environment).length === 0) {
-    delete unowned.env;
-  }
-  return unowned;
-}
-
 function validateGeneratedConfiguration(
-  plan: RuntimeConfigurationPlan,
   expected: Record<string, unknown>,
   actual: Record<string, unknown>,
 ): void {
-  const providerKey = plan.configurationProviderKey;
-  const expectedUnowned = plan.runtime === 'codex'
-    ? removeCodexManagedValues(expected, providerKey ?? '')
-    : removeClaudeCodeManagedValues(expected);
-  const actualUnowned = plan.runtime === 'codex'
-    ? removeCodexManagedValues(actual, providerKey ?? '')
-    : removeClaudeCodeManagedValues(actual);
-  if (!areConfigurationValuesEqual(expectedUnowned, actualUnowned)) {
+  if (!areConfigurationValuesEqual(expected, actual)) {
     throw new RuntimeOperationError(
       'configuration-invalid',
-      'Generated Runtime configuration did not preserve existing settings.',
-    );
-  }
-
-  const expectedManaged = plan.runtime === 'codex'
-    ? applyCodexPlan({ ...plan, source: { ...plan.source, values: expected } })
-    : applyClaudeCodePlan({ ...plan, source: { ...plan.source, values: expected } });
-  if (!areConfigurationValuesEqual(expectedManaged, actual)) {
-    throw new RuntimeOperationError(
-      'configuration-invalid',
-      'Generated Runtime configuration did not match the requested target.',
+      'Generated Runtime configuration did not preserve the requested settings.',
     );
   }
 }
 
-function hasManagedChanges(plan: RuntimeConfigurationPlan): boolean {
-  return plan.fields.some((field) => field.currentValue !== field.proposedValue);
+function getUpdatedConfiguration(plan: RuntimeConfigurationPlan): Record<string, unknown> {
+  return plan.runtime === 'codex' ? applyCodexPlan(plan) : applyClaudeCodePlan(plan);
 }
 
 function getOperationPath(basePath: string, kind: string): string {
@@ -432,7 +369,8 @@ export class RuntimeConfigurationApplier {
         );
       }
     }
-    if (!hasManagedChanges(plan)) {
+    const updatedValues = getUpdatedConfiguration(plan);
+    if (areConfigurationValuesEqual(plan.source.values, updatedValues)) {
       return false;
     }
 
@@ -451,11 +389,11 @@ export class RuntimeConfigurationApplier {
         backupTemporaryPath = undefined;
       }
 
-      const generated = generateConfiguration(plan);
+      const generated = generateConfiguration(plan, updatedValues);
       configurationTemporaryPath = getOperationPath(plan.file.absolutePath, 'write');
       await this.fileOperations.writeNewFile(configurationTemporaryPath, generated.content);
       const parsed = parseGeneratedConfiguration(plan.runtime, generated.content);
-      validateGeneratedConfiguration(plan, generated.values, parsed);
+      validateGeneratedConfiguration(generated.values, parsed);
       await this.fileOperations.replaceFile(
         configurationTemporaryPath,
         plan.file.absolutePath,

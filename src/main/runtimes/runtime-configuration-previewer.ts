@@ -16,7 +16,6 @@ import type {
   RuntimeConfigurationTarget,
 } from '../../shared/runtime-contract';
 import {
-  codexBuiltInConfigurationProviderKeys,
   codexDefaultConfigurationProviderKey,
   getCodexConfigurationManagedFieldKeys,
   runtimeConfigurationManagedFieldKeys,
@@ -69,8 +68,6 @@ interface CodexConfigurationProvider {
   key: string;
   values: Record<string, unknown>;
 }
-
-const codexBuiltInProviderKeys = new Set<string>(codexBuiltInConfigurationProviderKeys);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -189,7 +186,6 @@ function resolveCodexConfigurationProvider(
   );
   if (
     currentKey !== undefined
-    && !codexBuiltInProviderKeys.has(currentKey)
     && Object.hasOwn(modelProviders, currentKey)
   ) {
     return {
@@ -199,6 +195,27 @@ function resolveCodexConfigurationProvider(
         `Codex model_providers.${currentKey} must be a table.`,
       ),
     };
+  }
+
+  const providerKeys = Object.keys(modelProviders);
+  for (const key of providerKeys) {
+    requireConfigurationRecord(
+      modelProviders[key],
+      `Codex model_providers.${key} must be a table.`,
+    );
+  }
+  if (providerKeys.length === 1) {
+    const [key] = providerKeys;
+    return {
+      key,
+      values: modelProviders[key] as Record<string, unknown>,
+    };
+  }
+  if (providerKeys.length > 1) {
+    throw new RuntimeOperationError(
+      'configuration-invalid',
+      'Codex model_provider must select one of the existing Provider tables.',
+    );
   }
 
   return {
@@ -211,46 +228,48 @@ function resolveCodexConfigurationProvider(
   };
 }
 
-function createCodexFields(
+function createCodexSelectionFields(
   values: Record<string, unknown>,
-  provider: Extract<ProviderDetail, { runtime: 'codex' }> | undefined,
-  configurationProvider: CodexConfigurationProvider,
+  selection: { model: string; providerKey: string } | undefined,
 ): RuntimeConfigurationPlanField[] {
-  const fieldKeys = getCodexConfigurationManagedFieldKeys(configurationProvider.key);
-  const providerValues = provider === undefined
-    ? undefined
-    : {
-        model: provider.modelConfig.defaultModel,
-        name: provider.name,
-        baseUrl: provider.baseUrl,
-        apiKey: provider.apiKey ?? undefined,
-        apiKeySuffix: provider.apiKeySuffix,
-      };
-
   return [
     createField(
-      fieldKeys[0],
+      'model',
       getManagedString(values, 'model', 'Codex model must be a string.'),
-      providerValues?.model,
+      selection?.model,
     ),
     createField(
-      fieldKeys[1],
+      'model_provider',
       getManagedString(
         values,
         'model_provider',
         'Codex model_provider must be a string.',
       ),
-      provider === undefined ? undefined : configurationProvider.key,
+      selection?.providerKey,
     ),
     createField(
-      fieldKeys[2],
+      'forced_login_method',
       getManagedString(
         values,
         'forced_login_method',
         'Codex forced_login_method must be a string.',
       ),
-      provider === undefined ? undefined : 'api',
+      selection === undefined ? undefined : 'api',
     ),
+  ];
+}
+
+function createCodexProviderFields(
+  values: Record<string, unknown>,
+  provider: Extract<ProviderDetail, { runtime: 'codex' }>,
+  configurationProvider: CodexConfigurationProvider,
+): RuntimeConfigurationPlanField[] {
+  const fieldKeys = getCodexConfigurationManagedFieldKeys(configurationProvider.key);
+  return [
+    ...createCodexSelectionFields(values, {
+      model: provider.modelConfig.defaultModel,
+      providerKey: configurationProvider.key,
+    }),
     createField(
       fieldKeys[3],
       getManagedString(
@@ -258,7 +277,7 @@ function createCodexFields(
         'name',
         'Codex configuration Provider name must be a string.',
       ),
-      providerValues?.name,
+      provider.name,
     ),
     createField(
       fieldKeys[4],
@@ -267,7 +286,7 @@ function createCodexFields(
         'base_url',
         'Codex configuration Provider base_url must be a string.',
       ),
-      providerValues?.baseUrl,
+      provider.baseUrl,
     ),
     createField(
       fieldKeys[5],
@@ -276,7 +295,7 @@ function createCodexFields(
         'wire_api',
         'Codex configuration Provider wire_api must be a string.',
       ),
-      provider === undefined ? undefined : 'responses',
+      'responses',
     ),
     createField(
       fieldKeys[6],
@@ -285,10 +304,10 @@ function createCodexFields(
         'experimental_bearer_token',
         'Codex configuration Provider bearer token must be a string.',
       ),
-      providerValues?.apiKey,
+      provider.apiKey ?? undefined,
       {
         isSecret: true,
-        proposedSecretSuffix: providerValues?.apiKeySuffix,
+        proposedSecretSuffix: provider.apiKeySuffix,
       },
     ),
   ];
@@ -560,9 +579,13 @@ export class RuntimeConfigurationPreviewer {
       if (provider !== undefined && provider.runtime !== 'codex') {
         throw new RuntimeOperationError('invalid-input', 'Provider Runtime is invalid.');
       }
-      const configurationProvider = resolveCodexConfigurationProvider(source.values);
-      configurationProviderKey = configurationProvider.key;
-      fields = createCodexFields(source.values, provider, configurationProvider);
+      if (provider === undefined) {
+        fields = createCodexSelectionFields(source.values, undefined);
+      } else {
+        const configurationProvider = resolveCodexConfigurationProvider(source.values);
+        configurationProviderKey = configurationProvider.key;
+        fields = createCodexProviderFields(source.values, provider, configurationProvider);
+      }
     } else {
       if (provider !== undefined && provider.runtime !== 'claude-code') {
         throw new RuntimeOperationError('invalid-input', 'Provider Runtime is invalid.');

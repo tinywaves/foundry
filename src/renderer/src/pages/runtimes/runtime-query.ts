@@ -161,10 +161,18 @@ function isPreviewField(
 function getPreviewFieldKeys(
   runtime: ProviderRuntime,
   fields: unknown[],
+  isProviderTarget: boolean,
 ): { fieldKeys: readonly string[]; secretKey: string } | undefined {
   if (runtime === 'claude-code') {
     const fieldKeys = runtimeConfigurationManagedFieldKeys[runtime];
     return { fieldKeys, secretKey: fieldKeys[1] };
+  }
+
+  if (!isProviderTarget) {
+    return {
+      fieldKeys: ['model', 'model_provider', 'forced_login_method'],
+      secretKey: '',
+    };
   }
 
   const providerNameField = fields[3];
@@ -229,7 +237,11 @@ export function isRuntimeConfigurationPreview(
     return false;
   }
 
-  const expectedFields = getPreviewFieldKeys(input.runtime, fields);
+  const expectedFields = getPreviewFieldKeys(
+    input.runtime,
+    fields,
+    input.target.kind === 'provider',
+  );
   if (expectedFields === undefined) {
     return false;
   }

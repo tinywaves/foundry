@@ -23,13 +23,6 @@ export const runtimeConfigurationPaths = {
 
 export const codexDefaultConfigurationProviderKey = 'foundry_managed';
 
-export const codexBuiltInConfigurationProviderKeys = [
-  'openai',
-  'ollama',
-  'lmstudio',
-  'amazon-bedrock',
-] as const;
-
 export function getCodexConfigurationManagedFieldKeys(providerKey: string) {
   const providerPath = `model_providers.${providerKey}`;
   return [

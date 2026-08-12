@@ -26,12 +26,14 @@ The final application step safely updates macOS user configuration for Codex Des
 
 - Add a `Runtimes` navigation destination and page under Agent Runtime.
 - Present fixed Codex and Claude Code Runtime entries.
+- Keep the Runtimes page hierarchy aligned with Providers: equal page-header height, an emphasized directional Manage Providers link, no redundant list title, and Runtime icons composed with larger row names.
+- Keep Provider connection status in a stable trailing identity-row region while allowing the Provider name to use the remaining width.
 - Persist Runtime application state and Provider association in the existing Foundry SQLite database.
 - Represent `Not managed by Foundry`, official default, and one In-use Provider per Runtime.
 - Limit every Runtime selector to Providers belonging to that Runtime and include `Official Default` as a target.
 - Separate target selection from the Apply command and require a review-and-confirm step before external changes.
 - Preview the affected user configuration and Foundry-managed fields before Apply.
-- Detect and reuse an active custom Codex Provider key before falling back to the Foundry-owned `foundry_managed` key.
+- When applying a Codex Provider, reuse the table selected by `model_provider` when it exists, otherwise reuse the sole existing `model_providers.<key>` table. Create `foundry_managed` only when no Provider table exists, and reject multiple unselected tables as ambiguous. Official Default removes only the top-level selection fields and preserves every Provider table.
 - Keep API keys masked by default and support explicit, temporary Reveal in the confirmation flow.
 - Display Provider connection-test status without making it an Apply prerequisite.
 - Mark the successfully applied custom Provider with an inline `In use` status Token.
@@ -67,6 +69,9 @@ The final application step safely updates macOS user configuration for Codex Des
 ## Decisions
 
 - `Runtimes` is the user-facing destination for applying Providers; Providers remains the configuration inventory surface.
+- The Runtimes page title shares the Providers page's header height, while the Manage Providers link uses primary color, medium weight, and a trailing direction icon for stronger guidance.
+- Runtime identity is one top-aligned icon-and-name label with larger name text; it is not a standalone icon vertically centered against the full configuration row, and the redundant `Runtime configuration` list heading is omitted.
+- Provider-card connection status is right-aligned in a stable trailing region, with the name and `In use` Token sharing the flexible leading region; loading cards mirror that allocation.
 - Codex and Claude Code are the only Runtime entries in this plan and remain aligned with the existing Provider runtime types.
 - macOS is the only supported platform for live configuration application in this plan.
 - Codex Desktop and CLI are supported through their shared user configuration layers; Claude Code support is limited to its CLI user configuration.
@@ -86,7 +91,7 @@ The final application step safely updates macOS user configuration for Codex Des
 - A successful Save followed by a failed Apply keeps the Provider update, preserves the previous valid external configuration, and exposes a failure-only Retry Apply action.
 - Retry Apply repeats only the failed application step and is not a general Re-apply feature.
 - Restore Official Default resets or removes Foundry-owned fields instead of restoring the configuration captured before Foundry management.
-- Codex reuses the current non-built-in `model_provider` key when that key resolves to an explicit custom Provider table; otherwise it uses `foundry_managed`.
+- Codex reuses the current `model_provider` key whenever it resolves to an explicit Provider table. Otherwise it reuses the sole existing Provider table, creates `foundry_managed` only when none exists, and rejects multiple unselected tables as ambiguous. Restore Official Default removes `model`, `model_provider`, and `forced_login_method` without changing `model_providers`, so applying another custom Provider later keeps the same configuration Provider key and conversation identity.
 - The resolved Codex Provider key comes from each fresh configuration plan rather than SQLite. Foundry does not treat that key as a Provider association or continuously reconcile later third-party changes.
 - User and third-party edits to Foundry-owned fields may be replaced by a later explicit Apply or Restore Official Default operation.
 - Foundry does not treat the current external file content as the authority for its persisted application status.

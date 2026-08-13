@@ -99,6 +99,7 @@ interface ProviderDialogProps {
   request: ProviderDialogRequest;
   onClose: () => void;
   onSaved: (runtime: ProviderRuntime) => void;
+  onApplied: (runtime: ProviderRuntime) => void;
 }
 
 interface ConnectionTestFeedback {
@@ -357,6 +358,7 @@ function ProviderDialogFormSession({
   storedAvatarState,
   onClose,
   onSaved,
+  onApplied,
 }: ProviderDialogProps & {
   initialValues: ProviderFormValues;
   storedAvatarState: StoredAvatarState;
@@ -561,22 +563,14 @@ function ProviderDialogFormSession({
       },
       onSuccess: () => {
         void resetRuntimeProviderState(queryClient, provider.runtime);
-        const runtimeLabel = providerRuntimeLabels[provider.runtime];
-        showToast({
-          body: `Provider updated and applied to ${runtimeLabel}. Reopen ${runtimeLabel} to load the configuration.`,
-          uniqueID: `provider-edit-apply-${provider.id}`,
-        });
-        onSaved(provider.runtime);
-        onClose();
+        onApplied(provider.runtime);
       },
     });
   }, [
     applySavedProviderMutation,
     isApplyingProvider,
-    onClose,
-    onSaved,
+    onApplied,
     queryClient,
-    showToast,
   ]);
 
   const handleRetryApply = useCallback(() => {
@@ -825,7 +819,7 @@ function ProviderDialogFormSession({
   );
 }
 
-function EditProviderDialog({ request, onClose, onSaved }: ProviderDialogProps & {
+function EditProviderDialog({ request, onApplied, onClose, onSaved }: ProviderDialogProps & {
   request: Extract<ProviderDialogRequest, { mode: 'edit' }>;
 }) {
   const queryClient = useQueryClient();
@@ -893,6 +887,7 @@ function EditProviderDialog({ request, onClose, onSaved }: ProviderDialogProps &
       storedAvatarState={storedAvatarState}
       onClose={handleClose}
       onSaved={onSaved}
+      onApplied={onApplied}
     />
   );
 }

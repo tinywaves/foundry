@@ -40,6 +40,8 @@ import {
 import { ProviderRuntimeIcon } from './providers/provider-runtime-icon';
 import { useProviderList } from './providers/use-provider-list';
 import { resetRuntimeProviderState } from './runtimes/runtime-query';
+import { RuntimeApplyResultDialog } from './runtimes/runtime-apply-result-dialog';
+import type { RuntimeApplyResult } from './runtimes/runtime-apply-result';
 
 const RUNTIME_QUERY_PARAM = 'runtime';
 
@@ -68,6 +70,7 @@ export function ProvidersPage() {
   const runtime = getProviderRuntime(runtimeParam);
   const [dialogRequest, setDialogRequest] = useState<ProviderDialogRequest>();
   const [providerToDelete, setProviderToDelete] = useState<ProviderSummary>();
+  const [applyResult, setApplyResult] = useState<RuntimeApplyResult>();
   const dialogKeyRef = useRef(0);
   const { state } = useProviderList(runtime);
   const {
@@ -139,6 +142,16 @@ export function ProvidersPage() {
       );
     }
   }, [dialogRequest, queryClient]);
+
+  const handleProviderApplied = useCallback((appliedRuntime: ProviderRuntime) => {
+    disposeCurrentDialogDetail();
+    setDialogRequest(undefined);
+    selectRuntime(appliedRuntime);
+    setApplyResult({
+      runtime: appliedRuntime,
+      source: 'provider-updated-and-applied',
+    });
+  }, [disposeCurrentDialogDetail, selectRuntime]);
 
   const openAddDialog = () => {
     disposeCurrentDialogDetail();
@@ -274,6 +287,14 @@ export function ProvidersPage() {
           request={dialogRequest}
           onClose={() => setDialogRequest(undefined)}
           onSaved={selectRuntime}
+          onApplied={handleProviderApplied}
+        />
+      )}
+      {applyResult && (
+        <RuntimeApplyResultDialog
+          key={`${applyResult.runtime}:${applyResult.source}`}
+          result={applyResult}
+          onClose={() => setApplyResult(undefined)}
         />
       )}
       <AlertDialog

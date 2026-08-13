@@ -90,6 +90,8 @@ function installProviderApi(overrides: Partial<ProviderApi>): void {
         listRuntimes: () => rejectedProviderCall(),
         previewRuntimeConfiguration: () => rejectedProviderCall(),
         applyRuntimeConfiguration: () => rejectedProviderCall(),
+        getChatGptApplicationState: () => rejectedProviderCall(),
+        restartChatGptApplication: () => rejectedProviderCall(),
       },
     } satisfies FoundryApi,
   });

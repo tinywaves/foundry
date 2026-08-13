@@ -7,6 +7,8 @@ export const runtimeIpcChannels = {
   list: 'runtimes:list',
   previewConfiguration: 'runtimes:preview-configuration',
   applyConfiguration: 'runtimes:apply-configuration',
+  getChatGptApplicationState: 'runtimes:get-chatgpt-application-state',
+  restartChatGptApplication: 'runtimes:restart-chatgpt-application',
 } as const;
 
 export const runtimeConfigurationChangeOperations = [
@@ -72,6 +74,15 @@ export interface RuntimeConfigurationPreviewInput {
 }
 
 export type RuntimeConfigurationApplyInput = RuntimeConfigurationPreviewInput;
+
+export type ChatGptApplicationState = 'running' | 'not-running' | 'unavailable';
+
+export type ChatGptRestartResult
+  = | 'restarted'
+    | 'not-running'
+    | 'quit-failed'
+    | 'reopen-failed'
+    | 'unavailable';
 
 export type RuntimeConfigurationPreviewValue
   = | {
@@ -166,4 +177,6 @@ export interface RuntimeApi {
   applyRuntimeConfiguration: (
     input: RuntimeConfigurationApplyInput,
   ) => Promise<RuntimeApiResult<RuntimeSummary>>;
+  getChatGptApplicationState: () => Promise<RuntimeApiResult<ChatGptApplicationState>>;
+  restartChatGptApplication: () => Promise<RuntimeApiResult<ChatGptRestartResult>>;
 }

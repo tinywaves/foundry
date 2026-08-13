@@ -3,6 +3,8 @@ import type { QueryClient } from '@tanstack/react-query';
 import { providerRuntimes } from '../../../../shared/provider-contract';
 import type { ProviderRuntime } from '../../../../shared/provider-contract';
 import type {
+  ChatGptApplicationState,
+  ChatGptRestartResult,
   RuntimeApiError,
   RuntimeApiResult,
   RuntimeConfigurationPreview,
@@ -20,6 +22,14 @@ import {
 import { resetProviderList } from '../providers/provider-query';
 
 const CODEX_PROVIDER_FIELD_PREFIX = 'model_providers.';
+const chatGptApplicationStates = ['running', 'not-running', 'unavailable'] as const;
+const chatGptRestartResults = [
+  'restarted',
+  'not-running',
+  'quit-failed',
+  'reopen-failed',
+  'unavailable',
+] as const;
 
 export const runtimeQueryKeys = {
   all: ['runtimes'] as const,
@@ -334,6 +344,28 @@ export async function applyRuntimeConfiguration(
     throw new RuntimeRequestError('Runtime application response did not match the target.');
   }
   return summary;
+}
+
+export async function getChatGptApplicationState(): Promise<ChatGptApplicationState> {
+  const state = await resolveRuntimeRequest(
+    () => globalThis.api.runtimes.getChatGptApplicationState(),
+    'ChatGPT application state could not be checked.',
+  );
+  if (!chatGptApplicationStates.includes(state as ChatGptApplicationState)) {
+    throw new RuntimeRequestError('ChatGPT application state was invalid.');
+  }
+  return state as ChatGptApplicationState;
+}
+
+export async function restartChatGptApplication(): Promise<ChatGptRestartResult> {
+  const result = await resolveRuntimeRequest(
+    () => globalThis.api.runtimes.restartChatGptApplication(),
+    'ChatGPT could not be restarted.',
+  );
+  if (!chatGptRestartResults.includes(result as ChatGptRestartResult)) {
+    throw new RuntimeRequestError('ChatGPT restart response was invalid.');
+  }
+  return result as ChatGptRestartResult;
 }
 
 export function getRuntimeListQueryOptions() {

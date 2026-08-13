@@ -58,6 +58,12 @@ const runtimes: RuntimeApi = {
     runtimeIpcChannels.applyConfiguration,
     input,
   ),
+  getChatGptApplicationState: () => invokeRuntime(
+    runtimeIpcChannels.getChatGptApplicationState,
+  ),
+  restartChatGptApplication: () => invokeRuntime(
+    runtimeIpcChannels.restartChatGptApplication,
+  ),
 };
 
 const api: FoundryApi = {

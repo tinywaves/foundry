@@ -12,7 +12,6 @@ import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { Token } from '@astryxdesign/core/Token';
-import { useToast } from '@astryxdesign/core/Toast';
 import {
   sizeVars,
   spacingVars,
@@ -54,6 +53,8 @@ import {
 } from './runtimes/runtime-query';
 import { useRuntimeList } from './runtimes/use-runtime-list';
 import { RuntimePreviewDialog } from './runtimes/runtime-preview-dialog';
+import { RuntimeApplyResultDialog } from './runtimes/runtime-apply-result-dialog';
+import type { RuntimeApplyResult } from './runtimes/runtime-apply-result';
 
 type ProviderListState = ReturnType<typeof useProviderList>['state'];
 
@@ -327,7 +328,7 @@ function RuntimeRow({
           onRetry={onRetryProviders}
         />
         <Button
-          label="Apply..."
+          label="Apply"
           variant="secondary"
           isDisabled={!canApply}
           tooltip={applyTooltip}
@@ -381,12 +382,12 @@ function LoadingRuntimeList() {
 
 export function RuntimesPage() {
   const queryClient = useQueryClient();
-  const showToast = useToast();
   const { state: runtimeState } = useRuntimeList();
   const { state: codexProviderState } = useProviderList('codex');
   const { state: claudeProviderState } = useProviderList('claude-code');
   const [draftTargets, setDraftTargets] = useState<RuntimeDraftTargets>({});
   const [previewInput, setPreviewInput] = useState<RuntimeConfigurationPreviewInput>();
+  const [applyResult, setApplyResult] = useState<RuntimeApplyResult>();
   const providerStates = {
     'codex': codexProviderState,
     'claude-code': claudeProviderState,
@@ -482,14 +483,20 @@ export function RuntimesPage() {
               withoutRuntimeDraftTarget(current, summary.runtime)
             ));
             void resetRuntimeProviderState(queryClient, summary.runtime);
-            const runtimeLabel = providerRuntimeLabels[summary.runtime];
-            showToast({
-              body: summary.status === 'official-default'
-                ? `Official defaults restored for ${runtimeLabel}. Reopen ${runtimeLabel} to load the configuration.`
-                : `Provider applied to ${runtimeLabel}. Reopen ${runtimeLabel} to load the configuration.`,
-              uniqueID: `runtime-apply-${summary.runtime}`,
+            setApplyResult({
+              runtime: summary.runtime,
+              source: summary.status === 'official-default'
+                ? 'defaults-restored'
+                : 'provider-applied',
             });
           }}
+        />
+      )}
+      {applyResult && (
+        <RuntimeApplyResultDialog
+          key={`${applyResult.runtime}:${applyResult.source}`}
+          result={applyResult}
+          onClose={() => setApplyResult(undefined)}
         />
       )}
     </VStack>

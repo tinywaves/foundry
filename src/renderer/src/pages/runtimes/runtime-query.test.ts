@@ -8,6 +8,8 @@ import type {
   ProviderSummary,
 } from '../../../../shared/provider-contract';
 import type {
+  ChatGptApplicationState,
+  ChatGptRestartResult,
   RuntimeApi,
   RuntimeApiError,
   RuntimeConfigurationPreview,
@@ -17,6 +19,8 @@ import type {
 import { getCodexConfigurationManagedFieldKeys } from '../../../../shared/runtime-contract';
 import {
   applyRuntimeConfiguration,
+  getChatGptApplicationState,
+  restartChatGptApplication,
   getRuntimeListQueryOptions,
   getRuntimePreviewQueryOptions,
   isRuntimeConfigurationPreview,
@@ -52,6 +56,8 @@ function installRuntimeApi(overrides: Partial<RuntimeApi>): void {
     listRuntimes: () => rejectedCall(),
     previewRuntimeConfiguration: () => rejectedCall(),
     applyRuntimeConfiguration: () => rejectedCall(),
+    getChatGptApplicationState: () => rejectedCall(),
+    restartChatGptApplication: () => rejectedCall(),
     ...overrides,
   };
   const providers: ProviderApi = {
@@ -254,6 +260,60 @@ test('applies and validates the Runtime response against the requested target', 
     (error: unknown) => (
       error instanceof RuntimeRequestError
       && error.message === 'Runtime application response did not match the target.'
+    ),
+  );
+});
+
+test('validates ChatGPT application states through the renderer boundary', async () => {
+  for (const state of ['running', 'not-running', 'unavailable'] as const) {
+    installRuntimeApi({
+      getChatGptApplicationState: () => Promise.resolve({ ok: true, value: state }),
+    });
+    assert.equal(await getChatGptApplicationState(), state);
+  }
+
+  installRuntimeApi({
+    getChatGptApplicationState: () => Promise.resolve({
+      ok: true,
+      value: 'unexpected' as ChatGptApplicationState,
+    }),
+  });
+  await assert.rejects(
+    getChatGptApplicationState(),
+    (error: unknown) => (
+      error instanceof RuntimeRequestError
+      && error.message === 'ChatGPT application state was invalid.'
+      && error.apiError === undefined
+    ),
+  );
+});
+
+test('validates ChatGPT restart results through the renderer boundary', async () => {
+  for (const result of [
+    'restarted',
+    'not-running',
+    'quit-failed',
+    'reopen-failed',
+    'unavailable',
+  ] as const) {
+    installRuntimeApi({
+      restartChatGptApplication: () => Promise.resolve({ ok: true, value: result }),
+    });
+    assert.equal(await restartChatGptApplication(), result);
+  }
+
+  installRuntimeApi({
+    restartChatGptApplication: () => Promise.resolve({
+      ok: true,
+      value: 'unexpected' as ChatGptRestartResult,
+    }),
+  });
+  await assert.rejects(
+    restartChatGptApplication(),
+    (error: unknown) => (
+      error instanceof RuntimeRequestError
+      && error.message === 'ChatGPT restart response was invalid.'
+      && error.apiError === undefined
     ),
   );
 });

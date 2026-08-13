@@ -2,6 +2,7 @@ import type { BrowserWindow } from 'electron';
 import type Database from 'better-sqlite3';
 import type { FoundryStorageError } from '../storage/storage-error';
 import { ProviderRepository } from '../providers/provider-repository';
+import { ChatGptApplicationController } from './chatgpt-application-controller';
 import { RuntimeConfigurationApplier } from './runtime-configuration-applier';
 import { RuntimeConfigurationPreviewer } from './runtime-configuration-previewer';
 import { toRuntimeOperationError } from './runtime-error';
@@ -15,10 +16,14 @@ export class RuntimeSubsystem {
     database: Database.Database | FoundryStorageError,
     userHomeDirectory: string,
   ): void {
+    const chatGptApplicationController = new ChatGptApplicationController();
     if (database instanceof Error) {
       const runtimeError = toRuntimeOperationError(database);
       console.error(`[runtimes] initialization failed with ${runtimeError.code}.`);
-      this.ipcController = new RuntimeIpcController(runtimeError);
+      this.ipcController = new RuntimeIpcController(
+        runtimeError,
+        chatGptApplicationController,
+      );
       return;
     }
     const repository = new RuntimeRepository(database);
@@ -26,11 +31,14 @@ export class RuntimeSubsystem {
       userHomeDirectory,
       new ProviderRepository(database),
     );
-    this.ipcController = new RuntimeIpcController({
-      applier: new RuntimeConfigurationApplier(previewer, repository),
-      repository,
-      previewer,
-    });
+    this.ipcController = new RuntimeIpcController(
+      {
+        applier: new RuntimeConfigurationApplier(previewer, repository),
+        repository,
+        previewer,
+      },
+      chatGptApplicationController,
+    );
   }
 
   registerWindow(window: BrowserWindow): void {

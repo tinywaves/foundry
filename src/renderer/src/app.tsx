@@ -13,14 +13,30 @@ import {
   spacingVars,
 } from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
-import { Bot, LayoutDashboard, Plug, Wrench } from 'lucide-react';
+import {
+  Bot,
+  FileText,
+  LayoutDashboard,
+  MessagesSquare,
+  Plug,
+  Wrench,
+} from 'lucide-react';
 import { Link as RouterLink, Navigate, Route, Routes, useLocation } from 'react-router';
+import { McpIcon } from '@renderer/components/mcp-icon';
 import { WindowDragRegion } from '@renderer/components/window-drag-region';
 import { DashboardPage } from '@renderer/pages/dashboard-page';
+import { McpServersPage } from '@renderer/pages/mcp-servers-page';
+import { PromptTemplatesPage } from '@renderer/pages/prompt-templates-page';
 import { ProvidersPage } from '@renderer/pages/providers-page';
 import { RuntimesPage } from '@renderer/pages/runtimes-page';
+import { SessionsPage } from '@renderer/pages/sessions-page';
 import { SkillsPage } from '@renderer/pages/skills-page';
-import { agentRuntimeDestinations, routePaths } from '@renderer/routes';
+import {
+  agentExtensionDestinations,
+  agentObservabilityDestinations,
+  agentRuntimeDestinations,
+  routePaths,
+} from '@renderer/routes';
 import foundryIcon from '../../../resources/icon.png?url';
 
 const styles = stylex.create({
@@ -66,6 +82,16 @@ const sidebarResizeConfig = {
 const agentRuntimeIcons = {
   providers: Plug,
   runtimes: Bot,
+};
+
+const agentExtensionIcons = {
+  skills: Wrench,
+  mcpServers: McpIcon,
+  promptTemplates: FileText,
+};
+
+const agentObservabilityIcons = {
+  sessions: MessagesSquare,
 };
 
 export default function App() {
@@ -123,14 +149,21 @@ export default function App() {
                       href={routePaths.dashboard}
                       isSelected={pathname === routePaths.dashboard}
                     />
-                    <SideNavItem
-                      as={RouterLink}
-                      label="Skills"
-                      icon={Wrench}
-                      href={routePaths.skills}
-                      isSelected={pathname === routePaths.skills}
-                    />
                   </VStack>
+                  <SideNavSection title="Agent Extensions">
+                    <VStack gap={1}>
+                      {agentExtensionDestinations.map((destination) => (
+                        <SideNavItem
+                          key={destination.id}
+                          as={RouterLink}
+                          label={destination.label}
+                          icon={agentExtensionIcons[destination.id]}
+                          href={destination.path}
+                          isSelected={pathname === destination.path}
+                        />
+                      ))}
+                    </VStack>
+                  </SideNavSection>
                   <SideNavSection title="Agent Runtime">
                     <VStack gap={1}>
                       {agentRuntimeDestinations.map((destination) => (
@@ -139,6 +172,20 @@ export default function App() {
                           as={RouterLink}
                           label={destination.label}
                           icon={agentRuntimeIcons[destination.id]}
+                          href={destination.path}
+                          isSelected={pathname === destination.path}
+                        />
+                      ))}
+                    </VStack>
+                  </SideNavSection>
+                  <SideNavSection title="Agent Observability">
+                    <VStack gap={1}>
+                      {agentObservabilityDestinations.map((destination) => (
+                        <SideNavItem
+                          key={destination.id}
+                          as={RouterLink}
+                          label={destination.label}
+                          icon={agentObservabilityIcons[destination.id]}
                           href={destination.path}
                           isSelected={pathname === destination.path}
                         />
@@ -162,13 +209,33 @@ export default function App() {
           >
             <Routes>
               <Route path={routePaths.dashboard} element={<DashboardPage />} />
-              <Route path={routePaths.skills} element={<SkillsPage />} />
+              <Route
+                path={routePaths.agentExtensions}
+                element={<Navigate to={routePaths.agentExtensionsSkills} replace />}
+              />
+              <Route path={routePaths.agentExtensionsSkills} element={<SkillsPage />} />
+              <Route
+                path={routePaths.agentExtensionsMcpServers}
+                element={<McpServersPage />}
+              />
+              <Route
+                path={routePaths.agentExtensionsPromptTemplates}
+                element={<PromptTemplatesPage />}
+              />
               <Route
                 path={routePaths.agentRuntime}
                 element={<Navigate to={routePaths.agentRuntimeRuntimes} replace />}
               />
               <Route path={routePaths.agentRuntimeRuntimes} element={<RuntimesPage />} />
               <Route path={routePaths.agentRuntimeProviders} element={<ProvidersPage />} />
+              <Route
+                path={routePaths.agentObservability}
+                element={<Navigate to={routePaths.agentObservabilitySessions} replace />}
+              />
+              <Route
+                path={routePaths.agentObservabilitySessions}
+                element={<SessionsPage />}
+              />
               <Route path="*" element={<Navigate to={routePaths.dashboard} replace />} />
             </Routes>
           </StackItem>

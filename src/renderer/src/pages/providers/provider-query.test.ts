@@ -85,6 +85,7 @@ function installProviderApi(overrides: Partial<ProviderApi>): void {
     configurable: true,
     value: {
       platform: 'darwin',
+      prompts: {} as FoundryApi['prompts'],
       providers,
       runtimes: {
         listRuntimes: () => rejectedProviderCall(),

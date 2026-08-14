@@ -77,6 +77,7 @@ function installRuntimeApi(overrides: Partial<RuntimeApi>): void {
     configurable: true,
     value: {
       platform: 'darwin',
+      prompts: {} as FoundryApi['prompts'],
       providers,
       runtimes,
     } satisfies FoundryApi,

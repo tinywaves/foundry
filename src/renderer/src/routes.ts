@@ -3,12 +3,27 @@ export const routePaths = {
   agentExtensions: '/agent-extensions',
   agentExtensionsSkills: '/agent-extensions/skills',
   agentExtensionsMcpServers: '/agent-extensions/mcp-servers',
-  agentExtensionsPromptTemplates: '/agent-extensions/prompt-templates',
+  agentExtensionsPrompts: '/agent-extensions/prompts',
+  agentExtensionsPromptsNew: '/agent-extensions/prompts/new',
+  agentExtensionsPromptsTrash: '/agent-extensions/prompts/trash',
+  agentExtensionsTrashedPrompt: (promptId: string) => (
+    `/agent-extensions/prompts/trash/${promptId}`
+  ),
+  agentExtensionsPrompt: (promptId: string) => `/agent-extensions/prompts/${promptId}`,
+  agentExtensionsPromptEdit: (promptId: string) => (
+    `/agent-extensions/prompts/${promptId}/edit`
+  ),
   agentRuntime: '/agent-runtime',
   agentRuntimeRuntimes: '/agent-runtime/runtimes',
   agentRuntimeProviders: '/agent-runtime/providers',
   agentObservability: '/agent-observability',
   agentObservabilitySessions: '/agent-observability/sessions',
+} as const;
+
+export const routePatterns = {
+  agentExtensionsPrompt: '/agent-extensions/prompts/:promptId',
+  agentExtensionsPromptEdit: '/agent-extensions/prompts/:promptId/edit',
+  agentExtensionsTrashedPrompt: '/agent-extensions/prompts/trash/:promptId',
 } as const;
 
 export const agentExtensionDestinations = [
@@ -23,11 +38,15 @@ export const agentExtensionDestinations = [
     path: routePaths.agentExtensionsMcpServers,
   },
   {
-    id: 'promptTemplates',
-    label: 'Prompt Templates',
-    path: routePaths.agentExtensionsPromptTemplates,
+    id: 'prompts',
+    label: 'Prompts',
+    path: routePaths.agentExtensionsPrompts,
   },
 ] as const;
+
+export function isDestinationSelected(pathname: string, destinationPath: string): boolean {
+  return pathname === destinationPath || pathname.startsWith(`${destinationPath}/`);
+}
 
 export const agentRuntimeDestinations = [
   {

@@ -26,7 +26,11 @@ import { McpIcon } from '@renderer/components/mcp-icon';
 import { WindowDragRegion } from '@renderer/components/window-drag-region';
 import { DashboardPage } from '@renderer/pages/dashboard-page';
 import { McpServersPage } from '@renderer/pages/mcp-servers-page';
-import { PromptTemplatesPage } from '@renderer/pages/prompt-templates-page';
+import { PromptCreatePage, PromptEditPage } from '@renderer/pages/prompt-editor-page';
+import { PromptTrashPage } from '@renderer/pages/prompt-trash-page';
+import { PromptTrashViewPage } from '@renderer/pages/prompt-trash-view-page';
+import { PromptViewPage } from '@renderer/pages/prompt-view-page';
+import { PromptsPage } from '@renderer/pages/prompts-page';
 import { ProvidersPage } from '@renderer/pages/providers-page';
 import { RuntimesPage } from '@renderer/pages/runtimes-page';
 import { SessionsPage } from '@renderer/pages/sessions-page';
@@ -35,6 +39,8 @@ import {
   agentExtensionDestinations,
   agentObservabilityDestinations,
   agentRuntimeDestinations,
+  isDestinationSelected,
+  routePatterns,
   routePaths,
 } from '@renderer/routes';
 import foundryIcon from '../../../resources/icon.png?url';
@@ -87,7 +93,7 @@ const agentRuntimeIcons = {
 const agentExtensionIcons = {
   skills: Wrench,
   mcpServers: McpIcon,
-  promptTemplates: FileText,
+  prompts: FileText,
 };
 
 const agentObservabilityIcons = {
@@ -159,7 +165,7 @@ export default function App() {
                           label={destination.label}
                           icon={agentExtensionIcons[destination.id]}
                           href={destination.path}
-                          isSelected={pathname === destination.path}
+                          isSelected={isDestinationSelected(pathname, destination.path)}
                         />
                       ))}
                     </VStack>
@@ -219,8 +225,28 @@ export default function App() {
                 element={<McpServersPage />}
               />
               <Route
-                path={routePaths.agentExtensionsPromptTemplates}
-                element={<PromptTemplatesPage />}
+                path={routePaths.agentExtensionsPrompts}
+                element={<PromptsPage />}
+              />
+              <Route
+                path={routePaths.agentExtensionsPromptsNew}
+                element={<PromptCreatePage />}
+              />
+              <Route
+                path={routePaths.agentExtensionsPromptsTrash}
+                element={<PromptTrashPage />}
+              />
+              <Route
+                path={routePatterns.agentExtensionsTrashedPrompt}
+                element={<PromptTrashViewPage />}
+              />
+              <Route
+                path={routePatterns.agentExtensionsPromptEdit}
+                element={<PromptEditPage />}
+              />
+              <Route
+                path={routePatterns.agentExtensionsPrompt}
+                element={<PromptViewPage />}
               />
               <Route
                 path={routePaths.agentRuntime}

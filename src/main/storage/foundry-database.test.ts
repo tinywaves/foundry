@@ -5,6 +5,7 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { test } from 'vitest';
 import { ProviderRepository } from '../providers/provider-repository';
+import { RuntimeRepository } from '../runtimes/runtime-repository';
 import { FOUNDRY_SCHEMA_VERSION, openFoundryDatabase } from './foundry-database';
 import type { FoundryStorageErrorCode } from './storage-error';
 import { FoundryStorageError } from './storage-error';
@@ -45,9 +46,49 @@ test('creates the complete Foundry schema in migration order', () => {
     const tables = database.prepare<[], { name: string }>(`
       SELECT name FROM sqlite_schema WHERE type = 'table' ORDER BY name
     `).all().map((row) => row.name);
-    assert.deepEqual(tables, ['providers', 'runtime_applications']);
+    assert.deepEqual(tables, ['prompt_versions', 'prompts', 'providers', 'runtime_applications']);
   } finally {
     database.close();
+  }
+});
+
+test('upgrades a version 2 database without changing Provider or Runtime Application data', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'foundry-storage-v2-upgrade-'));
+  const filename = path.join(directory, 'foundry.sqlite');
+  try {
+    const versionTwoDatabase = openFoundryDatabase(filename);
+    const provider = new ProviderRepository(versionTwoDatabase).createProvider(createCodexInput());
+    new RuntimeRepository(versionTwoDatabase).recordProviderApplication('codex', provider.id);
+    versionTwoDatabase.exec('DROP TABLE prompt_versions; DROP TABLE prompts;');
+    versionTwoDatabase.pragma('user_version = 2');
+    versionTwoDatabase.close();
+
+    const upgradedDatabase = openFoundryDatabase(filename);
+    try {
+      assert.equal(
+        upgradedDatabase.pragma('user_version', { simple: true }),
+        FOUNDRY_SCHEMA_VERSION,
+      );
+      assert.equal(new ProviderRepository(upgradedDatabase).getProviderForEdit(provider.id).name, provider.name);
+      assert.deepEqual(new RuntimeRepository(upgradedDatabase).listRuntimes()[0], {
+        runtime: 'codex',
+        status: 'provider',
+        providerId: provider.id,
+        appliedAt: upgradedDatabase.prepare<[], number>(`
+          SELECT applied_at FROM runtime_applications WHERE runtime = 'codex'
+        `).pluck().get(),
+      });
+      const promptTables = upgradedDatabase.prepare<[], { name: string }>(`
+        SELECT name FROM sqlite_schema
+        WHERE type = 'table' AND name IN ('prompts', 'prompt_versions')
+        ORDER BY name
+      `).all().map((row) => row.name);
+      assert.deepEqual(promptTables, ['prompt_versions', 'prompts']);
+    } finally {
+      upgradedDatabase.close();
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
   }
 });
 
@@ -57,7 +98,11 @@ test('upgrades a version 1 database without changing Provider data', () => {
   try {
     const versionOneDatabase = openFoundryDatabase(filename);
     const created = new ProviderRepository(versionOneDatabase).createProvider(createCodexInput());
-    versionOneDatabase.exec('DROP TABLE runtime_applications');
+    versionOneDatabase.exec(`
+      DROP TABLE prompt_versions;
+      DROP TABLE prompts;
+      DROP TABLE runtime_applications;
+    `);
     versionOneDatabase.pragma('user_version = 1');
     versionOneDatabase.close();
 

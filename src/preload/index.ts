@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import process from 'node:process';
 import type { FoundryApi, FoundryPlatform } from '../shared/foundry-contract';
+import type { PromptApi, PromptApiResult } from '../shared/prompt-contract';
+import { promptIpcChannels } from '../shared/prompt-contract';
 import type {
   ProviderApi,
   ProviderApiResult,
@@ -10,6 +12,7 @@ import type { RuntimeApi, RuntimeApiResult } from '../shared/runtime-contract';
 import { runtimeIpcChannels } from '../shared/runtime-contract';
 
 type ProviderIpcChannel = typeof providerIpcChannels[keyof typeof providerIpcChannels];
+type PromptIpcChannel = typeof promptIpcChannels[keyof typeof promptIpcChannels];
 type RuntimeIpcChannel = typeof runtimeIpcChannels[keyof typeof runtimeIpcChannels];
 const foundryPlatforms = new Set<FoundryPlatform>(['darwin', 'linux', 'win32']);
 
@@ -23,6 +26,31 @@ function getFoundryPlatform(): FoundryPlatform {
 function invokeProvider<T>(channel: ProviderIpcChannel, argument: unknown): Promise<ProviderApiResult<T>> {
   return ipcRenderer.invoke(channel, argument) as Promise<ProviderApiResult<T>>;
 }
+
+function invokePrompt<T>(
+  channel: PromptIpcChannel,
+  argument?: unknown,
+): Promise<PromptApiResult<T>> {
+  return ipcRenderer.invoke(channel, argument) as Promise<PromptApiResult<T>>;
+}
+
+const prompts: PromptApi = {
+  listPrompts: () => invokePrompt(promptIpcChannels.list),
+  getPrompt: (id) => invokePrompt(promptIpcChannels.get, id),
+  createPrompt: (input) => invokePrompt(promptIpcChannels.create, input),
+  updatePrompt: (input) => invokePrompt(promptIpcChannels.update, input),
+  movePromptToTrash: (id) => invokePrompt(promptIpcChannels.moveToTrash, id),
+  listPromptVersions: (id) => invokePrompt(promptIpcChannels.listVersions, id),
+  getPromptVersion: (target) => invokePrompt(promptIpcChannels.getVersion, target),
+  restorePromptVersion: (target) => invokePrompt(promptIpcChannels.restoreVersion, target),
+  copyPrompt: (id) => invokePrompt(promptIpcChannels.copy, id),
+  copyPromptVersion: (target) => invokePrompt(promptIpcChannels.copyVersion, target),
+  listTrashedPrompts: () => invokePrompt(promptIpcChannels.listTrash),
+  getTrashedPrompt: (id) => invokePrompt(promptIpcChannels.getTrashed, id),
+  restoreTrashedPrompt: (id) => invokePrompt(promptIpcChannels.restoreTrashed, id),
+  removePromptFromTrash: (id) => invokePrompt(promptIpcChannels.removeFromTrash, id),
+  emptyPromptTrash: () => invokePrompt(promptIpcChannels.emptyTrash),
+};
 
 const providers: ProviderApi = {
   listProviders: (runtime) => invokeProvider(providerIpcChannels.list, runtime),
@@ -68,6 +96,7 @@ const runtimes: RuntimeApi = {
 
 const api: FoundryApi = {
   platform: getFoundryPlatform(),
+  prompts,
   providers,
   runtimes,
 };

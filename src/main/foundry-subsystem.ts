@@ -1,11 +1,13 @@
 import type { BrowserWindow } from 'electron';
 import type Database from 'better-sqlite3';
+import { PromptSubsystem } from './prompts/prompt-subsystem';
 import { ProviderSubsystem } from './providers/provider-subsystem';
 import { RuntimeSubsystem } from './runtimes/runtime-subsystem';
 import { openFoundryDatabase } from './storage/foundry-database';
 import { toFoundryStorageError } from './storage/storage-error';
 
 export class FoundrySubsystem {
+  private readonly promptSubsystem = new PromptSubsystem();
   private readonly providerSubsystem = new ProviderSubsystem();
   private readonly runtimeSubsystem = new RuntimeSubsystem();
   private database: Database.Database | undefined;
@@ -13,22 +15,26 @@ export class FoundrySubsystem {
   initialize(databaseFilename: string, userHomeDirectory: string): void {
     try {
       this.database = openFoundryDatabase(databaseFilename);
+      this.promptSubsystem.initialize(this.database);
       this.providerSubsystem.initialize(this.database);
       this.runtimeSubsystem.initialize(this.database, userHomeDirectory);
     } catch (error) {
       const storageError = toFoundryStorageError(error);
       console.error(`[storage] initialization failed with ${storageError.code}.`);
+      this.promptSubsystem.initialize(storageError);
       this.providerSubsystem.initialize(storageError);
       this.runtimeSubsystem.initialize(storageError, userHomeDirectory);
     }
   }
 
   registerWindow(window: BrowserWindow): void {
+    this.promptSubsystem.registerWindow(window);
     this.providerSubsystem.registerWindow(window);
     this.runtimeSubsystem.registerWindow(window);
   }
 
   close(): void {
+    this.promptSubsystem.close();
     this.providerSubsystem.close();
     this.runtimeSubsystem.close();
     try {

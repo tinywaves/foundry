@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import { FoundryStorageError, toFoundryStorageError } from './storage-error';
 
-export const FOUNDRY_SCHEMA_VERSION = 2;
+export const FOUNDRY_SCHEMA_VERSION = 3;
 
 const initialProviderSchema = `
   CREATE TABLE providers (
@@ -55,6 +55,35 @@ const runtimeApplicationSchema = `
     WHERE provider_id IS NOT NULL;
 `;
 
+const promptSchema = `
+  CREATE TABLE prompts (
+    id TEXT PRIMARY KEY NOT NULL,
+    created_at INTEGER NOT NULL CHECK (created_at >= 0),
+    updated_at INTEGER NOT NULL CHECK (updated_at >= created_at),
+    trashed_at INTEGER CHECK (trashed_at IS NULL OR trashed_at >= 0),
+    removed_at INTEGER CHECK (removed_at IS NULL OR removed_at >= 0),
+    CHECK (removed_at IS NULL OR trashed_at IS NOT NULL)
+  );
+
+  CREATE TABLE prompt_versions (
+    prompt_id TEXT NOT NULL REFERENCES prompts (id),
+    version_number INTEGER NOT NULL CHECK (version_number > 0),
+    title TEXT NOT NULL CHECK (length(trim(title)) > 0),
+    description TEXT,
+    content TEXT NOT NULL CHECK (length(trim(content)) > 0),
+    created_at INTEGER NOT NULL CHECK (created_at >= 0),
+    PRIMARY KEY (prompt_id, version_number)
+  );
+
+  CREATE INDEX prompts_active_updated_idx
+    ON prompts (updated_at DESC, id)
+    WHERE trashed_at IS NULL AND removed_at IS NULL;
+
+  CREATE INDEX prompts_trash_trashed_idx
+    ON prompts (trashed_at DESC, id)
+    WHERE trashed_at IS NOT NULL AND removed_at IS NULL;
+`;
+
 interface Migration {
   version: number;
   apply: (database: Database.Database) => void;
@@ -68,6 +97,10 @@ const migrations: Migration[] = [
   {
     version: 2,
     apply: (database) => database.exec(runtimeApplicationSchema),
+  },
+  {
+    version: 3,
+    apply: (database) => database.exec(promptSchema),
   },
 ];
 

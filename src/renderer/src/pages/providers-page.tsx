@@ -1,11 +1,8 @@
 import { AlertDialog } from '@astryxdesign/core/AlertDialog';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
-import { EmptyState } from '@astryxdesign/core/EmptyState';
-import { Heading } from '@astryxdesign/core/Heading';
 import { Icon } from '@astryxdesign/core/Icon';
-import { Section } from '@astryxdesign/core/Section';
-import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
+import { StackItem, VStack } from '@astryxdesign/core/Stack';
 import { Tab, TabList } from '@astryxdesign/core/TabList';
 import { useToast } from '@astryxdesign/core/Toast';
 import { Toolbar } from '@astryxdesign/core/Toolbar';
@@ -21,6 +18,8 @@ import {
 import { useSearchParams } from 'react-router';
 import { providerRuntimes } from '../../../shared/provider-contract';
 import type { ProviderRuntime, ProviderSummary } from '../../../shared/provider-contract';
+import { PageEmptyState } from '@renderer/components/page-empty-state';
+import { PageHeader } from '@renderer/components/page-header';
 import { ProviderDialog } from './providers/provider-dialog';
 import type { ProviderDialogRequest } from './providers/provider-dialog';
 import {
@@ -52,9 +51,6 @@ const styles = stylex.create({
   content: {
     minWidth: 0,
     minHeight: 0,
-  },
-  emptyState: {
-    minHeight: '100%',
   },
 });
 
@@ -216,19 +212,9 @@ export function ProvidersPage() {
     );
   } else if (state.providers.length === 0) {
     content = (
-      <EmptyState
-        headingLevel={2}
-        title={`No ${providerRuntimeLabels[runtime]} Providers Yet`}
-        icon={<Icon icon={ServerCog} size="lg" color="secondary" />}
-        xstyle={styles.emptyState}
-        actions={(
-          <Button
-            label="Add Provider"
-            variant="secondary"
-            icon={<Icon icon={Plus} size="sm" color="inherit" />}
-            onClick={openAddDialog}
-          />
-        )}
+      <PageEmptyState
+        icon={ServerCog}
+        text={`No ${providerRuntimeLabels[runtime]} Providers Yet`}
       />
     );
   } else {
@@ -246,17 +232,17 @@ export function ProvidersPage() {
 
   return (
     <VStack width="100%" height="100%" xstyle={styles.page}>
-      <Section padding={4} paddingBlock={2}>
-        <HStack gap={3} hAlign="between" vAlign="center">
-          <Heading level={3} accessibilityLevel={1}>Providers</Heading>
+      <PageHeader
+        text="Providers"
+        action={(
           <Button
             label="Add Provider"
             variant="primary"
             icon={<Icon icon={Plus} size="sm" color="inherit" />}
             onClick={openAddDialog}
           />
-        </HStack>
-      </Section>
+        )}
+      />
       <Toolbar
         label="Provider Runtime"
         size="sm"

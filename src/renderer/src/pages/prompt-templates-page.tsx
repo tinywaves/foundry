@@ -1,13 +1,15 @@
+import { StackItem, VStack } from '@astryxdesign/core/Stack';
 import { FileText } from 'lucide-react';
-import { UnavailableFeaturePage } from '@renderer/pages/unavailable-feature-page';
+import { PageEmptyState } from '@renderer/components/page-empty-state';
+import { PageHeader } from '@renderer/components/page-header';
 
 export function PromptTemplatesPage() {
   return (
-    <UnavailableFeaturePage
-      title="Prompt Templates"
-      unavailableTitle="Prompt Templates Aren't Available Yet"
-      description="Prompt Template creation and management aren't connected in this build."
-      icon={FileText}
-    />
+    <VStack width="100%" height="100%">
+      <PageHeader text="Prompt Templates" />
+      <StackItem size="fill">
+        <PageEmptyState icon={FileText} text="Prompt Templates Aren't Available Yet" />
+      </StackItem>
+    </VStack>
   );
 }

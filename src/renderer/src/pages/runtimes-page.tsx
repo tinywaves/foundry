@@ -2,7 +2,6 @@ import { Avatar } from '@astryxdesign/core/Avatar';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { Grid } from '@astryxdesign/core/Grid';
-import { Heading } from '@astryxdesign/core/Heading';
 import { HoverCard } from '@astryxdesign/core/HoverCard';
 import { Icon } from '@astryxdesign/core/Icon';
 import { Link } from '@astryxdesign/core/Link';
@@ -27,6 +26,7 @@ import type {
   ProviderSummary,
 } from '../../../shared/provider-contract';
 import type { RuntimeSummary, RuntimeConfigurationPreviewInput } from '../../../shared/runtime-contract';
+import { PageHeader } from '@renderer/components/page-header';
 import { routePaths } from '@renderer/routes';
 import { ProviderConnectionStatus } from './providers/provider-connection-status';
 import { providerRuntimeLabels } from './providers/provider-runtime';
@@ -445,14 +445,9 @@ export function RuntimesPage() {
 
   return (
     <VStack width="100%" minHeight="100%" xstyle={styles.page}>
-      <Section padding={4} paddingBlock={2}>
-        <HStack
-          gap={3}
-          minHeight={sizeVars['--size-element-md']}
-          hAlign="between"
-          vAlign="center"
-        >
-          <Heading level={3} accessibilityLevel={1}>Runtimes</Heading>
+      <PageHeader
+        text="Runtimes"
+        action={(
           <Link
             as={RouterLink}
             href={routePaths.agentRuntimeProviders}
@@ -465,8 +460,8 @@ export function RuntimesPage() {
               <Icon icon={ArrowRight} size="xsm" color="inherit" />
             </HStack>
           </Link>
-        </HStack>
-      </Section>
+        )}
+      />
       <Section padding={4} paddingBlock={2}>
         {content}
       </Section>

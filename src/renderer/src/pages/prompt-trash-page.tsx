@@ -105,10 +105,11 @@ export function PromptTrashPage() {
       <VStack width="100%" height="100%">
         <PromptLibraryHeader
           selectedTab="trash"
-          toolbarAction={(
+          headerAction={(
             <Button
               label="Empty Trash"
               variant="destructive"
+              size="sm"
               icon={<Icon icon={Trash2} size="sm" color="inherit" />}
               isDisabled={isBusy || (trashQuery.data?.length ?? 0) === 0}
               onClick={() => setPromptsToEmpty(trashQuery.data)}

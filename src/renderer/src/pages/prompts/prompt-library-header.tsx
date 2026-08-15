@@ -1,8 +1,5 @@
-import { Button } from '@astryxdesign/core/Button';
-import { Icon } from '@astryxdesign/core/Icon';
 import { Tab, TabList } from '@astryxdesign/core/TabList';
 import { Toolbar } from '@astryxdesign/core/Toolbar';
-import { Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { PageHeader } from '@renderer/components/page-header';
@@ -16,13 +13,13 @@ const promptLibraryPaths = {
 type PromptLibraryTab = keyof typeof promptLibraryPaths;
 
 interface PromptLibraryHeaderProps {
+  headerAction?: ReactNode;
   selectedTab: PromptLibraryTab;
-  toolbarAction?: ReactNode;
 }
 
 export function PromptLibraryHeader({
+  headerAction,
   selectedTab,
-  toolbarAction,
 }: PromptLibraryHeaderProps) {
   const navigate = useNavigate();
 
@@ -35,18 +32,7 @@ export function PromptLibraryHeader({
 
   return (
     <>
-      <PageHeader
-        text="Prompts"
-        action={(
-          <Button
-            label="New Prompt"
-            variant="primary"
-            size="sm"
-            icon={<Icon icon={Plus} size="sm" color="inherit" />}
-            onClick={() => void navigate(routePaths.agentExtensionsPromptsNew)}
-          />
-        )}
-      />
+      <PageHeader text="Prompts" action={headerAction} />
       <Toolbar
         label="Prompt Library"
         size="sm"
@@ -61,7 +47,6 @@ export function PromptLibraryHeader({
             <Tab value="trash" label="Trash" />
           </TabList>
         )}
-        endContent={toolbarAction}
       />
     </>
   );

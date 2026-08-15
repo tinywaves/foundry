@@ -6,12 +6,13 @@ import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import type { PromptSummary } from '../../../shared/prompt-contract';
-import { PageEmptyState } from '@renderer/components/page-empty-state';
-import { agentExtensionIcons } from '@renderer/navigation-icons';
 import { routePaths } from '@renderer/routes';
+import {
+  PromptCardGrid,
+  PromptCardGridLoading,
+} from './prompts/prompt-card-grid';
 import { PromptLibraryHeader } from './prompts/prompt-library-header';
 import { getPromptListQueryOptions } from './prompts/prompt-query';
-import { PromptTable, PromptTableLoading } from './prompts/prompt-table';
 import { usePromptCopy } from './prompts/use-prompt-copy';
 import { usePromptTrashActions } from './prompts/use-prompt-trash-actions';
 
@@ -40,7 +41,7 @@ export function PromptsPage() {
 
   let content;
   if (promptsQuery.isPending) {
-    content = <PromptTableLoading />;
+    content = <PromptCardGridLoading />;
   } else if (promptsQuery.data === undefined) {
     content = (
       <Banner
@@ -51,17 +52,15 @@ export function PromptsPage() {
       />
     );
   } else {
-    const promptData = promptsQuery.data.length === 0
-      ? <PageEmptyState icon={agentExtensionIcons.prompts} text="No Prompts Yet" />
-      : (
-          <PromptTable
-            prompts={promptsQuery.data}
-            isCopying={isCopying}
-            onCopy={copyPrompt}
-            onEdit={editPrompt}
-            onMoveToTrash={setPromptToTrash}
-          />
-        );
+    const promptData = (
+      <PromptCardGrid
+        prompts={promptsQuery.data}
+        isCopying={isCopying}
+        onCopy={copyPrompt}
+        onEdit={editPrompt}
+        onMoveToTrash={setPromptToTrash}
+      />
+    );
     content = promptsQuery.isError
       ? (
           <VStack width="100%" height="100%">

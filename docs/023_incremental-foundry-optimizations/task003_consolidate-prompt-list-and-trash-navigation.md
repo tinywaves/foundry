@@ -6,15 +6,17 @@
 
 ## Goal
 
-Replace the Prompts header's competing actions with a stable primary action and an `All` / `Trash` tab switcher modeled on the Providers page structure, while removing the unexplained extra header divider.
+Replace the Prompts header's competing navigation actions with an `All` / `Trash` tab switcher modeled on the Providers page structure, while removing the unexplained extra header divider.
 
 ## Detail
 
 The active Prompts list currently presents both `Trash` and `New Prompt` as header buttons, even though Trash represents a sibling content view rather than an immediate command. The Prompt Trash page then uses a separate `Trash` title and places `Empty Trash` in the same page-level action position. Both pages also wrap `PageHeader` in `LayoutHeader hasDivider`, adding a bottom border that is absent from the shared `PageHeader` itself and unnecessary for this composition.
 
-Create a shared Prompt library header that follows the existing Providers structure: render the stable `Prompts` page header first, keep only the primary `New Prompt` action at its end, and render a small Astryx `Toolbar` below with an `All` / `Trash` `TabList`. Selecting `All` navigates to the active Prompt list, and selecting `Trash` navigates to the existing Prompt Trash route.
+Create a shared Prompt library header that follows the existing Providers structure: render the stable `Prompts` page header first and render a small Astryx `Toolbar` below with an `All` / `Trash` `TabList`. Selecting `All` navigates to the active Prompt list, and selecting `Trash` navigates to the existing Prompt Trash route. The initial implementation retained `New Prompt` as the page-level primary action and placed `Empty Trash` at the end of the Trash toolbar.
 
-Use the shared header on both list pages so the title, creation action, tab position, and selection behavior remain stable during navigation. Keep `Empty Trash` available as a contextual action at the end of the Trash tab toolbar rather than replacing the page-level primary action. Replace the existing `Layout` and `LayoutHeader hasDivider` wrappers with the same `VStack` and fill-content structure used by Providers, removing the redundant border at its source.
+Use the shared header on both list pages so the title, tab position, and selection behavior remain stable during navigation. Replace the existing `Layout` and `LayoutHeader hasDivider` wrappers with the same `VStack` and fill-content structure used by Providers, removing the redundant border at its source.
+
+Task 005 later refined action placement: the `All` tab now exposes Prompt creation as the first dashed gallery card instead of a Header button, while the `Trash` tab exposes `Empty Trash` as its contextual Header action. The shared header therefore accepts an optional page-specific Header action and keeps the tab toolbar dedicated to navigation.
 
 ## Findings
 
@@ -24,19 +26,19 @@ Use the shared header on both list pages so the title, creation action, tab posi
 
 ## Deliverables
 
-- A shared Prompt library header with a stable `Prompts` title and `New Prompt` action.
+- A shared Prompt library header with a stable `Prompts` title and optional contextual Header action.
 - An Astryx `All` / `Trash` tab switcher below the page header.
 - Route-backed tab navigation between the active list and Trash list.
-- A contextual `Empty Trash` action on the Trash tab toolbar.
+- Navigation-only tab toolbar content without competing route buttons.
 - Removal of the redundant Prompt list `LayoutHeader hasDivider` wrappers and their bottom border.
 
 ## Acceptance Criteria
 
-- [x] The Prompts header shows only the `New Prompt` primary action.
+- [x] The Prompts header no longer shows a separate Trash navigation button.
 - [x] `All` is selected on the active Prompt list and navigates to the canonical Prompt list route.
 - [x] `Trash` is selected on the Prompt Trash list and navigates to the existing Trash route.
 - [x] Both list pages retain the stable `Prompts` title and tab placement.
-- [x] `Empty Trash` remains available only as a contextual Trash toolbar action and preserves its disabled and confirmation behavior.
+- [x] `Empty Trash` remains available only on the Trash view and preserves its disabled and confirmation behavior.
 - [x] The additional header bottom border from `LayoutHeader hasDivider` is removed.
 - [x] Existing Prompt loading, error, table, empty-state, mutation, and dialog behavior remains unchanged.
 - [x] Type checking, linting, focused tests, and diff validation pass without automated visual verification.
@@ -51,7 +53,7 @@ Use the shared header on both list pages so the title, creation action, tab posi
 
 ## Handoff
 
-Task 003 establishes stable Prompt library navigation and header action ownership. Add the next requested optimization to Plan 023 as Task 004.
+Task 003 establishes stable Prompt library navigation and removes the extra Header divider. Task 005 contains the later action-placement refinement.
 
 ## Verification
 
@@ -60,5 +62,5 @@ Task 003 establishes stable Prompt library navigation and header action ownershi
 - `pnpm test -- src/renderer/src/routes.test.ts` passed all 20 test files and 132 tests under the repository's Vitest runner.
 - `git diff --check` passed.
 - Static inspection confirmed that both Prompt list pages use the shared `PromptLibraryHeader`, expose the correct selected tab, and no longer import or render `LayoutHeader hasDivider`.
-- Static inspection confirmed that the active list no longer renders a Trash header button, the stable page-level action is `New Prompt`, and `Empty Trash` remains scoped to the Trash toolbar with its existing disabled and confirmation behavior.
+- Static inspection at completion confirmed that the active list no longer rendered a Trash Header button. Task 005 later moved creation into the active gallery and moved `Empty Trash` from the toolbar to the Trash Header while preserving its disabled and confirmation behavior.
 - The application was not launched, and no browser, screenshot, accessibility-tree, or desktop automation was performed, as required by repository policy.

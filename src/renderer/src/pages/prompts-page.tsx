@@ -1,19 +1,15 @@
 import { AlertDialog } from '@astryxdesign/core/AlertDialog';
 import { Banner } from '@astryxdesign/core/Banner';
-import { Button } from '@astryxdesign/core/Button';
-import { Icon } from '@astryxdesign/core/Icon';
-import { Layout, LayoutContent, LayoutHeader } from '@astryxdesign/core/Layout';
-import { HStack, VStack } from '@astryxdesign/core/Stack';
+import { StackItem, VStack } from '@astryxdesign/core/Stack';
 import { useToast } from '@astryxdesign/core/Toast';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import type { PromptSummary } from '../../../shared/prompt-contract';
 import { PageEmptyState } from '@renderer/components/page-empty-state';
-import { PageHeader } from '@renderer/components/page-header';
 import { agentExtensionIcons } from '@renderer/navigation-icons';
 import { routePaths } from '@renderer/routes';
+import { PromptLibraryHeader } from './prompts/prompt-library-header';
 import { getPromptListQueryOptions } from './prompts/prompt-query';
 import { PromptTable, PromptTableLoading } from './prompts/prompt-table';
 import { usePromptCopy } from './prompts/use-prompt-copy';
@@ -83,32 +79,10 @@ export function PromptsPage() {
 
   return (
     <>
-      <Layout
-        height="fill"
-        header={(
-          <LayoutHeader hasDivider padding={0}>
-            <PageHeader
-              text="Prompts"
-              action={(
-                <HStack gap={2} vAlign="center">
-                  <Button
-                    label="Trash"
-                    icon={<Icon icon={Trash2} size="sm" color="inherit" />}
-                    onClick={() => void navigate(routePaths.agentExtensionsPromptsTrash)}
-                  />
-                  <Button
-                    label="New Prompt"
-                    variant="primary"
-                    icon={<Icon icon={Plus} size="sm" color="inherit" />}
-                    onClick={() => void navigate(routePaths.agentExtensionsPromptsNew)}
-                  />
-                </HStack>
-              )}
-            />
-          </LayoutHeader>
-        )}
-        content={<LayoutContent padding={0}>{content}</LayoutContent>}
-      />
+      <VStack width="100%" height="100%">
+        <PromptLibraryHeader selectedTab="all" />
+        <StackItem size="fill">{content}</StackItem>
+      </VStack>
       <AlertDialog
         isOpen={promptToTrash !== undefined}
         onOpenChange={(isOpen) => {

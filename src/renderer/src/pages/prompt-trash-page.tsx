@@ -2,16 +2,15 @@ import { AlertDialog } from '@astryxdesign/core/AlertDialog';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { Icon } from '@astryxdesign/core/Icon';
-import { Layout, LayoutContent, LayoutHeader } from '@astryxdesign/core/Layout';
-import { VStack } from '@astryxdesign/core/Stack';
+import { StackItem, VStack } from '@astryxdesign/core/Stack';
 import { useToast } from '@astryxdesign/core/Toast';
 import { useQuery } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { TrashedPromptSummary } from '../../../shared/prompt-contract';
 import { PageEmptyState } from '@renderer/components/page-empty-state';
-import { PageHeader } from '@renderer/components/page-header';
 import { agentExtensionIcons } from '@renderer/navigation-icons';
+import { PromptLibraryHeader } from './prompts/prompt-library-header';
 import { getTrashedPromptListQueryOptions } from './prompts/prompt-query';
 import { getEmptyTrashDescription } from './prompts/prompt-trash-model';
 import {
@@ -103,26 +102,21 @@ export function PromptTrashPage() {
 
   return (
     <>
-      <Layout
-        height="fill"
-        header={(
-          <LayoutHeader hasDivider padding={0}>
-            <PageHeader
-              text="Trash"
-              action={(
-                <Button
-                  label="Empty Trash"
-                  variant="destructive"
-                  icon={<Icon icon={Trash2} size="sm" color="inherit" />}
-                  isDisabled={isBusy || (trashQuery.data?.length ?? 0) === 0}
-                  onClick={() => setPromptsToEmpty(trashQuery.data)}
-                />
-              )}
+      <VStack width="100%" height="100%">
+        <PromptLibraryHeader
+          selectedTab="trash"
+          toolbarAction={(
+            <Button
+              label="Empty Trash"
+              variant="destructive"
+              icon={<Icon icon={Trash2} size="sm" color="inherit" />}
+              isDisabled={isBusy || (trashQuery.data?.length ?? 0) === 0}
+              onClick={() => setPromptsToEmpty(trashQuery.data)}
             />
-          </LayoutHeader>
-        )}
-        content={<LayoutContent padding={0}>{content}</LayoutContent>}
-      />
+          )}
+        />
+        <StackItem size="fill">{content}</StackItem>
+      </VStack>
       <AlertDialog
         isOpen={promptToRemove !== undefined}
         onOpenChange={(isOpen) => {

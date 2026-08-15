@@ -239,6 +239,7 @@ export function ProvidersPage() {
           <Button
             label="Add Provider"
             variant="primary"
+            size="sm"
             icon={<Icon icon={Plus} size="sm" color="inherit" />}
             onClick={openAddDialog}
           />

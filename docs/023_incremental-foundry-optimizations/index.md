@@ -14,7 +14,7 @@ This plan collects the incremental optimizations requested after completion of P
 
 Only explicitly requested optimizations enter this plan. A new task is added when an optimization is defined, and its status is updated as implementation progresses. Completed tasks remain unchanged as historical records unless a later request explicitly revises the same behavior.
 
-The first optimization aligns renderer empty-state icons with the corresponding selected sidebar destination and slightly reduces the visual density of the shared empty-state message. The second optimization improves the shared empty state's visual hierarchy with an inset, low-contrast rounded dashed boundary that defines the otherwise empty content region without competing with its compact message.
+The first optimization aligns renderer empty-state icons with the corresponding selected sidebar destination and slightly reduces the visual density of the shared empty-state message. The second optimization improves the shared empty state's visual hierarchy with an inset, low-contrast rounded dashed boundary that defines the otherwise empty content region without competing with its compact message. The third optimization consolidates Prompt list and Trash navigation into tabs below a stable Prompts header, removes the redundant Trash header action, and eliminates the extra header divider. The fourth optimization reduces the Prompts and Providers page-level primary actions to the small Astryx button size for a denser desktop header treatment.
 
 ## Working Agreement
 
@@ -51,3 +51,5 @@ The first optimization aligns renderer empty-state icons with the corresponding 
 
 - [x] [Task 001: Align Empty-State Icons and Density](./task001_align-empty-state-icons-and-density.md)
 - [x] [Task 002: Refine Empty-State Visual Hierarchy](./task002_refine-empty-state-visual-hierarchy.md)
+- [x] [Task 003: Consolidate Prompt List and Trash Navigation](./task003_consolidate-prompt-list-and-trash-navigation.md)
+- [x] [Task 004: Reduce Page Header Action Size](./task004_reduce-page-header-action-size.md)

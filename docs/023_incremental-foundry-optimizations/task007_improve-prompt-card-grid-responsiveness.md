@@ -51,6 +51,8 @@ Retain the existing minimum card width so the grid continues to reduce its colum
 
 Task 007 establishes the wide-window Prompt gallery behavior. Add the next requested optimization to Plan 023 as Task 008.
 
+Task 008 extracts the responsive columns into `prompt-card-grid-layout.ts` so the active and Trash galleries share the same contract without importing one presentation component from another.
+
 ## Verification
 
 - `pnpm typecheck` passed the Node and Web TypeScript projects.
@@ -58,6 +60,6 @@ Task 007 establishes the wide-window Prompt gallery behavior. Add the next reque
 - `pnpm test` passed all 20 test files and 132 tests.
 - `git diff --check` and `git diff --cached --check` passed.
 - Astryx Grid documentation confirmed that `repeat: 'fill'` preserves tracks for consistent item widths while `repeat: 'fit'` stretches sparse items into leftover space.
-- Static inspection confirmed that both loaded and loading grids reference the same `promptGridColumns` configuration.
+- Static inspection confirmed that both loaded and loading grids reference the same responsive column configuration. Task 008 later renames and extracts it as `promptCardGridColumns` for reuse by the Trash gallery.
 - Static inspection confirmed that the configuration uses the existing `minWidth: 280`, `max: 4`, and `repeat: 'fill'` values.
 - The application was not launched, and no browser, screenshot, accessibility-tree, or desktop automation was performed, as required by repository policy.

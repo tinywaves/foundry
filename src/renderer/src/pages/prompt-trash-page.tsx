@@ -14,9 +14,9 @@ import { PromptLibraryHeader } from './prompts/prompt-library-header';
 import { getTrashedPromptListQueryOptions } from './prompts/prompt-query';
 import { getEmptyTrashDescription } from './prompts/prompt-trash-model';
 import {
-  PromptTrashTable,
-  PromptTrashTableLoading,
-} from './prompts/prompt-trash-table';
+  PromptTrashCardGrid,
+  PromptTrashCardGridLoading,
+} from './prompts/prompt-trash-card-grid';
 import { usePromptTrashActions } from './prompts/use-prompt-trash-actions';
 
 export function PromptTrashPage() {
@@ -63,7 +63,7 @@ export function PromptTrashPage() {
 
   let content;
   if (trashQuery.isPending) {
-    content = <PromptTrashTableLoading />;
+    content = <PromptTrashCardGridLoading />;
   } else if (trashQuery.data === undefined) {
     content = (
       <Banner
@@ -77,7 +77,7 @@ export function PromptTrashPage() {
     const trashData = trashQuery.data.length === 0
       ? <PageEmptyState icon={agentExtensionIcons.prompts} text="Trash Is Empty" />
       : (
-          <PromptTrashTable
+          <PromptTrashCardGrid
             prompts={trashQuery.data}
             isBusy={isBusy}
             isRestoring={isRestoring}

@@ -20,6 +20,7 @@ import * as stylex from '@stylexjs/stylex';
 import { Copy, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { PromptSummary } from '../../../../shared/prompt-contract';
 import { routePaths } from '@renderer/routes';
+import { promptCardGridColumns } from './prompt-card-grid-layout';
 
 const styles = stylex.create({
   card: {
@@ -36,12 +37,6 @@ const styles = stylex.create({
     backgroundColor: colorVars['--color-accent-muted'],
   },
 });
-
-const promptGridColumns = {
-  minWidth: 280,
-  max: 4,
-  repeat: 'fill',
-} as const;
 
 interface PromptCardGridProps {
   prompts: PromptSummary[];
@@ -86,7 +81,7 @@ export function PromptCardGrid({
   return (
     <Section variant="transparent" padding={4} width="100%">
       <Grid
-        columns={promptGridColumns}
+        columns={promptCardGridColumns}
         gap={3}
         width="100%"
       >
@@ -155,7 +150,7 @@ export function PromptCardGridLoading() {
   return (
     <Section variant="transparent" padding={4} width="100%">
       <Grid
-        columns={promptGridColumns}
+        columns={promptCardGridColumns}
         gap={3}
         width="100%"
       >

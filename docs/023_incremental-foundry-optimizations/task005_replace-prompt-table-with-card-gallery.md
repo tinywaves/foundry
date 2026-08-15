@@ -18,6 +18,8 @@ Limit the gallery to three columns and let it reduce the column count automatica
 
 Task 007 later refines the responsive contract by switching the grid from fitting sparse items to preserving available tracks and increasing the wide-window cap from three to four columns. This prevents one or two cards from stretching across the entire content width.
 
+Task 008 later applies the established responsive card language to the Trash view and removes the remaining Prompt Trash table. Restore, permanent removal, empty-trash, and confirmation behavior remain unchanged.
+
 Remove the `New Prompt` Button from the Header and place a restrained dashed `New Prompt` `ClickableCard` first in the `All` grid. Keep this creation entry visible when the Prompt collection is empty and while Prompt data is loading so creation remains immediately available without a separate empty-state screen or Header action.
 
 Keep the tab toolbar focused on `All` / `Trash` navigation. On the `Trash` tab, move the small destructive `Empty Trash` Button from the toolbar to the Header's right side while preserving its disabled state, confirmation dialog, and mutation behavior.
@@ -53,7 +55,7 @@ Rename the implementation to `prompt-card-grid.tsx` and update only the active `
 - [x] Clicking the card opens Prompt detail while Copy, Edit, and Move to Trash remain independent accessible actions.
 - [x] Cards align consistently within a grid of no more than three columns and reduce columns when width is constrained.
 - [x] The loading state matches the Card gallery geometry and no longer renders Table or List skeletons.
-- [x] The Trash list remains table-based, and `Empty Trash` appears as a small Trash-only Header action with unchanged lifecycle behavior.
+- [x] At Task 005 completion, the Trash list remained table-based and `Empty Trash` appeared as a small Trash-only Header action with unchanged lifecycle behavior. Task 008 later replaces only the Trash presentation.
 - [x] Type checking, linting, automated tests, and diff validation pass without automated visual verification.
 
 ## Out of Scope
@@ -80,5 +82,5 @@ Task 005 establishes the active Prompt Card gallery and its contextual creation 
 - Static inspection confirmed that `PromptLibraryHeader` no longer owns a `New Prompt` Button and accepts only an optional contextual `headerAction` in addition to the selected tab.
 - Static inspection confirmed that the Trash view supplies a small destructive `Empty Trash` Header action and leaves the tab toolbar dedicated to navigation.
 - Static inspection confirmed that each card links to Prompt detail while Copy, Edit, and Move to Trash retain independent handlers and accessible labels.
-- Static inspection confirmed that `prompt-trash-table.tsx` and Trash lifecycle behavior were not changed.
+- Static inspection at completion confirmed that `prompt-trash-table.tsx` and Trash lifecycle behavior were not changed. Task 008 later replaces the table component while preserving the lifecycle behavior.
 - The application was not launched, and no browser, screenshot, accessibility-tree, or desktop automation was performed, as required by repository policy.

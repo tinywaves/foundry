@@ -56,6 +56,29 @@ Each checklist label and link must match the corresponding task document title a
 
 Update the plan state to `in-progress` when the first detailed task is persisted. Set it to `completed` only after every checklist item is checked and every task has a terminal status.
 
+## Incremental Optimization Persistence
+
+For an explicitly declared Incremental Optimization Series, do not create the plan index or task stubs before implementation. Persist each optimization only after the user confirms documentation synchronization for that completed round.
+
+On the first confirmed synchronization:
+
+- create the plan directory and `index.md`
+- set the plan status to `completed`
+- describe the cumulative optimization objective in Goal and the current cumulative behavior in Detail, Scope, Out of Scope, and Decisions
+- create only `task001_<task-slug>.md`
+- add Task 001 as a checked checklist entry
+
+On each later confirmed synchronization:
+
+- leave the documents unchanged until implementation and verification are complete
+- append the next sequential checked task entry
+- create the matching completed task document in the same change
+- update only cumulative current-state statements affected by the new optimization
+- preserve all earlier task files, checklist entries, decisions, and historical records
+- keep the plan status `completed`
+
+Revisions requested before synchronization remain part of the same optimization task. Do not allocate another task number until the user begins a distinct optimization round. If synchronization is declined, do not persist or later backfill the round without a new explicit confirmation.
+
 ## Initial Task Stub
 
 Before task design is approved, keep each task file minimal:
@@ -120,6 +143,20 @@ None.
 ```
 
 Keep acceptance criteria about observable completion, not implementation activity. "Add a file" is a deliverable; "the application rejects invalid input through the approved boundary" is an acceptance criterion.
+
+## Completed Optimization Task
+
+When retrospectively persisting a confirmed Incremental Optimization Series round, use the Detailed Task structure with these terminal values:
+
+- set Status to `completed`
+- describe the implementation that actually exists, not a proposed design
+- use `None.` for Findings unless implementation exposed a material factual observation; resolve its disposition before marking the retrospective task completed
+- record only dependencies actually added or selected
+- check every satisfied Acceptance Criterion
+- describe the stable cumulative baseline for the next optimization under Handoff
+- record actual verification commands and results under Verification
+
+Do not create a preceding pending or ready version of this task. The completed task document and checked index entry must be written atomically after synchronization confirmation.
 
 ## Finding Entries
 

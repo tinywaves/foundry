@@ -1,6 +1,6 @@
 ---
 name: forge-plan
-description: Interview-driven workflow for turning a product or engineering goal into a small, reviewable plan and a strictly connected sequence of implementation tasks. Use when the user explicitly invokes forge-plan with a new goal or a plan number, wants to shape requirements before implementation, resume a persisted plan, detail or execute an approved task, or assess whether a small out-of-task adjustment requires persisted documentation updates.
+description: Interview-driven workflow for turning a product or engineering goal into a small, reviewable plan and a strictly connected sequence of implementation tasks. Use when the user explicitly invokes forge-plan with a new goal or a plan number, wants to shape requirements before implementation, resume a persisted plan, detail or execute an approved task, run an explicitly numbered or ongoing incremental optimization series, or assess whether a small out-of-task adjustment requires persisted documentation updates.
 ---
 
 # Forge Plan
@@ -21,11 +21,11 @@ Treat an argument containing only digits as a plan number. Treat any other non-e
 - Discover and read all applicable `AGENTS.md` files before planning or changing repository files. When an `AGENTS.md` instruction conflicts with this skill, follow the most specific applicable `AGENTS.md`; it takes precedence for repository conventions, documentation language, formatting, naming, styling, commands, verification, and other implementation constraints. If no applicable `AGENTS.md` specifies the matter, follow this skill and the user's language preference.
 - Grill the user in focused rounds. Turn vague intent into explicit decisions instead of filling important gaps silently.
 - Read the repository, existing documentation, dependency manifests, and Git state before asking questions answerable from local context.
-- Keep all exploration read-only until the relevant persistence confirmation.
-- Do not write a new plan before the user explicitly confirms the complete blueprint.
+- Keep all exploration read-only until the relevant persistence confirmation, except when implementing an explicitly declared Incremental Optimization Series round before its documentation synchronization gate.
+- Do not write a new plan before the user explicitly confirms the complete blueprint. For an Incremental Optimization Series, the post-implementation documentation synchronization confirmation replaces this persistence gate.
 - Do not expand a task stub before the user explicitly confirms that task's detailed design.
-- Do not modify application code or install dependencies before the user separately confirms task execution.
-- Keep the plan bounded to one independently reviewable outcome. If it contains multiple independently valuable or independently acceptable outcomes, stop and propose separate goals.
+- Do not modify application code or install dependencies before the user separately confirms task execution, except in the explicitly declared Incremental Optimization Series workflow.
+- Keep a conventional plan bounded to one independently reviewable outcome. If it contains multiple independently valuable or independently acceptable outcomes, stop and propose separate goals. An Incremental Optimization Series may collect separately accepted optimization rounds only when they share one named optimization objective or product area.
 - Prefer more connected tasks over fewer oversized tasks. Every task must produce a handoff consumed by the next task.
 - Detail only the first unchecked task. If it cannot be designed without detailing the next task, pause and evaluate whether the two tasks should be merged.
 - Treat the Tasks checklist in `index.md` as the only source of execution order and completion. Do not duplicate a current-task field in the plan status.
@@ -36,6 +36,7 @@ Treat an argument containing only digits as a plan number. Treat any other non-e
 - Review every unresolved Finding after the current task is completed. Keep the completed task closed; if the user decides that a Finding requires implementation, shape that work as a new plan.
 - After any fix, polish, parameter change, or other implementation adjustment made outside an active approved task, pause before finalizing and ask the user whether to synchronize the relevant persisted plan and task documents. Identify the available documentation targets and any stale behavior, values, constraints, decisions, acceptance statements, or verification records that would be updated.
 - A user's direct request to implement an out-of-task maintenance adjustment authorizes the implementation, but does not authorize documentation synchronization. Request explicit confirmation for documentation synchronization after each maintenance adjustment, even when the user previously approved synchronization for an earlier adjustment.
+- In an Incremental Optimization Series, do not create `index.md` or task stubs up front. Implement and verify one optimization round first, then request documentation synchronization. Persist only after explicit confirmation.
 - Keep out-of-task maintenance narrow. If the change creates a new independently reviewable outcome, changes the plan goal or task chain, or materially broadens scope, shape it as a new plan instead of recording it as maintenance.
 - Never silently delete plan history, task files, earlier decisions, or recorded Findings.
 
@@ -227,6 +228,41 @@ Keep the completed task and its acceptance criteria unchanged throughout this re
 
 If the user decides implementation is necessary, begin Stage 1 for a new bounded goal. Apply every normal interview and confirmation gate, including explicit confirmation of the complete blueprint before persistence. Do not create or execute the new plan automatically. If multiple Findings imply independently valuable outcomes, propose separate plans and ask the user which one to shape first.
 
+## Incremental Optimization Series
+
+Use this workflow only when the user explicitly frames the work as a numbered or ongoing sequence of optimizations, such as `优化1: ...`, and expects later rounds to be documented under one cumulative optimization index. Do not infer this workflow from an ordinary standalone fix.
+
+The direct request for each optimization round authorizes implementation of that round. It does not authorize documentation synchronization. This workflow is an explicit exception to Stages 1–5: the plan index and task file are written retrospectively after the implementation is accepted, rather than created before execution.
+
+### First Optimization
+
+1. Inspect the repository and clarify only the decisions needed to implement the requested optimization safely.
+2. Implement the optimization and run the appropriate verification without creating `index.md` or a task file.
+3. Summarize the completed behavior, verification, and the documents that would be created, then ask explicitly whether to synchronize the documentation.
+4. If the user reports a problem or requests another revision instead of confirming synchronization, continue modifying the same optimization round, verify again, and ask the synchronization question again. Do not create a new task number for these revisions.
+5. When the user confirms synchronization, read [document-schema.md](references/document-schema.md), allocate the next plan number, and atomically create:
+   - an `index.md` describing the cumulative optimization objective
+   - `task001_<task-slug>.md` recording the implemented optimization as `completed`
+   - a checked Task 001 entry in the index
+6. Because every persisted task is terminal at this point, set the plan status to `completed`.
+
+### Later Optimizations
+
+When the user starts the next optimization round, such as `优化2: ...`:
+
+1. Resolve the existing optimization-series plan from the conversation or an explicit plan number and inspect its index and tasks.
+2. Do not add a pending task or change the index before implementation.
+3. Implement and verify the new optimization round.
+4. Ask explicitly whether to synchronize documentation for that round. If the user requests revisions, keep working within the same round and repeat the synchronization question after each verified revision.
+5. After confirmation, atomically append the next sequential checked task entry to `index.md`, create the matching completed task document, and update cumulative current-state sections of the index only where the new optimization requires it.
+6. Preserve earlier tasks and decisions. Keep the plan status `completed` after the synchronized task is added.
+
+Task numbers follow persisted optimization order, not the numeric label written by the user. If the user declines synchronization, leave the documents unchanged and do not silently backfill that optimization in a later round; request separate confirmation before recording previously declined work.
+
+Once an optimization round has been synchronized, a later correction to that same completed round follows Out-of-Task Maintenance unless the user explicitly begins a new optimization round and the change belongs as a distinct entry in the shared optimization series.
+
+Do not use one optimization-series index for unrelated areas merely because the user numbers the requests. If a later optimization does not share the established cumulative objective or product area, start a separate series or return to Stage 1.
+
 ## Out-of-Task Maintenance
 
 Use this path when the user directly requests a narrow fix or adjustment outside an active approved task, including post-completion visual tuning, parameter corrections, and small implementation fixes.
@@ -244,7 +280,7 @@ Before finalizing the implementation:
    - record the reason and verification evidence
    - keep task status, checklist completion, and task order unchanged
 6. If the user declines synchronization, do not modify the persisted plan or task documents and report that documentation synchronization was declined for this adjustment.
-7. If no relevant persisted plan or task exists, report that no documentation target was available and do not ask for confirmation.
+7. If no relevant persisted plan or task exists, report that no documentation target was available and do not ask for confirmation, unless the user explicitly established an Incremental Optimization Series; in that workflow, offer to create the first index and completed task after implementation.
 
 Do not use a Maintenance Adjustment to hide new product behavior, broaden completed scope, or bypass a new plan.
 

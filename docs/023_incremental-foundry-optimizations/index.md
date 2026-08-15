@@ -14,7 +14,7 @@ This plan collects the incremental optimizations requested after completion of P
 
 Only explicitly requested optimizations enter this plan. A new task is added when an optimization is defined, and its status is updated as implementation progresses. Completed tasks remain unchanged as historical records unless a later request explicitly revises the same behavior.
 
-The first optimization aligns renderer empty-state icons with the corresponding selected sidebar destination and slightly reduces the visual density of the shared empty-state message.
+The first optimization aligns renderer empty-state icons with the corresponding selected sidebar destination and slightly reduces the visual density of the shared empty-state message. The second optimization improves the shared empty state's visual hierarchy with an inset, low-contrast rounded dashed boundary that defines the otherwise empty content region without competing with its compact message.
 
 ## Working Agreement
 
@@ -50,3 +50,4 @@ The first optimization aligns renderer empty-state icons with the corresponding 
 ## Tasks
 
 - [x] [Task 001: Align Empty-State Icons and Density](./task001_align-empty-state-icons-and-density.md)
+- [x] [Task 002: Refine Empty-State Visual Hierarchy](./task002_refine-empty-state-visual-hierarchy.md)

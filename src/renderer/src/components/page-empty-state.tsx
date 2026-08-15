@@ -20,6 +20,7 @@ export function PageEmptyState({ icon, text }: PageEmptyStateProps) {
       headingLevel={2}
       title={text}
       icon={<Icon icon={icon} size="lg" color="secondary" />}
+      isCompact
       xstyle={styles.emptyState}
     />
   );

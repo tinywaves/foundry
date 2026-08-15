@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { TrashedPromptSummary } from '../../../shared/prompt-contract';
 import { PageEmptyState } from '@renderer/components/page-empty-state';
 import { PageHeader } from '@renderer/components/page-header';
+import { agentExtensionIcons } from '@renderer/navigation-icons';
 import { getTrashedPromptListQueryOptions } from './prompts/prompt-query';
 import { getEmptyTrashDescription } from './prompts/prompt-trash-model';
 import {
@@ -75,7 +76,7 @@ export function PromptTrashPage() {
     );
   } else {
     const trashData = trashQuery.data.length === 0
-      ? <PageEmptyState icon={Trash2} text="Trash Is Empty" />
+      ? <PageEmptyState icon={agentExtensionIcons.prompts} text="Trash Is Empty" />
       : (
           <PromptTrashTable
             prompts={trashQuery.data}

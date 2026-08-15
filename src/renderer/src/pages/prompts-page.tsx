@@ -6,12 +6,13 @@ import { Layout, LayoutContent, LayoutHeader } from '@astryxdesign/core/Layout';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { useToast } from '@astryxdesign/core/Toast';
 import { useQuery } from '@tanstack/react-query';
-import { FileText, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import type { PromptSummary } from '../../../shared/prompt-contract';
 import { PageEmptyState } from '@renderer/components/page-empty-state';
 import { PageHeader } from '@renderer/components/page-header';
+import { agentExtensionIcons } from '@renderer/navigation-icons';
 import { routePaths } from '@renderer/routes';
 import { getPromptListQueryOptions } from './prompts/prompt-query';
 import { PromptTable, PromptTableLoading } from './prompts/prompt-table';
@@ -55,7 +56,7 @@ export function PromptsPage() {
     );
   } else {
     const promptData = promptsQuery.data.length === 0
-      ? <PageEmptyState icon={FileText} text="No Prompts Yet" />
+      ? <PageEmptyState icon={agentExtensionIcons.prompts} text="No Prompts Yet" />
       : (
           <PromptTable
             prompts={promptsQuery.data}

@@ -8,7 +8,7 @@ import { useToast } from '@astryxdesign/core/Toast';
 import { Toolbar } from '@astryxdesign/core/Toolbar';
 import * as stylex from '@stylexjs/stylex';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, ServerCog } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import {
   useCallback,
   useEffect,
@@ -20,6 +20,7 @@ import { providerRuntimes } from '../../../shared/provider-contract';
 import type { ProviderRuntime, ProviderSummary } from '../../../shared/provider-contract';
 import { PageEmptyState } from '@renderer/components/page-empty-state';
 import { PageHeader } from '@renderer/components/page-header';
+import { agentRuntimeIcons } from '@renderer/navigation-icons';
 import { ProviderDialog } from './providers/provider-dialog';
 import type { ProviderDialogRequest } from './providers/provider-dialog';
 import {
@@ -213,7 +214,7 @@ export function ProvidersPage() {
   } else if (state.providers.length === 0) {
     content = (
       <PageEmptyState
-        icon={ServerCog}
+        icon={agentRuntimeIcons.providers}
         text={`No ${providerRuntimeLabels[runtime]} Providers Yet`}
       />
     );

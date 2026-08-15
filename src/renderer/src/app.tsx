@@ -14,16 +14,19 @@ import {
 } from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {
-  Bot,
-  FileText,
-  LayoutDashboard,
-  MessagesSquare,
-  Plug,
-  Wrench,
-} from 'lucide-react';
-import { Link as RouterLink, Navigate, Route, Routes, useLocation } from 'react-router';
-import { McpIcon } from '@renderer/components/mcp-icon';
+  Link as RouterLink,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from 'react-router';
 import { WindowDragRegion } from '@renderer/components/window-drag-region';
+import {
+  agentExtensionIcons,
+  agentObservabilityIcons,
+  agentRuntimeIcons,
+  dashboardIcon,
+} from '@renderer/navigation-icons';
 import { DashboardPage } from '@renderer/pages/dashboard-page';
 import { McpServersPage } from '@renderer/pages/mcp-servers-page';
 import { PromptCreatePage, PromptEditPage } from '@renderer/pages/prompt-editor-page';
@@ -85,21 +88,6 @@ const sidebarResizeConfig = {
   maxWidth: 400,
 };
 
-const agentRuntimeIcons = {
-  providers: Plug,
-  runtimes: Bot,
-};
-
-const agentExtensionIcons = {
-  skills: Wrench,
-  mcpServers: McpIcon,
-  prompts: FileText,
-};
-
-const agentObservabilityIcons = {
-  sessions: MessagesSquare,
-};
-
 export default function App() {
   const isMacOS = globalThis.api.platform === 'darwin';
   const { pathname } = useLocation();
@@ -151,7 +139,7 @@ export default function App() {
                     <SideNavItem
                       as={RouterLink}
                       label="Dashboard"
-                      icon={LayoutDashboard}
+                      icon={dashboardIcon}
                       href={routePaths.dashboard}
                       isSelected={pathname === routePaths.dashboard}
                     />

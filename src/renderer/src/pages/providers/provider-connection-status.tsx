@@ -2,12 +2,6 @@ import { HStack } from '@astryxdesign/core/Stack';
 import { StatusDot } from '@astryxdesign/core/StatusDot';
 import { Text } from '@astryxdesign/core/Text';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
-import {
-  borderVars,
-  colorVars,
-  radiusVars,
-  spacingVars,
-} from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import type { ProviderConnectionSummary } from '../../../../shared/provider-contract';
 import { getProviderConnectionStatusPresentation } from './provider-connection-status-model';
@@ -20,21 +14,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
 const styles = stylex.create({
   statusTrigger: {
     width: 'fit-content',
-    borderRadius: radiusVars['--radius-element'],
     cursor: 'help',
-    outlineWidth: {
-      'default': 0,
-      ':focus-visible': borderVars['--border-width'],
-    },
-    outlineStyle: {
-      'default': 'none',
-      ':focus-visible': 'solid',
-    },
-    outlineColor: {
-      'default': null,
-      ':focus-visible': colorVars['--color-accent'],
-    },
-    outlineOffset: spacingVars['--spacing-1'],
   },
 });
 
@@ -62,7 +42,6 @@ export function ProviderConnectionStatus({
     <HStack
       gap={2}
       vAlign="center"
-      tabIndex={hasDetails ? 0 : undefined}
       aria-label={hasDetails ? `${status.label}. ${details.join('. ')}` : status.label}
       xstyle={hasDetails && styles.statusTrigger}
     >

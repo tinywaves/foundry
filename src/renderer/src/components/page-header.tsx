@@ -13,10 +13,11 @@ const styles = stylex.create({
 
 interface PageHeaderProps {
   action?: ReactNode;
+  start?: ReactNode;
   text: string;
 }
 
-export function PageHeader({ action, text }: PageHeaderProps) {
+export function PageHeader({ action, start, text }: PageHeaderProps) {
   return (
     <Section padding={4} paddingBlock={2}>
       <HStack
@@ -26,6 +27,7 @@ export function PageHeader({ action, text }: PageHeaderProps) {
         vAlign="center"
         wrap="wrap"
       >
+        {start ? <StackItem>{start}</StackItem> : null}
         <StackItem size="fill" xstyle={styles.title}>
           <Heading
             level={3}

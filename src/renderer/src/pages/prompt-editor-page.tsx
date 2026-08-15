@@ -11,7 +11,7 @@ import { ToggleButton } from '@astryxdesign/core/ToggleButton';
 import { typographyVars } from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Copy, History, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Copy, History, RotateCcw } from 'lucide-react';
 import type { SyntheticEvent } from 'react';
 import {
   useCallback,
@@ -41,6 +41,11 @@ import type {
   PromptFormValues,
 } from './prompts/prompt-form-model';
 import { PromptPageLoading } from './prompts/prompt-page-loading';
+import {
+  isPromptEditorExitDisabled,
+  promptEditorListNavigateOptions,
+  promptEditorListPath,
+} from './prompts/prompt-editor-navigation';
 import { PromptHistoryPanel } from './prompts/prompt-history-panel';
 import { getPromptVersionSelectionAction } from './prompts/prompt-history-model';
 import {
@@ -71,6 +76,27 @@ function getErrorStatus(message: string | undefined) {
   return message ? { type: 'error' as const, message } : undefined;
 }
 
+interface PromptEditorBackButtonProps {
+  isDisabled?: boolean;
+  onClick: () => void;
+}
+
+function PromptEditorBackButton({
+  isDisabled = false,
+  onClick,
+}: PromptEditorBackButtonProps) {
+  return (
+    <Button
+      label="Back to Prompts"
+      type="button"
+      variant="ghost"
+      icon={<Icon icon={ArrowLeft} size="sm" color="inherit" />}
+      isDisabled={isDisabled}
+      onClick={onClick}
+    />
+  );
+}
+
 function PromptEditor({ initialDetail }: PromptEditorProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -89,14 +115,8 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
   const [isRestoreOpen, setIsRestoreOpen] = useState(false);
   const allowNavigationRef = useRef(false);
   const versionRequestIdRef = useRef(0);
-  const titleInputRef = useRef<HTMLInputElement>(null);
-  const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
-  const contentInputRef = useRef<HTMLTextAreaElement>(null);
   const isEditing = currentDetail !== undefined;
   const isDirty = hasPromptFormChanges(values, baselineValues);
-  const destination = currentDetail
-    ? routePaths.agentExtensionsPrompt(currentDetail.id)
-    : routePaths.agentExtensionsPrompts;
 
   useEffect(() => () => {
     versionRequestIdRef.current += 1;
@@ -106,6 +126,10 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
     isDirty && !allowNavigationRef.current
   ), [isDirty]);
   const blocker = useBlocker(shouldBlock);
+
+  const returnToPrompts = () => {
+    void navigate(promptEditorListPath, promptEditorListNavigateOptions);
+  };
 
   async function savePrompt(input: CreatePromptInput): Promise<PromptDetail> {
     if (currentDetail) {
@@ -183,16 +207,6 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
       return nextErrors;
     });
   }, []);
-
-  const focusFirstError = (nextErrors: PromptFormErrors) => {
-    if (nextErrors.title) {
-      titleInputRef.current?.focus();
-    } else if (nextErrors.description) {
-      descriptionInputRef.current?.focus();
-    } else if (nextErrors.content) {
-      contentInputRef.current?.focus();
-    }
-  };
 
   const showCurrentVersion = useCallback(() => {
     versionRequestIdRef.current += 1;
@@ -277,7 +291,6 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
     const validation = validatePromptForm(values);
     if (!validation.ok) {
       setErrors(validation.errors);
-      focusFirstError(validation.errors);
       return;
     }
     setErrors({});
@@ -292,7 +305,6 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
         }
         const apiErrors = getPromptFormApiErrorState(error.apiError).errors;
         setErrors(apiErrors);
-        focusFirstError(apiErrors);
       },
     });
   };
@@ -305,6 +317,11 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
     ? isCopyingVersion(selectedTarget)
     : false;
   const isEditorDisabled = saveMutation.isPending || pendingVersion !== undefined;
+  const isExitDisabled = isPromptEditorExitDisabled({
+    isRestoring: restoreMutation.isPending,
+    isSaving: saveMutation.isPending,
+    isVersionLoading: pendingVersion !== undefined,
+  });
   return (
     <VStack
       as="form"
@@ -319,6 +336,12 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
           <LayoutHeader hasDivider padding={0}>
             <PageHeader
               text={pageTitle}
+              start={(
+                <PromptEditorBackButton
+                  isDisabled={isExitDisabled}
+                  onClick={returnToPrompts}
+                />
+              )}
               action={currentDetail
                 ? (
                     <ToggleButton
@@ -348,7 +371,6 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
               : (
                   <FormLayout direction="vertical">
                     <TextInput
-                      ref={titleInputRef}
                       label="Title"
                       htmlName="title"
                       value={values.title}
@@ -359,7 +381,6 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
                       onChange={(value) => setField('title', value)}
                     />
                     <TextArea
-                      ref={descriptionInputRef}
                       label="Description"
                       htmlName="description"
                       value={values.description}
@@ -371,7 +392,6 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
                       onChange={(value) => setField('description', value)}
                     />
                     <TextArea
-                      ref={contentInputRef}
                       label="Content"
                       htmlName="content"
                       value={values.content}
@@ -429,8 +449,8 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
                       <Button
                         label="Cancel"
                         type="button"
-                        isDisabled={isEditorDisabled}
-                        onClick={() => void navigate(destination, { replace: true })}
+                        isDisabled={isExitDisabled}
+                        onClick={returnToPrompts}
                       />
                       <Button
                         label="Save"
@@ -513,10 +533,22 @@ export function PromptCreatePage() {
 }
 
 export function PromptEditPage() {
+  const navigate = useNavigate();
   const promptId = useParams().promptId ?? '';
   const promptQuery = usePromptDetail(promptId);
   if (!promptQuery.data) {
-    return <PromptPageLoading title="Edit Prompt" />;
+    return (
+      <PromptPageLoading
+        title="Edit Prompt"
+        start={(
+          <PromptEditorBackButton
+            onClick={() => {
+              void navigate(promptEditorListPath, promptEditorListNavigateOptions);
+            }}
+          />
+        )}
+      />
+    );
   }
   return <PromptEditor key={promptQuery.data.id} initialDetail={promptQuery.data} />;
 }

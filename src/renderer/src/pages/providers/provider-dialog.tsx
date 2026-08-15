@@ -184,18 +184,6 @@ function ConnectionTestMethod({ runtime }: { runtime: ProviderRuntime }) {
   );
 }
 
-function focusFirstFormError(formId: string, errors: ProviderFormErrors): void {
-  const fields = Object.keys(errors) as ProviderFormField[];
-  if (fields.length === 0) {
-    return;
-  }
-  const field = fields[0];
-  queueMicrotask(() => {
-    const form = document.getElementById(formId);
-    form?.querySelector<HTMLElement>(`[name="${CSS.escape(field)}"]`)?.focus();
-  });
-}
-
 function ProviderDialogFrame({
   request,
   activeRuntime,
@@ -506,7 +494,6 @@ function ProviderDialogFormSession({
     if (!validation.ok) {
       resetTestConnection();
       setFormErrors((current) => ({ ...current, ...validation.errors }));
-      focusFirstFormError(formId, validation.errors);
       return;
     }
 
@@ -518,11 +505,10 @@ function ProviderDialogFormSession({
         if (baseUrlError) {
           const nextErrors = { baseUrl: baseUrlError.message };
           setFormErrors((current) => ({ ...current, ...nextErrors }));
-          focusFirstFormError(formId, nextErrors);
         }
       },
     });
-  }, [formId, isTesting, resetTestConnection, testConnection, values]);
+  }, [isTesting, resetTestConnection, testConnection, values]);
 
   const handleSelectAvatar = useCallback(() => {
     if (isSelectingAvatar) {
@@ -587,7 +573,6 @@ function ProviderDialogFormSession({
     if (!validation.ok) {
       resetSave();
       setFormErrors(validation.errors);
-      focusFirstFormError(formId, validation.errors);
       return;
     }
 
@@ -607,7 +592,6 @@ function ProviderDialogFormSession({
         const errorState = getProviderFormApiErrorState(error.apiError);
         setFormErrors(errorState.formErrors);
         setAvatarError(errorState.avatarError);
-        focusFirstFormError(formId, errorState.formErrors);
       },
       onSuccess: (savedProvider) => {
         setInitialValuesSnapshot(values);
@@ -627,7 +611,6 @@ function ProviderDialogFormSession({
   }, [
     avatarIntent,
     applySavedProvider,
-    formId,
     initialValuesSnapshot,
     isApplyingProvider,
     isSaving,

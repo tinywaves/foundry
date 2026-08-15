@@ -9,12 +9,7 @@ import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { Token } from '@astryxdesign/core/Token';
 import { useToast } from '@astryxdesign/core/Toast';
-import {
-  borderVars,
-  colorVars,
-  radiusVars,
-  spacingVars,
-} from '@astryxdesign/core/theme/tokens.stylex';
+import { spacingVars } from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Pencil, PlugZap, Trash2 } from 'lucide-react';
@@ -52,21 +47,7 @@ const styles = stylex.create({
   },
   nameTrigger: {
     width: 'fit-content',
-    borderRadius: radiusVars['--radius-element'],
     cursor: 'help',
-    outlineWidth: {
-      'default': 0,
-      ':focus-visible': borderVars['--border-width'],
-    },
-    outlineStyle: {
-      'default': 'none',
-      ':focus-visible': 'solid',
-    },
-    outlineColor: {
-      'default': null,
-      ':focus-visible': colorVars['--color-accent'],
-    },
-    outlineOffset: spacingVars['--spacing-1'],
   },
 });
 
@@ -97,7 +78,6 @@ function ProviderName({ provider }: { provider: ProviderSummary }) {
       type="label"
       maxLines={1}
       hasTruncateTooltip={!hasMetadata}
-      tabIndex={hasMetadata ? 0 : undefined}
       aria-label={hasMetadata ? `${provider.name} provider details` : undefined}
       xstyle={[styles.providerName, hasMetadata && styles.nameTrigger]}
     >

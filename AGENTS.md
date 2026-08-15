@@ -58,6 +58,8 @@ After code changes, run checks appropriate to the affected area. At minimum, run
 
 For UI changes, do not launch the application or use browser, screenshot, accessibility-tree, or desktop automation to verify visual correctness. The user performs final visual inspection and acceptance. Continue to run applicable non-visual checks such as type checking, linting, builds, and automated behavior tests.
 
+Renderer automated tests must cover functional behavior and pure logic only, such as models, validation, state transitions, query helpers, and other independently testable functions. Do not import or render React components, pages, layouts, route trees that load UI modules, or StyleX styling in renderer tests, and do not assert DOM structure, layout, styling, screenshots, or other visual output. When route-related behavior needs automated coverage, extract and test pure route constants or functions instead of importing the rendered route configuration. Verify renderer UI changes through type checking, linting, production builds, and user-performed visual acceptance.
+
 ## Coding Conventions
 
 - Use TypeScript and avoid introducing untyped `any`. If an Electron API is not accurately represented by the current types, add a type declaration or a narrow local type.

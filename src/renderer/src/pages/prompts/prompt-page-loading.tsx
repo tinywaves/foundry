@@ -2,15 +2,21 @@ import { Layout, LayoutContent, LayoutHeader } from '@astryxdesign/core/Layout';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { VStack } from '@astryxdesign/core/Stack';
 import { sizeVars, spacingVars } from '@astryxdesign/core/theme/tokens.stylex';
+import type { ReactNode } from 'react';
 import { PageHeader } from '@renderer/components/page-header';
 
-export function PromptPageLoading({ title }: { title: string }) {
+interface PromptPageLoadingProps {
+  start?: ReactNode;
+  title: string;
+}
+
+export function PromptPageLoading({ start, title }: PromptPageLoadingProps) {
   return (
     <Layout
       height="fill"
       header={(
         <LayoutHeader hasDivider padding={0}>
-          <PageHeader text={title} />
+          <PageHeader start={start} text={title} />
         </LayoutHeader>
       )}
       content={(

@@ -1,7 +1,7 @@
 {
   "name": "foundry",
   "type": "commonjs",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "main": "./out/main/index.js",
   "packageManager": "pnpm@11.9.0",
   "devEngines": {

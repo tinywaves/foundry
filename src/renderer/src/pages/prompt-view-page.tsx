@@ -1,19 +1,17 @@
 import { AlertDialog } from '@astryxdesign/core/AlertDialog';
 import { Button } from '@astryxdesign/core/Button';
-import { Heading } from '@astryxdesign/core/Heading';
 import { Icon } from '@astryxdesign/core/Icon';
-import { Layout, LayoutContent, LayoutHeader } from '@astryxdesign/core/Layout';
-import { MetadataList, MetadataListItem } from '@astryxdesign/core/MetadataList';
-import { HStack, VStack } from '@astryxdesign/core/Stack';
-import { Text } from '@astryxdesign/core/Text';
-import { Timestamp } from '@astryxdesign/core/Timestamp';
+import { Layout, LayoutContent } from '@astryxdesign/core/Layout';
+import { HStack } from '@astryxdesign/core/Stack';
 import { Copy, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { PageHeader } from '@renderer/components/page-header';
 import { routePaths } from '@renderer/routes';
-import { PromptContent } from './prompts/prompt-content';
+import { getPromptEditorNavigateOptions } from './prompts/prompt-editor-navigation';
+import { promptLifecycleExitNavigateOptions } from './prompts/prompt-lifecycle-navigation';
 import { PromptPageLoading } from './prompts/prompt-page-loading';
+import { PromptReadOnlyContent } from './prompts/prompt-read-only-content';
+import { PromptWindowHeader } from './prompts/prompt-window-header';
 import { usePromptCopy } from './prompts/use-prompt-copy';
 import { usePromptDetail } from './prompts/use-prompt-detail';
 import { usePromptTrashActions } from './prompts/use-prompt-trash-actions';
@@ -25,9 +23,22 @@ export function PromptViewPage() {
   const { copyPrompt, isCopying } = usePromptCopy();
   const { moveMutation } = usePromptTrashActions();
   const [isMoveToTrashOpen, setIsMoveToTrashOpen] = useState(false);
+  const returnToPrompts = () => {
+    void navigate(routePaths.agentExtensionsPrompts, { replace: true });
+  };
 
   if (!promptQuery.data) {
-    return <PromptPageLoading title="Prompt" />;
+    return (
+      <PromptPageLoading
+        title="View Prompt"
+        header={(
+          <PromptWindowHeader
+            title="View Prompt"
+            onBack={returnToPrompts}
+          />
+        )}
+      />
+    );
   }
   const prompt = promptQuery.data;
 
@@ -36,57 +47,48 @@ export function PromptViewPage() {
       <Layout
         height="fill"
         header={(
-          <LayoutHeader hasDivider padding={0}>
-            <PageHeader
-              text={prompt.title}
-              action={(
-                <HStack gap={2} vAlign="center">
-                  <Button
-                    label="Copy"
-                    icon={<Icon icon={Copy} size="sm" color="inherit" />}
-                    isLoading={isCopying(prompt.id)}
-                    onClick={() => copyPrompt(prompt.id)}
-                  />
-                  <Button
-                    label="Move to Trash"
-                    variant="destructive"
-                    icon={<Icon icon={Trash2} size="sm" color="inherit" />}
-                    onClick={() => setIsMoveToTrashOpen(true)}
-                  />
-                  <Button
-                    label="Edit"
-                    variant="primary"
-                    icon={<Icon icon={Pencil} size="sm" color="inherit" />}
-                    onClick={() => void navigate(
-                      routePaths.agentExtensionsPromptEdit(prompt.id),
-                    )}
-                  />
-                </HStack>
-              )}
-            />
-          </LayoutHeader>
+          <PromptWindowHeader
+            title={prompt.title}
+            onBack={returnToPrompts}
+            action={(
+              <HStack gap={2} vAlign="center">
+                <Button
+                  label="Copy"
+                  size="sm"
+                  icon={<Icon icon={Copy} size="sm" color="inherit" />}
+                  isLoading={isCopying(prompt.id)}
+                  onClick={() => copyPrompt(prompt.id)}
+                />
+                <Button
+                  label="Move to Trash"
+                  size="sm"
+                  variant="destructive"
+                  icon={<Icon icon={Trash2} size="sm" color="inherit" />}
+                  onClick={() => setIsMoveToTrashOpen(true)}
+                />
+              </HStack>
+            )}
+            primaryAction={(
+              <Button
+                label="Edit"
+                size="sm"
+                variant="primary"
+                icon={<Icon icon={Pencil} size="sm" color="inherit" />}
+                onClick={() => void navigate(
+                  routePaths.agentExtensionsPromptEdit(prompt.id),
+                  getPromptEditorNavigateOptions('view'),
+                )}
+              />
+            )}
+          />
         )}
         content={(
           <LayoutContent>
-            <VStack gap={6} width="100%">
-              <MetadataList columns="single" label={{ position: 'top' }}>
-                <MetadataListItem label="Description">
-                  <Text color={prompt.description ? 'primary' : 'secondary'}>
-                    {prompt.description ?? 'None'}
-                  </Text>
-                </MetadataListItem>
-                <MetadataListItem label="Updated At">
-                  <Timestamp
-                    value={new Date(prompt.updatedAt).toISOString()}
-                    format="date_time"
-                  />
-                </MetadataListItem>
-              </MetadataList>
-              <VStack gap={2} width="100%">
-                <Heading level={3}>Prompt</Heading>
-                <PromptContent content={prompt.content} />
-              </VStack>
-            </VStack>
+            <PromptReadOnlyContent
+              title={prompt.title}
+              description={prompt.description}
+              content={prompt.content}
+            />
           </LayoutContent>
         )}
       />
@@ -109,7 +111,10 @@ export function PromptViewPage() {
           moveMutation.mutate(prompt, {
             onSuccess: () => {
               setIsMoveToTrashOpen(false);
-              void navigate(routePaths.agentExtensionsPrompts, { replace: true });
+              void navigate(
+                routePaths.agentExtensionsPrompts,
+                promptLifecycleExitNavigateOptions,
+              );
             },
           });
         }}

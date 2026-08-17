@@ -1,5 +1,6 @@
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
+import { useTheme } from '@astryxdesign/core/theme';
 import CodeMirror, { EditorState, EditorView } from '@uiw/react-codemirror';
 import type { Extension } from '@uiw/react-codemirror';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
@@ -36,6 +37,7 @@ export function PromptMarkdownSourceEditor({
   onChange,
   value,
 }: PromptMarkdownSourceEditorProps) {
+  const { mode: themeMode } = useTheme();
   const editorViewRef = useRef<EditorView | undefined>(undefined);
   const lineSeparator = getPromptContentLineSeparator(value);
   const extensions = useMemo<Extension[]>(() => {
@@ -86,6 +88,7 @@ export function PromptMarkdownSourceEditor({
       value={value}
       height={height}
       width="100%"
+      theme={themeMode}
       extensions={extensions}
       editable={!isReadOnly}
       readOnly={isReadOnly}

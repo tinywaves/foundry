@@ -46,14 +46,6 @@ const appShellRoutes: RouteObject[] = [
     element: <PromptTrashPage />,
   },
   {
-    path: routePatterns.agentExtensionsTrashedPrompt,
-    element: <PromptTrashViewPage />,
-  },
-  {
-    path: routePatterns.agentExtensionsPrompt,
-    element: <PromptViewPage />,
-  },
-  {
     path: routePaths.agentRuntime,
     element: <Navigate to={routePaths.agentRuntimeRuntimes} replace />,
   },
@@ -85,8 +77,16 @@ const fullWindowRoutes: RouteObject[] = [
     element: <PromptCreatePage />,
   },
   {
+    path: routePatterns.agentExtensionsTrashedPrompt,
+    element: <PromptTrashViewPage />,
+  },
+  {
     path: routePatterns.agentExtensionsPromptEdit,
     element: <PromptEditPage />,
+  },
+  {
+    path: routePatterns.agentExtensionsPrompt,
+    element: <PromptViewPage />,
   },
 ];
 

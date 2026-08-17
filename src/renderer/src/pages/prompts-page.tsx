@@ -11,6 +11,7 @@ import {
   PromptCardGrid,
   PromptCardGridLoading,
 } from './prompts/prompt-card-grid';
+import { getPromptEditorNavigateOptions } from './prompts/prompt-editor-navigation';
 import { PromptLibraryHeader } from './prompts/prompt-library-header';
 import { getPromptListQueryOptions } from './prompts/prompt-query';
 import { usePromptCopy } from './prompts/use-prompt-copy';
@@ -25,7 +26,10 @@ export function PromptsPage() {
   const [promptToTrash, setPromptToTrash] = useState<PromptSummary>();
   const listErrorMessage = promptsQuery.error?.message;
   const editPrompt = useCallback((promptId: string) => {
-    void navigate(routePaths.agentExtensionsPromptEdit(promptId));
+    void navigate(
+      routePaths.agentExtensionsPromptEdit(promptId),
+      getPromptEditorNavigateOptions('list'),
+    );
   }, [navigate]);
 
   useEffect(() => {

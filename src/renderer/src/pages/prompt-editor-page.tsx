@@ -1,10 +1,9 @@
 import { AlertDialog } from '@astryxdesign/core/AlertDialog';
 import { Button } from '@astryxdesign/core/Button';
 import { FormLayout } from '@astryxdesign/core/FormLayout';
-import { Heading } from '@astryxdesign/core/Heading';
 import { Icon } from '@astryxdesign/core/Icon';
-import { Layout, LayoutContent, LayoutHeader } from '@astryxdesign/core/Layout';
-import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
+import { Layout, LayoutContent } from '@astryxdesign/core/Layout';
+import { VStack } from '@astryxdesign/core/Stack';
 import { TextArea } from '@astryxdesign/core/TextArea';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { useToast } from '@astryxdesign/core/Toast';
@@ -12,22 +11,26 @@ import { ToggleButton } from '@astryxdesign/core/ToggleButton';
 import { spacingVars } from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, History, RotateCcw } from 'lucide-react';
-import type { ReactNode, SyntheticEvent } from 'react';
+import { History, RotateCcw } from 'lucide-react';
+import type { SyntheticEvent } from 'react';
 import {
   useCallback,
   useEffect,
   useRef,
   useState,
 } from 'react';
-import { useBlocker, useNavigate, useParams } from 'react-router';
+import {
+  useBlocker,
+  useLocation,
+  useNavigate,
+  useParams,
+} from 'react-router';
 import type {
   CreatePromptInput,
   PromptDetail,
   PromptVersionDetail,
   PromptVersionTarget,
 } from '../../../shared/prompt-contract';
-import { WindowDragRegion } from '@renderer/components/window-drag-region';
 import { routePaths } from '@renderer/routes';
 import {
   createPromptFormValues,
@@ -44,7 +47,9 @@ import type {
 import { PromptPageLoading } from './prompts/prompt-page-loading';
 import { PromptMarkdownEditor } from './prompts/prompt-markdown-editor';
 import type { PromptMarkdownMode } from './prompts/prompt-markdown-editor';
+import { PromptWindowHeader } from './prompts/prompt-window-header';
 import {
+  getPromptEditorBackNavigation,
   isPromptEditorExitDisabled,
   promptEditorListNavigateOptions,
   promptEditorListPath,
@@ -64,9 +69,6 @@ const styles = stylex.create({
     minWidth: 0,
     minHeight: 0,
   },
-  headerContent: {
-    boxSizing: 'border-box',
-  },
   historicalFields: {
     borderStyle: 'none',
     margin: spacingVars['--spacing-0'],
@@ -76,99 +78,20 @@ const styles = stylex.create({
 });
 
 interface PromptEditorProps {
+  backLabel?: string;
   initialDetail?: PromptDetail;
+  onBack?: () => void;
 }
 
 function getErrorStatus(message: string | undefined) {
   return message ? { type: 'error' as const, message } : undefined;
 }
 
-interface PromptEditorBackButtonProps {
-  isDisabled?: boolean;
-  onClick: () => void;
-}
-
-function PromptEditorBackButton({
-  isDisabled = false,
-  onClick,
-}: PromptEditorBackButtonProps) {
-  return (
-    <Button
-      label="Back to Prompts"
-      type="button"
-      size="sm"
-      variant="ghost"
-      icon={<Icon icon={ArrowLeft} size="sm" color="inherit" />}
-      isDisabled={isDisabled}
-      onClick={onClick}
-    />
-  );
-}
-
-interface PromptEditorHeaderProps extends PromptEditorBackButtonProps {
-  action?: ReactNode;
-  primaryAction?: ReactNode;
-  title: string;
-}
-
-function PromptEditorHeader({
-  action,
-  isDisabled,
-  onClick,
-  primaryAction,
-  title,
-}: PromptEditorHeaderProps) {
-  const isMacOS = globalThis.api.platform === 'darwin';
-
-  return (
-    <LayoutHeader padding={0}>
-      <VStack width="100%">
-        <WindowDragRegion
-          isDraggable={isMacOS}
-          variant="header"
-        >
-          <HStack
-            width="100%"
-            height="100%"
-            paddingInline={3}
-            hAlign="center"
-            vAlign="center"
-            xstyle={styles.headerContent}
-          >
-            <Heading
-              level={4}
-              accessibilityLevel={1}
-              maxLines={1}
-              justify="center"
-              textWrap="nowrap"
-            >
-              {title}
-            </Heading>
-          </HStack>
-        </WindowDragRegion>
-        <HStack
-          width="100%"
-          gap={2}
-          padding={4}
-          paddingBlock={2}
-          hAlign="start"
-          vAlign="center"
-          xstyle={styles.headerContent}
-        >
-          <PromptEditorBackButton
-            isDisabled={isDisabled}
-            onClick={onClick}
-          />
-          {action || primaryAction ? <StackItem size="fill" /> : null}
-          {action}
-          {primaryAction}
-        </HStack>
-      </VStack>
-    </LayoutHeader>
-  );
-}
-
-function PromptEditor({ initialDetail }: PromptEditorProps) {
+function PromptEditor({
+  backLabel,
+  initialDetail,
+  onBack,
+}: PromptEditorProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const showToast = useToast();
@@ -202,6 +125,7 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
   const returnToPrompts = () => {
     void navigate(promptEditorListPath, promptEditorListNavigateOptions);
   };
+  const returnFromEditor = onBack ?? returnToPrompts;
 
   async function savePrompt(input: CreatePromptInput): Promise<PromptDetail> {
     if (currentDetail) {
@@ -413,10 +337,11 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
       <Layout
         height="fill"
         header={(
-          <PromptEditorHeader
+          <PromptWindowHeader
             title={promptName}
-            isDisabled={isExitDisabled}
-            onClick={returnToPrompts}
+            backLabel={backLabel}
+            isBackDisabled={isExitDisabled}
+            onBack={returnFromEditor}
             primaryAction={selectedVersion
               ? (
                   <Button
@@ -585,23 +510,38 @@ export function PromptCreatePage() {
 }
 
 export function PromptEditPage() {
+  const location = useLocation();
   const navigate = useNavigate();
   const promptId = useParams().promptId ?? '';
   const promptQuery = usePromptDetail(promptId);
+  const backNavigation = getPromptEditorBackNavigation(location.state);
+  const returnFromEdit = () => {
+    if (backNavigation.kind === 'history') {
+      void navigate(-1);
+      return;
+    }
+    void navigate(backNavigation.path, backNavigation.options);
+  };
   if (!promptQuery.data) {
     return (
       <PromptPageLoading
         title="Edit Prompt"
         header={(
-          <PromptEditorHeader
+          <PromptWindowHeader
             title="Edit Prompt"
-            onClick={() => {
-              void navigate(promptEditorListPath, promptEditorListNavigateOptions);
-            }}
+            backLabel={backNavigation.label}
+            onBack={returnFromEdit}
           />
         )}
       />
     );
   }
-  return <PromptEditor key={promptQuery.data.id} initialDetail={promptQuery.data} />;
+  return (
+    <PromptEditor
+      key={promptQuery.data.id}
+      initialDetail={promptQuery.data}
+      backLabel={backNavigation.label}
+      onBack={returnFromEdit}
+    />
+  );
 }

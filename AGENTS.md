@@ -113,6 +113,7 @@ When changing release configuration, keep the pnpm version, Node.js version, bui
 - Do not use destructive commands to overwrite existing workspace changes.
 - Do not commit build artifacts, dependency directories, or local environment files.
 - Before committing, inspect `git status` and `git diff` and confirm that only task-related changes are included.
+- Commit messages must use `<type>(<scope>): <concrete behavior or outcome>`. Subjects must contain at least three words and 12 characters. `feat`, `fix`, and `perf` commits require a scope because their subjects become grouped GitHub Release notes. Avoid vague subjects such as `fix issue`, `update code`, or `wip`.
 
 <!-- ASTRYX:START -->
 Astryx v0.2.0 · 154 components

@@ -10,7 +10,7 @@ Establish sibling standard-shell and full-window route layouts, then use the ful
 
 ## Detail
 
-Foundry will register two mutually exclusive layout branches at the router boundary. `AppShellLayout` will own the standard `AppShell`, `SideNav`, and an outlet for ordinary application pages. `FullWindowLayout` will own only the reusable full-window boundary, a macOS-only full-width `WindowDragRegion`, and an outlet for routes that require the complete application window.
+Foundry will register two mutually exclusive layout branches at the router boundary. `AppShellLayout` will own the standard `AppShell`, `SideNav`, and an outlet for ordinary application pages. `FullWindowLayout` will own only the reusable full-window boundary, the Astryx surface background shared with standard content areas, a macOS-only full-width `WindowDragRegion`, and an outlet for routes that require the complete application window.
 
 The layouts will be selected by route registration rather than by Prompt-specific checks or visual hiding inside the application root. Entering a full-window route will unmount `AppShellLayout` and `SideNav`. The resizable SideNav will use a stable `autoSaveId` so its user-adjusted width is restored when the standard layout mounts again and across application restarts.
 
@@ -22,7 +22,7 @@ This plan establishes a reusable route-layout boundary, not a root-level workspa
 
 - Sibling `AppShellLayout` and `FullWindowLayout` branches at the renderer router boundary.
 - Migration of standard application routes into the `AppShellLayout` branch.
-- A generic full-window route layout with a macOS-only, full-width `WindowDragRegion` and an outlet.
+- A generic full-window route layout with the Astryx surface background, a macOS-only full-width `WindowDragRegion`, and an outlet.
 - Mutually exclusive route rendering with one active layout branch for each URL.
 - Stable SideNav width persistence through its resizable `autoSaveId` across layout unmounts and application restarts.
 - Migration of Prompt New/Edit routes into the full-window branch.
@@ -47,7 +47,7 @@ This plan establishes a reusable route-layout boundary, not a root-level workspa
 - Register `AppShellLayout` and `FullWindowLayout` as sibling route layouts rather than conditionally switching content inside `App`.
 - Render exactly one layout branch for the active URL; do not mount duplicate route trees or hide an inactive shell behind another layer.
 - Let full-window routes unmount `AppShellLayout` and `SideNav`, while preserving the SideNav width with a stable `autoSaveId`.
-- Keep `FullWindowLayout` domain-agnostic: it owns only full-window structure, macOS window dragging, and an outlet.
+- Keep `FullWindowLayout` domain-agnostic: it owns only full-window structure, the shared Astryx surface background, macOS window dragging, and an outlet.
 - Keep Back to Prompts, History, Cancel, form state, and other Prompt-specific behavior in Prompt-owned pages.
 - Reuse the existing `WindowDragRegion` as a full-width top row on macOS and omit it on Windows and Linux.
 - Make Back to Prompts and both Create/Edit Cancel actions navigate with replacement to `/agent-extensions/prompts`.

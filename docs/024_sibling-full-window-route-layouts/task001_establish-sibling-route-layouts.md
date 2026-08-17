@@ -14,7 +14,7 @@ Create a renderer router module that owns the route-object configuration used by
 
 Move the current `AppShell`, SideNav composition, navigation selection logic, macOS SideNav drag region, skip link, and main-content boundary into `src/renderer/src/layouts/app-shell-layout.tsx`. Replace the nested `<Routes>` tree with `<Outlet />`. Register every current production route as a child of this layout during Task 001, including New Prompt and Edit Prompt, so all current pages, redirects, deep links, scrolling, and fallback behavior remain in the standard shell until Task 002. Keep the wildcard redirect inside the standard-shell branch so an unknown URL continues to render through the standard shell and redirect to Dashboard.
 
-Add `src/renderer/src/layouts/full-window-layout.tsx` as a domain-agnostic full-window boundary. It will fill the renderer root, render the existing full-width `WindowDragRegion` as the first row only when `globalThis.api.platform` is `darwin`, and provide a focusable main-content region that fills the remaining space and renders `<Outlet />`. Windows and Linux will omit the custom drag row. The layout will not import Prompt pages, Prompt route constants, or Prompt state, and it will not own domain headers, navigation controls, or page-specific scrolling. Its main region will preserve the minimum-size constraints required by nested fill layouts without forcing an outer scroll container, allowing future full-window pages to own their content scrolling and avoiding double scrolling for the Prompt editor.
+Add `src/renderer/src/layouts/full-window-layout.tsx` as a domain-agnostic full-window boundary. It will fill the renderer root, apply the Astryx `--color-background-surface` token shared with standard content areas, render the existing full-width `WindowDragRegion` as the first row only when `globalThis.api.platform` is `darwin`, and provide a focusable main-content region that fills the remaining space and renders `<Outlet />`. Windows and Linux will omit the custom drag row. The layout will not import Prompt pages, Prompt route constants, or Prompt state, and it will not own domain headers, navigation controls, or page-specific scrolling. Its main region will preserve the minimum-size constraints required by nested fill layouts without forcing an outer scroll container, allowing future full-window pages to own their content scrolling and avoiding double scrolling for the Prompt editor.
 
 Register the full-window sibling branch with no production business children in Task 001. This keeps the architecture present without moving Prompt New/Edit prematurely. Static route inspection confirms that current explicit routes and the standard-shell wildcard remain under `AppShellLayout`; Task 002 can later relocate the exact Prompt editor route registrations into the sibling full-window branch.
 
@@ -38,7 +38,7 @@ None.
 
 - A renderer-owned route-object configuration with sibling standard-shell and full-window layout branches.
 - An `AppShellLayout` containing the existing application shell, SideNav, navigation state, and an `<Outlet />` for standard pages.
-- A domain-agnostic `FullWindowLayout` with platform-aware window dragging, a full-window main-content boundary, and an `<Outlet />`.
+- A domain-agnostic `FullWindowLayout` with the shared Astryx surface background, platform-aware window dragging, a full-window main-content boundary, and an `<Outlet />`.
 - A shared Skip to Main Content component used by both mutually exclusive layouts.
 - SideNav width persistence through a stable Astryx `autoSaveId` while preserving the existing width bounds.
 - The complete current page, redirect, deep-link, and fallback route set under `AppShellLayout`.
@@ -57,7 +57,7 @@ None.
 - [x] The standard SideNav retains its content, selection behavior, resize bounds, and macOS drag region.
 - [x] A resized SideNav width is restored after layout remounts and application restarts.
 - [x] Missing, unavailable, malformed, or out-of-range SideNav persistence data safely falls back to or is constrained by the existing `200` to `400` width configuration.
-- [x] `FullWindowLayout` fills the application window and renders child content through `<Outlet />`.
+- [x] `FullWindowLayout` fills the application window, applies the Astryx surface background, and renders child content through `<Outlet />`.
 - [x] On macOS, `FullWindowLayout` begins with the existing full-width `WindowDragRegion`.
 - [x] On Windows and Linux, `FullWindowLayout` renders without an additional custom drag row.
 - [x] `FullWindowLayout` has no Prompt page, Prompt route, or Prompt state dependency.
@@ -77,7 +77,7 @@ None.
 
 ## Handoff
 
-Task 002 will consume the registered `FullWindowLayout` branch by moving the New/Edit Prompt route definitions from the standard route collection into the full-window route collection. It will then implement the Prompt-owned Back and Cancel behavior without changing `main.tsx`, the standard-shell boundary, or the full-window layout contract.
+Task 002 will consume the registered `FullWindowLayout` branch by moving the New/Edit Prompt route definitions from the standard route collection into the full-window route collection. It will then implement the Prompt-owned Back and Cancel behavior without changing `main.tsx`, the standard-shell boundary, or the full-window layout contract, including its shared surface background.
 
 ## Verification
 
@@ -99,3 +99,11 @@ Task 002 will consume the registered `FullWindowLayout` branch by moving the New
 - Reason: The user requires renderer automated tests to cover functional behavior and pure logic only, not UI components or styling.
 - Documentation impact: Synchronized the Plan 024 index and Task 001 current-state and verification statements.
 - Verification: `pnpm test` passed 21 test files and 135 tests; `pnpm typecheck`, `pnpm lint`, `pnpm build`, and `git diff --check` passed.
+
+### 2026-08-17 23:50:25: Align the Full-Window Surface Background
+
+- Change: Applied the Astryx `--color-background-surface` token to the shared `FullWindowLayout` root so every full-window route inherits the same surface hierarchy as standard application content.
+- Previous state: `FullWindowLayout` did not set a background and exposed the darker underlying application body color across Settings and Prompt full-window routes.
+- Reason: The user requested that full-window pages use the lighter dark surface already established by non-full-window content instead of a near-black canvas.
+- Documentation impact: Updated the Plan 024 index and Task 001 current-state statements while preserving their completed status, checklist order, and original acceptance boundary.
+- Verification: `pnpm typecheck`, `pnpm lint`, `pnpm test` (26 files and 158 tests), `pnpm build`, and `git diff --check` passed; static inspection confirmed that the token is owned once by `FullWindowLayout` and no page-specific background override was introduced. No application launch or visual automation was performed.

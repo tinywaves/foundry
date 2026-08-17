@@ -16,6 +16,10 @@ import {
 } from 'react-router';
 import { WindowDragRegion } from '@renderer/components/window-drag-region';
 import {
+  applicationSidebarResizeConfig,
+  applicationSidebarStyles,
+} from '@renderer/layouts/application-sidebar';
+import {
   agentExtensionIcons,
   agentObservabilityIcons,
   agentRuntimeIcons,
@@ -43,21 +47,11 @@ const styles = stylex.create({
     height: spacingVars['--spacing-10'],
     objectFit: 'contain',
   },
-  sideNav: {
-    overflowX: 'clip',
-  },
   main: {
     minWidth: 0,
     minHeight: 0,
   },
 });
-
-const sidebarResizeConfig = {
-  defaultWidth: 200,
-  minWidth: 200,
-  maxWidth: 400,
-  autoSaveId: 'foundry-app-side-nav',
-};
 
 export function AppShellLayout() {
   const isMacOS = globalThis.api.platform === 'darwin';
@@ -71,12 +65,12 @@ export function AppShellLayout() {
       contentPadding={0}
       mobileNav={{ breakpoint: 'none', hasToggle: false }}
       sideNav={(
-        <VStack height="100%" xstyle={styles.sideNav}>
+        <VStack height="100%" xstyle={applicationSidebarStyles.root}>
           {isMacOS ? <WindowDragRegion /> : null}
           <StackItem size="fill">
             <SideNav
               collapsible={false}
-              resizable={sidebarResizeConfig}
+              resizable={applicationSidebarResizeConfig}
               footer={(
                 <SideNavItem
                   as={Link}

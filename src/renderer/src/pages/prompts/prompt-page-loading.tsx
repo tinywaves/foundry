@@ -6,15 +6,20 @@ import type { ReactNode } from 'react';
 import { PageHeader } from '@renderer/components/page-header';
 
 interface PromptPageLoadingProps {
+  header?: ReactNode;
   start?: ReactNode;
   title: string;
 }
 
-export function PromptPageLoading({ start, title }: PromptPageLoadingProps) {
+export function PromptPageLoading({
+  header,
+  start,
+  title,
+}: PromptPageLoadingProps) {
   return (
     <Layout
       height="fill"
-      header={(
+      header={header ?? (
         <LayoutHeader hasDivider padding={0}>
           <PageHeader start={start} text={title} />
         </LayoutHeader>

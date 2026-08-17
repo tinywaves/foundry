@@ -1,9 +1,10 @@
 import { AlertDialog } from '@astryxdesign/core/AlertDialog';
 import { Button } from '@astryxdesign/core/Button';
 import { FormLayout } from '@astryxdesign/core/FormLayout';
+import { Heading } from '@astryxdesign/core/Heading';
 import { Icon } from '@astryxdesign/core/Icon';
-import { Layout, LayoutContent, LayoutFooter, LayoutHeader } from '@astryxdesign/core/Layout';
-import { HStack, VStack } from '@astryxdesign/core/Stack';
+import { Layout, LayoutContent, LayoutHeader } from '@astryxdesign/core/Layout';
+import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
 import { TextArea } from '@astryxdesign/core/TextArea';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { useToast } from '@astryxdesign/core/Toast';
@@ -11,8 +12,8 @@ import { ToggleButton } from '@astryxdesign/core/ToggleButton';
 import { typographyVars } from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Copy, History, RotateCcw } from 'lucide-react';
-import type { SyntheticEvent } from 'react';
+import { ArrowLeft, History, RotateCcw } from 'lucide-react';
+import type { ReactNode, SyntheticEvent } from 'react';
 import {
   useCallback,
   useEffect,
@@ -26,7 +27,7 @@ import type {
   PromptVersionDetail,
   PromptVersionTarget,
 } from '../../../shared/prompt-contract';
-import { PageHeader } from '@renderer/components/page-header';
+import { WindowDragRegion } from '@renderer/components/window-drag-region';
 import { routePaths } from '@renderer/routes';
 import {
   createPromptFormValues,
@@ -54,14 +55,15 @@ import {
   resolvePromptRequest,
   updatePromptCaches,
 } from './prompts/prompt-query';
-import { PromptVersionContent } from './prompts/prompt-version-content';
-import { usePromptCopy } from './prompts/use-prompt-copy';
 import { usePromptDetail } from './prompts/use-prompt-detail';
 
 const styles = stylex.create({
   form: {
     minWidth: 0,
     minHeight: 0,
+  },
+  headerContent: {
+    boxSizing: 'border-box',
   },
   contentInput: {
     fontFamily: typographyVars['--font-family-code'],
@@ -89,6 +91,7 @@ function PromptEditorBackButton({
     <Button
       label="Back to Prompts"
       type="button"
+      size="sm"
       variant="ghost"
       icon={<Icon icon={ArrowLeft} size="sm" color="inherit" />}
       isDisabled={isDisabled}
@@ -97,11 +100,73 @@ function PromptEditorBackButton({
   );
 }
 
+interface PromptEditorHeaderProps extends PromptEditorBackButtonProps {
+  action?: ReactNode;
+  primaryAction?: ReactNode;
+  title: string;
+}
+
+function PromptEditorHeader({
+  action,
+  isDisabled,
+  onClick,
+  primaryAction,
+  title,
+}: PromptEditorHeaderProps) {
+  const isMacOS = globalThis.api.platform === 'darwin';
+
+  return (
+    <LayoutHeader padding={0}>
+      <VStack width="100%">
+        <WindowDragRegion
+          isDraggable={isMacOS}
+          variant="header"
+        >
+          <HStack
+            width="100%"
+            height="100%"
+            paddingInline={3}
+            hAlign="center"
+            vAlign="center"
+            xstyle={styles.headerContent}
+          >
+            <Heading
+              level={4}
+              accessibilityLevel={1}
+              maxLines={1}
+              justify="center"
+              textWrap="nowrap"
+            >
+              {title}
+            </Heading>
+          </HStack>
+        </WindowDragRegion>
+        <HStack
+          width="100%"
+          gap={2}
+          padding={4}
+          paddingBlock={2}
+          hAlign="start"
+          vAlign="center"
+          xstyle={styles.headerContent}
+        >
+          <PromptEditorBackButton
+            isDisabled={isDisabled}
+            onClick={onClick}
+          />
+          {action || primaryAction ? <StackItem size="fill" /> : null}
+          {action}
+          {primaryAction}
+        </HStack>
+      </VStack>
+    </LayoutHeader>
+  );
+}
+
 function PromptEditor({ initialDetail }: PromptEditorProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const showToast = useToast();
-  const { copyPromptVersion, isCopyingVersion } = usePromptCopy();
   const [currentDetail, setCurrentDetail] = useState(initialDetail);
   const [baselineValues, setBaselineValues] = useState(() => (
     createPromptFormValues(initialDetail)
@@ -116,7 +181,8 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
   const allowNavigationRef = useRef(false);
   const versionRequestIdRef = useRef(0);
   const isEditing = currentDetail !== undefined;
-  const isDirty = hasPromptFormChanges(values, baselineValues);
+  const isDirty = selectedVersion === undefined
+    && hasPromptFormChanges(values, baselineValues);
 
   useEffect(() => () => {
     versionRequestIdRef.current += 1;
@@ -212,8 +278,10 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
     versionRequestIdRef.current += 1;
     setPendingVersion(undefined);
     setSelectedVersion(undefined);
+    setValues(baselineValues);
+    setErrors({});
     setIsRestoreOpen(false);
-  }, []);
+  }, [baselineValues]);
 
   const closeHistory = useCallback(() => {
     showCurrentVersion();
@@ -236,7 +304,7 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
         return;
       }
       setSelectedVersion(snapshot);
-      setValues(baselineValues);
+      setValues(createPromptFormValues(snapshot));
       setErrors({});
     } catch (error) {
       if (versionRequestIdRef.current !== requestId) {
@@ -309,13 +377,10 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
     });
   };
 
-  const pageTitle = isEditing ? 'Edit Prompt' : 'New Prompt';
+  const promptName = values.title.trim() || 'Untitled';
   const selectedTarget = currentDetail && selectedVersion
     ? { id: currentDetail.id, version: selectedVersion.version }
     : undefined;
-  const isCopyingSelectedVersion = selectedTarget
-    ? isCopyingVersion(selectedTarget)
-    : false;
   const isEditorDisabled = saveMutation.isPending || pendingVersion !== undefined;
   const isExitDisabled = isPromptEditorExitDisabled({
     isRestoring: restoreMutation.isPending,
@@ -333,79 +398,94 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
       <Layout
         height="fill"
         header={(
-          <LayoutHeader hasDivider padding={0}>
-            <PageHeader
-              text={pageTitle}
-              start={(
-                <PromptEditorBackButton
-                  isDisabled={isExitDisabled}
-                  onClick={returnToPrompts}
-                />
-              )}
-              action={currentDetail
-                ? (
-                    <ToggleButton
-                      label="History"
-                      isPressed={isHistoryOpen}
-                      isDisabled={saveMutation.isPending || restoreMutation.isPending}
-                      icon={<Icon icon={History} size="sm" color="inherit" />}
-                      onPressedChange={(isPressed) => {
-                        if (isPressed) {
-                          setIsHistoryOpen(true);
-                        } else {
-                          closeHistory();
-                        }
-                      }}
-                    >
-                      History
-                    </ToggleButton>
-                  )
-                : undefined}
-            />
-          </LayoutHeader>
+          <PromptEditorHeader
+            title={promptName}
+            isDisabled={isExitDisabled}
+            onClick={returnToPrompts}
+            primaryAction={selectedVersion
+              ? (
+                  <Button
+                    label="Restore"
+                    type="button"
+                    size="sm"
+                    variant="primary"
+                    icon={<Icon icon={RotateCcw} size="sm" color="inherit" />}
+                    isDisabled={pendingVersion !== undefined}
+                    onClick={() => setIsRestoreOpen(true)}
+                  />
+                )
+              : (
+                  <Button
+                    label="Save"
+                    type="submit"
+                    size="sm"
+                    variant="primary"
+                    isLoading={saveMutation.isPending}
+                    isDisabled={pendingVersion !== undefined}
+                  />
+                )}
+            action={currentDetail
+              ? (
+                  <ToggleButton
+                    label="History"
+                    size="sm"
+                    isPressed={isHistoryOpen}
+                    isDisabled={saveMutation.isPending || restoreMutation.isPending}
+                    icon={<Icon icon={History} size="sm" color="inherit" />}
+                    onPressedChange={(isPressed) => {
+                      if (isPressed) {
+                        setIsHistoryOpen(true);
+                      } else {
+                        closeHistory();
+                      }
+                    }}
+                  >
+                    History
+                  </ToggleButton>
+                )
+              : undefined}
+          />
         )}
         content={(
           <LayoutContent>
-            {selectedVersion
-              ? <PromptVersionContent version={selectedVersion} />
-              : (
-                  <FormLayout direction="vertical">
-                    <TextInput
-                      label="Title"
-                      htmlName="title"
-                      value={values.title}
-                      width="100%"
-                      isRequired
-                      isDisabled={isEditorDisabled}
-                      status={getErrorStatus(errors.title)}
-                      onChange={(value) => setField('title', value)}
-                    />
-                    <TextArea
-                      label="Description"
-                      htmlName="description"
-                      value={values.description}
-                      width="100%"
-                      rows={4}
-                      isOptional
-                      isDisabled={isEditorDisabled}
-                      status={getErrorStatus(errors.description)}
-                      onChange={(value) => setField('description', value)}
-                    />
-                    <TextArea
-                      label="Content"
-                      htmlName="content"
-                      value={values.content}
-                      width="100%"
-                      rows={20}
-                      isRequired
-                      isDisabled={isEditorDisabled}
-                      hasSpellCheck={false}
-                      status={getErrorStatus(errors.content)}
-                      xstyle={styles.contentInput}
-                      onChange={(value) => setField('content', value)}
-                    />
-                  </FormLayout>
-                )}
+            <fieldset disabled={selectedVersion !== undefined}>
+              <FormLayout direction="vertical">
+                <TextInput
+                  label="Title"
+                  htmlName="title"
+                  value={values.title}
+                  width="100%"
+                  isRequired
+                  isDisabled={isEditorDisabled}
+                  status={getErrorStatus(errors.title)}
+                  onChange={(value) => setField('title', value)}
+                />
+                <TextArea
+                  label="Description"
+                  htmlName="description"
+                  value={values.description}
+                  width="100%"
+                  rows={4}
+                  isOptional
+                  isDisabled={isEditorDisabled}
+                  status={getErrorStatus(errors.description)}
+                  onChange={(value) => setField('description', value)}
+                />
+                <TextArea
+                  label="Content"
+                  htmlName="content"
+                  value={values.content}
+                  width="100%"
+                  rows={20}
+                  isRequired
+                  isDisabled={isEditorDisabled}
+                  hasSpellCheck={false}
+                  status={getErrorStatus(errors.content)}
+                  xstyle={styles.contentInput}
+                  onChange={(value) => setField('content', value)}
+                />
+              </FormLayout>
+            </fieldset>
           </LayoutContent>
         )}
         end={isHistoryOpen && currentDetail
@@ -420,50 +500,6 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
               />
             )
           : undefined}
-        footer={(
-          <LayoutFooter hasDivider>
-            <HStack gap={2} hAlign="end" vAlign="center" wrap="wrap">
-              {selectedTarget
-                ? (
-                    <>
-                      <Button
-                        label="Copy"
-                        type="button"
-                        icon={<Icon icon={Copy} size="sm" color="inherit" />}
-                        isLoading={isCopyingSelectedVersion}
-                        isDisabled={pendingVersion !== undefined || restoreMutation.isPending}
-                        onClick={() => copyPromptVersion(selectedTarget)}
-                      />
-                      <Button
-                        label="Restore"
-                        type="button"
-                        variant="primary"
-                        icon={<Icon icon={RotateCcw} size="sm" color="inherit" />}
-                        isDisabled={isCopyingSelectedVersion || pendingVersion !== undefined}
-                        onClick={() => setIsRestoreOpen(true)}
-                      />
-                    </>
-                  )
-                : (
-                    <>
-                      <Button
-                        label="Cancel"
-                        type="button"
-                        isDisabled={isExitDisabled}
-                        onClick={returnToPrompts}
-                      />
-                      <Button
-                        label="Save"
-                        type="submit"
-                        variant="primary"
-                        isLoading={saveMutation.isPending}
-                        isDisabled={pendingVersion !== undefined}
-                      />
-                    </>
-                  )}
-            </HStack>
-          </LayoutFooter>
-        )}
       />
       <AlertDialog
         isOpen={blocker.state === 'blocked'}
@@ -493,10 +529,10 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
                   setDiscardVersion(undefined);
                 }
               }}
-              title={`Discard Changes and View Version ${discardVersion}?`}
+              title={`Discard Changes and Load Version ${discardVersion}?`}
               description="Your unsaved changes will be lost after this version loads."
               cancelLabel="Keep Editing"
-              actionLabel="Discard and View"
+              actionLabel="Discard and Load"
               actionVariant="destructive"
               onAction={() => {
                 const version = discardVersion;
@@ -540,8 +576,9 @@ export function PromptEditPage() {
     return (
       <PromptPageLoading
         title="Edit Prompt"
-        start={(
-          <PromptEditorBackButton
+        header={(
+          <PromptEditorHeader
+            title="Edit Prompt"
             onClick={() => {
               void navigate(promptEditorListPath, promptEditorListNavigateOptions);
             }}

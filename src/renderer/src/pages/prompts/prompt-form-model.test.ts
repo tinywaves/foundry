@@ -26,7 +26,7 @@ function assertInvalid(
   assert.equal(result.ok, false);
 }
 
-test('creates empty and detail-backed Prompt form values', () => {
+test('creates empty, current, and historical Prompt form values', () => {
   assert.deepEqual(createPromptFormValues(), {
     title: '',
     description: '',
@@ -44,6 +44,18 @@ test('creates empty and detail-backed Prompt form values', () => {
     title: 'Title',
     description: '',
     content: '  exact\r\ncontent  ',
+  });
+  assert.deepEqual(createPromptFormValues({
+    promptId: 'prompt-1',
+    version: 1,
+    title: 'Historical title',
+    description: 'Historical description',
+    content: 'Historical content',
+    createdAt: 1,
+  }), {
+    title: 'Historical title',
+    description: 'Historical description',
+    content: 'Historical content',
   });
 });
 

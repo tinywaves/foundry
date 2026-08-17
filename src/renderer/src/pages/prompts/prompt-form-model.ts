@@ -2,6 +2,7 @@ import type {
   CreatePromptInput,
   PromptApiError,
   PromptDetail,
+  PromptVersionDetail,
 } from '../../../../shared/prompt-contract';
 import {
   PROMPT_CONTENT_MAX_UTF8_BYTES,
@@ -33,7 +34,9 @@ const promptFormFields = new Set<PromptFormField>([
   'content',
 ]);
 
-export function createPromptFormValues(detail?: PromptDetail): PromptFormValues {
+export function createPromptFormValues(
+  detail?: PromptDetail | PromptVersionDetail,
+): PromptFormValues {
   return {
     title: detail?.title ?? '',
     description: detail?.description ?? '',

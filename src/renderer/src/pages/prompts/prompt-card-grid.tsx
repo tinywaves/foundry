@@ -1,5 +1,4 @@
 import { Card } from '@astryxdesign/core/Card';
-import { Center } from '@astryxdesign/core/Center';
 import { ClickableCard } from '@astryxdesign/core/ClickableCard';
 import { Grid } from '@astryxdesign/core/Grid';
 import { Icon } from '@astryxdesign/core/Icon';
@@ -12,7 +11,6 @@ import { Timestamp } from '@astryxdesign/core/Timestamp';
 import {
   borderVars,
   colorVars,
-  radiusVars,
   sizeVars,
   spacingVars,
 } from '@astryxdesign/core/theme/tokens.stylex';
@@ -31,10 +29,6 @@ const styles = stylex.create({
     borderStyle: 'dashed',
     borderColor: colorVars['--color-border-emphasized'],
     backgroundColor: 'transparent',
-  },
-  createIconContainer: {
-    borderRadius: radiusVars['--radius-full'],
-    backgroundColor: colorVars['--color-accent-muted'],
   },
 });
 
@@ -57,13 +51,7 @@ function NewPromptCard() {
       xstyle={[styles.card, styles.createCard]}
     >
       <VStack gap={2} height="100%" hAlign="center" vAlign="center">
-        <Center
-          width={sizeVars['--size-element-lg']}
-          height={sizeVars['--size-element-lg']}
-          xstyle={styles.createIconContainer}
-        >
-          <Icon icon={Plus} size="md" color="accent" />
-        </Center>
+        <Icon icon={Plus} size="md" color="accent" />
         <Text type="label" weight="semibold">New Prompt</Text>
         <Text type="supporting" color="secondary">Create a reusable Prompt</Text>
       </VStack>

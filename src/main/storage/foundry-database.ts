@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import { FoundryStorageError, toFoundryStorageError } from './storage-error';
 
-export const FOUNDRY_SCHEMA_VERSION = 3;
+export const FOUNDRY_SCHEMA_VERSION = 4;
 
 const initialProviderSchema = `
   CREATE TABLE providers (
@@ -84,6 +84,13 @@ const promptSchema = `
     WHERE trashed_at IS NOT NULL AND removed_at IS NULL;
 `;
 
+const applicationSettingsSchema = `
+  CREATE TABLE application_settings (
+    id INTEGER PRIMARY KEY NOT NULL CHECK (id = 1),
+    color_mode TEXT NOT NULL CHECK (color_mode IN ('light', 'dark', 'system'))
+  );
+`;
+
 interface Migration {
   version: number;
   apply: (database: Database.Database) => void;
@@ -101,6 +108,10 @@ const migrations: Migration[] = [
   {
     version: 3,
     apply: (database) => database.exec(promptSchema),
+  },
+  {
+    version: 4,
+    apply: (database) => database.exec(applicationSettingsSchema),
   },
 ];
 

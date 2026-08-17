@@ -80,6 +80,7 @@ function installRuntimeApi(overrides: Partial<RuntimeApi>): void {
       prompts: {} as FoundryApi['prompts'],
       providers,
       runtimes,
+      settings: {} as FoundryApi['settings'],
     } satisfies FoundryApi,
   });
 }

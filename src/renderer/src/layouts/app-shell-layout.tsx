@@ -8,13 +8,19 @@ import {
 import { StackItem, VStack } from '@astryxdesign/core/Stack';
 import { spacingVars } from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
-import { Link, Outlet, useLocation } from 'react-router';
+import {
+  Link,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from 'react-router';
 import { WindowDragRegion } from '@renderer/components/window-drag-region';
 import {
   agentExtensionIcons,
   agentObservabilityIcons,
   agentRuntimeIcons,
   dashboardIcon,
+  settingsIcon,
 } from '@renderer/navigation-icons';
 import {
   agentExtensionDestinations,
@@ -23,6 +29,7 @@ import {
   isDestinationSelected,
   routePaths,
 } from '@renderer/routes';
+import { settingsEntryNavigateOptions } from '@renderer/settings-navigation';
 import foundryIcon from '../../../../resources/icon.png?url';
 
 const styles = stylex.create({
@@ -55,6 +62,7 @@ const sidebarResizeConfig = {
 export function AppShellLayout() {
   const isMacOS = globalThis.api.platform === 'darwin';
   const { pathname } = useLocation();
+  const navigate = useNavigate();
 
   return (
     <AppShell
@@ -69,6 +77,18 @@ export function AppShellLayout() {
             <SideNav
               collapsible={false}
               resizable={sidebarResizeConfig}
+              footer={(
+                <SideNavItem
+                  as={Link}
+                  label="Settings"
+                  icon={settingsIcon}
+                  href={routePaths.settings}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    void navigate(routePaths.settings, settingsEntryNavigateOptions);
+                  }}
+                />
+              )}
               header={(
                 <SideNavHeading
                   as={Link}

@@ -3,6 +3,7 @@ import type Database from 'better-sqlite3';
 import { PromptSubsystem } from './prompts/prompt-subsystem';
 import { ProviderSubsystem } from './providers/provider-subsystem';
 import { RuntimeSubsystem } from './runtimes/runtime-subsystem';
+import { SettingsSubsystem } from './settings/settings-subsystem';
 import { openFoundryDatabase } from './storage/foundry-database';
 import { toFoundryStorageError } from './storage/storage-error';
 
@@ -10,6 +11,7 @@ export class FoundrySubsystem {
   private readonly promptSubsystem = new PromptSubsystem();
   private readonly providerSubsystem = new ProviderSubsystem();
   private readonly runtimeSubsystem = new RuntimeSubsystem();
+  private readonly settingsSubsystem = new SettingsSubsystem();
   private database: Database.Database | undefined;
 
   initialize(databaseFilename: string, userHomeDirectory: string): void {
@@ -18,12 +20,14 @@ export class FoundrySubsystem {
       this.promptSubsystem.initialize(this.database);
       this.providerSubsystem.initialize(this.database);
       this.runtimeSubsystem.initialize(this.database, userHomeDirectory);
+      this.settingsSubsystem.initialize(this.database);
     } catch (error) {
       const storageError = toFoundryStorageError(error);
       console.error(`[storage] initialization failed with ${storageError.code}.`);
       this.promptSubsystem.initialize(storageError);
       this.providerSubsystem.initialize(storageError);
       this.runtimeSubsystem.initialize(storageError, userHomeDirectory);
+      this.settingsSubsystem.initialize(storageError);
     }
   }
 
@@ -31,12 +35,14 @@ export class FoundrySubsystem {
     this.promptSubsystem.registerWindow(window);
     this.providerSubsystem.registerWindow(window);
     this.runtimeSubsystem.registerWindow(window);
+    this.settingsSubsystem.registerWindow(window);
   }
 
   close(): void {
     this.promptSubsystem.close();
     this.providerSubsystem.close();
     this.runtimeSubsystem.close();
+    this.settingsSubsystem.close();
     try {
       this.database?.close();
     } catch {

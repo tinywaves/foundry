@@ -11,6 +11,7 @@ import { PromptViewPage } from '@renderer/pages/prompt-view-page';
 import { PromptsPage } from '@renderer/pages/prompts-page';
 import { ProvidersPage } from '@renderer/pages/providers-page';
 import { RuntimesPage } from '@renderer/pages/runtimes-page';
+import { SettingsPage } from '@renderer/pages/settings-page';
 import { SessionsPage } from '@renderer/pages/sessions-page';
 import { SkillsPage } from '@renderer/pages/skills-page';
 import { routePatterns, routePaths } from '@renderer/routes';
@@ -72,6 +73,10 @@ const appShellRoutes: RouteObject[] = [
 ];
 
 const fullWindowRoutes: RouteObject[] = [
+  {
+    path: routePaths.settings,
+    element: <SettingsPage />,
+  },
   {
     path: routePaths.agentExtensionsPromptsNew,
     element: <PromptCreatePage />,

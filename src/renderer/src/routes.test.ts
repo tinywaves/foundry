@@ -11,6 +11,7 @@ import {
 
 test('defines the canonical Agent navigation paths', () => {
   assert.equal(routePaths.dashboard, '/');
+  assert.equal(routePaths.settings, '/settings');
   assert.equal(routePaths.agentExtensions, '/agent-extensions');
   assert.equal(routePaths.agentExtensionsSkills, '/agent-extensions/skills');
   assert.equal(routePaths.agentExtensionsMcpServers, '/agent-extensions/mcp-servers');

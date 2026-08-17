@@ -1,5 +1,6 @@
 export const routePaths = {
   dashboard: '/',
+  settings: '/settings',
   agentExtensions: '/agent-extensions',
   agentExtensionsSkills: '/agent-extensions/skills',
   agentExtensionsMcpServers: '/agent-extensions/mcp-servers',

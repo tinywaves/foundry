@@ -7,7 +7,10 @@ import {
 } from 'lucide-react';
 import { McpIcon } from '@renderer/components/mcp-icon';
 
-export { LayoutDashboard as dashboardIcon } from 'lucide-react';
+export {
+  LayoutDashboard as dashboardIcon,
+  Settings as settingsIcon,
+} from 'lucide-react';
 
 export const agentRuntimeIcons = {
   providers: Plug,

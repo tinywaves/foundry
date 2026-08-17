@@ -10,10 +10,13 @@ import type {
 import { providerIpcChannels } from '../shared/provider-contract';
 import type { RuntimeApi, RuntimeApiResult } from '../shared/runtime-contract';
 import { runtimeIpcChannels } from '../shared/runtime-contract';
+import type { SettingsApi, SettingsApiResult } from '../shared/settings-contract';
+import { settingsIpcChannels } from '../shared/settings-contract';
 
 type ProviderIpcChannel = typeof providerIpcChannels[keyof typeof providerIpcChannels];
 type PromptIpcChannel = typeof promptIpcChannels[keyof typeof promptIpcChannels];
 type RuntimeIpcChannel = typeof runtimeIpcChannels[keyof typeof runtimeIpcChannels];
+type SettingsIpcChannel = typeof settingsIpcChannels[keyof typeof settingsIpcChannels];
 const foundryPlatforms = new Set<FoundryPlatform>(['darwin', 'linux', 'win32']);
 
 function getFoundryPlatform(): FoundryPlatform {
@@ -94,11 +97,27 @@ const runtimes: RuntimeApi = {
   ),
 };
 
+function invokeSettings<T>(
+  channel: SettingsIpcChannel,
+  argument?: unknown,
+): Promise<SettingsApiResult<T>> {
+  return ipcRenderer.invoke(channel, argument) as Promise<SettingsApiResult<T>>;
+}
+
+const settings: SettingsApi = {
+  getApplicationSettings: () => invokeSettings(settingsIpcChannels.get),
+  updateApplicationColorMode: (colorMode) => invokeSettings(
+    settingsIpcChannels.updateColorMode,
+    colorMode,
+  ),
+};
+
 const api: FoundryApi = {
   platform: getFoundryPlatform(),
   prompts,
   providers,
   runtimes,
+  settings,
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

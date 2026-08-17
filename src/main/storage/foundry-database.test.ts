@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import { test } from 'vitest';
+import { PromptRepository } from '../prompts/prompt-repository';
 import { ProviderRepository } from '../providers/provider-repository';
 import { RuntimeRepository } from '../runtimes/runtime-repository';
 import { FOUNDRY_SCHEMA_VERSION, openFoundryDatabase } from './foundry-database';
@@ -46,9 +47,66 @@ test('creates the complete Foundry schema in migration order', () => {
     const tables = database.prepare<[], { name: string }>(`
       SELECT name FROM sqlite_schema WHERE type = 'table' ORDER BY name
     `).all().map((row) => row.name);
-    assert.deepEqual(tables, ['prompt_versions', 'prompts', 'providers', 'runtime_applications']);
+    assert.deepEqual(tables, [
+      'application_settings',
+      'prompt_versions',
+      'prompts',
+      'providers',
+      'runtime_applications',
+    ]);
   } finally {
     database.close();
+  }
+});
+
+test('upgrades a version 3 database without changing existing domain data', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'foundry-storage-v3-upgrade-'));
+  const filename = path.join(directory, 'foundry.sqlite');
+  try {
+    const versionThreeDatabase = openFoundryDatabase(filename);
+    const provider = new ProviderRepository(versionThreeDatabase).createProvider(createCodexInput());
+    new RuntimeRepository(versionThreeDatabase).recordProviderApplication('codex', provider.id);
+    const prompt = new PromptRepository(versionThreeDatabase).createPrompt({
+      title: 'Migrated Prompt',
+      description: 'Keep this Prompt',
+      content: 'Preserve this exact content.\n',
+    });
+    versionThreeDatabase.exec('DROP TABLE application_settings;');
+    versionThreeDatabase.pragma('user_version = 3');
+    versionThreeDatabase.close();
+
+    const upgradedDatabase = openFoundryDatabase(filename);
+    try {
+      assert.equal(
+        upgradedDatabase.pragma('user_version', { simple: true }),
+        FOUNDRY_SCHEMA_VERSION,
+      );
+      assert.equal(
+        new ProviderRepository(upgradedDatabase).getProviderForEdit(provider.id).apiKey,
+        'migration-secret',
+      );
+      assert.deepEqual(new RuntimeRepository(upgradedDatabase).listRuntimes()[0], {
+        runtime: 'codex',
+        status: 'provider',
+        providerId: provider.id,
+        appliedAt: upgradedDatabase.prepare<[], number>(`
+          SELECT applied_at FROM runtime_applications WHERE runtime = 'codex'
+        `).pluck().get(),
+      });
+      assert.deepEqual(new PromptRepository(upgradedDatabase).getPrompt(prompt.id), prompt);
+      assert.equal(
+        upgradedDatabase.prepare('SELECT COUNT(*) FROM prompt_versions').pluck().get(),
+        1,
+      );
+      assert.equal(
+        upgradedDatabase.prepare('SELECT COUNT(*) FROM application_settings').pluck().get(),
+        0,
+      );
+    } finally {
+      upgradedDatabase.close();
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
   }
 });
 
@@ -59,7 +117,11 @@ test('upgrades a version 2 database without changing Provider or Runtime Applica
     const versionTwoDatabase = openFoundryDatabase(filename);
     const provider = new ProviderRepository(versionTwoDatabase).createProvider(createCodexInput());
     new RuntimeRepository(versionTwoDatabase).recordProviderApplication('codex', provider.id);
-    versionTwoDatabase.exec('DROP TABLE prompt_versions; DROP TABLE prompts;');
+    versionTwoDatabase.exec(`
+      DROP TABLE application_settings;
+      DROP TABLE prompt_versions;
+      DROP TABLE prompts;
+    `);
     versionTwoDatabase.pragma('user_version = 2');
     versionTwoDatabase.close();
 
@@ -102,6 +164,7 @@ test('upgrades a version 1 database without changing Provider data', () => {
       DROP TABLE prompt_versions;
       DROP TABLE prompts;
       DROP TABLE runtime_applications;
+      DROP TABLE application_settings;
     `);
     versionOneDatabase.pragma('user_version = 1');
     versionOneDatabase.close();

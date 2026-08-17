@@ -94,6 +94,7 @@ function installProviderApi(overrides: Partial<ProviderApi>): void {
         getChatGptApplicationState: () => rejectedProviderCall(),
         restartChatGptApplication: () => rejectedProviderCall(),
       },
+      settings: {} as FoundryApi['settings'],
     } satisfies FoundryApi,
   });
 }

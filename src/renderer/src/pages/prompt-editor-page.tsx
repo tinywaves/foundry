@@ -9,7 +9,7 @@ import { TextArea } from '@astryxdesign/core/TextArea';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { useToast } from '@astryxdesign/core/Toast';
 import { ToggleButton } from '@astryxdesign/core/ToggleButton';
-import { typographyVars } from '@astryxdesign/core/theme/tokens.stylex';
+import { spacingVars } from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, History, RotateCcw } from 'lucide-react';
@@ -42,6 +42,8 @@ import type {
   PromptFormValues,
 } from './prompts/prompt-form-model';
 import { PromptPageLoading } from './prompts/prompt-page-loading';
+import { PromptMarkdownEditor } from './prompts/prompt-markdown-editor';
+import type { PromptMarkdownMode } from './prompts/prompt-markdown-editor';
 import {
   isPromptEditorExitDisabled,
   promptEditorListNavigateOptions,
@@ -65,8 +67,11 @@ const styles = stylex.create({
   headerContent: {
     boxSizing: 'border-box',
   },
-  contentInput: {
-    fontFamily: typographyVars['--font-family-code'],
+  historicalFields: {
+    borderStyle: 'none',
+    margin: spacingVars['--spacing-0'],
+    minWidth: 0,
+    padding: spacingVars['--spacing-0'],
   },
 });
 
@@ -173,6 +178,7 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
   ));
   const [values, setValues] = useState<PromptFormValues>(baselineValues);
   const [errors, setErrors] = useState<PromptFormErrors>({});
+  const [contentMode, setContentMode] = useState<PromptMarkdownMode>('source');
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<PromptVersionDetail>();
   const [pendingVersion, setPendingVersion] = useState<number>();
@@ -273,6 +279,9 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
       return nextErrors;
     });
   }, []);
+  const setContent = useCallback((value: string) => {
+    setField('content', value);
+  }, [setField]);
 
   const showCurrentVersion = useCallback(() => {
     versionRequestIdRef.current += 1;
@@ -358,6 +367,9 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
     }
     const validation = validatePromptForm(values);
     if (!validation.ok) {
+      if (validation.errors.content) {
+        setContentMode('source');
+      }
       setErrors(validation.errors);
       return;
     }
@@ -372,6 +384,9 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
           return;
         }
         const apiErrors = getPromptFormApiErrorState(error.apiError).errors;
+        if (apiErrors.content) {
+          setContentMode('source');
+        }
         setErrors(apiErrors);
       },
     });
@@ -448,44 +463,45 @@ function PromptEditor({ initialDetail }: PromptEditorProps) {
         )}
         content={(
           <LayoutContent>
-            <fieldset disabled={selectedVersion !== undefined}>
-              <FormLayout direction="vertical">
-                <TextInput
-                  label="Title"
-                  htmlName="title"
-                  value={values.title}
-                  width="100%"
-                  isRequired
-                  isDisabled={isEditorDisabled}
-                  status={getErrorStatus(errors.title)}
-                  onChange={(value) => setField('title', value)}
-                />
-                <TextArea
-                  label="Description"
-                  htmlName="description"
-                  value={values.description}
-                  width="100%"
-                  rows={4}
-                  isOptional
-                  isDisabled={isEditorDisabled}
-                  status={getErrorStatus(errors.description)}
-                  onChange={(value) => setField('description', value)}
-                />
-                <TextArea
-                  label="Content"
-                  htmlName="content"
-                  value={values.content}
-                  width="100%"
-                  rows={20}
-                  isRequired
-                  isDisabled={isEditorDisabled}
-                  hasSpellCheck={false}
-                  status={getErrorStatus(errors.content)}
-                  xstyle={styles.contentInput}
-                  onChange={(value) => setField('content', value)}
-                />
-              </FormLayout>
-            </fieldset>
+            <FormLayout direction="vertical">
+              <fieldset
+                disabled={selectedVersion !== undefined}
+                {...stylex.props(styles.historicalFields)}
+              >
+                <FormLayout direction="vertical">
+                  <TextInput
+                    label="Title"
+                    htmlName="title"
+                    value={values.title}
+                    width="100%"
+                    isRequired
+                    isDisabled={isEditorDisabled}
+                    status={getErrorStatus(errors.title)}
+                    onChange={(value) => setField('title', value)}
+                  />
+                  <TextArea
+                    label="Description"
+                    htmlName="description"
+                    value={values.description}
+                    width="100%"
+                    rows={2}
+                    isOptional
+                    isDisabled={isEditorDisabled}
+                    status={getErrorStatus(errors.description)}
+                    onChange={(value) => setField('description', value)}
+                  />
+                </FormLayout>
+              </fieldset>
+              <PromptMarkdownEditor
+                value={values.content}
+                mode={contentMode}
+                isDisabled={isEditorDisabled}
+                isReadOnly={selectedVersion !== undefined}
+                error={errors.content}
+                onChange={setContent}
+                onModeChange={setContentMode}
+              />
+            </FormLayout>
           </LayoutContent>
         )}
         end={isHistoryOpen && currentDetail

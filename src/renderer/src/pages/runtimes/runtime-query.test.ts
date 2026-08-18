@@ -82,6 +82,7 @@ function installRuntimeApi(overrides: Partial<RuntimeApi>): void {
       providers,
       runtimes,
       settings: {} as FoundryApi['settings'],
+      skills: {} as FoundryApi['skills'],
     } satisfies FoundryApi,
   });
 }

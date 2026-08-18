@@ -3,6 +3,13 @@ export const routePaths = {
   settings: '/settings',
   agentExtensions: '/agent-extensions',
   agentExtensionsSkills: '/agent-extensions/skills',
+  agentExtensionsSkillsDiscover: '/agent-extensions/skills/discover',
+  agentExtensionsSkillTargets: '/agent-extensions/skills/targets',
+  agentExtensionsSkillsTrash: '/agent-extensions/skills/trash',
+  agentExtensionsSkill: (skillId: string) => `/agent-extensions/skills/${skillId}`,
+  agentExtensionsSkillTarget: (targetId: string) => (
+    `/agent-extensions/skills/targets/${targetId}`
+  ),
   agentExtensionsMcpServers: '/agent-extensions/mcp-servers',
   agentExtensionsPrompts: '/agent-extensions/prompts',
   agentExtensionsPromptsNew: '/agent-extensions/prompts/new',
@@ -22,6 +29,8 @@ export const routePaths = {
 } as const;
 
 export const routePatterns = {
+  agentExtensionsSkill: '/agent-extensions/skills/:skillId',
+  agentExtensionsSkillTarget: '/agent-extensions/skills/targets/:targetId',
   agentExtensionsPrompt: '/agent-extensions/prompts/:promptId',
   agentExtensionsPromptEdit: '/agent-extensions/prompts/:promptId/edit',
   agentExtensionsTrashedPrompt: '/agent-extensions/prompts/trash/:promptId',

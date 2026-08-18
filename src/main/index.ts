@@ -45,7 +45,7 @@ function createWindow(): BrowserWindow {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-void app.whenReady().then(() => {
+void app.whenReady().then(async () => {
   // Set app user model id for windows
   electronApp.setAppUserModelId(identifier);
 
@@ -56,7 +56,7 @@ void app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window);
   });
 
-  foundrySubsystem.initialize(
+  await foundrySubsystem.initialize(
     path.join(app.getPath('userData'), 'foundry.sqlite'),
     app.getPath('home'),
   );
@@ -71,7 +71,7 @@ void app.whenReady().then(() => {
   });
 });
 
-app.on('will-quit', () => foundrySubsystem.close());
+app.on('will-quit', () => void foundrySubsystem.close());
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits

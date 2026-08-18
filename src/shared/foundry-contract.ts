@@ -2,6 +2,7 @@ import type { PromptApi } from './prompt-contract';
 import type { ProviderApi } from './provider-contract';
 import type { RuntimeApi } from './runtime-contract';
 import type { SettingsApi } from './settings-contract';
+import type { SkillApi } from './skill-contract';
 
 export type FoundryPlatform = 'darwin' | 'linux' | 'win32';
 
@@ -12,4 +13,5 @@ export interface FoundryApi {
   providers: ProviderApi;
   runtimes: RuntimeApi;
   settings: SettingsApi;
+  skills: SkillApi;
 }

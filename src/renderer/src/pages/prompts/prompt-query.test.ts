@@ -94,6 +94,7 @@ function installPromptApi(overrides: Partial<PromptApi>): void {
       providers: {} as FoundryApi['providers'],
       runtimes: {} as FoundryApi['runtimes'],
       settings: {} as FoundryApi['settings'],
+      skills: {} as FoundryApi['skills'],
     } satisfies FoundryApi,
   });
 }

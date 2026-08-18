@@ -14,6 +14,11 @@ import { RuntimesPage } from '@renderer/pages/runtimes-page';
 import { SettingsPage } from '@renderer/pages/settings-page';
 import { SessionsPage } from '@renderer/pages/sessions-page';
 import { SkillsPage } from '@renderer/pages/skills-page';
+import { SkillStorePage } from '@renderer/pages/skills/skill-store-page';
+import { SkillDetailPage } from '@renderer/pages/skills/skill-detail-page';
+import { SkillDiscoverPage } from '@renderer/pages/skills/skill-discover-page';
+import { SkillTrashPage } from '@renderer/pages/skills/skill-trash-page';
+import { SkillTargetsPage } from '@renderer/pages/skills/skill-targets-page';
 import { routePatterns, routePaths } from '@renderer/routes';
 
 const routeLayoutIds = {
@@ -33,6 +38,28 @@ const appShellRoutes: RouteObject[] = [
   {
     path: routePaths.agentExtensionsSkills,
     element: <SkillsPage />,
+    children: [
+      {
+        index: true,
+        element: <SkillStorePage />,
+      },
+      {
+        path: 'discover',
+        element: <SkillDiscoverPage />,
+      },
+      {
+        path: 'targets',
+        element: <SkillTargetsPage />,
+      },
+      {
+        path: 'trash',
+        element: <SkillTrashPage />,
+      },
+      {
+        path: ':skillId',
+        element: <SkillDetailPage />,
+      },
+    ],
   },
   {
     path: routePaths.agentExtensionsMcpServers,

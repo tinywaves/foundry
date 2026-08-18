@@ -13,11 +13,14 @@ import type { RuntimeApi, RuntimeApiResult } from '../shared/runtime-contract';
 import { runtimeIpcChannels } from '../shared/runtime-contract';
 import type { SettingsApi, SettingsApiResult } from '../shared/settings-contract';
 import { settingsIpcChannels } from '../shared/settings-contract';
+import type { SkillApi, SkillApiResult, SkillChangedNotification } from '../shared/skill-contract';
+import { skillIpcChannels } from '../shared/skill-contract';
 
 type ProviderIpcChannel = typeof providerIpcChannels[keyof typeof providerIpcChannels];
 type PromptIpcChannel = typeof promptIpcChannels[keyof typeof promptIpcChannels];
 type RuntimeIpcChannel = typeof runtimeIpcChannels[keyof typeof runtimeIpcChannels];
 type SettingsIpcChannel = typeof settingsIpcChannels[keyof typeof settingsIpcChannels];
+type SkillIpcChannel = typeof skillIpcChannels[keyof typeof skillIpcChannels];
 const foundryPlatforms = new Set<FoundryPlatform>(['darwin', 'linux', 'win32']);
 
 function getFoundryPlatform(): FoundryPlatform {
@@ -113,6 +116,111 @@ const settings: SettingsApi = {
   ),
 };
 
+function invokeSkill<T>(
+  channel: SkillIpcChannel,
+  argument?: unknown,
+): Promise<SkillApiResult<T>> {
+  return ipcRenderer.invoke(channel, argument) as Promise<SkillApiResult<T>>;
+}
+
+const skills: SkillApi = {
+  listStorePackages: () => invokeSkill(skillIpcChannels.listStorePackages),
+  getStorePackage: (skillId) => invokeSkill(skillIpcChannels.getStorePackage, skillId),
+  listTargets: () => invokeSkill(skillIpcChannels.listTargets),
+  listInstallations: (input) => invokeSkill(skillIpcChannels.listInstallations, input),
+  importExisting: () => invokeSkill(skillIpcChannels.importExisting),
+  beginWatchSession: () => invokeSkill(skillIpcChannels.beginWatchSession),
+  endWatchSession: (sessionId) => invokeSkill(skillIpcChannels.endWatchSession, sessionId),
+  listPackageFiles: (skillId) => invokeSkill(skillIpcChannels.listPackageFiles, skillId),
+  readPackageFile: (input) => invokeSkill(skillIpcChannels.readPackageFile, input),
+  revealPackage: (skillId) => invokeSkill(skillIpcChannels.revealPackage, skillId),
+  revealTarget: (targetId) => invokeSkill(skillIpcChannels.revealTarget, targetId),
+  openTargetDocumentation: (targetId) => invokeSkill(
+    skillIpcChannels.openTargetDocumentation,
+    targetId,
+  ),
+  selectCustomTargetDirectory: () => invokeSkill(
+    skillIpcChannels.selectCustomTargetDirectory,
+  ),
+  createCustomTarget: (input) => invokeSkill(skillIpcChannels.createCustomTarget, input),
+  updateTargetPolicy: (input) => invokeSkill(skillIpcChannels.updateTargetPolicy, input),
+  resetBuiltInTargetPolicy: (targetId) => invokeSkill(
+    skillIpcChannels.resetBuiltInTargetPolicy,
+    targetId,
+  ),
+  removeCustomTarget: (targetId) => invokeSkill(
+    skillIpcChannels.removeCustomTarget,
+    targetId,
+  ),
+  preflightDistribution: (input) => invokeSkill(
+    skillIpcChannels.preflightDistribution,
+    input,
+  ),
+  distribute: (input) => invokeSkill(skillIpcChannels.distribute, input),
+  restoreInstallation: (input) => invokeSkill(
+    skillIpcChannels.restoreInstallation,
+    input,
+  ),
+  promoteInstallation: (input) => invokeSkill(
+    skillIpcChannels.promoteInstallation,
+    input,
+  ),
+  importInstallationAsNew: (input) => invokeSkill(
+    skillIpcChannels.importInstallationAsNew,
+    input,
+  ),
+  uninstall: (input) => invokeSkill(skillIpcChannels.uninstall, input),
+  listRevisions: (skillId) => invokeSkill(skillIpcChannels.listRevisions, skillId),
+  listRevisionFiles: (skillId, revisionId) => ipcRenderer.invoke(
+    skillIpcChannels.listRevisionFiles,
+    skillId,
+    revisionId,
+  ),
+  readRevisionFile: (input) => invokeSkill(skillIpcChannels.readRevisionFile, input),
+  movePackageToTrash: (skillId) => invokeSkill(skillIpcChannels.movePackageToTrash, skillId),
+  listTrash: () => invokeSkill(skillIpcChannels.listTrash),
+  restoreTrashedPackage: (skillId) => invokeSkill(
+    skillIpcChannels.restoreTrashedPackage,
+    skillId,
+  ),
+  removeTrashedPackage: (skillId) => invokeSkill(
+    skillIpcChannels.removeTrashedPackage,
+    skillId,
+  ),
+  emptyTrash: () => invokeSkill(skillIpcChannels.emptyTrash),
+  listSources: (skillId) => invokeSkill(skillIpcChannels.listSources, skillId),
+  browseRemoteSkills: (input) => invokeSkill(skillIpcChannels.browseRemoteSkills, input),
+  searchRemoteSkills: (input) => invokeSkill(skillIpcChannels.searchRemoteSkills, input),
+  getRemoteSkillDetails: (input) => invokeSkill(
+    skillIpcChannels.getRemoteSkillDetails,
+    input,
+  ),
+  resolveDirectoryResult: (input) => invokeSkill(
+    skillIpcChannels.resolveDirectoryResult,
+    input,
+  ),
+  resolveGitSource: (input) => invokeSkill(skillIpcChannels.resolveGitSource, input),
+  addRemoteCandidate: (input) => invokeSkill(skillIpcChannels.addRemoteCandidate, input),
+  openRemoteResult: (input) => invokeSkill(skillIpcChannels.openRemoteResult, input),
+  openSource: (sourceId) => invokeSkill(skillIpcChannels.openSource, sourceId),
+  checkSourceForUpdates: (sourceId) => invokeSkill(
+    skillIpcChannels.checkSourceForUpdates,
+    sourceId,
+  ),
+  checkPackageForUpdates: (skillId) => invokeSkill(
+    skillIpcChannels.checkPackageForUpdates,
+    skillId,
+  ),
+  applyUpdate: (input) => invokeSkill(skillIpcChannels.applyUpdate, input),
+  onChanged: (listener) => {
+    const handleChanged = (_event: unknown, notification: SkillChangedNotification) => {
+      listener(notification);
+    };
+    ipcRenderer.on(skillIpcChannels.changed, handleChanged);
+    return () => ipcRenderer.removeListener(skillIpcChannels.changed, handleChanged);
+  },
+};
+
 const api: FoundryApi = {
   applicationVersion: packageMetadata.version,
   platform: getFoundryPlatform(),
@@ -120,6 +228,7 @@ const api: FoundryApi = {
   providers,
   runtimes,
   settings,
+  skills,
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

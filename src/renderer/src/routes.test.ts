@@ -14,6 +14,22 @@ test('defines the canonical Agent navigation paths', () => {
   assert.equal(routePaths.settings, '/settings');
   assert.equal(routePaths.agentExtensions, '/agent-extensions');
   assert.equal(routePaths.agentExtensionsSkills, '/agent-extensions/skills');
+  assert.equal(
+    routePaths.agentExtensionsSkillTargets,
+    '/agent-extensions/skills/targets',
+  );
+  assert.equal(
+    routePaths.agentExtensionsSkillsTrash,
+    '/agent-extensions/skills/trash',
+  );
+  assert.equal(
+    routePaths.agentExtensionsSkill('skill-1'),
+    '/agent-extensions/skills/skill-1',
+  );
+  assert.equal(
+    routePaths.agentExtensionsSkillTarget('target-1'),
+    '/agent-extensions/skills/targets/target-1',
+  );
   assert.equal(routePaths.agentExtensionsMcpServers, '/agent-extensions/mcp-servers');
   assert.equal(routePaths.agentExtensionsPrompts, '/agent-extensions/prompts');
   assert.equal(routePaths.agentExtensionsPromptsNew, '/agent-extensions/prompts/new');
@@ -31,6 +47,8 @@ test('defines the canonical Agent navigation paths', () => {
     '/agent-extensions/prompts/prompt-1/edit',
   );
   assert.deepEqual(routePatterns, {
+    agentExtensionsSkill: '/agent-extensions/skills/:skillId',
+    agentExtensionsSkillTarget: '/agent-extensions/skills/targets/:targetId',
     agentExtensionsPrompt: '/agent-extensions/prompts/:promptId',
     agentExtensionsPromptEdit: '/agent-extensions/prompts/:promptId/edit',
     agentExtensionsTrashedPrompt: '/agent-extensions/prompts/trash/:promptId',

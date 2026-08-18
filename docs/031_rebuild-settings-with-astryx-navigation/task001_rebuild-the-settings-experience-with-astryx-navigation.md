@@ -10,7 +10,7 @@ Rebuild the current Settings page with Astryx-native sidebar navigation and grou
 
 ## Detail
 
-Keep the implementation focused on `src/renderer/src/pages/settings-page.tsx`. Preserve the canonical `/settings` route, `getSettingsBackNavigation`, the source-aware history return, the direct-entry Dashboard fallback, the Application Settings context, immediate color-mode updates, System mode behavior, and asynchronous persistence.
+Keep the Settings composition focused on `src/renderer/src/pages/settings-page.tsx`, and keep the application-wide `SelectableCard` visual policy in the existing root theme defined by `src/renderer/src/foundry-application.tsx`. Preserve the canonical `/settings` route, `getSettingsBackNavigation`, the source-aware history return, the direct-entry Dashboard fallback, the Application Settings context, immediate color-mode updates, System mode behavior, and asynchronous persistence.
 
 Represent the active Settings section with a narrow local union containing `appearance` and `data`. Initialize the mounted page to `appearance`. Switching sections will update only page-local renderer state; it will not modify the URL, React Router navigation state, an application context, local storage, or the database. Leaving and remounting Settings will therefore return to Appearance.
 
@@ -21,6 +21,8 @@ Retain the right pane's independent platform-aware `WindowDragRegion`. Replace t
 Compose Appearance with an unframed Astryx `Section` and `Divider`. Render the Theme choices in an Astryx responsive `Grid` that displays at most three columns when space permits and automatically wraps when the available width becomes narrower. Do not add custom media queries or standalone CSS.
 
 Replace `SegmentedControl` and `SegmentedControlItem` with three controlled Astryx `SelectableCard` options. Light uses Lucide `Sun` with concise light-appearance copy, Dark uses Lucide `Moon` with concise dark-appearance copy, and System uses Lucide `Monitor` with copy explaining that it follows the operating-system appearance. Each card receives an accessible label and derives `isSelected` directly from the existing `colorMode`. Handle `onChange` only when the card requests selection so clicking the already selected card cannot leave the application without a selected color mode. Reuse `applicationColorModes`, `ApplicationColorMode`, and the existing `updateColorMode` boundary rather than duplicating theme values or persistence logic. Do not add Save, loading, retry, rollback, or storage-error UI.
+
+Use `foundryTheme` to remove Astryx's additional two-pixel inset selection ring from the `selected:true` state of every `SelectableCard`. Preserve the component's existing variant-aware one-pixel border color, interaction behavior, and keyboard focus ring. Keep this policy at the root theme boundary so current and future `SelectableCard` consumers inherit it without a wrapper, local StyleX override, component fork, or change to the installed Astryx package.
 
 Compose Data with the same top-level content width and spacing conventions. Render Data as the visible accessibility-level-one heading and display only the exact placeholder text `Hello world`. Do not add fictitious controls, disabled actions, explanatory banners, or future-feature promises.
 
@@ -36,6 +38,7 @@ None.
 
 - The existing Application Settings context provides the controlled `colorMode` value and immediate `updateColorMode` operation.
 - The existing Settings navigation model provides source-aware history return and the Dashboard fallback.
+- The existing root `foundryTheme` provides the application-wide Astryx component-override boundary.
 - The completed `FullWindowLayout` maintenance provides the shared Astryx surface background.
 - Existing `@astryxdesign/core`, `lucide-react`, React, React Router, and StyleX dependencies provide all required implementation capabilities. No new dependency is required.
 
@@ -50,6 +53,7 @@ None.
 - A top-aligned, width-constrained Settings content composition with reduced six-step block padding.
 - An unframed Appearance `Section` and `Divider` composition.
 - Three responsive Theme `SelectableCard` options with Lucide icons and concise descriptions.
+- A global `SelectableCard` selected-state override that removes the additional inset ring while retaining the component's variant-aware one-pixel border and focus indication.
 - A Data section containing the exact placeholder text `Hello world`.
 - Removal of the current Settings `List`, segmented Theme control, vertically centered sparse layout, and visually hidden page heading.
 - Preserved Back navigation, immediate theme switching, System mode, persistence, route ownership, and platform-aware window behavior.
@@ -69,6 +73,7 @@ None.
 - [x] Appearance uses an unframed Astryx `Section` and `Divider` rather than an outer Card.
 - [x] Light, Dark, and System are simultaneously discoverable as Astryx `SelectableCard` options and wrap responsively when space becomes constrained.
 - [x] Light uses `Sun`, Dark uses `Moon`, and System uses `Monitor`, with concise explanatory copy for each option.
+- [x] Every selected Astryx `SelectableCard` uses its variant-aware one-pixel border without the additional inset selection ring, and keyboard focus indication remains available.
 - [x] Exactly one Theme card is selected for every valid application color mode.
 - [x] Clicking the already selected Theme card does not clear the selected color mode.
 - [x] Selecting a different Theme card continues to update the full application immediately and persist through the existing Application Settings boundary without a Save action.
@@ -84,6 +89,7 @@ None.
 - `/settings/appearance`, `/settings/data`, other Settings deep links, or persisted section selection.
 - Settings search, additional destinations, responsive drawers, sidebar hiding, collapsing, or an independent Settings resize configuration.
 - Custom Theme preview artwork, screenshots, or illustrations.
+- A Settings-only selectable-card wrapper, an Astryx component fork, or direct modification of installed dependency source.
 - Color-mode persistence refactoring, storage-failure feedback, retry behavior, rollback behavior, or startup-loading changes.
 - Renderer component tests, DOM assertions, visual snapshots, browser automation, screenshots, accessibility-tree inspection, or desktop automation.
 
@@ -99,6 +105,7 @@ Completing Task 001 completes Plan 031. The resulting Settings frame will provid
 - `pnpm build` — Passed the node and renderer type checks and the Electron Vite production build.
 - `git diff --check` — Passed.
 - Static Astryx inspection — Passed: Settings uses the same `AppShell`, `SideNav`, and shared resizable configuration as the standard application layout; the configuration shares the `200`-pixel default and minimum width, `400`-pixel maximum width, and persisted-width key; the Foundry brand region is replaced by a small ghost `Button` labeled `Back to app` with `fit-content` width, the Astryx normal-font-weight token, and Lucide `ArrowLeft` icon; Settings also uses `SideNavItem`, `Section`, `Divider`, `Grid`, and `SelectableCard`; destinations use a one-step gap; no raw layout `div` or `span`, standalone CSS, hardcoded color, hand-authored SVG, obsolete segmented control, obsolete Settings list, independent `LayoutPanel`, manual navigation-width override, or `SideNavHeading` Back treatment remains.
+- Static selected-card theming inspection — Passed: `foundryTheme` targets the global `SelectableCard` `selected:true` state, replaces only its internal selection-ring shadow with a transparent no-op, and leaves Astryx's variant-aware border color and focus-visible outline unchanged.
 - Static behavior inspection — Passed: Appearance is the local default, Appearance/Data clicks do not navigate, Theme cards reuse `applicationColorModes`, selected-card deselection is ignored, Back uses the existing navigation decision, and Data displays the exact `Hello world` placeholder.
 - Static boundary inspection — Passed: `/settings` route ownership, Application Settings persistence, platform drag regions, renderer/preload/main-process boundaries, and dependency declarations remain unchanged.
 - User-performed visual acceptance remains pending. No application launch, browser automation, screenshot, accessibility-tree inspection, or desktop automation was performed, per repository rules.
@@ -144,3 +151,11 @@ Completing Task 001 completes Plan 031. The resulting Settings frame will provid
 - Reason: User requested that the Back button remain content-sized rather than filling the sidebar header.
 - Documentation impact: Updated Plan 031 and Task 001 current-state detail, scope, decisions, deliverables, acceptance criteria, and verification statements while preserving all existing sidebar structure and navigation behavior.
 - Verification: `pnpm typecheck`, `pnpm lint`, and `git diff --check` passed. No application launch or visual automation was performed.
+
+### 2026-08-18 10:52:20: Reduce the Global Selectable Card Selection Border
+
+- Change: Added a root `foundryTheme` component override for the Astryx `SelectableCard` `selected:true` state. The override replaces the component's additional two-pixel inset ring with a transparent no-op, leaving only its existing variant-aware one-pixel selected border.
+- Previous state: A selected `SelectableCard` combined its one-pixel border with Astryx's two-pixel inset selection ring, producing a visually heavy selected treatment in the Appearance Theme card grid.
+- Reason: User visual acceptance found the selected border too heavy and chose to retain the original card interaction with a thinner application-wide selection treatment.
+- Documentation impact: Updated Plan 031 and Task 001 to record the root-theme ownership, global scope, preserved Astryx focus behavior, acceptance criterion, and wrapper/fork exclusions.
+- Verification: `pnpm typecheck`, `pnpm lint`, `pnpm build`, and `git diff --check` passed; direct theme-rule generation confirmed the override emits `.astryx-selectable-card.true` with `--_card-ring: 0 0 transparent`. No application launch or visual automation was performed.

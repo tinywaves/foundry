@@ -18,7 +18,7 @@ Switch between Appearance and Data through page-local renderer state while remai
 
 Align the active content near the top of the right pane within a constrained readable width instead of vertically centering a sparse row in the full canvas. Use six spacing steps of block padding so the heading sits slightly closer to the window-drag region while retaining eight spacing steps of inline padding. Show the active section name, Appearance or Data, as the visible main heading in the content pane.
 
-Compose Appearance with an unframed Astryx `Section` and `Divider`. Replace the compact Theme `SegmentedControl` with three Astryx `SelectableCard` options for Light, Dark, and System. Pair the options with Lucide `Sun`, `Moon`, and `Monitor` icons and concise explanatory text. The cards remain controlled by the existing Application Settings context, apply a valid color mode immediately, and require no Save action.
+Compose Appearance with an unframed Astryx `Section` and `Divider`. Replace the compact Theme `SegmentedControl` with three Astryx `SelectableCard` options for Light, Dark, and System. Pair the options with Lucide `Sun`, `Moon`, and `Monitor` icons and concise explanatory text. The cards remain controlled by the existing Application Settings context, apply a valid color mode immediately, and require no Save action. Refine the selected treatment through the root Foundry theme: remove Astryx's additional two-pixel inset selection ring from every `SelectableCard` while preserving its variant-aware one-pixel selected border and keyboard focus ring. Keep this as a global component override rather than a Settings-only wrapper or local StyleX rule.
 
 Compose Data as a second selectable Settings section whose current content is only a visible Data heading and the exact placeholder text `Hello world`. The placeholder establishes and verifies the section-switching structure but introduces no data-management behavior.
 
@@ -34,6 +34,7 @@ Preserve the inline, non-collapsible sidebar at all supported window widths, inc
 - Top-aligned, width-constrained Settings content with reduced six-step block padding instead of vertically centered sparse content.
 - An unframed Astryx `Section` and `Divider` composition for Appearance.
 - Light, Dark, and System Theme options rendered as Astryx `SelectableCard` components with Lucide icons and concise descriptions.
+- A root Foundry theme override that keeps every selected `SelectableCard` to its existing variant-aware one-pixel border without the additional inset ring.
 - A Data section containing the exact placeholder text `Hello world`.
 - Preserved source-aware Back navigation, immediate color-mode updates, System mode behavior, and persistence.
 - Preserved inline, non-collapsible sidebar behavior with the standard shared resize range, persisted width, and platform-aware window-drag behavior.
@@ -48,6 +49,7 @@ Preserve the inline, non-collapsible sidebar at all supported window widths, inc
 - Changes to application-settings storage, IPC, preload, main-process code, database schemas, startup restoration, or error handling.
 - Custom Theme preview illustrations, screenshots, or hand-authored SVG artwork.
 - New dependencies or another styling system.
+- A Settings-only `SelectableCard` wrapper, a swizzled Astryx component, or direct changes to the installed Astryx package.
 - Application launch, browser automation, screenshots, accessibility-tree inspection, desktop automation, or renderer component tests.
 
 ## Decisions
@@ -60,6 +62,7 @@ Preserve the inline, non-collapsible sidebar at all supported window widths, inc
 - Keep section selection local to the mounted Settings page and default to Appearance.
 - Keep the canonical route at `/settings` without nested section URLs.
 - Replace the Theme `SegmentedControl` with three Astryx `SelectableCard` options.
+- Apply the thinner selected treatment through `foundryTheme` so all `SelectableCard` instances retain only their variant-aware one-pixel border while Astryx continues to own focus indication.
 - Use Lucide `Sun`, `Moon`, and `Monitor` icons for Light, Dark, and System.
 - Use an unframed Astryx `Section` and `Divider` rather than an outer Card.
 - Keep Data intentionally limited to the exact `Hello world` placeholder.

@@ -13,6 +13,13 @@ const foundryTheme = defineTheme({
   tokens: {
     '--font-family-code': 'monospace',
   },
+  components: {
+    'selectable-card': {
+      'selected:true': {
+        '--_card-ring': '0 0 transparent',
+      },
+    },
+  },
 });
 
 const router = createHashRouter(foundryRoutes);

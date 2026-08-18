@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import process from 'node:process';
+import packageMetadata from '../../package.json';
 import type { FoundryApi, FoundryPlatform } from '../shared/foundry-contract';
 import type { PromptApi, PromptApiResult } from '../shared/prompt-contract';
 import { promptIpcChannels } from '../shared/prompt-contract';
@@ -113,6 +114,7 @@ const settings: SettingsApi = {
 };
 
 const api: FoundryApi = {
+  applicationVersion: packageMetadata.version,
   platform: getFoundryPlatform(),
   prompts,
   providers,

@@ -6,6 +6,7 @@ import type { SettingsApi } from './settings-contract';
 export type FoundryPlatform = 'darwin' | 'linux' | 'win32';
 
 export interface FoundryApi {
+  applicationVersion: string;
   platform: FoundryPlatform;
   prompts: PromptApi;
   providers: ProviderApi;

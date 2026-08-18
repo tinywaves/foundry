@@ -4,16 +4,24 @@ import { Divider } from '@astryxdesign/core/Divider';
 import { Grid } from '@astryxdesign/core/Grid';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Icon } from '@astryxdesign/core/Icon';
+import { Link } from '@astryxdesign/core/Link';
+import {
+  MetadataList,
+  MetadataListItem,
+} from '@astryxdesign/core/MetadataList';
 import { Section } from '@astryxdesign/core/Section';
 import { SelectableCard } from '@astryxdesign/core/SelectableCard';
 import { SideNav, SideNavItem } from '@astryxdesign/core/SideNav';
 import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
-import { fontWeightVars } from '@astryxdesign/core/theme/tokens.stylex';
+import {
+  fontWeightVars,
+  spacingVars,
+} from '@astryxdesign/core/theme/tokens.stylex';
 import * as stylex from '@stylexjs/stylex';
 import {
   ArrowLeft,
-  Database,
+  Info,
   Monitor,
   Moon,
   Sun,
@@ -30,10 +38,23 @@ import {
   applicationSidebarStyles,
 } from '@renderer/layouts/application-sidebar';
 import { getSettingsBackNavigation } from '@renderer/settings-navigation';
+import foundryIcon from '../../../../resources/icon.png?url';
+
+const foundryContactEmail = 'dhzhme@gmail.com';
+const foundryEmailUrl = `mailto:${foundryContactEmail}`;
+const foundryRepositoryUrl = 'https://github.com/tinywaves/foundry';
+const foundryReleasesUrl = 'https://github.com/tinywaves/foundry/releases';
 
 const styles = stylex.create({
   backButton: {
     fontWeight: fontWeightVars['--font-weight-normal'],
+  },
+  productIcon: {
+    display: 'block',
+    flexShrink: 0,
+    width: spacingVars['--spacing-12'],
+    height: spacingVars['--spacing-12'],
+    objectFit: 'contain',
   },
 });
 
@@ -61,7 +82,7 @@ const colorModePresentation = {
   icon: typeof Sun;
 }>;
 
-type SettingsSection = 'appearance' | 'data';
+type SettingsSection = 'about' | 'appearance';
 
 interface AppearanceSettingsProps {
   colorMode: ApplicationColorMode;
@@ -120,12 +141,74 @@ function AppearanceSettings({
   );
 }
 
-function DataSettings() {
+function AboutSettings() {
   return (
     <VStack width="100%" gap={6}>
-      <Heading level={1}>Data</Heading>
+      <Heading level={1}>About</Heading>
       <Divider />
-      <Text>Hello world</Text>
+      <VStack width="100%" gap={6}>
+        <HStack width="100%" gap={4} vAlign="center">
+          <img
+            {...stylex.props(styles.productIcon)}
+            src={foundryIcon}
+            alt=""
+            width={1024}
+            height={1024}
+            draggable={false}
+          />
+          <StackItem size="fill">
+            <VStack width="100%" gap={1}>
+              <Heading level={2}>Foundry</Heading>
+              <Text color="secondary" textWrap="pretty">
+                An AI-native local developer runtime for tools, skills, agents,
+                and workflows.
+              </Text>
+            </VStack>
+          </StackItem>
+        </HStack>
+        <MetadataList label={{ position: 'top' }}>
+          <MetadataListItem label="Version">
+            <Text>{globalThis.api.applicationVersion}</Text>
+          </MetadataListItem>
+          <MetadataListItem label="Author">
+            <Text>tinywaves</Text>
+          </MetadataListItem>
+          <MetadataListItem label="Email">
+            <Link
+              as="a"
+              href={foundryEmailUrl}
+              isExternalLink
+              isStandalone
+            >
+              {foundryContactEmail}
+            </Link>
+          </MetadataListItem>
+          <MetadataListItem label="License">
+            <Text>Apache-2.0</Text>
+          </MetadataListItem>
+        </MetadataList>
+        <VStack width="100%" gap={2}>
+          <Heading level={2}>Project Links</Heading>
+          <VStack width="100%" gap={2}>
+            <Link
+              as="a"
+              href={foundryRepositoryUrl}
+              isExternalLink
+              isStandalone
+            >
+              GitHub Repository
+            </Link>
+            <Link
+              as="a"
+              href={foundryReleasesUrl}
+              isExternalLink
+              isStandalone
+            >
+              Releases
+            </Link>
+          </VStack>
+        </VStack>
+      </VStack>
     </VStack>
   );
 }
@@ -178,10 +261,10 @@ export function SettingsPage() {
                   onClick={() => setActiveSection('appearance')}
                 />
                 <SideNavItem
-                  label="Data"
-                  icon={Database}
-                  isSelected={activeSection === 'data'}
-                  onClick={() => setActiveSection('data')}
+                  label="About"
+                  icon={Info}
+                  isSelected={activeSection === 'about'}
+                  onClick={() => setActiveSection('about')}
                 />
               </VStack>
             </SideNav>
@@ -211,7 +294,7 @@ export function SettingsPage() {
                   onColorModeChange={updateColorMode}
                 />
               )}
-              {activeSection === 'data' && <DataSettings />}
+              {activeSection === 'about' && <AboutSettings />}
             </Section>
           </HStack>
         </StackItem>

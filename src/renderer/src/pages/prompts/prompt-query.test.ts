@@ -88,6 +88,7 @@ function installPromptApi(overrides: Partial<PromptApi>): void {
   Object.defineProperty(globalThis, 'api', {
     configurable: true,
     value: {
+      applicationVersion: '0.0.0-test',
       platform: 'darwin',
       prompts,
       providers: {} as FoundryApi['providers'],

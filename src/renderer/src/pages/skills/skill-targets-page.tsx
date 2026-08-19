@@ -11,7 +11,6 @@ import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
 import { StatusDot } from '@astryxdesign/core/StatusDot';
 import { Text } from '@astryxdesign/core/Text';
 import { Token } from '@astryxdesign/core/Token';
-import { Toolbar } from '@astryxdesign/core/Toolbar';
 import { useToast } from '@astryxdesign/core/Toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -35,6 +34,7 @@ import type {
   SkillInstallationView,
   SkillTargetView,
 } from '../../../../shared/skill-contract';
+import { SkillActionBar } from './skill-action-bar';
 import {
   buildSkillTargetInventory,
   getInstallationStatePresentation,
@@ -368,9 +368,8 @@ export function SkillTargetsPage() {
   return (
     <>
       <VStack width="100%" height="100%">
-        <Toolbar
+        <SkillActionBar
           label="Distribution Target Controls"
-          size="sm"
           endContent={(
             <Button
               label="Add Custom Target"

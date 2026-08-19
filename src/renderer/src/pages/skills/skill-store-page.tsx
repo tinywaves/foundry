@@ -11,7 +11,6 @@ import { proportional, Table } from '@astryxdesign/core/Table';
 import type { TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
 import { TextInput } from '@astryxdesign/core/TextInput';
-import { Toolbar } from '@astryxdesign/core/Toolbar';
 import { useToast } from '@astryxdesign/core/Toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Compass, FolderOpen, Import, PackagePlus, Search, Wrench } from 'lucide-react';
@@ -22,6 +21,7 @@ import type {
   SkillStorePackageView,
 } from '../../../../shared/skill-contract';
 import { routePaths } from '@renderer/routes';
+import { SkillActionBar } from './skill-action-bar';
 import {
   filterSkillStorePackages,
   getStoreObservationPresentation,
@@ -210,9 +210,8 @@ export function SkillStorePage() {
   return (
     <>
       <VStack width="100%" height="100%">
-        <Toolbar
+        <SkillActionBar
           label="Skill Store Controls"
-          size="sm"
           startContent={(
             <TextInput
               label="Search Skill Store"

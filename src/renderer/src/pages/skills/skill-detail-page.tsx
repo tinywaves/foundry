@@ -23,7 +23,6 @@ import type { TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
 import { useToast } from '@astryxdesign/core/Toast';
 import { Token } from '@astryxdesign/core/Token';
-import { Toolbar } from '@astryxdesign/core/Toolbar';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
@@ -47,6 +46,7 @@ import type {
   SkillApplyUpdateResult,
 } from '../../../../shared/skill-contract';
 import { routePaths } from '@renderer/routes';
+import { SkillActionBar } from './skill-action-bar';
 import {
   abbreviateSkillId,
   canMoveSkillPackageToTrash,
@@ -150,9 +150,8 @@ export function SkillDetailPage() {
   return (
     <>
       <VStack width="100%" height="100%">
-        <Toolbar
+        <SkillActionBar
           label="Skill Package"
-          size="sm"
           startContent={(
             <HStack gap={2} vAlign="center">
               <IconButton
@@ -202,9 +201,8 @@ export function SkillDetailPage() {
             </HStack>
           )}
         />
-        <Toolbar
+        <SkillActionBar
           label="Skill Package Detail"
-          size="sm"
           startContent={(
             <TabList
               value={activeTab}
@@ -752,9 +750,8 @@ function SkillSources({ skillId }: { skillId: string }) {
   return (
     <>
       <VStack width="100%" height="100%" gap={0}>
-        <Toolbar
+        <SkillActionBar
           label="Skill Sources"
-          size="sm"
           startContent={<Heading level={4} accessibilityLevel={2}>Sources</Heading>}
           endContent={(
             <Button

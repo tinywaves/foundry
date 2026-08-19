@@ -10,11 +10,11 @@ import { StatusDot } from '@astryxdesign/core/StatusDot';
 import { proportional, Table } from '@astryxdesign/core/Table';
 import type { TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
-import { Toolbar } from '@astryxdesign/core/Toolbar';
 import { useQuery } from '@tanstack/react-query';
 import { RotateCcw, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { SkillTrashPackageView } from '../../../../shared/skill-contract';
+import { SkillActionBar } from './skill-action-bar';
 import { getEmptySkillTrashDescription } from './skill-detail-model';
 import { getStoreObservationPresentation } from './skill-inventory-model';
 import { SkillInventoryLoading } from './skill-loading';
@@ -151,9 +151,8 @@ export function SkillTrashPage() {
   return (
     <>
       <VStack width="100%" height="100%">
-        <Toolbar
+        <SkillActionBar
           label="Skill Trash Controls"
-          size="sm"
           endContent={(
             <Button
               label="Empty Trash"

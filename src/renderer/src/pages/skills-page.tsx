@@ -1,12 +1,12 @@
 import { Banner } from '@astryxdesign/core/Banner';
 import { StackItem, VStack } from '@astryxdesign/core/Stack';
 import { Tab, TabList } from '@astryxdesign/core/TabList';
-import { Toolbar } from '@astryxdesign/core/Toolbar';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { PageHeader } from '@renderer/components/page-header';
 import { routePaths } from '@renderer/routes';
+import { SkillActionBar } from './skills/skill-action-bar';
 import { invalidateSkillQueries } from './skills/skill-query';
 import { startSkillWatchSession } from './skills/skill-watch-session';
 
@@ -60,9 +60,8 @@ export function SkillsPage() {
   return (
     <VStack width="100%" height="100%">
       <PageHeader text="Skills" />
-      <Toolbar
+      <SkillActionBar
         label="Skills View"
-        size="sm"
         startContent={(
           <TabList
             value={activeView}

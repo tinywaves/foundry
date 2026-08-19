@@ -16,7 +16,6 @@ import { proportional, Table } from '@astryxdesign/core/Table';
 import type { TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
 import { TextInput } from '@astryxdesign/core/TextInput';
-import { Toolbar } from '@astryxdesign/core/Toolbar';
 import { useToast } from '@astryxdesign/core/Toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -35,6 +34,7 @@ import type {
   SkillRemoteSearchInput,
   SkillResolveGitSourceInput,
 } from '../../../../shared/skill-contract';
+import { SkillActionBar } from './skill-action-bar';
 import {
   chooseRemoteVersion,
   createGitResolutionInput,
@@ -260,9 +260,8 @@ export function SkillDiscoverPage() {
   return (
     <>
       <VStack width="100%" height="100%">
-        <Toolbar
+        <SkillActionBar
           label="Skill Discovery Sources"
-          size="sm"
           startContent={(
             <TabList value={mode} onChange={changeMode} size="sm">
               {sourceTabs.map((tab) => (
@@ -339,9 +338,8 @@ function DiscoveryControls({
     canSubmit = createGitResolutionInput(sourceUrl, requestedRef) !== null;
   }
   return (
-    <Toolbar
+    <SkillActionBar
       label="Remote Skill Search"
-      size="sm"
       startContent={mode === 'git'
         ? (
             <HStack gap={2} width="100%" vAlign="end">

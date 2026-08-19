@@ -141,29 +141,12 @@ export interface SkillDistributionBaseline {
   recordedAt: number;
 }
 
-export interface SkillInstallationFacts {
+export interface SkillInstallationSyncFacts {
   store: SkillContentObservation;
-  distribution: SkillDistributionBaseline | null;
   target: SkillContentObservation;
 }
 
-export type SkillInstallationState
-  = | 'synced'
-    | 'outdated'
-    | 'drifted'
-    | 'diverged'
-    | 'missing';
-
-export type SkillInstallationStateResult
-  = | { kind: 'known'; state: SkillInstallationState }
-    | {
-      kind: 'unavailable';
-      reason:
-        | 'distribution-baseline-missing'
-        | 'store-missing'
-        | 'store-unreadable'
-        | 'target-unreadable';
-    };
+export type SkillInstallationSyncStatus = 'synced' | 'different' | 'unknown';
 
 export type SkillApiErrorCode
   = | 'invalid-input'
@@ -311,9 +294,10 @@ export interface SkillInstallationView {
   targetId: SkillTargetId;
   distributionName: string;
   relativePath: string;
+  storeObservation: SkillContentObservation;
   targetObservation: SkillContentObservation;
   distribution: SkillDistributionBaseline | null;
-  state: SkillInstallationStateResult;
+  syncStatus: SkillInstallationSyncStatus;
   createdAt: number;
   updatedAt: number;
 }
@@ -346,9 +330,6 @@ export const skillDistributionConflictCodes = [
   'target-read-only',
   'target-unavailable',
   'duplicate-physical-target',
-  'name-conflict',
-  'untracked-content',
-  'target-unreadable',
 ] as const;
 
 export type SkillDistributionConflictCode
@@ -358,7 +339,7 @@ export type SkillDistributionTargetPreflight
   = | {
     targetId: SkillTargetId;
     status: 'ready';
-    operation: 'install' | 'replace';
+    operation: 'install' | 'none' | 'replace';
     installationId: SkillInstallationId | null;
   }
   | {
@@ -683,39 +664,14 @@ export const SKILL_REMOTE_LOCATOR_MAX_UTF8_BYTES = 4096;
 export const SKILL_REMOTE_REF_MAX_UTF8_BYTES = 1024;
 export const SKILL_REMOTE_REVISION_MAX_UTF8_BYTES = 1024;
 
-export function deriveInstallationState(
-  facts: SkillInstallationFacts,
-): SkillInstallationStateResult {
+export function deriveInstallationSyncStatus(
+  facts: SkillInstallationSyncFacts,
+): SkillInstallationSyncStatus {
+  if (facts.store.status !== 'available' || facts.target.status === 'unreadable') {
+    return 'unknown';
+  }
   if (facts.target.status === 'missing') {
-    return { kind: 'known', state: 'missing' };
+    return 'different';
   }
-  if (facts.target.status === 'unreadable') {
-    return { kind: 'unavailable', reason: 'target-unreadable' };
-  }
-  if (facts.store.status === 'missing') {
-    return { kind: 'unavailable', reason: 'store-missing' };
-  }
-  if (facts.store.status === 'unreadable') {
-    return { kind: 'unavailable', reason: 'store-unreadable' };
-  }
-  if (facts.distribution === null) {
-    return { kind: 'unavailable', reason: 'distribution-baseline-missing' };
-  }
-  if (
-    facts.distribution.fingerprint === facts.store.fingerprint
-    && facts.distribution.fingerprint === facts.target.fingerprint
-  ) {
-    return { kind: 'known', state: 'synced' };
-  }
-  if (
-    facts.distribution.fingerprint === facts.target.fingerprint
-  ) {
-    return { kind: 'known', state: 'outdated' };
-  }
-  if (
-    facts.distribution.fingerprint === facts.store.fingerprint
-  ) {
-    return { kind: 'known', state: 'drifted' };
-  }
-  return { kind: 'known', state: 'diverged' };
+  return facts.store.fingerprint === facts.target.fingerprint ? 'synced' : 'different';
 }

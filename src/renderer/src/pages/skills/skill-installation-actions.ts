@@ -1,6 +1,6 @@
 import type {
   SkillDistributionTargetResult,
-  SkillInstallationStateResult,
+  SkillInstallationView,
 } from '../../../../shared/skill-contract';
 
 export const skillInstallationActions = [
@@ -13,30 +13,22 @@ export const skillInstallationActions = [
 export type SkillInstallationAction = typeof skillInstallationActions[number];
 
 export function getSkillInstallationActions(
-  state: SkillInstallationStateResult,
+  installation: SkillInstallationView,
 ): SkillInstallationAction[] {
-  if (state.kind === 'unavailable') {
-    if (state.reason === 'store-missing' || state.reason === 'store-unreadable') {
-      return ['promote', 'import-as-new', 'uninstall'];
-    }
-    if (state.reason === 'distribution-baseline-missing') {
-      return ['restore', 'promote', 'import-as-new', 'uninstall'];
-    }
-    return [];
+  const canReadStore = installation.storeObservation.status === 'available';
+  if (installation.targetObservation.status === 'missing') {
+    return canReadStore ? ['restore', 'uninstall'] : ['uninstall'];
   }
-  switch (state.state) {
-    case 'synced': {
-      return ['uninstall'];
-    }
-    case 'outdated':
-    case 'missing': {
-      return ['restore', 'uninstall'];
-    }
-    case 'drifted':
-    case 'diverged': {
-      return ['restore', 'promote', 'import-as-new', 'uninstall'];
-    }
+  if (installation.targetObservation.status === 'unreadable') {
+    return canReadStore ? ['restore'] : [];
   }
+  if (!canReadStore) {
+    return ['promote', 'import-as-new', 'uninstall'];
+  }
+  if (installation.syncStatus === 'synced') {
+    return ['uninstall'];
+  }
+  return ['restore', 'promote', 'import-as-new', 'uninstall'];
 }
 
 export interface SkillDistributionResultSummary {

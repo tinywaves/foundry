@@ -61,7 +61,7 @@ This task changes renderer query composition and pure presentation logic only. I
 
 - Replacing selectable cards or removing multi-selection.
 - Changing installation derivation, discovery, preflight, or distribution semantics.
-- Showing detailed synced, outdated, drifted, or diverged state in this selection surface.
+- Showing detailed synchronization status in this selection surface.
 - Renaming existing domain terms to download terminology.
 - Adding renderer component, DOM, layout, screenshot, or accessibility-tree tests.
 

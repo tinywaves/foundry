@@ -2,18 +2,20 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import {
   cp,
+  lstat,
   mkdir,
   mkdtemp,
   readFile,
   readdir,
   rm,
+  symlink,
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type Database from 'better-sqlite3';
 import { test } from 'vitest';
-import { deriveInstallationState } from '../../shared/skill-contract';
+import { deriveInstallationSyncStatus } from '../../shared/skill-contract';
 import { openFoundryDatabase } from '../storage/foundry-database';
 import { SkillOperationError } from './skill-error';
 import {
@@ -51,7 +53,7 @@ interface MutationFixture {
   close: () => Promise<void>;
 }
 
-test('normalizes conflicts and reports partial multi-target distribution', async () => {
+test('synchronizes unmanaged and differently associated destinations', async () => {
   const fixture = await createFixture('partial', 3);
 
   try {
@@ -72,24 +74,39 @@ test('normalizes conflicts and reports partial multi-target distribution', async
       targetIds: fixture.targetIds,
     });
 
-    assert.equal(preflight.targets[0]?.status, 'ready');
-    assert.deepEqual(preflight.targets.slice(1).map((target) => (
-      target.status === 'conflict' ? target.code : null
-    )), ['untracked-content', 'name-conflict']);
+    assert.deepEqual(preflight.targets.map((target) => (
+      target.status === 'ready' ? target.operation : target.code
+    )), ['install', 'replace', 'replace']);
 
     const distributed = await coordinator.distribute({
       skillId: packageId,
       targetIds: fixture.targetIds,
     });
     assert.equal(distributed.revisionId, revisionId);
-    assert.deepEqual(distributed.targets.map((target) => target.ok), [true, false, false]);
+    assert.deepEqual(distributed.targets.map((target) => target.ok), [true, true, true]);
     assert.equal(
       await readFile(path.join(fixture.targetPaths[0], 'shared-skill', 'SKILL.md'), 'utf8'),
       skillManifest('# Initial\n'),
     );
     assert.equal(
       await readFile(path.join(unmanagedPath, 'SKILL.md'), 'utf8'),
-      skillManifest('# Unmanaged\n'),
+      skillManifest('# Initial\n'),
+    );
+    assert.equal(
+      await readFile(path.join(fixture.targetPaths[2], 'shared-skill', 'SKILL.md'), 'utf8'),
+      skillManifest('# Initial\n'),
+    );
+    const displacedResult = occupied.targets[0];
+    const displacedInstallationId = displacedResult.installationId;
+    assert.equal(
+      fixture.installationRepository.isInstallationActive(displacedInstallationId),
+      false,
+    );
+    assert.equal(
+      fixture.database.prepare(`
+        SELECT COUNT(*) FROM skill_distribution_records WHERE installation_id = ?
+      `).pluck().get(displacedInstallationId),
+      1,
     );
     const installation = fixture.installationRepository.listActiveInstallations(
       fixture.targetIds[0],
@@ -107,8 +124,109 @@ test('normalizes conflicts and reports partial multi-target distribution', async
   }
 });
 
-test('keeps an installation Outdated until explicit same-package replacement', async () => {
-  const fixture = await createFixture('outdated', 1);
+test('keeps environmental failures isolated per selected Target', async () => {
+  const fixture = await createFixture('partial', 2);
+
+  try {
+    fixture.targetRepository.updateTargetPolicy({
+      targetId: fixture.targetIds[1],
+      enabled: false,
+      maxScanDepth: 4,
+      allowSymlinkEscape: false,
+    });
+    const result = await createCoordinator(fixture).distribute({
+      skillId: packageId,
+      targetIds: fixture.targetIds,
+    });
+
+    assert.deepEqual(result.targets.map((target) => target.ok), [true, false]);
+    const failedTarget = result.targets[1];
+    if (failedTarget.ok) {
+      assert.fail('The disabled Target was not reported as a failure.');
+    }
+    assert.equal(failedTarget.error.code, 'conflict');
+    assert.equal(fixture.installationRepository.listActiveInstallations().length, 1);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('records an equal destination without copying package bytes again', async () => {
+  const fixture = await createFixture('equal-target', 1);
+
+  try {
+    let copyCalls = 0;
+    const coordinator = createCoordinator(fixture, {
+      copyPackage: async (source, destination) => {
+        copyCalls += 1;
+        await copyPackage(source, destination);
+      },
+    });
+    const input = { skillId: packageId, targetIds: fixture.targetIds };
+    const first = await coordinator.distribute(input);
+    assert.equal(first.targets[0]?.ok, true);
+    assert.equal(copyCalls, 1);
+
+    const preflight = await coordinator.preflightDistribution(input);
+    assert.equal(
+      preflight.targets[0]?.status === 'ready'
+        ? preflight.targets[0].operation
+        : null,
+      'none',
+    );
+    const second = await coordinator.distribute(input);
+    assert.equal(second.targets[0]?.ok, true);
+    assert.equal(copyCalls, 1);
+
+    const installation = fixture.installationRepository.listActiveInstallations()[0];
+    assert.equal(
+      fixture.database.prepare(`
+        SELECT COUNT(*) FROM skill_distribution_records WHERE installation_id = ?
+      `).pluck().get(installation.id),
+      2,
+    );
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('replaces an unreadable destination entry without following it', async () => {
+  const fixture = await createFixture('unreadable-target', 1);
+  const externalPackage = path.join(fixture.temporaryRoot, 'external-package');
+  const targetPackage = path.join(fixture.targetPaths[0], 'shared-skill');
+
+  try {
+    await createSkillPackage(externalPackage, '# External\n');
+    await symlink(externalPackage, targetPackage);
+    const coordinator = createCoordinator(fixture);
+    const input = { skillId: packageId, targetIds: fixture.targetIds };
+
+    const preflight = await coordinator.preflightDistribution(input);
+    assert.equal(
+      preflight.targets[0]?.status === 'ready'
+        ? preflight.targets[0].operation
+        : null,
+      'replace',
+    );
+    const result = await coordinator.distribute(input);
+    assert.equal(result.targets[0]?.ok, true);
+    const targetStats = await lstat(targetPackage);
+    assert.equal(targetStats.isDirectory(), true);
+    assert.equal(
+      await readFile(path.join(targetPackage, 'SKILL.md'), 'utf8'),
+      skillManifest('# Initial\n'),
+    );
+    assert.equal(
+      await readFile(path.join(externalPackage, 'SKILL.md'), 'utf8'),
+      skillManifest('# External\n'),
+    );
+  } finally {
+    await fixture.close();
+  }
+});
+
+test('reports different content until explicit same-package synchronization', async () => {
+  const fixture = await createFixture('different-content', 1);
 
   try {
     const coordinator = createCoordinator(fixture);
@@ -124,18 +242,10 @@ test('keeps an installation Outdated until explicit same-package replacement', a
     await writeFile(path.join(storePackage, 'SKILL.md'), skillManifest('# Store update\n'));
     await fixture.storeCoordinator.reconcileStorePackages();
     const store = fixture.metadataRepository.getActivePackage(packageId);
-    const baseline = fixture.installationRepository.getLatestDistributionRecord(
-      installation.id,
-    )!;
-    assert.deepEqual(deriveInstallationState({
+    assert.equal(deriveInstallationSyncStatus({
       store: store.storeObservation,
-      distribution: {
-        revisionId: baseline.revisionId,
-        fingerprint: baseline.fingerprint,
-        recordedAt: baseline.createdAt,
-      },
       target: installation.targetObservation,
-    }), { kind: 'known', state: 'outdated' });
+    }), 'different');
     assert.equal(await readFile(path.join(targetPackage, 'SKILL.md'), 'utf8'), skillManifest('# Initial\n'));
 
     const updated = await coordinator.distribute({
@@ -204,7 +314,7 @@ test('rejects a changed staging copy without replacing the installed bytes', asy
   }
 });
 
-test('rechecks untracked content created after preflight and preserves it', async () => {
+test('rechecks and replaces content created after preflight', async () => {
   const fixture = await createFixture('toctou', 1);
 
   try {
@@ -221,15 +331,14 @@ test('rechecks untracked content created after preflight and preserves it', asyn
     });
 
     const targetResult = result.targets[0];
-    if (targetResult.ok) {
-      assert.fail('The untracked content was replaced.');
+    if (!targetResult.ok) {
+      assert.fail(targetResult.error.message);
     }
-    assert.equal(targetResult.error.code, 'conflict');
     assert.equal(
       await readFile(path.join(finalPath, 'SKILL.md'), 'utf8'),
-      skillManifest('# External install\n'),
+      skillManifest('# Initial\n'),
     );
-    assert.deepEqual(fixture.installationRepository.listActiveInstallations(), []);
+    assert.equal(fixture.installationRepository.listActiveInstallations().length, 1);
     assert.deepEqual(await readdir(fixture.paths.targetOperations), []);
   } finally {
     await fixture.close();
@@ -344,7 +453,7 @@ test('serializes concurrent mutations through the shared subsystem queue', async
 });
 
 test('keeps Promote, Import as New, Restore, and Uninstall identity effects distinct', async () => {
-  const fixture = await createFixture('drift-actions', 1);
+  const fixture = await createFixture('installation-actions', 1);
 
   try {
     const coordinator = createCoordinator(fixture);
@@ -365,16 +474,11 @@ test('keeps Promote, Import as New, Restore, and Uninstall identity effects dist
     const baselineAfterPromotion = fixture.installationRepository
       .getLatestDistributionRecord(installation.id)!;
     assert.equal(baselineAfterPromotion.sequenceNumber, 1);
-    assert.deepEqual(deriveInstallationState({
+    assert.equal(deriveInstallationSyncStatus({
       store: promoted.package.storeObservation,
-      distribution: {
-        revisionId: baselineAfterPromotion.revisionId,
-        fingerprint: baselineAfterPromotion.fingerprint,
-        recordedAt: baselineAfterPromotion.createdAt,
-      },
       target: fixture.installationRepository.getActiveInstallation(installation.id)
         .targetObservation,
-    }), { kind: 'known', state: 'diverged' });
+    }), 'synced');
 
     const imported = await coordinator.importInstallationAsNew({
       installationId: installation.id,

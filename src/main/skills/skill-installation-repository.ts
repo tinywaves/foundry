@@ -256,6 +256,51 @@ export class SkillInstallationRepository {
     return this.getActiveById(installationId);
   }
 
+  private insertInstallation(input: {
+    installationId: string;
+    packageId: string;
+    targetId: string;
+    distributionName: string;
+    relativePath: string;
+    fingerprint: string;
+    observedAt: number;
+  }): SkillInstallationMetadata {
+    this.database.prepare(`
+      INSERT INTO skill_installations (
+        id,
+        package_id,
+        target_id,
+        distribution_name,
+        normalized_distribution_name,
+        relative_path,
+        relative_path_key,
+        target_observation,
+        target_fingerprint,
+        target_observed_at,
+        created_at,
+        updated_at
+      ) VALUES (
+        @installationId,
+        @packageId,
+        @targetId,
+        @distributionName,
+        @normalizedDistributionName,
+        @relativePath,
+        @relativePathKey,
+        'available',
+        @fingerprint,
+        @observedAt,
+        @observedAt,
+        @observedAt
+      )
+    `).run({
+      ...input,
+      normalizedDistributionName: normalizeSkillDistributionName(input.distributionName),
+      relativePathKey: normalizeSkillRelativePath(input.relativePath),
+    });
+    return this.getActiveById(input.installationId);
+  }
+
   findActiveInstallationByLocation(
     targetIdValue: unknown,
     relativePathValue: unknown,
@@ -476,65 +521,57 @@ export class SkillInstallationRepository {
         let isCreated = false;
         if (existingAtLocation) {
           installation = this.mapInstallation(existingAtLocation);
-          if (
-            installation.id !== installationId
-            || installation.packageId !== packageId
-            || normalizeSkillDistributionName(installation.distributionName)
-            !== normalizeSkillDistributionName(distributionName)
-          ) {
+          const canReuse = installation.id === installationId
+            && installation.packageId === packageId
+            && normalizeSkillDistributionName(installation.distributionName)
+            === normalizeSkillDistributionName(distributionName);
+          if (canReuse) {
+            installation = this.updateObservationInternal(
+              installationId,
+              { status: 'available', fingerprint, observedAt },
+            );
+          } else if (installation.id === installationId) {
             throw new SkillOperationError(
               'conflict',
-              'The Distribution Target name is occupied by another Skill Installation.',
+              'The Skill Installation identity does not match the synchronized content.',
             );
+          } else {
+            if (this.selectActiveById(installationId)) {
+              throw new SkillOperationError(
+                'conflict',
+                'Skill Installation identity is occupied.',
+              );
+            }
+            this.database.prepare(`
+              UPDATE skill_installations
+              SET uninstalled_at = @observedAt,
+                  updated_at = MAX(updated_at, @observedAt)
+              WHERE id = @existingId AND uninstalled_at IS NULL
+            `).run({ existingId: installation.id, observedAt });
+            installation = this.insertInstallation({
+              installationId,
+              packageId,
+              targetId,
+              distributionName,
+              relativePath,
+              fingerprint,
+              observedAt,
+            });
+            isCreated = true;
           }
-          installation = this.updateObservationInternal(
-            installationId,
-            { status: 'available', fingerprint, observedAt },
-          );
         } else {
           if (this.selectActiveById(installationId)) {
             throw new SkillOperationError('conflict', 'Skill Installation identity is occupied.');
           }
-          this.database.prepare(`
-            INSERT INTO skill_installations (
-              id,
-              package_id,
-              target_id,
-              distribution_name,
-              normalized_distribution_name,
-              relative_path,
-              relative_path_key,
-              target_observation,
-              target_fingerprint,
-              target_observed_at,
-              created_at,
-              updated_at
-            ) VALUES (
-              @id,
-              @packageId,
-              @targetId,
-              @distributionName,
-              @normalizedDistributionName,
-              @relativePath,
-              @relativePathKey,
-              'available',
-              @fingerprint,
-              @observedAt,
-              @observedAt,
-              @observedAt
-            )
-          `).run({
-            id: installationId,
+          installation = this.insertInstallation({
+            installationId,
             packageId,
             targetId,
             distributionName,
-            normalizedDistributionName: normalizeSkillDistributionName(distributionName),
             relativePath,
-            relativePathKey: normalizeSkillRelativePath(relativePath),
             fingerprint,
             observedAt,
           });
-          installation = this.getActiveById(installationId);
           isCreated = true;
         }
 

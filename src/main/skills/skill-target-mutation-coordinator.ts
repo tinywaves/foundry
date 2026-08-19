@@ -110,6 +110,7 @@ interface PreparedTarget {
   distributionName: string;
   relativePath: string;
   finalPath: string;
+  operation: Extract<SkillDistributionTargetPreflight, { status: 'ready' }>['operation'];
 }
 
 export type SkillTargetMutationResult
@@ -220,50 +221,39 @@ export class SkillTargetMutationCoordinator {
     const distributionName = parseSkillDistributionName(skillPackage.distributionName);
     const namedInstallation = this.options.installationRepository
       .findActiveInstallationByDistributionName(target.id, distributionName);
-    if (namedInstallation && namedInstallation.packageId !== skillPackage.id) {
-      return conflict(
-        target.id,
-        'name-conflict',
-        'Another Skill Installation uses this Distribution Name.',
-      );
-    }
     const packageInstallations = this.options.installationRepository
       .listActiveInstallations(target.id)
       .filter((installation) => installation.packageId === skillPackage.id);
-    const installation = namedInstallation
+    const occupiedEntry = namedInstallation
+      ? null
+      : await findNormalizedRootEntry(rootPath, distributionName);
+    const preferredInstallation = namedInstallation
       ?? (packageInstallations.length === 1 ? packageInstallations[0] : null);
-    if (!installation && packageInstallations.length > 1) {
-      return conflict(
-        target.id,
-        'name-conflict',
-        'More than one installation of this Skill occupies the Distribution Target.',
-      );
-    }
-    const relativePath = installation?.relativePath ?? distributionName;
+    const relativePath = preferredInstallation?.relativePath ?? occupiedEntry ?? distributionName;
     const finalPath = resolveContainedTargetPath(rootPath, relativePath);
-
+    const installation = this.options.installationRepository
+      .findActiveInstallationByLocation(target.id, relativePath);
+    const isTargetPresent = await pathEntryExists(finalPath);
+    const targetObservation = isTargetPresent
+      ? await observeSkillPackage(finalPath, this.now())
+      : { status: 'missing' as const, observedAt: this.now() };
     if (installation) {
-      const targetObservation = await observeSkillPackage(finalPath, this.now());
       this.options.installationRepository.updateInstallationObservation(
         installation.id,
         targetObservation,
       );
-      if (targetObservation.status === 'unreadable') {
-        return conflict(
-          target.id,
-          'target-unreadable',
-          'The existing Skill Installation could not be read completely.',
-        );
-      }
+    }
+    let operation: PreparedTarget['operation'];
+    if (!isTargetPresent) {
+      operation = 'install';
+    } else if (
+      targetObservation.status === 'available'
+      && skillPackage.storeObservation.status === 'available'
+      && targetObservation.fingerprint === skillPackage.storeObservation.fingerprint
+    ) {
+      operation = 'none';
     } else {
-      const occupiedEntry = await findNormalizedRootEntry(rootPath, distributionName);
-      if (occupiedEntry !== null) {
-        return conflict(
-          target.id,
-          'untracked-content',
-          `Unmanaged content already occupies ${occupiedEntry}.`,
-        );
-      }
+      operation = 'replace';
     }
 
     return {
@@ -273,6 +263,7 @@ export class SkillTargetMutationCoordinator {
       distributionName,
       relativePath,
       finalPath,
+      operation,
     };
   }
 
@@ -303,7 +294,7 @@ export class SkillTargetMutationCoordinator {
         targets.push({
           targetId,
           status: 'ready',
-          operation: prepared.installation ? 'replace' : 'install',
+          operation: prepared.operation,
           installationId: prepared.installation?.id ?? null,
         });
       }
@@ -315,16 +306,16 @@ export class SkillTargetMutationCoordinator {
     };
   }
 
-  private async replaceTarget(
+  private async synchronizeTarget(
     skillPackage: SkillPackageMetadata,
     revision: SkillRevisionMetadata,
     targetId: string,
-    operation: TargetMutationOperation,
+    mutationOperation: TargetMutationOperation,
     expectedInstallationId?: string,
   ): Promise<SkillTargetMutationResult> {
     try {
       const target = this.options.targetRepository.getTarget(targetId);
-      const prepared = await this.prepareTarget(skillPackage, target);
+      let prepared = await this.prepareTarget(skillPackage, target);
       if ('status' in prepared) {
         throw new SkillOperationError('conflict', prepared.message);
       }
@@ -334,8 +325,55 @@ export class SkillTargetMutationCoordinator {
       ) {
         throw new SkillOperationError('conflict', 'The Skill Installation changed.');
       }
-      const installationId = prepared.installation?.id
-        ?? parseSkillInstallationId(this.createId());
+      if (prepared.operation === 'none') {
+        const currentStore = await this.observeStorePackage(skillPackage.id);
+        if (
+          currentStore.storeObservation.status !== 'available'
+          || currentStore.storeObservation.fingerprint !== revision.fingerprint
+        ) {
+          throw new SkillOperationError(
+            'conflict',
+            'The Store Working Copy changed after distribution started.',
+          );
+        }
+        const rechecked = await this.prepareTarget(currentStore, target);
+        if (
+          'status' in rechecked
+          || rechecked.relativePath !== prepared.relativePath
+          || (
+            expectedInstallationId !== undefined
+            && rechecked.installation?.id !== expectedInstallationId
+          )
+        ) {
+          throw new SkillOperationError('conflict', 'The Distribution Target changed.');
+        }
+        if (rechecked.operation === 'none') {
+          const installationId = getSynchronizedInstallationId(
+            rechecked.installation,
+            skillPackage,
+            () => this.createId(),
+          );
+          this.options.installationRepository.recordDistribution({
+            installationId,
+            distributionRecordId: parseSkillDistributionRecordId(this.createId()),
+            packageId: skillPackage.id,
+            targetId,
+            revisionId: revision.id,
+            distributionName: rechecked.distributionName,
+            relativePath: rechecked.relativePath,
+            fingerprint: revision.fingerprint,
+            operation: mutationOperation,
+            observedAt: this.now(),
+          });
+          return { targetId, ok: true, installationId, revisionId: revision.id };
+        }
+        prepared = rechecked;
+      }
+      const installationId = getSynchronizedInstallationId(
+        prepared.installation,
+        skillPackage,
+        () => this.createId(),
+      );
       const distributionRecordId = parseSkillDistributionRecordId(this.createId());
       const operationId = parseSkillId(this.createId());
       const operationRoot = path.join(this.options.paths.targetOperations, operationId);
@@ -360,7 +398,7 @@ export class SkillTargetMutationCoordinator {
         fingerprint: revision.fingerprint,
         distributionName: prepared.distributionName,
         relativePath: prepared.relativePath,
-        operation,
+        operation: mutationOperation,
         hadBackup: false,
         createdAt: this.now(),
       };
@@ -393,7 +431,10 @@ export class SkillTargetMutationCoordinator {
         if (
           'status' in rechecked
           || rechecked.relativePath !== prepared.relativePath
-          || rechecked.installation?.id !== prepared.installation?.id
+          || (
+            expectedInstallationId !== undefined
+            && rechecked.installation?.id !== expectedInstallationId
+          )
         ) {
           throw new SkillOperationError('conflict', 'The Distribution Target changed.');
         }
@@ -419,7 +460,7 @@ export class SkillTargetMutationCoordinator {
           distributionName: prepared.distributionName,
           relativePath: prepared.relativePath,
           fingerprint: revision.fingerprint,
-          operation,
+          operation: mutationOperation,
           observedAt: this.now(),
         });
         isMetadataCommitted = true;
@@ -484,12 +525,11 @@ export class SkillTargetMutationCoordinator {
           error: { code: 'conflict', message: target.message },
         });
       } else {
-        results.push(await this.replaceTarget(
+        results.push(await this.synchronizeTarget(
           skillPackage,
           snapshot.revision,
           target.targetId,
           'distribution',
-          target.installationId ?? undefined,
         ));
       }
     }
@@ -513,7 +553,7 @@ export class SkillTargetMutationCoordinator {
     const skillPackage = this.options.metadataRepository.getActivePackage(
       installation.packageId,
     );
-    return this.replaceTarget(
+    return this.synchronizeTarget(
       skillPackage,
       snapshot.revision,
       installation.targetId,
@@ -819,6 +859,21 @@ function conflict(
   message: string,
 ): Extract<SkillDistributionTargetPreflight, { status: 'conflict' }> {
   return { targetId, status: 'conflict', code, message };
+}
+
+function getSynchronizedInstallationId(
+  installation: SkillInstallationMetadata | null,
+  skillPackage: SkillPackageMetadata,
+  createId: () => string,
+): string {
+  if (
+    installation?.packageId === skillPackage.id
+    && normalizeSkillDistributionName(installation.distributionName)
+    === normalizeSkillDistributionName(skillPackage.distributionName)
+  ) {
+    return installation.id;
+  }
+  return parseSkillInstallationId(createId());
 }
 
 function resolveContainedTargetPath(rootPath: string, relativePathValue: unknown): string {

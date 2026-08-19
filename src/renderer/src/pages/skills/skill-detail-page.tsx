@@ -59,7 +59,7 @@ import type { SkillDetailTab } from './skill-detail-model';
 import { SkillDistributionDialog } from './skill-distribution-dialog';
 import { SkillFileInspector } from './skill-file-inspector';
 import {
-  getInstallationStatePresentation,
+  getInstallationStatusPresentation,
   getStoreObservationPresentation,
 } from './skill-inventory-model';
 import { SkillInventoryLoading } from './skill-loading';
@@ -455,7 +455,7 @@ function SkillInstallations({
     { key: 'directory', header: 'Directory', width: proportional(1) },
     {
       key: 'status',
-      header: 'State',
+      header: 'Status',
       width: proportional(1),
       renderCell: (row) => (
         <HStack gap={1.5} vAlign="center">
@@ -531,7 +531,7 @@ function buildInstallationRows(
 ): SkillInstallationRow[] {
   const targetNames = new Map(targets.map((target) => [target.id, target.displayName]));
   return installations.map((installation) => {
-    const status = getInstallationStatePresentation(installation.state);
+    const status = getInstallationStatusPresentation(installation);
     return {
       id: installation.id,
       target: targetNames.get(installation.targetId) ?? 'Unknown Target',

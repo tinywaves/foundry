@@ -101,6 +101,9 @@ export function SkillDistributionDialog({
   const replaceCount = preflight?.targets.filter((target) => (
     target.status === 'ready' && target.operation === 'replace'
   )).length ?? 0;
+  const currentCount = preflight?.targets.filter((target) => (
+    target.status === 'ready' && target.operation === 'none'
+  )).length ?? 0;
   const error = targetsQuery.error
     ?? installationsQuery.error
     ?? preflightMutation.error
@@ -156,7 +159,7 @@ export function SkillDistributionDialog({
                 <Banner
                   status={readyCount === preflight.targets.length ? 'success' : 'warning'}
                   title="Distribution Review Complete"
-                  description={`${readyCount} ready, ${preflight.targets.length - readyCount} blocked.${replaceCount > 0 ? ` ${replaceCount} existing installations will be replaced.` : ''}`}
+                  description={`${readyCount} ready, ${preflight.targets.length - readyCount} blocked.${replaceCount > 0 ? ` ${replaceCount} destinations will be replaced.` : ''}${currentCount > 0 ? ` ${currentCount} already up to date.` : ''}`}
                 />
               )}
               {result && <DistributionResultBanner result={result} />}
@@ -349,13 +352,17 @@ function getTargetFeedback({
     ? preflight?.targets.find((item) => item.targetId === target.id)
     : undefined;
   if (targetPreflight) {
-    return targetPreflight.status === 'ready'
-      ? {
-          label: targetPreflight.operation === 'replace' ? 'Will replace' : 'Ready to install',
-          message: undefined,
-          variant: targetPreflight.operation === 'replace' ? 'warning' : 'success',
-        }
-      : { label: 'Blocked', message: targetPreflight.message, variant: 'error' };
+    if (targetPreflight.status === 'conflict') {
+      return { label: 'Blocked', message: targetPreflight.message, variant: 'error' };
+    }
+    if (targetPreflight.operation === 'none') {
+      return { label: 'Up to date', message: undefined, variant: 'success' };
+    }
+    return {
+      label: targetPreflight.operation === 'replace' ? 'Will replace' : 'Ready to install',
+      message: undefined,
+      variant: targetPreflight.operation === 'replace' ? 'warning' : 'success',
+    };
   }
   if (isInstallationPending) {
     return { label: 'Checking', message: undefined, variant: 'neutral' };

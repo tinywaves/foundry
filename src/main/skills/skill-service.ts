@@ -29,7 +29,7 @@ import type {
   SkillWatchSessionStart,
   SkillPromotionResult,
 } from '../../shared/skill-contract';
-import { deriveInstallationState } from '../../shared/skill-contract';
+import { deriveInstallationSyncStatus } from '../../shared/skill-contract';
 import type { SkillDiscoveryCoordinator } from './skill-discovery-coordinator';
 import { SkillOperationError, toSkillOperationError } from './skill-error';
 import type { SkillFileCoordinator } from './skill-file-coordinator';
@@ -145,10 +145,10 @@ export class SkillService {
       : null;
     return {
       ...installation,
+      storeObservation: skillPackage.storeObservation,
       distribution,
-      state: deriveInstallationState({
+      syncStatus: deriveInstallationSyncStatus({
         store: skillPackage.storeObservation,
-        distribution,
         target: installation.targetObservation,
       }),
     };

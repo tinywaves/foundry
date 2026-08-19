@@ -1,6 +1,6 @@
 import type {
   SkillContentObservationStatus,
-  SkillInstallationStateResult,
+  SkillInstallationSyncStatus,
   SkillInstallationView,
   SkillStorePackageView,
   SkillTargetView,
@@ -15,7 +15,7 @@ export interface SkillTargetInventoryRow {
   target: SkillTargetView;
   installations: SkillInstallationView[];
   packageCount: number;
-  stateCounts: Record<string, number>;
+  statusCounts: Record<string, number>;
 }
 
 const observationPresentations: Record<
@@ -27,16 +27,25 @@ const observationPresentations: Record<
   unreadable: { label: 'Unreadable', variant: 'warning' },
 };
 
-const installationPresentations: Record<string, SkillStatePresentation> = {
-  'synced': { label: 'Synced', variant: 'success' },
-  'outdated': { label: 'Outdated', variant: 'accent' },
-  'drifted': { label: 'Drifted', variant: 'warning' },
-  'diverged': { label: 'Diverged', variant: 'warning' },
-  'missing': { label: 'Missing', variant: 'error' },
-  'distribution-baseline-missing': { label: 'Baseline unavailable', variant: 'neutral' },
+const syncPresentations: Record<SkillInstallationSyncStatus, SkillStatePresentation> = {
+  synced: { label: 'Synced', variant: 'success' },
+  different: { label: 'Different', variant: 'warning' },
+  unknown: { label: 'Unknown', variant: 'neutral' },
+};
+
+const unavailableStorePresentations = {
   'store-missing': { label: 'Store missing', variant: 'error' },
   'store-unreadable': { label: 'Store unreadable', variant: 'warning' },
-  'target-unreadable': { label: 'Target unreadable', variant: 'warning' },
+} satisfies Record<string, SkillStatePresentation>;
+
+const missingInstallationPresentation: SkillStatePresentation = {
+  label: 'Missing',
+  variant: 'error',
+};
+
+const unreadableInstallationPresentation: SkillStatePresentation = {
+  label: 'Unreadable',
+  variant: 'warning',
 };
 
 const targetInstallationPresentations: Record<
@@ -72,10 +81,19 @@ export function getStoreObservationPresentation(
   return observationPresentations[status];
 }
 
-export function getInstallationStatePresentation(
-  state: SkillInstallationStateResult,
+export function getInstallationStatusPresentation(
+  installation: SkillInstallationView,
 ): SkillStatePresentation {
-  return installationPresentations[state.kind === 'known' ? state.state : state.reason];
+  if (installation.targetObservation.status === 'missing') {
+    return missingInstallationPresentation;
+  }
+  if (installation.targetObservation.status === 'unreadable') {
+    return unreadableInstallationPresentation;
+  }
+  if (installation.storeObservation.status !== 'available') {
+    return unavailableStorePresentations[`store-${installation.storeObservation.status}`];
+  }
+  return syncPresentations[installation.syncStatus];
 }
 
 export function getTargetInstallationPresentation(
@@ -110,16 +128,16 @@ export function buildSkillTargetInventory(
         left.distributionName.localeCompare(right.distributionName)
         || left.id.localeCompare(right.id)
       ));
-    const stateCounts: Record<string, number> = {};
+    const statusCounts: Record<string, number> = {};
     for (const installation of targetInstallations) {
-      const presentation = getInstallationStatePresentation(installation.state);
-      stateCounts[presentation.label] = (stateCounts[presentation.label] ?? 0) + 1;
+      const presentation = getInstallationStatusPresentation(installation);
+      statusCounts[presentation.label] = (statusCounts[presentation.label] ?? 0) + 1;
     }
     return {
       target,
       installations: targetInstallations,
       packageCount: new Set(targetInstallations.map((item) => item.packageId)).size,
-      stateCounts,
+      statusCounts,
     };
   });
 }

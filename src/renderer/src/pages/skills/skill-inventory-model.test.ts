@@ -9,7 +9,7 @@ import type {
 import {
   buildSkillTargetInventory,
   filterSkillStorePackages,
-  getInstallationStatePresentation,
+  getInstallationStatusPresentation,
   getStoreObservationPresentation,
   getTargetInstallationPresentation,
   isCodexLegacyTarget,
@@ -53,7 +53,10 @@ function createInstallation(
   id: string,
   targetId: string,
   packageId: string,
-  state: SkillInstallationView['state'],
+  overrides: Partial<Pick<
+    SkillInstallationView,
+    'storeObservation' | 'targetObservation' | 'syncStatus'
+  >> = {},
 ): SkillInstallationView {
   return {
     id,
@@ -61,11 +64,13 @@ function createInstallation(
     packageId,
     distributionName: packageId,
     relativePath: packageId,
-    targetObservation: { status: 'missing', observedAt: 1 },
+    storeObservation: { status: 'available', fingerprint: 'a'.repeat(64), observedAt: 1 },
+    targetObservation: { status: 'available', fingerprint: 'a'.repeat(64), observedAt: 1 },
     distribution: null,
-    state,
+    syncStatus: 'synced',
     createdAt: 1,
     updatedAt: 1,
+    ...overrides,
   };
 }
 
@@ -84,16 +89,21 @@ test('maps Store observations and installation facts without claiming validity',
     variant: 'success',
   });
   assert.equal(getStoreObservationPresentation('unreadable').label, 'Unreadable');
+  const different = createInstallation('installation', 'target', 'package', {
+    targetObservation: { status: 'available', fingerprint: 'b'.repeat(64), observedAt: 2 },
+    syncStatus: 'different',
+  });
   assert.equal(
-    getInstallationStatePresentation({ kind: 'known', state: 'outdated' }).label,
-    'Outdated',
+    getInstallationStatusPresentation(different).label,
+    'Different',
   );
+  const unreadable = createInstallation('installation', 'target', 'package', {
+    targetObservation: { status: 'unreadable', observedAt: 2 },
+    syncStatus: 'unknown',
+  });
   assert.equal(
-    getInstallationStatePresentation({
-      kind: 'unavailable',
-      reason: 'target-unreadable',
-    }).label,
-    'Target unreadable',
+    getInstallationStatusPresentation(unreadable).label,
+    'Unreadable',
   );
 });
 
@@ -102,7 +112,10 @@ test('presents installation presence independently from card selection', () => {
     'installation',
     'target',
     'package',
-    { kind: 'known', state: 'missing' },
+    {
+      targetObservation: { status: 'missing', observedAt: 1 },
+      syncStatus: 'different',
+    },
   );
   const installed: SkillInstallationView = {
     ...missing,
@@ -111,10 +124,12 @@ test('presents installation presence independently from card selection', () => {
       fingerprint: 'b'.repeat(64),
       observedAt: 2,
     },
+    syncStatus: 'different',
   };
   const unreadable: SkillInstallationView = {
     ...missing,
     targetObservation: { status: 'unreadable', observedAt: 3 },
+    syncStatus: 'unknown',
   };
 
   assert.deepEqual(getTargetInstallationPresentation(undefined), {
@@ -151,19 +166,22 @@ test('counts unique packages and observed installation states per physical targe
   const inventory = buildSkillTargetInventory(
     [createTarget('target', 'custom', 0)],
     [
-      createInstallation('1', 'target', 'package-1', { kind: 'known', state: 'synced' }),
-      createInstallation('2', 'target', 'package-1', { kind: 'known', state: 'missing' }),
+      createInstallation('1', 'target', 'package-1'),
+      createInstallation('2', 'target', 'package-1', {
+        targetObservation: { status: 'missing', observedAt: 1 },
+        syncStatus: 'different',
+      }),
       createInstallation('3', 'target', 'package-2', {
-        kind: 'unavailable',
-        reason: 'target-unreadable',
+        targetObservation: { status: 'unreadable', observedAt: 1 },
+        syncStatus: 'unknown',
       }),
     ],
   );
   assert.equal(inventory[0]?.packageCount, 2);
   assert.deepEqual(inventory[0]?.installations.map((item) => item.id), ['1', '2', '3']);
-  assert.deepEqual(inventory[0]?.stateCounts, {
-    'Synced': 1,
-    'Missing': 1,
-    'Target unreadable': 1,
+  assert.deepEqual(inventory[0]?.statusCounts, {
+    Synced: 1,
+    Missing: 1,
+    Unreadable: 1,
   });
 });

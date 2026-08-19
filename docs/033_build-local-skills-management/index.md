@@ -4,6 +4,10 @@
 
 `completed`
 
+## Superseded Decisions
+
+[Plan 036](../036_simplify-skill-distribution-and-installation-state/index.md) replaces this plan's three-way `Store / Distribution Record / Target` state derivation and destination ownership conflicts. The task records below remain the historical account of the original implementation; current Distribution and Installation Status semantics come from Plan 036 and [ADR 0004](../adr/0004-treat-distribution-as-target-synchronization.md).
+
 ## Goal
 
 Replace the Skills placeholder with a local-first control plane that imports recognized Skill Packages into one canonical Foundry Skill Store, distributes explicit package revisions to local Distribution Targets, and derives installation state from observed filesystem facts.

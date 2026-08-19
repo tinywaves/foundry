@@ -11,8 +11,13 @@ const distributionRecordId = '00000000-0000-4000-8000-000000000605';
 const secondRevisionId = '00000000-0000-4000-8000-000000000606';
 const secondDistributionRecordId = '00000000-0000-4000-8000-000000000607';
 const rejectedDistributionRecordId = '00000000-0000-4000-8000-000000000608';
+const replacementPackageId = '00000000-0000-4000-8000-000000000609';
+const replacementRevisionId = '00000000-0000-4000-8000-000000000610';
+const replacementInstallationId = '00000000-0000-4000-8000-000000000611';
+const replacementDistributionRecordId = '00000000-0000-4000-8000-000000000612';
 const fingerprint = 'a'.repeat(64);
 const secondFingerprint = 'b'.repeat(64);
+const replacementFingerprint = 'c'.repeat(64);
 
 test('adopts a discovered copy with its exact initial Distribution Record baseline', () => {
   const database = openFoundryDatabase(':memory:');
@@ -179,6 +184,41 @@ test('commits installation observation and append-only Distribution Records atom
       fingerprint: secondFingerprint,
       observedAt: 30,
     });
+
+    database.prepare(`
+      INSERT INTO skill_packages (
+        id, distribution_name, normalized_distribution_name,
+        store_observation, store_fingerprint, store_observed_at, created_at, updated_at
+      ) VALUES (?, 'shared-skill', 'shared-skill', 'available', ?, 40, 40, 40)
+    `).run(replacementPackageId, replacementFingerprint);
+    database.prepare(`
+      INSERT INTO skill_revisions (
+        id, package_id, sequence_number, fingerprint, reason, created_at
+      ) VALUES (?, ?, 1, ?, 'distribution', 40)
+    `).run(replacementRevisionId, replacementPackageId, replacementFingerprint);
+    const replacement = repository.recordDistribution({
+      installationId: replacementInstallationId,
+      distributionRecordId: replacementDistributionRecordId,
+      packageId: replacementPackageId,
+      targetId,
+      revisionId: replacementRevisionId,
+      distributionName: 'shared-skill',
+      relativePath: 'shared-skill',
+      fingerprint: replacementFingerprint,
+      operation: 'distribution',
+      observedAt: 40,
+    });
+
+    assert.equal(replacement.created, true);
+    assert.equal(replacement.installation.id, replacementInstallationId);
+    assert.equal(repository.isInstallationActive(installationId), false);
+    assert.equal(repository.isInstallationActive(replacementInstallationId), true);
+    assert.equal(
+      database.prepare(`
+        SELECT COUNT(*) FROM skill_distribution_records WHERE installation_id = ?
+      `).pluck().get(installationId),
+      2,
+    );
   } finally {
     database.close();
   }

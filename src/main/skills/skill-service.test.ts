@@ -99,23 +99,19 @@ test('lists derived installation state and reveals only paths resolved from know
 
     assert.equal(service.listStorePackages()[0]?.id, packageId);
     assert.equal(service.getStorePackage(packageId).distributionName, 'shared-skill');
-    assert.deepEqual(service.listInstallations({ skillId: packageId })[0]?.state, {
-      kind: 'known',
-      state: 'synced',
-    });
+    assert.equal(service.listInstallations({ skillId: packageId })[0]?.syncStatus, 'synced');
     metadataRepository.updateStoreObservation(packageId, {
       status: 'available',
       fingerprint: 'b'.repeat(64),
       observedAt: 20,
     });
-    const outdatedInstallation = service.listInstallations({ skillId: packageId })[0];
-    assert.deepEqual(outdatedInstallation.state, {
-      kind: 'known',
-      state: 'outdated',
-    });
-    assert.equal(outdatedInstallation.targetObservation.status, 'available');
-    assert.equal(outdatedInstallation.targetObservation.fingerprint, fingerprint);
-    assert.equal(outdatedInstallation.distribution?.fingerprint, fingerprint);
+    const differentInstallation = service.listInstallations({ skillId: packageId })[0];
+    assert.equal(differentInstallation.syncStatus, 'different');
+    assert.equal(differentInstallation.storeObservation.status, 'available');
+    assert.equal(differentInstallation.storeObservation.fingerprint, 'b'.repeat(64));
+    assert.equal(differentInstallation.targetObservation.status, 'available');
+    assert.equal(differentInstallation.targetObservation.fingerprint, fingerprint);
+    assert.equal(differentInstallation.distribution?.fingerprint, fingerprint);
     await service.revealPackage(packageId);
     await service.revealTarget(targetId);
     assert.deepEqual(revealedPaths, [

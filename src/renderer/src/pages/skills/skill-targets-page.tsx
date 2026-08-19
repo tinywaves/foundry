@@ -37,7 +37,7 @@ import type {
 import { SkillActionBar } from './skill-action-bar';
 import {
   buildSkillTargetInventory,
-  getInstallationStatePresentation,
+  getInstallationStatusPresentation,
 } from './skill-inventory-model';
 import {
   getSkillInstallationActions,
@@ -225,7 +225,7 @@ export function SkillTargetsPage() {
   } else {
     content = (
       <List density="compact" hasDividers header="Distribution Targets">
-        {inventory.map(({ target, installations, packageCount, stateCounts }) => (
+        {inventory.map(({ target, installations, packageCount, statusCounts }) => (
           <ListItem
             key={target.id}
             label={target.displayName}
@@ -248,7 +248,7 @@ export function SkillTargetsPage() {
                     size="sm"
                   />
                   <Token label={`${packageCount} packages`} color="default" size="sm" />
-                  {Object.entries(stateCounts).map(([label, count]) => (
+                  {Object.entries(statusCounts).map(([label, count]) => (
                     <Token key={label} label={`${label}: ${count}`} color="default" size="sm" />
                   ))}
                 </HStack>
@@ -257,8 +257,8 @@ export function SkillTargetsPage() {
                   : (
                       <List density="compact" hasDividers header="Installed Skills">
                         {installations.map((installation) => {
-                          const state = getInstallationStatePresentation(installation.state);
-                          const actions = getSkillInstallationActions(installation.state);
+                          const status = getInstallationStatusPresentation(installation);
+                          const actions = getSkillInstallationActions(installation);
                           const isThisInstallationPending = installationMutation.isPending
                             && installationMutation.variables.installation.id === installation.id;
                           return (
@@ -272,8 +272,8 @@ export function SkillTargetsPage() {
                               endContent={(
                                 <HStack gap={2} vAlign="center">
                                   <HStack gap={1.5} vAlign="center">
-                                    <StatusDot variant={state.variant} label={state.label} />
-                                    <Text type="supporting">{state.label}</Text>
+                                    <StatusDot variant={status.variant} label={status.label} />
+                                    <Text type="supporting">{status.label}</Text>
                                   </HStack>
                                   {actions.length > 0 && (
                                     <DropdownMenu

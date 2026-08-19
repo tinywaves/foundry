@@ -4,6 +4,8 @@
 
 `completed`
 
+> Superseded by [Plan 036](../036_simplify-skill-distribution-and-installation-state/index.md) for current Installation Status derivation. The `S / D / T` requirements below describe the original implementation.
+
 ## Goal
 
 Create the pure domain model and transactional metadata foundation required by every local Skills workflow.

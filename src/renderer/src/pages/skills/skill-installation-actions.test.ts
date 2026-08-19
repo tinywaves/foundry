@@ -1,39 +1,82 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import type { SkillDistributionTargetResult } from '../../../../shared/skill-contract';
+import type {
+  SkillContentObservation,
+  SkillDistributionTargetResult,
+  SkillInstallationView,
+} from '../../../../shared/skill-contract';
 import {
   getSkillInstallationActions,
   summarizeSkillDistributionResults,
 } from './skill-installation-actions';
 
-test('offers only actions meaningful for each derived installation state', () => {
+const availableStore = {
+  status: 'available' as const,
+  fingerprint: 'a'.repeat(64),
+  observedAt: 1,
+};
+
+function createInstallation(input: {
+  store?: SkillContentObservation;
+  target?: SkillContentObservation;
+  syncStatus?: SkillInstallationView['syncStatus'];
+} = {}): SkillInstallationView {
+  return {
+    id: 'installation',
+    packageId: 'package',
+    targetId: 'target',
+    distributionName: 'package',
+    relativePath: 'package',
+    storeObservation: input.store ?? availableStore,
+    targetObservation: input.target ?? availableStore,
+    distribution: null,
+    syncStatus: input.syncStatus ?? 'synced',
+    createdAt: 1,
+    updatedAt: 1,
+  };
+}
+
+test('offers actions from current Store and Target capabilities', () => {
+  const different = createInstallation({
+    target: { status: 'available', fingerprint: 'b'.repeat(64), observedAt: 2 },
+    syncStatus: 'different',
+  });
   assert.deepEqual(
-    getSkillInstallationActions({ kind: 'known', state: 'synced' }),
+    getSkillInstallationActions(createInstallation()),
     ['uninstall'],
   );
   assert.deepEqual(
-    getSkillInstallationActions({ kind: 'known', state: 'outdated' }),
-    ['restore', 'uninstall'],
-  );
-  assert.deepEqual(
-    getSkillInstallationActions({ kind: 'known', state: 'drifted' }),
+    getSkillInstallationActions(different),
     ['restore', 'promote', 'import-as-new', 'uninstall'],
   );
   assert.deepEqual(
-    getSkillInstallationActions({ kind: 'known', state: 'diverged' }),
-    ['restore', 'promote', 'import-as-new', 'uninstall'],
-  );
-  assert.deepEqual(
-    getSkillInstallationActions({ kind: 'known', state: 'missing' }),
+    getSkillInstallationActions(createInstallation({
+      target: { status: 'missing', observedAt: 2 },
+      syncStatus: 'different',
+    })),
     ['restore', 'uninstall'],
   );
   assert.deepEqual(
-    getSkillInstallationActions({ kind: 'unavailable', reason: 'target-unreadable' }),
-    [],
+    getSkillInstallationActions(createInstallation({
+      target: { status: 'unreadable', observedAt: 2 },
+      syncStatus: 'unknown',
+    })),
+    ['restore'],
   );
   assert.deepEqual(
-    getSkillInstallationActions({ kind: 'unavailable', reason: 'store-missing' }),
+    getSkillInstallationActions(createInstallation({
+      store: { status: 'missing', observedAt: 2 },
+      syncStatus: 'unknown',
+    })),
     ['promote', 'import-as-new', 'uninstall'],
+  );
+  assert.deepEqual(
+    getSkillInstallationActions(createInstallation({
+      store: { status: 'missing', observedAt: 2 },
+      target: { status: 'missing', observedAt: 2 },
+      syncStatus: 'unknown',
+    })),
+    ['uninstall'],
   );
 });
 

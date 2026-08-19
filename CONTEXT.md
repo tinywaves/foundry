@@ -68,6 +68,10 @@ _Avoid_: Installed skill
 A Skill Package made available to a specific Distribution Target. It remains distinct from the canonical package in the Skill Store.
 _Avoid_: Installed skill, skill copy
 
+**Distribution**:
+A user-directed synchronization that makes a Skill Package's destination in a selected Distribution Target match its current Store Working Copy. Existing destination content does not retain ownership or conflict status against this command.
+_Avoid_: Deployment, download
+
 **Distribution Target**:
 A physical local skill root to which Foundry can distribute selected Skill Packages.
 _Avoid_: Agent runtime, install location
@@ -113,12 +117,8 @@ A remote source revision found by an Update Check that differs from the Skill Pa
 _Avoid_: Skill Revision, available update
 
 **Distribution Record**:
-The record that associates a Skill Installation with the Skill Package content last distributed to its Distribution Target.
+The historical record that associates a Skill Installation with the exact Skill Revision confirmed by a successful Distribution, Restore from Store, or Automatic Import.
 _Avoid_: Install log, deployment history
-
-**Skill Conflict**:
-The condition in which different Skill Packages with the same normalized Distribution Name would occupy the same location in a Distribution Target.
-_Avoid_: Duplicate skill
 
 **Uninstall**:
 The direct removal of a Skill Installation from one Distribution Target without removing its Skill Package from the Skill Store.
@@ -155,19 +155,16 @@ A recorded Skill Package whose Store Working Copy is no longer present.
 **Unreadable Store Package**:
 A Skill Package whose Store Working Copy cannot currently be inspected by Foundry.
 
-### Installation States
+### Installation Statuses
 
 **Synced Installation**:
-A Skill Installation whose contents match both its last Distribution Record and the current Skill Revision in the Skill Store.
+A Skill Installation whose readable target contents match its current Store Working Copy.
 
-**Outdated Installation**:
-A Skill Installation that still matches its last Distribution Record after the Skill Store records a newer Skill Revision.
-
-**Drifted Installation**:
-A Skill Installation whose contents no longer match its last Distribution Record while the current Skill Revision remains unchanged.
-
-**Diverged Installation**:
-A Skill Installation whose contents changed independently after the Skill Store recorded a newer Skill Revision.
+**Different Installation**:
+A Skill Installation whose readable target contents differ from its current Store Working Copy, regardless of which copy changed after the last Distribution.
 
 **Missing Installation**:
 A recorded Skill Installation whose expected contents are no longer present in its Distribution Target.
+
+**Unreadable Installation**:
+A recorded Skill Installation whose target contents cannot currently be inspected by Foundry.

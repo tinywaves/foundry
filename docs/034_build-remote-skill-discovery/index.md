@@ -4,6 +4,10 @@
 
 `completed`
 
+## Superseded Terminology
+
+[Plan 036](../036_simplify-skill-distribution-and-installation-state/index.md) replaces the `Outdated` Installation label used below with `Different`. Remote updates remain Store-only and still require a separate explicit Distribution to synchronize Targets.
+
 ## Goal
 
 Add remote discovery and acquisition to Skills without weakening the canonical Store boundary: users can find or resolve remote Skill Packages, add an exact remote revision to the Store, check tracked sources for updates on demand, and explicitly apply an Update Candidate.
@@ -20,7 +24,7 @@ The following decisions are final:
 - ClawHub is the first Skill Registry. Preserve its owner-qualified identity and exact immutable version.
 - `skills.sh` is a replaceable Skill Directory. It locates Git content but does not become the update authority.
 - Update Checks are user-initiated, resolve metadata only, and never download or distribute content.
-- Applying an Update Candidate is explicit, re-resolves and downloads the selected revision, replaces the Store Working Copy, and creates a `remote-update` Skill Revision. Existing target copies then become Outdated until separately distributed.
+- Applying an Update Candidate is explicit, re-resolves and downloads the selected revision, replaces the Store Working Copy, and creates a `remote-update` Skill Revision. Existing target copies then become Different until separately distributed.
 - Fixed Sources never produce Update Candidates. Source failures produce an Unavailable Source presentation without affecting local content.
 - No background polling, scheduled checks, publisher audit, trust label, compatibility judgment, or automatic update exists.
 

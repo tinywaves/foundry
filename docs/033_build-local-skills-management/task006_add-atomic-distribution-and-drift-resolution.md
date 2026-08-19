@@ -4,6 +4,8 @@
 
 `completed`
 
+> Superseded by [Plan 036](../036_simplify-skill-distribution-and-installation-state/index.md) for destination overwrite policy and current Installation Status. Atomic staging, replacement, compensation, recovery, and per-Target result requirements remain in force.
+
 ## Goal
 
 Distribute exact Store content to selected Targets, maintain append-only baselines, and provide explicit actions for every changed or missing installation.

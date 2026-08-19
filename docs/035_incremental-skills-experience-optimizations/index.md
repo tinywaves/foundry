@@ -16,6 +16,8 @@ Only requested optimizations enter this plan. Add a task when its outcome and sc
 
 The first optimization removes Astryx `Toolbar` from Skills regions that only need passive layout and size coordination. Using `Toolbar` placed its built-in roving-tabindex focus management and `useKeyboardHint` behavior around ordinary search inputs and actions, which caused the visual `← → to navigate` hint to appear when the Skill Store search input received keyboard-visible focus. Skills now uses a narrowly owned passive action bar for those regions without modifying Astryx or changing the controls' business behavior.
 
+The second optimization strengthens the Skill Store control hierarchy by separating the search field from the trailing action group more clearly than the two actions are separated from each other. The shared action bar now accepts a token-based slot gap, and the Store uses spacing step 4 between Search and Actions while retaining spacing step 2 between Discover and Import Existing. Other Skills action bars retain their existing default spacing.
+
 ## Working Agreement
 
 - Add each newly requested Skills optimization as the next numbered task.
@@ -29,6 +31,7 @@ The first optimization removes Astryx `Toolbar` from Skills regions that only ne
 
 - Focused user-requested refinements to existing Skills surfaces and workflows.
 - Narrow Skills-owned presentation helpers when they remove unintended behavior or prevent drift.
+- Token-based spacing hierarchy within existing Skills control regions.
 - Task-specific documentation, implementation, static inspection, and non-visual verification.
 - Cumulative updates as additional Skills optimizations are defined.
 
@@ -47,6 +50,7 @@ The first optimization removes Astryx `Toolbar` from Skills regions that only ne
 - Use one task document per optimization and assign task numbers only when the work is defined.
 - Treat dependency-owned behavior activated by a Foundry component choice as part of the effective behavior audit.
 - Use passive layout components for Skills action regions that do not require composite-widget keyboard semantics.
+- Keep spacing relationships explicit: related controls use a tighter group gap than the boundary between distinct control groups.
 - Preserve Astryx-owned behavior for semantic controls such as `TabList`, dialogs, menus, inputs, and buttons.
 - Keep the existing main, preload, renderer, and shared-contract boundaries unless a later task explicitly requires a scoped change.
 - Continue using Astryx, StyleX, design tokens, and Lucide icons without adding dependencies for presentation-only refinements.
@@ -54,3 +58,4 @@ The first optimization removes Astryx `Toolbar` from Skills regions that only ne
 ## Tasks
 
 - [x] [Task 001: Remove Toolbar Keyboard Hints from Skills](./task001_remove-toolbar-keyboard-hints-from-skills.md)
+- [x] [Task 002: Separate Skill Store Search and Actions](./task002_separate-skill-store-search-and-actions.md)

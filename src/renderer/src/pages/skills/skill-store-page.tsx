@@ -212,6 +212,7 @@ export function SkillStorePage() {
       <VStack width="100%" height="100%">
         <SkillActionBar
           label="Skill Store Controls"
+          slotGap={4}
           startContent={(
             <TextInput
               label="Search Skill Store"

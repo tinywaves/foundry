@@ -110,7 +110,9 @@ export class SkillDiscoveryCoordinator {
       code: warning.code,
     })));
     if (scanResult.rootStatus !== 'scanned') {
-      result.rootFailures.push({ targetId: target.id, status: scanResult.rootStatus });
+      if (scanResult.rootStatus === 'unreadable') {
+        result.rootFailures.push({ targetId: target.id, status: scanResult.rootStatus });
+      }
       return;
     }
 

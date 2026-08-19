@@ -266,7 +266,7 @@ export interface SkillDiscoveryResult {
   warnings: SkillDiscoveryWarning[];
   rootFailures: Array<{
     targetId: SkillTargetId;
-    status: 'missing' | 'unreadable';
+    status: 'unreadable';
   }>;
 }
 

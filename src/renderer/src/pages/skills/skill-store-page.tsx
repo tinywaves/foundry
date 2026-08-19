@@ -22,6 +22,12 @@ import type {
 } from '../../../../shared/skill-contract';
 import { routePaths } from '@renderer/routes';
 import { SkillActionBar } from './skill-action-bar';
+import { SkillImportIssuesDialog } from './skill-import-issues-dialog';
+import {
+  buildSkillImportIssues,
+  describeSkillImport,
+  getSkillImportWarningCount,
+} from './skill-import-result-model';
 import {
   filterSkillStorePackages,
   getStoreObservationPresentation,
@@ -29,6 +35,7 @@ import {
 import { SkillInventoryLoading } from './skill-loading';
 import {
   getSkillStorePackagesQueryOptions,
+  getSkillTargetsQueryOptions,
   invalidateSkillQueries,
   resolveSkillRequest,
 } from './skill-query';
@@ -50,27 +57,25 @@ function formatUpdatedAt(updatedAt: number): string {
   }).format(new Date(updatedAt));
 }
 
-function describeImport(result: SkillDiscoveryResult): string {
-  const warningCount = result.warnings.length + result.rootFailures.length;
-  const summary = `Imported ${result.packagesImported} and adopted ${result.installationsAdopted}.`;
-  return warningCount === 0
-    ? `${summary} Inspected ${result.rootsInspected} targets.`
-    : `${summary} ${warningCount} scan warnings need attention.`;
-}
-
 export function SkillStorePage() {
   const queryClient = useQueryClient();
   const showToast = useToast();
   const [search, setSearch] = useState('');
   const [importResult, setImportResult] = useState<SkillDiscoveryResult>();
+  const [areImportIssuesOpen, setAreImportIssuesOpen] = useState(false);
   const [packageToDistribute, setPackageToDistribute] = useState<SkillStorePackageView>();
   const storeQuery = useQuery(getSkillStorePackagesQueryOptions());
+  const targetsQuery = useQuery(getSkillTargetsQueryOptions());
+  const importIssues = useMemo(() => importResult
+    ? buildSkillImportIssues(importResult, targetsQuery.data ?? [])
+    : [], [importResult, targetsQuery.data]);
   const importMutation = useMutation<SkillDiscoveryResult, SkillRequestError>({
     mutationFn: () => resolveSkillRequest(
       () => globalThis.api.skills.importExisting(),
       'Installed Skills could not be imported.',
     ),
     onSuccess: (result) => {
+      setAreImportIssuesOpen(false);
       setImportResult(result);
       void invalidateSkillQueries(queryClient);
     },
@@ -255,14 +260,27 @@ export function SkillStorePage() {
         )}
         {importResult && !importMutation.isError && (
           <Banner
-            status={importResult.warnings.length + importResult.rootFailures.length > 0
+            status={getSkillImportWarningCount(importResult) > 0
               ? 'warning'
               : 'success'}
             container="section"
             title="Import Finished"
-            description={describeImport(importResult)}
+            description={describeSkillImport(importResult)}
+            endContent={importIssues.length > 0
+              ? (
+                  <Button
+                    label="View Details"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setAreImportIssuesOpen(true)}
+                  />
+                )
+              : undefined}
             isDismissable
-            onDismiss={() => setImportResult(undefined)}
+            onDismiss={() => {
+              setAreImportIssuesOpen(false);
+              setImportResult(undefined);
+            }}
           />
         )}
         {storeQuery.isError && storeQuery.data !== undefined && (
@@ -279,6 +297,12 @@ export function SkillStorePage() {
         <SkillDistributionDialog
           skillPackage={packageToDistribute}
           onClose={() => setPackageToDistribute(undefined)}
+        />
+      )}
+      {areImportIssuesOpen && importIssues.length > 0 && (
+        <SkillImportIssuesDialog
+          issues={importIssues}
+          onClose={() => setAreImportIssuesOpen(false)}
         />
       )}
     </>

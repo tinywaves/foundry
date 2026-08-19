@@ -28,7 +28,7 @@ const operationId = '00000000-0000-4000-8000-000000000312';
 const installationId = '00000000-0000-4000-8000-000000000313';
 const distributionRecordId = '00000000-0000-4000-8000-000000000314';
 
-test('imports, adopts, updates, and marks a runtime-installed Skill as missing', async () => {
+test('imports, adopts, updates, and treats a missing Target root as an empty scan', async () => {
   const userHome = await mkdtemp(path.join(tmpdir(), 'foundry-skill-discovery-'));
   const genericRoot = path.join(userHome, '.agents', 'skills');
   const candidate = path.join(genericRoot, 'runtime-skill');
@@ -89,15 +89,27 @@ test('imports, adopts, updates, and marks a runtime-installed Skill as missing',
 
     now = 1200;
     await rm(genericRoot, { recursive: true });
-    const unavailableRoot = await discovery.scan();
+    const missingRoot = await discovery.scan();
     const staleInstallation = installationRepository.listActiveInstallations(genericTarget.id)[0];
     assert.equal(
-      unavailableRoot.rootFailures.some((failure) => failure.targetId === genericTarget.id),
-      true,
+      missingRoot.roots.find((root) => root.targetId === genericTarget.id)?.status,
+      'missing',
     );
+    assert.deepEqual(missingRoot.rootFailures, []);
     assert.deepEqual(staleInstallation.targetObservation, changedInstallation.targetObservation);
 
+    now = 1250;
+    await writeFile(genericRoot, 'not a directory');
+    const unreadableRoot = await discovery.scan();
+    assert.deepEqual(unreadableRoot.rootFailures, [
+      {
+        targetId: genericTarget.id,
+        status: 'unreadable',
+      },
+    ]);
+
     now = 1300;
+    await rm(genericRoot);
     await mkdir(genericRoot, { recursive: true });
     const missing = await discovery.scan();
     const missingInstallation = installationRepository.listActiveInstallations(genericTarget.id)[0];

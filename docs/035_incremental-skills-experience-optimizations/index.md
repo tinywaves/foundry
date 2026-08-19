@@ -18,6 +18,10 @@ The first optimization removes Astryx `Toolbar` from Skills regions that only ne
 
 The second optimization strengthens the Skill Store control hierarchy by separating the search field from the trailing action group more clearly than the two actions are separated from each other. The shared action bar now accepts a token-based slot gap, and the Store uses spacing step 4 between Search and Actions while retaining spacing step 2 between Discover and Import Existing. Other Skills action bars retain their existing default spacing.
 
+The third optimization aligns import feedback with optional Discovery Root semantics. A missing configured root now means that the scan found no Skill Packages at that location; it remains an internal root observation but no longer becomes a user-facing scan warning. Unreadable roots and partial or failed package scans still produce warnings. Warning results now expose a `View Details` action that identifies the affected Distribution Target, root path, optional relative path, and readable cause for each actionable issue.
+
+The fourth optimization refines the import-warning Dialog into a compact operational detail surface. Warning conclusions and explanations now use a restrained type hierarchy, their status icons are optically aligned with the first conclusion line, and each issue exposes one safely wrapped filesystem location through a supporting-size inline `Code` value. The Target name appears only when the root path is unavailable. The narrower information Dialog relies on its standard close affordance instead of adding a redundant issue-count subtitle or primary footer action.
+
 ## Working Agreement
 
 - Add each newly requested Skills optimization as the next numbered task.
@@ -51,6 +55,10 @@ The second optimization strengthens the Skill Store control hierarchy by separat
 - Treat dependency-owned behavior activated by a Foundry component choice as part of the effective behavior audit.
 - Use passive layout components for Skills action regions that do not require composite-widget keyboard semantics.
 - Keep spacing relationships explicit: related controls use a tighter group gap than the boundary between distinct control groups.
+- Treat a missing Discovery Root as an empty optional location rather than an actionable scan failure.
+- Keep unreadable roots and partial or failed scans actionable, with details available from the import result.
+- Present import warnings as compact issue details with optically aligned status, subordinate explanation, and one inline-code filesystem location.
+- Keep dismissable information Dialogs free of redundant primary footer actions.
 - Preserve Astryx-owned behavior for semantic controls such as `TabList`, dialogs, menus, inputs, and buttons.
 - Keep the existing main, preload, renderer, and shared-contract boundaries unless a later task explicitly requires a scoped change.
 - Continue using Astryx, StyleX, design tokens, and Lucide icons without adding dependencies for presentation-only refinements.
@@ -59,3 +67,5 @@ The second optimization strengthens the Skill Store control hierarchy by separat
 
 - [x] [Task 001: Remove Toolbar Keyboard Hints from Skills](./task001_remove-toolbar-keyboard-hints-from-skills.md)
 - [x] [Task 002: Separate Skill Store Search and Actions](./task002_separate-skill-store-search-and-actions.md)
+- [x] [Task 003: Clarify Skill Import Warnings](./task003_clarify-skill-import-warnings.md)
+- [x] [Task 004: Refine the Import Warning Dialog](./task004_refine-the-import-warning-dialog.md)

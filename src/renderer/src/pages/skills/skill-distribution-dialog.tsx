@@ -2,14 +2,15 @@ import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { CheckboxInput } from '@astryxdesign/core/CheckboxInput';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
+import { Grid } from '@astryxdesign/core/Grid';
 import { Icon } from '@astryxdesign/core/Icon';
 import {
   Layout,
   LayoutContent,
   LayoutFooter,
 } from '@astryxdesign/core/Layout';
-import { List, ListItem } from '@astryxdesign/core/List';
-import { HStack, VStack } from '@astryxdesign/core/Stack';
+import { SelectableCard } from '@astryxdesign/core/SelectableCard';
+import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
 import { StatusDot } from '@astryxdesign/core/StatusDot';
 import { Text } from '@astryxdesign/core/Text';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -28,6 +29,7 @@ import {
   resolveSkillRequest,
 } from './skill-query';
 import type { SkillRequestError } from './skill-query';
+import { SkillTargetIcon } from './skill-target-icon';
 
 interface TargetFeedback {
   label: string;
@@ -162,52 +164,73 @@ export function SkillDistributionDialog({
                     </VStack>
                   )
                 : (
-                    <List density="compact" hasDividers header="Distribution Targets">
-                      {targets.map((target) => {
-                        const feedback = getTargetFeedback({
-                          target,
-                          isSelected: selectedTargetIds.has(target.id),
-                          isApplying: distributionMutation.isPending,
-                          preflight,
-                          result,
-                        });
-                        return (
-                          <ListItem
-                            key={target.id}
-                            label={target.displayName}
-                            startContent={(
-                              <CheckboxInput
-                                label={`Select ${target.displayName}`}
-                                isLabelHidden
-                                value={selectedTargetIds.has(target.id)}
-                                size="sm"
-                                isDisabled={isBusy || result !== undefined}
-                                onChange={(isChecked) => {
-                                  const next = new Set(selectedTargetIds);
-                                  if (isChecked) {
-                                    next.add(target.id);
-                                  } else {
-                                    next.delete(target.id);
-                                  }
-                                  changeSelection(next);
-                                }}
-                              />
-                            )}
-                            description={feedback.message ?? target.configuredPath}
-                            endContent={(
-                              <HStack gap={1.5} vAlign="center">
-                                <StatusDot
-                                  variant={feedback.variant}
-                                  label={feedback.label}
-                                  isPulsing={feedback.pulsing}
-                                />
-                                <Text type="supporting">{feedback.label}</Text>
+                    <VStack gap={2} width="100%">
+                      <Text type="label" display="block">Distribution Targets</Text>
+                      <Grid columns={2} gap={2} width="100%">
+                        {targets.map((target) => {
+                          const isSelected = selectedTargetIds.has(target.id);
+                          const feedback = getTargetFeedback({
+                            target,
+                            isSelected,
+                            isApplying: distributionMutation.isPending,
+                            preflight,
+                            result,
+                          });
+                          return (
+                            <SelectableCard
+                              key={target.id}
+                              label={`Select ${target.displayName}`}
+                              isSelected={isSelected}
+                              isDisabled={isBusy || result !== undefined}
+                              padding={3}
+                              width="100%"
+                              onChange={(nextIsSelected) => {
+                                const next = new Set(selectedTargetIds);
+                                if (nextIsSelected) {
+                                  next.add(target.id);
+                                } else {
+                                  next.delete(target.id);
+                                }
+                                changeSelection(next);
+                              }}
+                            >
+                              <HStack gap={3} width="100%" vAlign="start">
+                                <SkillTargetIcon kind={target.kind} />
+                                <StackItem size="fill">
+                                  <VStack gap={1} width="100%">
+                                    <HStack gap={2} width="100%" vAlign="center">
+                                      <StackItem size="fill">
+                                        <Text type="label" display="block" maxLines={1}>
+                                          {target.displayName}
+                                        </Text>
+                                      </StackItem>
+                                      <HStack gap={1} vAlign="center">
+                                        <StatusDot
+                                          variant={feedback.variant}
+                                          label={feedback.label}
+                                          isPulsing={feedback.pulsing}
+                                        />
+                                        <Text type="supporting" maxLines={1}>
+                                          {feedback.label}
+                                        </Text>
+                                      </HStack>
+                                    </HStack>
+                                    <Text
+                                      type="supporting"
+                                      color="secondary"
+                                      maxLines={2}
+                                      wordBreak="break-word"
+                                    >
+                                      {feedback.message ?? target.configuredPath}
+                                    </Text>
+                                  </VStack>
+                                </StackItem>
                               </HStack>
-                            )}
-                          />
-                        );
-                      })}
-                    </List>
+                            </SelectableCard>
+                          );
+                        })}
+                      </Grid>
+                    </VStack>
                   )}
             </VStack>
           </LayoutContent>

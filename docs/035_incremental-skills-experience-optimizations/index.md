@@ -26,6 +26,10 @@ The fifth optimization makes completed import feedback transient without adding 
 
 The sixth optimization reduces the Skill Store inventory to its decision-relevant columns. The ambiguous `Store` heading becomes `Status`, while the time column is removed because it displayed package update time under an `Observed` label and did not help the primary identify, assess, and act workflow. The remaining `Skill`, `Status`, and `Actions` columns allocate most of the width to the Skill identity.
 
+The seventh optimization replaces checkbox-led Distribution Target rows with a two-column grid of selectable cards. Each card introduces the existing Target icon, keeps the name, path, and live distribution feedback together, and makes the complete option surface toggle selection. Select-all, preflight review, replacement confirmation, and result handling remain unchanged.
+
+The eighth optimization makes Distribution Target icons identifiable and legible across light and dark themes. Agent Skills uses its provided avatar as a bundled local image clipped with the restrained Astryx `--radius-inner` token, Hermes Agent uses the available static brand asset, and Custom Targets use the more distinctive Lucide `Blocks` symbol. The monochrome assets for OpenCode, Cursor, GitHub Copilot, and Hermes Agent retain their original dark appearance in light mode and normalize to light marks in effective dark mode. Colored and self-contained image assets otherwise remain unchanged, while the Custom Target symbol inherits Astryx semantic colors.
+
 ## Working Agreement
 
 - Add each newly requested Skills optimization as the next numbered task.
@@ -67,6 +71,9 @@ The sixth optimization reduces the Skill Store inventory to its decision-relevan
 - Pause import-result auto-hide while warning details are open, and keep error feedback persistent.
 - Keep the Skill Store inventory focused on Skill identity, local content status, and row actions without a low-value time column.
 - Label the local content observation column `Status` within the Store-scoped table.
+- Present Distribution Targets as icon-led selectable cards while preserving multi-select and operational feedback.
+- Keep distribution preflight and confirmation authoritative when changing only the Target selection surface.
+- Use specific available Target branding, adapt only monochrome brand assets to the effective Astryx color mode, preserve colored assets, and give Custom Targets a token-driven Lucide `Blocks` identity.
 - Preserve Astryx-owned behavior for semantic controls such as `TabList`, dialogs, menus, inputs, and buttons.
 - Keep the existing main, preload, renderer, and shared-contract boundaries unless a later task explicitly requires a scoped change.
 - Continue using Astryx, StyleX, design tokens, and Lucide icons without adding dependencies for presentation-only refinements.
@@ -79,3 +86,5 @@ The sixth optimization reduces the Skill Store inventory to its decision-relevan
 - [x] [Task 004: Refine the Import Warning Dialog](./task004_refine-the-import-warning-dialog.md)
 - [x] [Task 005: Auto-Hide the Import Result Banner](./task005_auto-hide-the-import-result-banner.md)
 - [x] [Task 006: Simplify the Skill Store Columns](./task006_simplify-the-skill-store-columns.md)
+- [x] [Task 007: Use Selectable Distribution Target Cards](./task007_use-selectable-distribution-target-cards.md)
+- [x] [Task 008: Adapt Target Icons to Color Mode](./task008_adapt-target-icons-to-color-mode.md)

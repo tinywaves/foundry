@@ -32,7 +32,7 @@ The eighth optimization makes Distribution Target icons identifiable and legible
 
 The ninth optimization separates distribution selection from installation observation. A card's selected border remains the input for the pending distribution command, while its status now reports whether the current Skill has an available, missing, unreadable, or absent Skill Installation in that Target. Loading and unavailable observations remain explicit, and preflight or execution feedback temporarily takes precedence once an operation begins.
 
-The tenth optimization keeps Distribution Target cards dimensionally stable when configured paths are long. Filesystem paths now remain on one line, truncate with an ellipsis at the available width, and retain Astryx's automatic full-value tooltip. Operational error messages remain distinct and may use up to two lines.
+The tenth optimization keeps Distribution Target cards dimensionally stable when configured paths are long. Filesystem paths remain on one line, truncate with an ellipsis at the available width, and retain Astryx's automatic full-value tooltip. The two-column Grid uses zero-minimum equal tracks and each Selectable Card permits intrinsic-width contraction, so a long Custom Target path cannot widen its column. Operational error messages remain distinct and may use up to two lines.
 
 ## Working Agreement
 
@@ -80,7 +80,7 @@ The tenth optimization keeps Distribution Target cards dimensionally stable when
 - Use specific available Target branding, adapt only monochrome brand assets to the effective Astryx color mode, preserve colored assets, and give Custom Targets a token-driven Lucide `Blocks` identity.
 - Keep selection as transient distribution input and use each Target card's status area for authoritative Skill Installation presence.
 - Use `Skill Installation` rather than download terminology, and distinguish missing or unreadable installations from both installed and not installed states.
-- Keep configured Target paths to one truncated line while preserving multi-line space for actionable operation errors.
+- Keep configured Target paths to one truncated line, constrain the card Grid to equal shrinkable columns, and preserve multi-line space for actionable operation errors.
 - Preserve Astryx-owned behavior for semantic controls such as `TabList`, dialogs, menus, inputs, and buttons.
 - Keep the existing main, preload, renderer, and shared-contract boundaries unless a later task explicitly requires a scoped change.
 - Continue using Astryx, StyleX, design tokens, and Lucide icons without adding dependencies for presentation-only refinements.

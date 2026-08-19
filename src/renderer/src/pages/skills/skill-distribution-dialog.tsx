@@ -13,6 +13,7 @@ import { SelectableCard } from '@astryxdesign/core/SelectableCard';
 import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
 import { StatusDot } from '@astryxdesign/core/StatusDot';
 import { Text } from '@astryxdesign/core/Text';
+import * as stylex from '@stylexjs/stylex';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PackageCheck } from 'lucide-react';
 import { useState } from 'react';
@@ -40,6 +41,16 @@ interface TargetFeedback {
   variant: 'success' | 'warning' | 'error' | 'accent' | 'neutral';
   pulsing?: boolean;
 }
+
+const styles = stylex.create({
+  targetGrid: {
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    minWidth: 0,
+  },
+  targetCard: {
+    minWidth: 0,
+  },
+});
 
 export function SkillDistributionDialog({
   skillPackage,
@@ -184,7 +195,7 @@ export function SkillDistributionDialog({
                 : (
                     <VStack gap={2} width="100%">
                       <Text type="label" display="block">Distribution Targets</Text>
-                      <Grid columns={2} gap={2} width="100%">
+                      <Grid columns={2} gap={2} width="100%" xstyle={styles.targetGrid}>
                         {targets.map((target) => {
                           const isSelected = selectedTargetIds.has(target.id);
                           const feedback = getTargetFeedback({
@@ -206,6 +217,7 @@ export function SkillDistributionDialog({
                               isDisabled={isBusy || result !== undefined}
                               padding={3}
                               width="100%"
+                              xstyle={styles.targetCard}
                               onChange={(nextIsSelected) => {
                                 const next = new Set(selectedTargetIds);
                                 if (nextIsSelected) {

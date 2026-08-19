@@ -14,7 +14,7 @@ import { TextInput } from '@astryxdesign/core/TextInput';
 import { useToast } from '@astryxdesign/core/Toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Compass, FolderOpen, Import, PackagePlus, Search, Wrench } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink } from 'react-router';
 import type {
   SkillDiscoveryResult,
@@ -47,15 +47,9 @@ interface SkillStoreRow extends Record<string, unknown> {
   distributionName: string;
   skillPackage: SkillStorePackageView;
   status: string;
-  updated: string;
 }
 
-function formatUpdatedAt(updatedAt: number): string {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(updatedAt));
-}
+const IMPORT_RESULT_AUTO_HIDE_MS = 8000;
 
 export function SkillStorePage() {
   const queryClient = useQueryClient();
@@ -80,6 +74,18 @@ export function SkillStorePage() {
       void invalidateSkillQueries(queryClient);
     },
   });
+  useEffect(() => {
+    if (!importResult || areImportIssuesOpen) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setImportResult((currentResult) => (
+        currentResult === importResult ? undefined : currentResult
+      ));
+    }, IMPORT_RESULT_AUTO_HIDE_MS);
+    return () => clearTimeout(timeoutId);
+  }, [areImportIssuesOpen, importResult]);
   const revealMutation = useMutation<null, SkillRequestError, string>({
     mutationFn: (skillId) => resolveSkillRequest(
       () => globalThis.api.skills.revealPackage(skillId),
@@ -97,13 +103,12 @@ export function SkillStorePage() {
     distributionName: skillPackage.distributionName,
     skillPackage,
     status: getStoreObservationPresentation(skillPackage.storeObservation.status).label,
-    updated: formatUpdatedAt(skillPackage.updatedAt),
   })), [filteredPackages]);
   const columns = useMemo<Array<TableColumn<SkillStoreRow>>>(() => [
     {
       key: 'distributionName',
       header: 'Skill',
-      width: proportional(2),
+      width: proportional(3),
       renderCell: (row) => (
         <Link
           as={RouterLink}
@@ -116,7 +121,7 @@ export function SkillStorePage() {
     },
     {
       key: 'status',
-      header: 'Store',
+      header: 'Status',
       width: proportional(1),
       renderCell: (row) => {
         const presentation = getStoreObservationPresentation(
@@ -130,7 +135,6 @@ export function SkillStorePage() {
         );
       },
     },
-    { key: 'updated', header: 'Observed', width: proportional(1) },
     {
       key: 'id',
       header: 'Actions',
@@ -276,11 +280,6 @@ export function SkillStorePage() {
                   />
                 )
               : undefined}
-            isDismissable
-            onDismiss={() => {
-              setAreImportIssuesOpen(false);
-              setImportResult(undefined);
-            }}
           />
         )}
         {storeQuery.isError && storeQuery.data !== undefined && (

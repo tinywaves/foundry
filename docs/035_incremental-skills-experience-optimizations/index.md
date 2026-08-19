@@ -22,6 +22,10 @@ The third optimization aligns import feedback with optional Discovery Root seman
 
 The fourth optimization refines the import-warning Dialog into a compact operational detail surface. Warning conclusions and explanations now use a restrained type hierarchy, their status icons are optically aligned with the first conclusion line, and each issue exposes one safely wrapped filesystem location through a supporting-size inline `Code` value. The Target name appears only when the root path is unavailable. The narrower information Dialog relies on its standard close affordance instead of adding a redundant issue-count subtitle or primary footer action.
 
+The fifth optimization makes completed import feedback transient without adding another manual dismissal affordance. The `Import Finished` Banner no longer renders a close button and clears automatically after eight seconds. Opening warning details pauses that lifecycle so the Dialog is not removed with its source result; closing the Dialog starts a fresh interval. Import and Store error Banners remain persistent.
+
+The sixth optimization reduces the Skill Store inventory to its decision-relevant columns. The ambiguous `Store` heading becomes `Status`, while the time column is removed because it displayed package update time under an `Observed` label and did not help the primary identify, assess, and act workflow. The remaining `Skill`, `Status`, and `Actions` columns allocate most of the width to the Skill identity.
+
 ## Working Agreement
 
 - Add each newly requested Skills optimization as the next numbered task.
@@ -59,6 +63,10 @@ The fourth optimization refines the import-warning Dialog into a compact operati
 - Keep unreadable roots and partial or failed scans actionable, with details available from the import result.
 - Present import warnings as compact issue details with optically aligned status, subordinate explanation, and one inline-code filesystem location.
 - Keep dismissable information Dialogs free of redundant primary footer actions.
+- Auto-hide completed import feedback after eight seconds without rendering a close control.
+- Pause import-result auto-hide while warning details are open, and keep error feedback persistent.
+- Keep the Skill Store inventory focused on Skill identity, local content status, and row actions without a low-value time column.
+- Label the local content observation column `Status` within the Store-scoped table.
 - Preserve Astryx-owned behavior for semantic controls such as `TabList`, dialogs, menus, inputs, and buttons.
 - Keep the existing main, preload, renderer, and shared-contract boundaries unless a later task explicitly requires a scoped change.
 - Continue using Astryx, StyleX, design tokens, and Lucide icons without adding dependencies for presentation-only refinements.
@@ -69,3 +77,5 @@ The fourth optimization refines the import-warning Dialog into a compact operati
 - [x] [Task 002: Separate Skill Store Search and Actions](./task002_separate-skill-store-search-and-actions.md)
 - [x] [Task 003: Clarify Skill Import Warnings](./task003_clarify-skill-import-warnings.md)
 - [x] [Task 004: Refine the Import Warning Dialog](./task004_refine-the-import-warning-dialog.md)
+- [x] [Task 005: Auto-Hide the Import Result Banner](./task005_auto-hide-the-import-result-banner.md)
+- [x] [Task 006: Simplify the Skill Store Columns](./task006_simplify-the-skill-store-columns.md)

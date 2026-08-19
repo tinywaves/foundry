@@ -39,6 +39,20 @@ const installationPresentations: Record<string, SkillStatePresentation> = {
   'target-unreadable': { label: 'Target unreadable', variant: 'warning' },
 };
 
+const targetInstallationPresentations: Record<
+  SkillContentObservationStatus,
+  SkillStatePresentation
+> = {
+  available: { label: 'Installed', variant: 'success' },
+  missing: { label: 'Missing', variant: 'error' },
+  unreadable: { label: 'Unreadable', variant: 'warning' },
+};
+
+const notInstalledPresentation: SkillStatePresentation = {
+  label: 'Not installed',
+  variant: 'neutral',
+};
+
 export function filterSkillStorePackages(
   packages: readonly SkillStorePackageView[],
   search: string,
@@ -62,6 +76,14 @@ export function getInstallationStatePresentation(
   state: SkillInstallationStateResult,
 ): SkillStatePresentation {
   return installationPresentations[state.kind === 'known' ? state.state : state.reason];
+}
+
+export function getTargetInstallationPresentation(
+  installation: SkillInstallationView | undefined,
+): SkillStatePresentation {
+  return installation
+    ? targetInstallationPresentations[installation.targetObservation.status]
+    : notInstalledPresentation;
 }
 
 export function orderSkillTargets(targets: readonly SkillTargetView[]): SkillTargetView[] {

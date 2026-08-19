@@ -30,6 +30,10 @@ The seventh optimization replaces checkbox-led Distribution Target rows with a t
 
 The eighth optimization makes Distribution Target icons identifiable and legible across light and dark themes. Agent Skills uses its provided avatar as a bundled local image clipped with the restrained Astryx `--radius-inner` token, Hermes Agent uses the available static brand asset, and Custom Targets use the more distinctive Lucide `Blocks` symbol. The monochrome assets for OpenCode, Cursor, GitHub Copilot, and Hermes Agent retain their original dark appearance in light mode and normalize to light marks in effective dark mode. Colored and self-contained image assets otherwise remain unchanged, while the Custom Target symbol inherits Astryx semantic colors.
 
+The ninth optimization separates distribution selection from installation observation. A card's selected border remains the input for the pending distribution command, while its status now reports whether the current Skill has an available, missing, unreadable, or absent Skill Installation in that Target. Loading and unavailable observations remain explicit, and preflight or execution feedback temporarily takes precedence once an operation begins.
+
+The tenth optimization keeps Distribution Target cards dimensionally stable when configured paths are long. Filesystem paths now remain on one line, truncate with an ellipsis at the available width, and retain Astryx's automatic full-value tooltip. Operational error messages remain distinct and may use up to two lines.
+
 ## Working Agreement
 
 - Add each newly requested Skills optimization as the next numbered task.
@@ -74,6 +78,9 @@ The eighth optimization makes Distribution Target icons identifiable and legible
 - Present Distribution Targets as icon-led selectable cards while preserving multi-select and operational feedback.
 - Keep distribution preflight and confirmation authoritative when changing only the Target selection surface.
 - Use specific available Target branding, adapt only monochrome brand assets to the effective Astryx color mode, preserve colored assets, and give Custom Targets a token-driven Lucide `Blocks` identity.
+- Keep selection as transient distribution input and use each Target card's status area for authoritative Skill Installation presence.
+- Use `Skill Installation` rather than download terminology, and distinguish missing or unreadable installations from both installed and not installed states.
+- Keep configured Target paths to one truncated line while preserving multi-line space for actionable operation errors.
 - Preserve Astryx-owned behavior for semantic controls such as `TabList`, dialogs, menus, inputs, and buttons.
 - Keep the existing main, preload, renderer, and shared-contract boundaries unless a later task explicitly requires a scoped change.
 - Continue using Astryx, StyleX, design tokens, and Lucide icons without adding dependencies for presentation-only refinements.
@@ -88,3 +95,5 @@ The eighth optimization makes Distribution Target icons identifiable and legible
 - [x] [Task 006: Simplify the Skill Store Columns](./task006_simplify-the-skill-store-columns.md)
 - [x] [Task 007: Use Selectable Distribution Target Cards](./task007_use-selectable-distribution-target-cards.md)
 - [x] [Task 008: Adapt Target Icons to Color Mode](./task008_adapt-target-icons-to-color-mode.md)
+- [x] [Task 009: Show Target Installation Status](./task009_show-target-installation-status.md)
+- [x] [Task 010: Truncate Distribution Target Paths](./task010_truncate-distribution-target-paths.md)

@@ -11,6 +11,7 @@ import {
   filterSkillStorePackages,
   getInstallationStatePresentation,
   getStoreObservationPresentation,
+  getTargetInstallationPresentation,
   isCodexLegacyTarget,
   orderSkillTargets,
 } from './skill-inventory-model';
@@ -94,6 +95,44 @@ test('maps Store observations and installation facts without claiming validity',
     }).label,
     'Target unreadable',
   );
+});
+
+test('presents installation presence independently from card selection', () => {
+  const missing = createInstallation(
+    'installation',
+    'target',
+    'package',
+    { kind: 'known', state: 'missing' },
+  );
+  const installed: SkillInstallationView = {
+    ...missing,
+    targetObservation: {
+      status: 'available',
+      fingerprint: 'b'.repeat(64),
+      observedAt: 2,
+    },
+  };
+  const unreadable: SkillInstallationView = {
+    ...missing,
+    targetObservation: { status: 'unreadable', observedAt: 3 },
+  };
+
+  assert.deepEqual(getTargetInstallationPresentation(undefined), {
+    label: 'Not installed',
+    variant: 'neutral',
+  });
+  assert.deepEqual(getTargetInstallationPresentation(installed), {
+    label: 'Installed',
+    variant: 'success',
+  });
+  assert.deepEqual(getTargetInstallationPresentation(missing), {
+    label: 'Missing',
+    variant: 'error',
+  });
+  assert.deepEqual(getTargetInstallationPresentation(unreadable), {
+    label: 'Unreadable',
+    variant: 'warning',
+  });
 });
 
 test('orders Codex Legacy last and retains its official documentation metadata', () => {

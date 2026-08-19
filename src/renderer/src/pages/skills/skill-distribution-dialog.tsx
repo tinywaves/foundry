@@ -19,11 +19,14 @@ import { useState } from 'react';
 import type {
   SkillDistributionPreflightResult,
   SkillDistributionResult,
+  SkillInstallationView,
   SkillStorePackageView,
   SkillTargetView,
 } from '../../../../shared/skill-contract';
 import { summarizeSkillDistributionResults } from './skill-installation-actions';
+import { getTargetInstallationPresentation } from './skill-inventory-model';
 import {
+  getSkillInstallationsQueryOptions,
   getSkillTargetsQueryOptions,
   invalidateSkillQueries,
   resolveSkillRequest,
@@ -47,6 +50,9 @@ export function SkillDistributionDialog({
 }) {
   const queryClient = useQueryClient();
   const targetsQuery = useQuery(getSkillTargetsQueryOptions());
+  const installationsQuery = useQuery(getSkillInstallationsQueryOptions({
+    skillId: skillPackage.id,
+  }));
   const [selectedTargetIds, setSelectedTargetIds] = useState<Set<string>>(() => new Set());
   const [preflight, setPreflight] = useState<SkillDistributionPreflightResult>();
   const [result, setResult] = useState<SkillDistributionResult>();
@@ -82,6 +88,12 @@ export function SkillDistributionDialog({
   });
   const isBusy = preflightMutation.isPending || distributionMutation.isPending;
   const targets = targetsQuery.data ?? [];
+  const installationsByTargetId = new Map(
+    (installationsQuery.data ?? []).map((installation) => [
+      installation.targetId,
+      installation,
+    ]),
+  );
   const selectionValue = selectedTargetIds.size === 0
     ? false
     : (selectedTargetIds.size === targets.length ? true : 'indeterminate');
@@ -89,7 +101,10 @@ export function SkillDistributionDialog({
   const replaceCount = preflight?.targets.filter((target) => (
     target.status === 'ready' && target.operation === 'replace'
   )).length ?? 0;
-  const error = targetsQuery.error ?? preflightMutation.error ?? distributionMutation.error;
+  const error = targetsQuery.error
+    ?? installationsQuery.error
+    ?? preflightMutation.error
+    ?? distributionMutation.error;
 
   const changeSelection = (next: Set<string>) => {
     setSelectedTargetIds(next);
@@ -173,6 +188,10 @@ export function SkillDistributionDialog({
                             target,
                             isSelected,
                             isApplying: distributionMutation.isPending,
+                            installation: installationsByTargetId.get(target.id),
+                            isInstallationPending: installationsQuery.isPending,
+                            isInstallationUnavailable: installationsQuery.isError
+                              && installationsQuery.data === undefined,
                             preflight,
                             result,
                           });
@@ -215,14 +234,26 @@ export function SkillDistributionDialog({
                                         </Text>
                                       </HStack>
                                     </HStack>
-                                    <Text
-                                      type="supporting"
-                                      color="secondary"
-                                      maxLines={2}
-                                      wordBreak="break-word"
-                                    >
-                                      {feedback.message ?? target.configuredPath}
-                                    </Text>
+                                    {feedback.message
+                                      ? (
+                                          <Text
+                                            type="supporting"
+                                            color="secondary"
+                                            maxLines={2}
+                                            wordBreak="break-word"
+                                          >
+                                            {feedback.message}
+                                          </Text>
+                                        )
+                                      : (
+                                          <Text
+                                            type="supporting"
+                                            color="secondary"
+                                            maxLines={1}
+                                          >
+                                            {target.configuredPath}
+                                          </Text>
+                                        )}
                                   </VStack>
                                 </StackItem>
                               </HStack>
@@ -288,42 +319,52 @@ function getTargetFeedback({
   target,
   isSelected,
   isApplying,
+  installation,
+  isInstallationPending,
+  isInstallationUnavailable,
   preflight,
   result,
 }: {
   target: SkillTargetView;
   isSelected: boolean;
   isApplying: boolean;
+  installation: SkillInstallationView | undefined;
+  isInstallationPending: boolean;
+  isInstallationUnavailable: boolean;
   preflight: SkillDistributionPreflightResult | undefined;
   result: SkillDistributionResult | undefined;
 }): TargetFeedback {
-  if (!isSelected) {
-    return { label: 'Not selected', message: undefined, variant: 'neutral' };
+  if (isSelected && isApplying) {
+    return { label: 'Distributing', message: undefined, variant: 'accent', pulsing: true };
   }
-  if (isApplying) {
-    return { label: 'Distributing', message: target.configuredPath, variant: 'accent', pulsing: true };
-  }
-  const targetResult = result?.targets.find((item) => item.targetId === target.id);
+  const targetResult = isSelected
+    ? result?.targets.find((item) => item.targetId === target.id)
+    : undefined;
   if (targetResult) {
     return targetResult.ok
-      ? { label: 'Succeeded', message: target.configuredPath, variant: 'success' }
+      ? { label: 'Succeeded', message: undefined, variant: 'success' }
       : { label: 'Failed', message: targetResult.error.message, variant: 'error' };
   }
-  const targetPreflight = preflight?.targets.find((item) => item.targetId === target.id);
+  const targetPreflight = isSelected
+    ? preflight?.targets.find((item) => item.targetId === target.id)
+    : undefined;
   if (targetPreflight) {
     return targetPreflight.status === 'ready'
       ? {
           label: targetPreflight.operation === 'replace' ? 'Will replace' : 'Ready to install',
-          message: target.configuredPath,
+          message: undefined,
           variant: targetPreflight.operation === 'replace' ? 'warning' : 'success',
         }
       : { label: 'Blocked', message: targetPreflight.message, variant: 'error' };
   }
-  if (!target.enabled) {
-    return { label: 'Disabled', message: target.configuredPath, variant: 'neutral' };
+  if (isInstallationPending) {
+    return { label: 'Checking', message: undefined, variant: 'neutral' };
   }
-  if (!target.writable) {
-    return { label: 'Read only', message: target.configuredPath, variant: 'warning' };
+  if (isInstallationUnavailable) {
+    return { label: 'Unknown', message: undefined, variant: 'warning' };
   }
-  return { label: 'Selected', message: target.configuredPath, variant: 'neutral' };
+  return {
+    ...getTargetInstallationPresentation(installation),
+    message: undefined,
+  };
 }

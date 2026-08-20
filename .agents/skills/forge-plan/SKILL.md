@@ -1,11 +1,11 @@
 ---
 name: forge-plan
-description: Interview-driven workflow for turning a product or engineering goal into a small, reviewable plan and a strictly connected sequence of implementation tasks. Use when the user explicitly invokes forge-plan with a new goal or a plan number, wants to shape requirements before implementation, resume a persisted plan, detail or execute an approved task, run an explicitly numbered or ongoing incremental optimization series, or assess whether a small out-of-task adjustment requires persisted documentation updates.
+description: Interview-driven workflow for turning a product or engineering goal into a bounded plan of connected vertical slices, then executing each slice through explicit review checkpoints. Use when the user explicitly invokes forge-plan with a new goal or a plan number, wants to shape requirements before implementation, resume a persisted plan, detail or execute an approved task, run an explicitly numbered or ongoing incremental optimization series, or assess whether a small out-of-task adjustment requires persisted documentation updates.
 ---
 
 # Forge Plan
 
-Shape one bounded goal into a reviewable plan, persist it only after confirmation, and advance through one implementation task at a time.
+Shape one bounded goal into connected, reviewable vertical slices, persist it only after confirmation, and advance through one implementation checkpoint at a time.
 
 ## Invocation
 
@@ -25,8 +25,10 @@ Treat an argument containing only digits as a plan number. Treat any other non-e
 - Do not write a new plan before the user explicitly confirms the complete blueprint. For an Incremental Optimization Series, the post-implementation documentation synchronization confirmation replaces this persistence gate.
 - Do not expand a task stub before the user explicitly confirms that task's detailed design.
 - Do not modify application code or install dependencies before the user separately confirms task execution, except in the explicitly declared Incremental Optimization Series workflow.
-- Keep a conventional plan bounded to one independently reviewable outcome. If it contains multiple independently valuable or independently acceptable outcomes, stop and propose separate goals. An Incremental Optimization Series may collect separately accepted optimization rounds only when they share one named optimization objective or product area.
-- Prefer more connected tasks over fewer oversized tasks. Every task must produce a handoff consumed by the next task.
+- Keep a conventional plan bounded to one coherent product or engineering capability. It may contain multiple independently reviewable vertical slices when they advance the same capability through a connected task chain. Split separate plans when the work has independent objectives, unrelated acceptance narratives, or workstreams that do not consume one another's handoffs. An Incremental Optimization Series may collect separately accepted optimization rounds only when they share one named optimization objective or product area.
+- In a conventional new plan, make every implementation task a vertical behavior slice: one coherent user-visible or system-visible behavior, state transition, or independently verifiable invariant. A slice may cross data, main-process, IPC, and renderer layers. Do not create tasks that are only a database table, Repository, IPC route, isolated button, or other technical layer unless the foundation is independently verifiable and a safe vertical slice cannot be delivered without it.
+- Prefer more connected slices over fewer oversized tasks. Every task must produce a stable handoff consumed by the next task.
+- Give every substantial conventional-plan task explicit implementation checkpoints. A checkpoint is a review stop inside one task, not another task or acceptance boundary. During execution, stop after each checkpoint and wait for explicit continuation before generating the next implementation batch.
 - Detail only the first unchecked task. If it cannot be designed without detailing the next task, pause and evaluate whether the two tasks should be merged.
 - Treat the Tasks checklist in `index.md` as the only source of execution order and completion. Do not duplicate a current-task field in the plan status.
 - Identify reasonably foreseeable user-visible consequences, interaction states, platform differences, and acceptance boundaries before execution. Do not defer predictable product decisions until implementation.
@@ -54,6 +56,7 @@ Keep this stage at the product and architecture level. Discuss:
 - product behavior and important flows
 - architectural direction and subsystem boundaries
 - constraints, assumptions, risks, and unresolved decisions
+- the thinnest coherent end-to-end behavior and how later slices expand it
 - the sequence of task-level handoffs
 
 Do not design concrete schemas, function signatures, IPC payloads, database tables, migrations, or file-by-file implementation yet.
@@ -64,9 +67,9 @@ Ask a small set of high-leverage questions per round. Challenge ambiguity, confl
 
 Review the proposed outcome from the user's perspective before designing the task chain. Cover the normal flow and any reasonably foreseeable states or side effects relevant to the goal, including interaction behavior, layout consequences, failure behavior, and platform differences. Ask the user to decide any behavior that affects acceptance; do not silently classify it as a future implementation detail.
 
-Distinguish the requested outcome from possible follow-up enhancements. If a behavior is required for the stated outcome to be coherent or usable, resolve it in the current plan. If it is independently valuable and can be accepted separately, explicitly place it out of scope or propose it as a separate goal.
+Distinguish the requested capability from optional variants and follow-up enhancements. If a behavior is required for the capability to be coherent or usable, resolve it in the current plan. Defer batch variants, additional providers, automation, polish, and secondary flows to later slices when the thinnest coherent path remains useful without them.
 
-Do not use task count as the size limit. Treat the plan as too large when it has more than one independently reviewable outcome, more than one independent acceptance boundary, or multiple workstreams that could be delivered separately.
+Do not use task count as the size limit. Treat the plan as too large when it contains more than one product or engineering objective, multiple unrelated acceptance narratives, or workstreams that can proceed without consuming one another's outputs. Independently reviewable vertical slices are expected inside one coherent plan and are not by themselves evidence that the plan is too large.
 
 When the goal is too large:
 
@@ -75,15 +78,33 @@ When the goal is too large:
 3. Ask the user to select one.
 4. Do not create a parent plan or write files.
 
+### Slice the Goal Vertically
+
+Read [vertical-slicing.md](references/vertical-slicing.md) for every conventional new plan before designing its task chain. Do not apply this upfront slicing workflow to an Incremental Optimization Series, whose rounds are implemented and persisted retrospectively.
+
+Identify the smallest coherent end-to-end behavior first, then expand it through connected slices. For every proposed slice, state:
+
+- the actor or trigger
+- the observable behavior or system result
+- the primary invariant or state transition
+- the intentionally deferred variants
+- the stable handoff the next slice consumes
+
+Reject horizontal task chains such as schema → Repository → IPC → page, and reject atomized UI chains such as button → dialog → validation. Those may be implementation checkpoints inside one slice, but they are not plan tasks.
+
+Use a narrow foundation task only when it proves an independently testable invariant, removes material risk before side effects are introduced, and cannot be folded into the first vertical slice without making that slice unreviewable. Name the behavior or invariant it establishes rather than the technical artifact it creates.
+
 ### Design the Task Chain
 
-Create as many tasks as needed for a coherent linear chain. A task may establish foundations without delivering visible product behavior.
+Create as many vertical-slice tasks as needed for a coherent linear chain. Start with the thinnest useful path and add variants, scale, additional adapters, automation, and lifecycle behavior in later tasks.
 
 For each task name, verify:
 
-- it has one clear responsibility
-- its output can be reviewed
-- it produces a concrete foundation or handoff
+- it describes one observable behavior, state transition, or independently verifiable invariant
+- its output can be reviewed and verified without implementing later tasks
+- it can be merged or rolled back without leaving an incoherent half-layer
+- it introduces no more domain concepts, authority changes, persistence relationships, process boundaries, or external side effects than the slice requires
+- it produces a concrete stable handoff
 - the next task can consume that handoff
 - it does not require premature design of later tasks
 
@@ -91,7 +112,7 @@ At this stage, define task names and chain intent only. Keep implementation deta
 
 ### Request Plan Persistence
 
-Present the complete proposed Goal, Detail, Scope, Out of Scope, Decisions, ordered Tasks, proposed plan number, and proposed English kebab-case slug.
+Present the complete proposed Goal, Detail, Scope, Out of Scope, Decisions, Slice Strategy, ordered Tasks, proposed plan number, and proposed English kebab-case slug.
 
 Ask for an explicit persistence confirmation. General agreement, answers to questions, or approval of one detail do not count as permission to write.
 
@@ -127,7 +148,7 @@ Read `index.md`, then inspect tasks in checklist order:
 3. Continue according to its status:
    - `pending`: begin task design.
    - `ready`: ask whether to execute it, revise its design, or pause.
-   - `in-progress`: inspect the repository and recorded design, then continue implementation.
+   - `in-progress`: inspect the repository, recorded design, and checkpoint checklist; present the first unchecked checkpoint and wait for explicit continuation before implementing it.
    - `blocked`: re-evaluate whether the blocker still exists before proceeding.
 4. If every task is checked, verify terminal statuses, treat the plan as completed, and review any Findings whose disposition is still pending.
 5. If the plan is `paused` or `cancelled`, require an explicit decision before changing that state.
@@ -145,10 +166,12 @@ Read the task's direct architectural context and relevant callers before grillin
 - failure handling and security
 - testing and verification
 - dependency selection
+- slice boundary and deferred variants
+- implementation checkpoints and review stops
 
 Read [dependency-evaluation.md](references/dependency-evaluation.md) whenever a new third-party dependency may be useful. Current online research is mandatory before recommending a new dependency.
 
-Build the task design using the detailed schema in [document-schema.md](references/document-schema.md). Ensure its Deliverables, Acceptance Criteria, Verification, and Handoff are concrete enough to review.
+Build the task design using the detailed schema in [document-schema.md](references/document-schema.md). Ensure its Slice Boundary, Deliverables, Acceptance Criteria, Implementation Checkpoints, Verification, and Handoff are concrete enough to review.
 
 Before requesting task-design confirmation, perform a completeness review:
 
@@ -157,6 +180,8 @@ Before requesting task-design confirmation, perform a completeness review:
 - cover relevant interaction states, failure states, and platform variants
 - trace every acceptance criterion to a deliverable and verification step
 - confirm which adjacent behaviors remain intentionally unchanged or out of scope
+- confirm the task is vertical rather than a technical layer or isolated UI fragment
+- confirm each checkpoint has a bounded review surface and a concrete stop condition
 
 Resolve every acceptance-affecting question before execution. If the review exposes independently valuable work, split it into a separate plan or task at the appropriate confirmation gate instead of postponing the decision until implementation.
 
@@ -171,17 +196,25 @@ Present the full task design and request explicit confirmation before expanding 
 
 ## Stage 5: Execute an Approved Task
 
-Execute only when the current task is `ready` and the user explicitly asks to begin implementation.
+Execute only when the current task is `ready` and the user explicitly asks to begin implementation, or when it is `in-progress` and the user explicitly asks to continue the next recorded checkpoint.
 
 The execution confirmation authorizes:
 
 - changing the task status to `in-progress`
-- making the code and configuration changes already described by the task
+- making the code and configuration changes described by the first unchecked implementation checkpoint
 - installing dependencies already approved in the task
-- running the planned verification
-- marking the task `completed` and checking it in `index.md` when verification succeeds
+- running that checkpoint's planned verification
+- checking the checkpoint after its stop condition and verification succeed
+- after the final checkpoint, running the full task verification and marking the task `completed` when every acceptance criterion succeeds
 
-Do not request another confirmation for routine status transitions covered by that execution approval.
+After each non-final checkpoint:
+
+1. stop implementation
+2. update the checkpoint checklist and relevant verification evidence
+3. summarize the behavior now available, changed interfaces, review hotspots, verification results, and remaining checkpoints
+4. ask the user explicitly whether to continue
+
+Do not generate the next checkpoint's code before that continuation. Routine status and documentation updates inside the approved checkpoint do not require another confirmation; crossing a checkpoint review gate does.
 
 When implementation or verification reveals a material fact that could not reasonably have been discovered from repository inspection, documentation, research, or the pre-execution completeness review, record it in the task's `Findings` section. A Finding is an observation and its evidence; it does not change the approved design or authorize additional work. Examples include an undocumented platform limitation, incompatible dependency behavior, or a contract that differs from the inspected source.
 

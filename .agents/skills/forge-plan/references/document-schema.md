@@ -27,7 +27,7 @@ Create `index.md` with this structure:
 
 ## Goal
 
-<One bounded, independently reviewable outcome.>
+<One bounded product or engineering capability delivered through connected vertical slices.>
 
 ## Detail
 
@@ -45,6 +45,11 @@ Create `index.md` with this structure:
 
 - <Confirmed decision and rationale>
 
+## Slice Strategy
+
+<The thinnest coherent end-to-end behavior, how later slices expand it, and the
+variants intentionally deferred from early slices.>
+
 ## Tasks
 
 - [ ] [Task 001: <Task Name>](./task001_<task-slug>.md)
@@ -53,6 +58,8 @@ Create `index.md` with this structure:
 
 Use the checklist as the only source of task order and completion. Do not add a `Current Task` field.
 Each checklist label and link must match the corresponding task document title and filename.
+
+For new conventional plans, include `Slice Strategy`. Preserve existing plans that predate this section unless the user confirms a plan-structure revision. Incremental Optimization Series indexes describe cumulative completed behavior and do not require a predeclared Slice Strategy.
 
 Update the plan state to `in-progress` when the first detailed task is persisted. Set it to `completed` only after every checklist item is checked and every task has a terminal status.
 
@@ -95,7 +102,7 @@ Do not persist partial interview notes into a pending task.
 
 ## Detailed Task
 
-After the user approves the task design, replace the stub with:
+After the user approves a conventional-plan task design, replace the stub with:
 
 ```markdown
 # Task 001: <Task Name>
@@ -107,6 +114,13 @@ After the user approves the task design, replace the stub with:
 ## Goal
 
 <The single implementation outcome of this task.>
+
+## Slice Boundary
+
+- Trigger: <Actor action or system event>
+- Observable result: <Behavior or state transition completed by this task>
+- Primary invariant: <The most important correctness condition>
+- Deferred variants: <Related behavior intentionally left to later tasks>
 
 ## Detail
 
@@ -124,6 +138,11 @@ None.
 ## Deliverables
 
 - <Reviewable artifact or behavior>
+
+## Implementation Checkpoints
+
+- [ ] Checkpoint 1: <Bounded implementation batch, stop condition, and review evidence>
+- [ ] Checkpoint 2: <Bounded implementation batch, stop condition, and review evidence>
 
 ## Acceptance Criteria
 
@@ -144,12 +163,15 @@ None.
 
 Keep acceptance criteria about observable completion, not implementation activity. "Add a file" is a deliverable; "the application rejects invalid input through the approved boundary" is an acceptance criterion.
 
+Implementation Checkpoints govern progress inside the current task; the checklist in `index.md` remains the only source of task order and task-level completion. Use one checkpoint for a genuinely small task. Check a checkpoint only after its stop condition and checkpoint verification succeed. Do not treat a checkpoint as permission to broaden the approved Slice Boundary.
+
 ## Completed Optimization Task
 
 When retrospectively persisting a confirmed Incremental Optimization Series round, use the Detailed Task structure with these terminal values:
 
 - set Status to `completed`
 - describe the implementation that actually exists, not a proposed design
+- omit `Slice Boundary` and `Implementation Checkpoints`; those sections govern prospective conventional-plan slicing and review gates
 - use `None.` for Findings unless implementation exposed a material factual observation; resolve its disposition before marking the retrospective task completed
 - record only dependencies actually added or selected
 - check every satisfied Acceptance Criterion

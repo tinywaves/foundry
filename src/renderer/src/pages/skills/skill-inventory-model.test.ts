@@ -16,7 +16,14 @@ import {
 } from './skill-inventory-model';
 
 function createPackage(id: string, distributionName: string): SkillStorePackageView {
-  return { id, distributionName, fingerprint: 'v2:abc', createdAt: 1, updatedAt: 1 };
+  return {
+    id,
+    distributionName,
+    description: null,
+    fingerprint: 'v2:abc',
+    createdAt: 1,
+    updatedAt: 1,
+  };
 }
 
 function createTarget(id: string, kind: SkillTargetKind, sortOrder: number): SkillTargetView {
@@ -58,9 +65,16 @@ function createInstallation(
 }
 
 test('filters Store metadata without requiring content state', () => {
-  const packages = [createPackage('1', 'Code Review'), createPackage('2', 'Release Notes')];
+  const packages = [
+    { ...createPackage('1', 'Code Review'), description: 'Review pull requests' },
+    { ...createPackage('2', 'Release Notes'), description: 'Prepare releases' },
+  ];
   assert.deepEqual(
     filterSkillStorePackages(packages, ' review ').map((item) => item.id),
+    ['1'],
+  );
+  assert.deepEqual(
+    filterSkillStorePackages(packages, 'PULL REQUESTS').map((item) => item.id),
     ['1'],
   );
 });

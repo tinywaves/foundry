@@ -454,6 +454,7 @@ export class SkillClawHubProvider {
       return this.options.sourceRepository.importPackageWithSource({
         packageId,
         distributionName: prepared.distributionName,
+        description: prepared.description,
         content: prepared.encoded.content,
         fingerprint: prepared.encoded.fingerprint,
         createdAt: fetchedAt,

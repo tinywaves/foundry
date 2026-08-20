@@ -96,6 +96,7 @@ export class SkillUpdateCoordinator {
       const committed = this.options.sourceRepository.commitRemoteUpdate({
         sourceId: source.id,
         distributionName: prepared.distributionName,
+        description: prepared.description,
         content: prepared.encoded.content,
         fingerprint: prepared.encoded.fingerprint,
         resolvedRevision: materialized.resolvedRevision,

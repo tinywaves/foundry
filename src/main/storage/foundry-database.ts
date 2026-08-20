@@ -13,11 +13,13 @@ import {
 import {
   encodeSkillPackage,
   fingerprintLegacySkillPackageRoot,
+  inspectSkillPackage,
   SKILL_PACKAGE_CONTENT_FORMAT,
 } from '../skills/skill-package-codec';
+import { readSkillPackageManifest } from '../skills/skill-package-manifest';
 import { FoundryStorageError, toFoundryStorageError } from './storage-error';
 
-export const FOUNDRY_SCHEMA_VERSION = 8;
+export const FOUNDRY_SCHEMA_VERSION = 9;
 
 const legacySkillRevisionReasons = ['import', 'distribution', 'promotion', 'remote-update'] as const;
 const legacySkillDistributionOperations = ['adoption', 'distribution', 'restore'] as const;
@@ -419,6 +421,7 @@ const currentSkillSchema = `
     distribution_name TEXT NOT NULL CHECK (
       length(distribution_name) > 0 AND length(distribution_name) <= 255
     ),
+    description TEXT,
     normalized_distribution_name TEXT NOT NULL CHECK (
       length(normalized_distribution_name) > 0
       AND length(normalized_distribution_name) <= 255
@@ -605,6 +608,7 @@ interface LegacySkillSourceRow {
 interface PreparedSkillPackage extends LegacySkillPackageRow {
   content: Buffer;
   contentFingerprint: string;
+  description: string | null;
 }
 
 interface PreparedSkillInstallation extends LegacySkillInstallationRow {
@@ -659,6 +663,12 @@ const migrations: Migration[] = [
     version: 7,
     apply: (database) => database.exec(remoteSkillSourceSchema),
   },
+  {
+    version: 9,
+    apply: (database) => {
+      database.exec('ALTER TABLE skill_packages ADD COLUMN description TEXT');
+    },
+  },
 ];
 
 function toSqlStringList(values: readonly string[]): string {
@@ -702,6 +712,7 @@ export async function initializeFoundryDatabase(
     }
     database = new Database(filename, { timeout: 5000 });
     configureDatabase(database);
+    const initialVersion = getDatabaseVersion(database);
     applyMigrations(database);
     if (getDatabaseVersion(database) === 7) {
       const packageCount = countLegacySkillPackages(database);
@@ -712,6 +723,9 @@ export async function initializeFoundryDatabase(
         const prepared = await prepareSkillMigration(database, options.userHomeDirectory);
         replaceSkillSchema(database, prepared);
       }
+    }
+    if (initialVersion >= 8) {
+      await backfillSkillPackageDescriptions(database);
     }
     assertDatabaseConsistency(database);
     await cleanupLegacySkillStore(options.userHomeDirectory);
@@ -744,6 +758,11 @@ function applyMigrations(database: Database.Database): void {
 
   for (const migration of migrations) {
     if (migration.version <= currentVersion) {
+      continue;
+    }
+    // Version 7 databases must be converted through the asynchronous package
+    // migration before the current schema can receive version 9 metadata.
+    if (migration.version === 9 && currentVersion < 8) {
       continue;
     }
     database.transaction(() => {
@@ -842,6 +861,10 @@ async function prepareSkillMigration(
       );
     }
     const encoded = await encodeSkillPackage(packageRoot);
+    const inspected = await inspectSkillPackage(encoded.content, {
+      expectedFingerprint: encoded.fingerprint,
+    });
+    const manifest = readSkillPackageManifest(inspected);
     packageFingerprints.set(skillPackage.id, {
       legacy: legacyFingerprint,
       current: encoded.fingerprint,
@@ -850,6 +873,7 @@ async function prepareSkillMigration(
       ...skillPackage,
       content: encoded.content,
       contentFingerprint: encoded.fingerprint,
+      description: manifest.description,
     });
   }
 
@@ -928,6 +952,7 @@ function replaceSkillSchema(
       INSERT INTO skill_packages_v8 (
         id,
         distribution_name,
+        description,
         normalized_distribution_name,
         content_format,
         content_fingerprint,
@@ -939,6 +964,7 @@ function replaceSkillSchema(
       ) VALUES (
         @id,
         @distribution_name,
+        @description,
         @normalizedDistributionName,
         '${SKILL_PACKAGE_CONTENT_FORMAT}',
         @contentFingerprint,
@@ -1050,6 +1076,39 @@ function replaceSkillSchema(
     `);
     database.pragma(`user_version = ${FOUNDRY_SCHEMA_VERSION}`);
   }).immediate();
+}
+
+async function backfillSkillPackageDescriptions(database: Database.Database): Promise<void> {
+  const packages = database.prepare<[], {
+    id: string;
+    content_blob: Buffer;
+    content_fingerprint: string;
+  }>(`
+    SELECT id, content_blob, content_fingerprint
+    FROM skill_packages
+    WHERE description IS NULL
+  `).all();
+  const update = database.prepare(`
+    UPDATE skill_packages
+    SET description = @description
+    WHERE id = @id AND description IS NULL
+  `);
+  for (const skillPackage of packages) {
+    try {
+      const inspected = await inspectSkillPackage(skillPackage.content_blob, {
+        expectedFingerprint: skillPackage.content_fingerprint,
+      });
+      const description = readSkillPackageManifest(inspected).description;
+      if (description !== null) {
+        update.run({ id: skillPackage.id, description });
+      }
+    } catch {
+      throw new FoundryStorageError(
+        'storage-corrupt',
+        'Stored Skill Package content could not be inspected during migration.',
+      );
+    }
+  }
 }
 
 async function cleanupLegacySkillStore(userHomeDirectory: string): Promise<void> {

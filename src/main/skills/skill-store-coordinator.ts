@@ -1,7 +1,5 @@
-import type { Buffer } from 'node:buffer';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import { parseDocument } from 'yaml';
 import { SkillOperationError, toSkillOperationError } from './skill-error';
 import type {
   SkillPackageContent,
@@ -14,13 +12,12 @@ import {
   materializeSkillPackage,
   SkillPackageCodecError,
 } from './skill-package-codec';
+import { readSkillPackageManifest } from './skill-package-manifest';
 import type {
   EncodedSkillPackage,
   InspectedSkillPackage,
 } from './skill-package-codec';
 import { parseSkillDistributionName, parseSkillId } from './skill-validation';
-
-const MAX_MANIFEST_FRONTMATTER_BYTES = 256 * 1024;
 
 interface SkillStoreCoordinatorOptions {
   createId?: () => string;
@@ -34,6 +31,7 @@ export interface SkillImportResult {
 
 export interface PreparedSkillPackageContent {
   distributionName: string;
+  description: string | null;
   encoded: EncodedSkillPackage;
 }
 
@@ -81,6 +79,7 @@ export class SkillStoreCoordinator {
           path.basename(sourceRoot),
           fallbackId,
         ),
+        description: readSkillPackageManifest(inspected).description,
         encoded,
       };
     } catch (error) {
@@ -134,6 +133,7 @@ export class SkillStoreCoordinator {
       distributionName: prepared.distributionName,
       fingerprint: prepared.encoded.fingerprint,
       content: prepared.encoded.content,
+      description: prepared.description,
       createdAt,
     });
     return { package: skillPackage, reused: false };
@@ -159,10 +159,7 @@ function deriveDistributionName(
   sourceBasename: string,
   packageId: string,
 ): string {
-  const manifest = inspected.entries.find((entry) => entry.relativePath === 'SKILL.md');
-  const manifestName = manifest?.kind === 'file'
-    ? readManifestName(manifest.content)
-    : undefined;
+  const manifestName = readSkillPackageManifest(inspected).name;
   for (const candidate of [manifestName, sourceBasename]) {
     try {
       return parseSkillDistributionName(candidate);
@@ -171,24 +168,6 @@ function deriveDistributionName(
     }
   }
   return `skill-${packageId}`;
-}
-
-function readManifestName(content: Buffer): unknown {
-  if (content.length > MAX_MANIFEST_FRONTMATTER_BYTES) {
-    return undefined;
-  }
-  const lines = content.toString('utf8').split(/\r?\n/);
-  if (lines[0] !== '---') {
-    return undefined;
-  }
-  const closingIndex = lines.findIndex(
-    (line, index) => index > 0 && (line === '---' || line === '...'),
-  );
-  if (closingIndex === -1) {
-    return undefined;
-  }
-  const document = parseDocument(lines.slice(1, closingIndex).join('\n'));
-  return document.errors.length === 0 ? document.get('name') : undefined;
 }
 
 function mapSourceCodecError(error: unknown): SkillOperationError {

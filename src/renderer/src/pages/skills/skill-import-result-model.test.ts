@@ -61,7 +61,7 @@ test('describes successful imports without warning details', () => {
   assert.equal(getSkillImportWarningCount(result), 0);
   assert.equal(
     describeSkillImport(result),
-    'Imported 1 and adopted 1. Checked 1 target.',
+    'Synced 1 and connected 1. Checked 1 target.',
   );
   assert.deepEqual(buildSkillImportIssues(result, [target]), []);
 });
@@ -80,7 +80,7 @@ test('builds readable details for every candidate warning code', () => {
   assert.equal(getSkillImportWarningCount(result), warningCodes.length);
   assert.equal(
     describeSkillImport(result),
-    'Imported 1 and adopted 1. 5 scan warnings need attention.',
+    'Synced 1 and connected 1. 5 scan warnings need attention.',
   );
   assert.deepEqual(issues.map((issue) => issue.code), warningCodes);
   assert.equal(issues.every((issue) => issue.targetName === target.displayName), true);
@@ -104,7 +104,7 @@ test('includes unreadable Target roots while retaining result paths without Targ
   assert.equal(getSkillImportWarningCount(result), 1);
   assert.equal(
     describeSkillImport(result),
-    'Imported 1 and adopted 1. 1 scan warning needs attention.',
+    'Synced 1 and connected 1. 1 scan warning needs attention.',
   );
   assert.deepEqual(buildSkillImportIssues(result, []), [
     {

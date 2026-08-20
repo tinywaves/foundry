@@ -13,6 +13,7 @@ import {
 interface SkillPackageRow {
   id: string;
   distribution_name: string;
+  description: string | null;
   content_fingerprint: string;
   created_at: number;
   updated_at: number;
@@ -30,6 +31,7 @@ interface SkillTrashPackageRow extends SkillPackageRow {
 export interface SkillPackageMetadata {
   id: string;
   distributionName: string;
+  description: string | null;
   fingerprint: SkillContentFingerprint;
   createdAt: number;
   updatedAt: number;
@@ -49,6 +51,7 @@ export interface CreateImportedPackageInput {
   distributionName: string;
   fingerprint: string;
   content: Uint8Array;
+  description?: string | null;
   createdAt: number;
 }
 
@@ -57,6 +60,7 @@ export interface ReplaceSkillPackageContentInput {
   distributionName: string;
   fingerprint: string;
   content: Uint8Array;
+  description?: string | null;
   updatedAt: number;
 }
 
@@ -74,6 +78,7 @@ export class SkillMetadataRepository {
         INSERT INTO skill_packages (
           id,
           distribution_name,
+          description,
           normalized_distribution_name,
           content_format,
           content_fingerprint,
@@ -83,6 +88,7 @@ export class SkillMetadataRepository {
         ) VALUES (
           @id,
           @distributionName,
+          @description,
           @normalizedDistributionName,
           '${SKILL_PACKAGE_CONTENT_FORMAT}',
           @fingerprint,
@@ -94,6 +100,7 @@ export class SkillMetadataRepository {
         id,
         distributionName,
         normalizedDistributionName: normalizeSkillDistributionName(distributionName),
+        description: parseDescription(input.description),
         fingerprint,
         content,
         createdAt,
@@ -113,6 +120,7 @@ export class SkillMetadataRepository {
         UPDATE skill_packages
         SET distribution_name = @distributionName,
             normalized_distribution_name = @normalizedDistributionName,
+            description = @description,
             content_format = '${SKILL_PACKAGE_CONTENT_FORMAT}',
             content_fingerprint = @fingerprint,
             content_blob = @content,
@@ -122,6 +130,7 @@ export class SkillMetadataRepository {
         packageId,
         distributionName,
         normalizedDistributionName: normalizeSkillDistributionName(distributionName),
+        description: parseDescription(input.description),
         fingerprint,
         content,
         updatedAt,
@@ -144,6 +153,7 @@ export class SkillMetadataRepository {
         SELECT
           id,
           distribution_name,
+          description,
           content_format,
           content_fingerprint,
           content_blob,
@@ -187,7 +197,7 @@ export class SkillMetadataRepository {
     return this.execute(() => {
       const fingerprint = parseSkillContentFingerprint(fingerprintValue);
       const row = this.database.prepare<[string], SkillPackageRow>(`
-        SELECT id, distribution_name, content_fingerprint, created_at, updated_at
+        SELECT id, distribution_name, description, content_fingerprint, created_at, updated_at
         FROM skill_packages
         WHERE content_fingerprint = ?
           AND trashed_at IS NULL
@@ -203,7 +213,7 @@ export class SkillMetadataRepository {
     return this.execute(() => {
       const limit = parseListLimit(limitValue);
       return this.database.prepare<[number], SkillPackageRow>(`
-        SELECT id, distribution_name, content_fingerprint, created_at, updated_at
+        SELECT id, distribution_name, description, content_fingerprint, created_at, updated_at
         FROM skill_packages
         WHERE trashed_at IS NULL AND removed_at IS NULL
         ORDER BY created_at, id
@@ -219,6 +229,7 @@ export class SkillMetadataRepository {
         SELECT
           id,
           distribution_name,
+          description,
           content_fingerprint,
           created_at,
           updated_at,
@@ -319,7 +330,7 @@ export class SkillMetadataRepository {
 
   private selectActivePackage(id: string): SkillPackageRow | undefined {
     return this.database.prepare<[string], SkillPackageRow>(`
-      SELECT id, distribution_name, content_fingerprint, created_at, updated_at
+        SELECT id, distribution_name, description, content_fingerprint, created_at, updated_at
       FROM skill_packages
       WHERE id = ? AND trashed_at IS NULL AND removed_at IS NULL
     `).get(id);
@@ -329,7 +340,8 @@ export class SkillMetadataRepository {
     return this.database.prepare<[string], SkillTrashPackageRow>(`
       SELECT
         id,
-        distribution_name,
+          distribution_name,
+          description,
         content_fingerprint,
         created_at,
         updated_at,
@@ -358,13 +370,14 @@ export class SkillMetadataRepository {
   private mapPackage(row: SkillPackageRow): SkillPackageMetadata {
     const id = parseStoredId(row.id);
     const distributionName = parseStoredDistributionName(row.distribution_name);
+    const description = parseStoredDescription(row.description);
     const fingerprint = parseStoredFingerprint(row.content_fingerprint);
     const createdAt = parseStoredTimestamp(row.created_at);
     const updatedAt = parseStoredTimestamp(row.updated_at);
     if (updatedAt < createdAt) {
       throw storedPackageError();
     }
-    return { id, distributionName, fingerprint, createdAt, updatedAt };
+    return { id, distributionName, description, fingerprint, createdAt, updatedAt };
   }
 
   private mapPackageContent(row: SkillPackageContentRow): SkillPackageContent {
@@ -422,6 +435,28 @@ function parseStoredDistributionName(value: unknown): string {
   } catch {
     throw storedPackageError();
   }
+}
+
+function parseDescription(value: unknown): string | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (typeof value !== 'string') {
+    throw new SkillOperationError('invalid-input', 'Skill Package description is invalid.');
+  }
+  const description = value.trim();
+  return description.length > 0 ? description : null;
+}
+
+function parseStoredDescription(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (typeof value !== 'string') {
+    throw storedPackageError();
+  }
+  const description = value.trim();
+  return description.length > 0 ? description : null;
 }
 
 function parseStoredFingerprint(value: unknown): string {

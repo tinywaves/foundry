@@ -40,6 +40,7 @@ export function filterSkillStorePackages(
   }
   return packages.filter((skillPackage) => (
     skillPackage.distributionName.toLocaleLowerCase().includes(query)
+    || skillPackage.description?.toLocaleLowerCase().includes(query) === true
   ));
 }
 

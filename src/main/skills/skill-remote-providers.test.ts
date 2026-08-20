@@ -242,6 +242,7 @@ function storePackage(): SkillStorePackageView {
   return {
     id: packageId,
     distributionName: 'typescript',
+    description: null,
     fingerprint: `v2:${fingerprint}`,
     createdAt: 50,
     updatedAt: 50,

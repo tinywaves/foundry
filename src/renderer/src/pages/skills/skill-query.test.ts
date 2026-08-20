@@ -111,6 +111,7 @@ test('keeps Store and Trash caches coherent across the deletion lifecycle', () =
   const storePackage: SkillStorePackageView = {
     id: 'skill-1',
     distributionName: 'shared-skill',
+    description: null,
     fingerprint: 'v2:abc',
     createdAt: 10,
     updatedAt: 10,
@@ -118,6 +119,7 @@ test('keeps Store and Trash caches coherent across the deletion lifecycle', () =
   const trashedPackage: SkillTrashPackageView = {
     id: storePackage.id,
     distributionName: storePackage.distributionName,
+    description: storePackage.description,
     fingerprint: storePackage.fingerprint,
     createdAt: storePackage.createdAt,
     updatedAt: 20,

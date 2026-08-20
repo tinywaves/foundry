@@ -37,8 +37,8 @@ const warningPresentations: Record<
     description: 'Foundry recognized a Skill Package but could not inspect its contents.',
   },
   'candidate-reconciliation-failed': {
-    title: 'Skill Package couldn\'t be imported',
-    description: 'The package could not be imported or matched to the Skill Store.',
+    title: 'Skill Package couldn\'t be synced',
+    description: 'The package could not be synced or matched to the Skill Store.',
   },
 };
 
@@ -68,7 +68,7 @@ export function describeSkillImportIssueLocation(issue: SkillImportIssue): strin
 
 export function describeSkillImport(result: SkillDiscoveryResult): string {
   const warningCount = getSkillImportWarningCount(result);
-  const summary = `Imported ${result.packagesImported} and adopted ${result.installationsAdopted}.`;
+  const summary = `Synced ${result.packagesImported} and connected ${result.installationsAdopted}.`;
   if (warningCount > 0) {
     const warningLabel = warningCount === 1 ? 'warning needs' : 'warnings need';
     return `${summary} ${warningCount} scan ${warningLabel} attention.`;

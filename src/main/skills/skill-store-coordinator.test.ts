@@ -20,8 +20,14 @@ test('imports one immutable BLOB and reuses identical current content', async ()
   try {
     await Promise.all([mkdir(firstSource), mkdir(secondSource)]);
     await Promise.all([
-      writeFile(path.join(firstSource, 'SKILL.md'), '---\nname: imported-skill\n---\n'),
-      writeFile(path.join(secondSource, 'SKILL.md'), '---\nname: imported-skill\n---\n'),
+      writeFile(
+        path.join(firstSource, 'SKILL.md'),
+        '---\nname: imported-skill\ndescription: Review pull requests\n---\n',
+      ),
+      writeFile(
+        path.join(secondSource, 'SKILL.md'),
+        '---\nname: imported-skill\ndescription: Review pull requests\n---\n',
+      ),
     ]);
     const ids = [firstPackageId, secondPackageId];
     const repository = new SkillMetadataRepository(database);
@@ -36,6 +42,7 @@ test('imports one immutable BLOB and reuses identical current content', async ()
     assert.equal(second.reused, true);
     assert.equal(second.package.id, first.package.id);
     assert.equal(first.package.distributionName, 'imported-skill');
+    assert.equal(first.package.description, 'Review pull requests');
     assert.match(first.package.fingerprint, /^v2:[0-9a-f]{64}$/);
     assert.ok(repository.getActivePackageContent(first.package.id).content.length > 0);
     assert.equal(repository.listActivePackages().length, 1);

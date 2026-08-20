@@ -179,6 +179,7 @@ export interface SkillDiscoveryResult {
 export interface SkillStorePackageView {
   id: SkillId;
   distributionName: string;
+  description: string | null;
   fingerprint: SkillContentFingerprint;
   createdAt: number;
   updatedAt: number;
@@ -310,6 +311,7 @@ export interface SkillStoreDeletionResult {
 export interface SkillTrashPackageView {
   id: SkillId;
   distributionName: string;
+  description: string | null;
   fingerprint: SkillContentFingerprint;
   createdAt: number;
   updatedAt: number;

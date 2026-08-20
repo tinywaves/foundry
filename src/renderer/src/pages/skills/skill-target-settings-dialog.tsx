@@ -167,7 +167,7 @@ export function SkillTargetSettingsDialog({
                 )}
                 <CheckboxInput
                   label="Enable discovery"
-                  description="Include this location when Import Existing is run."
+                  description="Include this location when Sync Skills is run."
                   value={enabled}
                   onChange={setEnabled}
                 />

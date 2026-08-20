@@ -69,6 +69,7 @@ export interface AttachSkillSourceInput {
 export interface CommitRemoteSkillUpdateInput {
   sourceId: string;
   distributionName: string;
+  description?: string | null;
   content: Uint8Array;
   fingerprint: string;
   resolvedRevision: string;
@@ -80,6 +81,7 @@ export interface CommitRemoteSkillUpdateInput {
 export interface ImportRemoteSkillPackageInput {
   packageId: string;
   distributionName: string;
+  description?: string | null;
   content: Uint8Array;
   fingerprint: string;
   createdAt: number;
@@ -140,11 +142,12 @@ export class SkillSourceRepository {
         const existingPackage = this.database.prepare<[string], {
           id: string;
           distribution_name: string;
+          description: string | null;
           content_fingerprint: string;
           created_at: number;
           updated_at: number;
         }>(`
-          SELECT id, distribution_name, content_fingerprint, created_at, updated_at
+          SELECT id, distribution_name, description, content_fingerprint, created_at, updated_at
           FROM skill_packages
           WHERE content_fingerprint = ? AND trashed_at IS NULL AND removed_at IS NULL
           ORDER BY created_at, id
@@ -156,6 +159,7 @@ export class SkillSourceRepository {
             INSERT INTO skill_packages (
               id,
               distribution_name,
+              description,
               normalized_distribution_name,
               content_format,
               content_fingerprint,
@@ -165,6 +169,7 @@ export class SkillSourceRepository {
             ) VALUES (
               @packageId,
               @distributionName,
+              @description,
               @normalizedDistributionName,
               '${SKILL_PACKAGE_CONTENT_FORMAT}',
               @fingerprint,
@@ -175,6 +180,7 @@ export class SkillSourceRepository {
           `).run({
             packageId,
             distributionName,
+            description: parsePackageDescription(input.description),
             normalizedDistributionName: normalizeSkillDistributionName(distributionName),
             fingerprint,
             content,
@@ -189,6 +195,7 @@ export class SkillSourceRepository {
           id: packageId,
           distribution_name: distributionName,
           content_fingerprint: fingerprint,
+          description: parsePackageDescription(input.description),
           created_at: createdAt,
           updated_at: createdAt,
         };
@@ -243,6 +250,7 @@ export class SkillSourceRepository {
           UPDATE skill_packages
           SET distribution_name = @distributionName,
               normalized_distribution_name = @normalizedDistributionName,
+              description = @description,
               content_format = '${SKILL_PACKAGE_CONTENT_FORMAT}',
               content_fingerprint = @fingerprint,
               content_blob = @content,
@@ -252,6 +260,7 @@ export class SkillSourceRepository {
           packageId: source.packageId,
           distributionName,
           normalizedDistributionName: normalizeSkillDistributionName(distributionName),
+          description: parsePackageDescription(input.description),
           fingerprint,
           content,
           fetchedAt,
@@ -280,10 +289,11 @@ export class SkillSourceRepository {
           id: string;
           distribution_name: string;
           content_fingerprint: string;
+          description: string | null;
           created_at: number;
           updated_at: number;
         }>(`
-          SELECT id, distribution_name, content_fingerprint, created_at, updated_at
+          SELECT id, distribution_name, description, content_fingerprint, created_at, updated_at
           FROM skill_packages WHERE id = ?
         `).get(source.packageId);
         if (!packageRow) {
@@ -294,6 +304,7 @@ export class SkillSourceRepository {
           skillPackage: {
             id: parseSkillId(packageRow.id),
             distributionName: parseSkillDistributionName(packageRow.distribution_name),
+            description: parsePackageDescription(packageRow.description),
             fingerprint: parseSkillContentFingerprint(packageRow.content_fingerprint),
             createdAt: parseTimestamp(packageRow.created_at),
             updatedAt: parseTimestamp(packageRow.updated_at),
@@ -394,6 +405,7 @@ export class SkillSourceRepository {
 function mapPackageMetadata(row: {
   id: string;
   distribution_name: string;
+  description: string | null;
   content_fingerprint: string;
   created_at: number;
   updated_at: number;
@@ -401,10 +413,22 @@ function mapPackageMetadata(row: {
   return {
     id: parseSkillId(row.id),
     distributionName: parseSkillDistributionName(row.distribution_name),
+    description: parsePackageDescription(row.description),
     fingerprint: parseSkillContentFingerprint(row.content_fingerprint),
     createdAt: parseTimestamp(row.created_at),
     updatedAt: parseTimestamp(row.updated_at),
   };
+}
+
+function parsePackageDescription(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (typeof value !== 'string') {
+    throw new SkillOperationError('storage-corrupt', 'Stored Skill Package description is invalid.');
+  }
+  const description = value.trim();
+  return description.length > 0 ? description : null;
 }
 
 function selectByIdentity(

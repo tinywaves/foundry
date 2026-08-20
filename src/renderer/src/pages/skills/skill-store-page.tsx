@@ -8,6 +8,7 @@ import { Section } from '@astryxdesign/core/Section';
 import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
 import { proportional, Table } from '@astryxdesign/core/Table';
 import type { TableColumn } from '@astryxdesign/core/Table';
+import { Text } from '@astryxdesign/core/Text';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Compass, Import, PackagePlus, Search, Wrench } from 'lucide-react';
@@ -62,7 +63,7 @@ export function SkillStorePage() {
   const importMutation = useMutation<SkillDiscoveryResult, SkillRequestError>({
     mutationFn: () => resolveSkillRequest(
       () => globalThis.api.skills.importExisting(),
-      'Installed Skills could not be imported.',
+      'Installed Skills could not be synced.',
     ),
     onSuccess: (result) => {
       setAreImportIssuesOpen(false);
@@ -94,13 +95,21 @@ export function SkillStorePage() {
       header: 'Skill',
       width: proportional(3),
       renderCell: (row) => (
-        <Link
-          as={RouterLink}
-          href={routePaths.agentExtensionsSkill(row.id)}
-          isStandalone
-        >
-          {row.distributionName}
-        </Link>
+        <VStack gap={0} width="100%">
+          <Link
+            as={RouterLink}
+            href={routePaths.agentExtensionsSkill(row.id)}
+            isStandalone
+            maxLines={1}
+          >
+            {row.distributionName}
+          </Link>
+          {row.skillPackage.description && (
+            <Text type="supporting" color="secondary" maxLines={1} hasTruncateTooltip>
+              {row.skillPackage.description}
+            </Text>
+          )}
+        </VStack>
       ),
     },
     {
@@ -144,13 +153,13 @@ export function SkillStorePage() {
           title={hasSearch ? 'No Matching Skills' : 'No Skills in Store'}
           description={hasSearch
             ? 'Try another name or clear the search.'
-            : 'Import Skills already installed in recognized local targets.'}
+            : 'Sync Skills already installed in recognized local targets.'}
           icon={<Icon icon={hasSearch ? Search : Wrench} size="lg" color="secondary" />}
           actions={hasSearch
             ? <Button label="Clear Search" variant="secondary" onClick={() => setSearch('')} />
             : (
                 <Button
-                  label="Import Existing"
+                  label="Sync Skills"
                   variant="primary"
                   icon={<Icon icon={Import} size="sm" color="inherit" />}
                   isLoading={importMutation.isPending}
@@ -202,7 +211,7 @@ export function SkillStorePage() {
                 icon={<Icon icon={Compass} size="sm" color="inherit" />}
               />
               <Button
-                label="Import Existing"
+                label="Sync Skills"
                 variant="primary"
                 icon={<Icon icon={Import} size="sm" color="inherit" />}
                 isLoading={importMutation.isPending}
@@ -216,7 +225,7 @@ export function SkillStorePage() {
           <Banner
             status="error"
             container="section"
-            title="Import Couldn't Finish"
+            title="Skill Sync Couldn't Finish"
             description={importMutation.error.message}
           />
         )}
@@ -226,7 +235,7 @@ export function SkillStorePage() {
               ? 'warning'
               : 'success'}
             container="section"
-            title="Import Finished"
+            title="Skill Sync Finished"
             description={describeSkillImport(importResult)}
             endContent={importIssues.length > 0
               ? (

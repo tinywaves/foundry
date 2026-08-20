@@ -15,6 +15,7 @@ test('stores one current BLOB while metadata reads omit content bytes', () => {
     const created = repository.createImportedPackage({
       id: packageId,
       distributionName: 'example-skill',
+      description: null,
       fingerprint,
       content: Buffer.from('encoded-content'),
       createdAt: 100,
@@ -23,6 +24,7 @@ test('stores one current BLOB while metadata reads omit content bytes', () => {
     assert.deepEqual(created, {
       id: packageId,
       distributionName: 'example-skill',
+      description: null,
       fingerprint,
       createdAt: 100,
       updatedAt: 100,

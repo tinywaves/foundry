@@ -175,11 +175,11 @@ function createLegacyV7Database(filename: string, legacyFingerprint: string): vo
   database.close();
 }
 
-test('creates the v8 schema without removed Skill state tables or columns', () => {
+test('creates the v9 schema without removed Skill state tables or columns', () => {
   const database = openFoundryDatabase(':memory:');
   try {
-    assert.equal(FOUNDRY_SCHEMA_VERSION, 8);
-    assert.equal(database.pragma('user_version', { simple: true }), 8);
+    assert.equal(FOUNDRY_SCHEMA_VERSION, 9);
+    assert.equal(database.pragma('user_version', { simple: true }), 9);
     assert.equal(database.pragma('quick_check', { simple: true }), 'ok');
     const tables = database.prepare<[], { name: string }>(`
       SELECT name FROM sqlite_schema WHERE type = 'table' AND name LIKE 'skill_%' ORDER BY name
@@ -247,7 +247,7 @@ test('migrates v7 filesystem content into a verified BLOB and versioned fingerpr
     const reopened = await initializeFoundryDatabase(filename, {
       userHomeDirectory: temporaryRoot,
     });
-    assert.equal(reopened.pragma('user_version', { simple: true }), 8);
+    assert.equal(reopened.pragma('user_version', { simple: true }), 9);
     reopened.close();
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });

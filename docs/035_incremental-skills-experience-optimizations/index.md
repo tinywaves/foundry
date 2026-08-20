@@ -2,11 +2,11 @@
 
 ## Status
 
-`in_progress`
+`completed`
 
 ## Superseded Decisions
 
-[Plan 037](../037_replace-skill-store-with-sqlite-blobs/index.md) removes the Store observation Status established by Task 006 and the live Installation observation presentation established by Task 009. The completed tasks remain historical UI records; current Skills presentation comes from Plan 037 and [ADR 0005](../adr/0005-store-current-skill-content-in-sqlite.md).
+[Plan 037](../037_replace-skill-store-with-sqlite-blobs/index.md) removes the Store observation Status established by Task 006 and the live Installation observation presentation established by Task 009. Task 011 subsequently removes the Fingerprint column introduced by that current-content model, leaving the Store list focused on Skill identity and row actions. The completed tasks remain historical UI records; current Skills presentation comes from Plan 037, [ADR 0005](../adr/0005-store-current-skill-content-in-sqlite.md), and the later optimizations recorded here.
 
 ## Goal
 
@@ -38,10 +38,12 @@ The ninth optimization separates distribution selection from installation observ
 
 The tenth optimization keeps Distribution Target cards dimensionally stable when configured paths are long. Filesystem paths remain on one line, truncate with an ellipsis at the available width, and retain Astryx's automatic full-value tooltip. The two-column Grid uses zero-minimum equal tracks and each Selectable Card permits intrinsic-width contraction, so a long Custom Target path cannot widen its column. Operational error messages remain distinct and may use up to two lines.
 
+The eleventh optimization removes the technical Fingerprint column from the Skill Store inventory. The table now presents only Skill identity and row actions, while Content Fingerprints remain available to the domain, detail, installation, and distribution workflows that depend on them.
+
 ## Working Agreement
 
 - Add each newly requested Skills optimization as the next numbered task.
-- Keep this plan `in_progress` while additional Skills optimizations are expected.
+- Keep this plan `completed` between synchronized rounds because every persisted task is terminal; append the next completed task only after its optimization is implemented, verified, and accepted for documentation synchronization.
 - Define the task boundary before changing renderer, preload, main-process, persistence, dependency, build, or packaging behavior.
 - Audit effective component behavior through public documentation and dependency source when a rendered interaction is not explained by Foundry source alone.
 - Preserve completed tasks as historical records; document later refinements as new tasks unless they directly correct the same implementation.
@@ -85,6 +87,7 @@ The tenth optimization keeps Distribution Target cards dimensionally stable when
 - Keep selection as transient distribution input and use each Target card's status area for authoritative Skill Installation presence.
 - Use `Skill Installation` rather than download terminology, and distinguish missing or unreadable installations from both installed and not installed states.
 - Keep configured Target paths to one truncated line, constrain the card Grid to equal shrinkable columns, and preserve multi-line space for actionable operation errors.
+- Keep Content Fingerprints out of the Skill Store list while preserving them in the underlying Skills domain and workflows.
 - Preserve Astryx-owned behavior for semantic controls such as `TabList`, dialogs, menus, inputs, and buttons.
 - Keep the existing main, preload, renderer, and shared-contract boundaries unless a later task explicitly requires a scoped change.
 - Continue using Astryx, StyleX, design tokens, and Lucide icons without adding dependencies for presentation-only refinements.
@@ -101,3 +104,4 @@ The tenth optimization keeps Distribution Target cards dimensionally stable when
 - [x] [Task 008: Adapt Target Icons to Color Mode](./task008_adapt-target-icons-to-color-mode.md)
 - [x] [Task 009: Show Target Installation Status](./task009_show-target-installation-status.md)
 - [x] [Task 010: Truncate Distribution Target Paths](./task010_truncate-distribution-target-paths.md)
+- [x] [Task 011: Remove the Skill Store Fingerprint Column](./task011_remove-the-skill-store-fingerprint-column.md)

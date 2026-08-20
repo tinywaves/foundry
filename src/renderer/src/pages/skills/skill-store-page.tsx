@@ -42,7 +42,6 @@ interface SkillStoreRow extends Record<string, unknown> {
   id: string;
   distributionName: string;
   skillPackage: SkillStorePackageView;
-  fingerprint: string;
 }
 
 const IMPORT_RESULT_AUTO_HIDE_MS = 8000;
@@ -88,7 +87,6 @@ export function SkillStorePage() {
     id: skillPackage.id,
     distributionName: skillPackage.distributionName,
     skillPackage,
-    fingerprint: skillPackage.fingerprint.slice(0, 15),
   })), [filteredPackages]);
   const columns = useMemo<Array<TableColumn<SkillStoreRow>>>(() => [
     {
@@ -104,11 +102,6 @@ export function SkillStorePage() {
           {row.distributionName}
         </Link>
       ),
-    },
-    {
-      key: 'fingerprint',
-      header: 'Fingerprint',
-      width: proportional(1),
     },
     {
       key: 'id',

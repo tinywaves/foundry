@@ -2,6 +2,7 @@ import type {
   SkillApplyUpdateResult,
   SkillSourceProvider,
   SkillSourceView,
+  SkillUpdateCandidateView,
   SkillUpdateCheckResult,
 } from '../../../../shared/skill-contract';
 import type { SkillStatePresentation } from './skill-inventory-model';
@@ -11,8 +12,8 @@ const providerLabels: Record<SkillSourceProvider, string> = {
   clawhub: 'ClawHub',
 };
 
-const checkPresentations: Record<SkillSourceView['check']['status'], SkillStatePresentation> = {
-  'never': { label: 'Not checked', variant: 'neutral' },
+const checkPresentations: Record<SkillUpdateCheckResult['status'], SkillStatePresentation> = {
+  'fixed': { label: 'Fixed', variant: 'neutral' },
   'current': { label: 'Current', variant: 'success' },
   'update-available': { label: 'Update available', variant: 'accent' },
   'unavailable': { label: 'Unavailable', variant: 'warning' },
@@ -24,31 +25,31 @@ export function getSkillSourceProviderLabel(provider: SkillSourceProvider): stri
 
 export function getSkillSourceStatusPresentation(
   source: SkillSourceView,
+  check: SkillUpdateCheckResult | undefined,
 ): SkillStatePresentation {
-  return source.trackingMode === 'fixed'
-    ? { label: 'Fixed', variant: 'neutral' }
-    : checkPresentations[source.check.status];
-}
-
-export function getSkillSourceCheckedAt(source: SkillSourceView): number | null {
-  return source.check.status === 'never' ? null : source.check.checkedAt;
-}
-
-export function getSkillSourceCandidateId(source: SkillSourceView): string | null {
-  return source.check.status === 'update-available'
-    ? source.check.candidate.id
-    : null;
-}
-
-export function mergeSkillSourceChecks(
-  current: readonly SkillSourceView[] | undefined,
-  results: readonly SkillUpdateCheckResult[],
-): SkillSourceView[] | undefined {
-  if (current === undefined) {
-    return undefined;
+  if (check) {
+    return checkPresentations[check.status];
   }
-  const checkedSources = new Map(results.map((result) => [result.source.id, result.source]));
-  return current.map((source) => checkedSources.get(source.id) ?? source);
+  return source.trackingMode === 'fixed'
+    ? checkPresentations.fixed
+    : { label: 'Not checked', variant: 'neutral' };
+}
+
+export function getSkillSourceCandidate(
+  check: SkillUpdateCheckResult | undefined,
+): SkillUpdateCandidateView | null {
+  return check?.status === 'update-available' ? check.candidate : null;
+}
+
+export function mergeSkillSourceCheckResults(
+  current: ReadonlyMap<string, SkillUpdateCheckResult>,
+  results: readonly SkillUpdateCheckResult[],
+): Map<string, SkillUpdateCheckResult> {
+  const merged = new Map(current);
+  for (const result of results) {
+    merged.set(result.source.id, result);
+  }
+  return merged;
 }
 
 export function describeSkillSourceChecks(results: readonly SkillUpdateCheckResult[]): string {

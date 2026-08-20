@@ -7,7 +7,6 @@ import { SkillDiscoveryCoordinator } from './skill-discovery-coordinator';
 import { toSkillOperationError } from './skill-error';
 import { SkillFileCoordinator } from './skill-file-coordinator';
 import { SkillGitSourceCoordinator } from './skill-git-source-coordinator';
-import { createSkillFilesystemWatcher } from './skill-filesystem-watcher';
 import { SkillInstallationRepository } from './skill-installation-repository';
 import { SkillIpcController } from './skill-ipc';
 import { SkillMetadataRepository } from './skill-metadata-repository';
@@ -25,8 +24,6 @@ import { SkillTargetMutationCoordinator } from './skill-target-mutation-coordina
 import { SkillTrashCoordinator } from './skill-trash-coordinator';
 import { SkillUpdateCoordinator } from './skill-update-coordinator';
 import { resolveBuiltInSkillTargets } from './skill-target-adapters';
-import { SkillWatchCoordinator } from './skill-watch-coordinator';
-import { resolveSkillWatchPaths } from './skill-watch-paths';
 
 export class SkillSubsystem {
   private ipcController: SkillIpcController | undefined;
@@ -48,8 +45,8 @@ export class SkillSubsystem {
       const sourceRepository = new SkillSourceRepository(database);
       const targetRepository = new SkillTargetRepository(database);
       const installationRepository = new SkillInstallationRepository(database);
-      const storeCoordinator = new SkillStoreCoordinator(paths, metadataRepository);
-      await storeCoordinator.initialize();
+      const storeCoordinator = new SkillStoreCoordinator(metadataRepository);
+      await paths.initialize();
       const remoteAcquisitionCoordinator = new SkillRemoteAcquisitionCoordinator(paths);
       await remoteAcquisitionCoordinator.initialize();
       const gitSourceCoordinator = new SkillGitSourceCoordinator({
@@ -74,14 +71,15 @@ export class SkillSubsystem {
         gitSourceCoordinator,
         httpClient: providerHttpClient,
       });
+      const operationQueue = new SkillOperationQueue();
       const updateCoordinator = new SkillUpdateCoordinator({
         metadataRepository,
         sourceRepository,
         storeCoordinator,
         gitSourceCoordinator,
         clawHubProvider,
+        operationQueue,
       });
-      const operationQueue = new SkillOperationQueue();
       const discoveryCoordinator = new SkillDiscoveryCoordinator({
         userHomeDirectory,
         targetRepository,
@@ -90,33 +88,19 @@ export class SkillSubsystem {
         operationQueue,
       });
       const targetMutationCoordinator = new SkillTargetMutationCoordinator({
-        paths,
         metadataRepository,
         targetRepository,
         installationRepository,
         storeCoordinator,
         operationQueue,
       });
-      await targetMutationCoordinator.initialize();
       const trashCoordinator = new SkillTrashCoordinator({
-        paths,
         metadataRepository,
         installationRepository,
+        targetRepository,
         operationQueue,
       });
-      await trashCoordinator.initialize();
-      let ipcController: SkillIpcController | undefined;
-      const watchCoordinator = new SkillWatchCoordinator({
-        reconcileStore: () => storeCoordinator.reconcileStorePackages(),
-        scan: () => discoveryCoordinator.scan(),
-        resolveWatchPaths: () => resolveSkillWatchPaths(paths, targetRepository),
-        watchFactory: createSkillFilesystemWatcher,
-        onChanged: (ownerIds, notification) => {
-          ipcController?.notifyOwners(ownerIds, notification);
-        },
-      });
       this.service = new SkillService({
-        paths,
         metadataRepository,
         targetRepository,
         installationRepository,
@@ -126,16 +110,14 @@ export class SkillSubsystem {
         remoteDiscoveryCoordinator,
         updateCoordinator,
         discoveryCoordinator,
-        fileCoordinator: new SkillFileCoordinator(paths, metadataRepository),
-        watchCoordinator,
+        fileCoordinator: new SkillFileCoordinator(storeCoordinator),
         targetMutationCoordinator,
         trashCoordinator,
         resolveBuiltInTargets: () => resolveBuiltInSkillTargets({ userHomeDirectory }),
         revealPath: (targetPath) => shell.showItemInFolder(targetPath),
         openExternal: (url) => shell.openExternal(url),
       });
-      ipcController = new SkillIpcController(this.service);
-      this.ipcController = ipcController;
+      this.ipcController = new SkillIpcController(this.service);
     } catch (error) {
       const skillError = toSkillOperationError(error);
       console.error(`[skills] initialization failed with ${skillError.code}.`);

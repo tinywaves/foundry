@@ -56,6 +56,7 @@ test('resolves the approved global Distribution Targets in stable adapter order'
       targets.at(-1)?.documentationUrl ?? '',
       /^https:\/\/developers\.openai\.com\/codex\/skills/,
     );
+    assert.equal(targets.every((target) => target.defaultAllowSymlinkEscape), true);
     assert.equal(targets.some((target) => target.displayName.toLowerCase().includes('goose')), false);
   } finally {
     await rm(userHome, { recursive: true, force: true });

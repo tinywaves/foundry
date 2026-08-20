@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
 import { test } from 'vitest';
 import type {
   SkillGitResolutionView,
@@ -20,7 +21,6 @@ const latestCandidateId = '00000000-0000-4000-8000-000000000a03';
 const exactCandidateId = '00000000-0000-4000-8000-000000000a04';
 const sourceId = '00000000-0000-4000-8000-000000000a05';
 const packageId = '00000000-0000-4000-8000-000000000a06';
-const revisionId = '00000000-0000-4000-8000-000000000a07';
 const operationId = '00000000-0000-4000-8000-000000000a08';
 const fingerprint = 'a'.repeat(64);
 const artifactDigest = 'b'.repeat(64);
@@ -82,23 +82,26 @@ test('normalizes owner-qualified ClawHub results and imports an exact latest rev
     } as unknown as SkillRemoteAcquisitionCoordinator,
     gitSourceCoordinator: {} as SkillGitSourceCoordinator,
     storeCoordinator: {
-      importPackage: () => Promise.resolve({
-        package: storePackage(),
-        revision: {
-          id: revisionId,
-          packageId,
-          sequenceNumber: 1,
-          fingerprint,
-          reason: 'import',
-          createdAt: 50,
+      preparePackageContent: () => Promise.resolve({
+        distributionName: 'typescript',
+        encoded: {
+          format: 'foundry-skill-zip-v1',
+          content: Buffer.from('encoded-content'),
+          fingerprint: `v2:${fingerprint}`,
+          entryCount: 1,
+          uncompressedBytes: 1,
         },
-        reused: false,
       }),
     } as unknown as SkillStoreCoordinator,
     sourceRepository: {
-      attachOrRefresh: (input) => {
-        attachedSource = input;
-        return sourceView(input);
+      importPackageWithSource: (input) => {
+        const importedSource = { ...input.source, packageId: input.packageId };
+        attachedSource = importedSource;
+        return {
+          skillPackage: storePackage(),
+          source: sourceView(importedSource),
+          reusedPackage: false,
+        };
       },
     } as unknown as SkillSourceRepository,
     createId: idSequence([
@@ -106,6 +109,7 @@ test('normalizes owner-qualified ClawHub results and imports an exact latest rev
       secondResultId,
       latestCandidateId,
       exactCandidateId,
+      packageId,
       sourceId,
     ]),
     now: () => 60,
@@ -238,7 +242,7 @@ function storePackage(): SkillStorePackageView {
   return {
     id: packageId,
     distributionName: 'typescript',
-    storeObservation: { status: 'available', fingerprint, observedAt: 50 },
+    fingerprint: `v2:${fingerprint}`,
     createdAt: 50,
     updatedAt: 50,
   };
@@ -250,7 +254,6 @@ function sourceView(
   return {
     ...input,
     id: input.id,
-    check: { status: 'never' },
     createdAt: input.fetchedAt,
     updatedAt: input.fetchedAt,
   };

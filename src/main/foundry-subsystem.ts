@@ -5,7 +5,7 @@ import { ProviderSubsystem } from './providers/provider-subsystem';
 import { RuntimeSubsystem } from './runtimes/runtime-subsystem';
 import { SettingsSubsystem } from './settings/settings-subsystem';
 import { SkillSubsystem } from './skills/skill-subsystem';
-import { openFoundryDatabase } from './storage/foundry-database';
+import { initializeFoundryDatabase } from './storage/foundry-database';
 import { toFoundryStorageError } from './storage/storage-error';
 
 export class FoundrySubsystem {
@@ -18,7 +18,7 @@ export class FoundrySubsystem {
 
   async initialize(databaseFilename: string, userHomeDirectory: string): Promise<void> {
     try {
-      this.database = openFoundryDatabase(databaseFilename);
+      this.database = await initializeFoundryDatabase(databaseFilename, { userHomeDirectory });
       this.promptSubsystem.initialize(this.database);
       this.providerSubsystem.initialize(this.database);
       this.runtimeSubsystem.initialize(this.database, userHomeDirectory);

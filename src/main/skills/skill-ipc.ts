@@ -4,7 +4,7 @@ import type {
   WebContents,
 } from 'electron';
 import { BrowserWindow as ElectronBrowserWindow, dialog, ipcMain } from 'electron';
-import type { SkillApiResult, SkillChangedNotification } from '../../shared/skill-contract';
+import type { SkillApiResult } from '../../shared/skill-contract';
 import { skillIpcChannels } from '../../shared/skill-contract';
 import { SkillOperationError, toSkillOperationError } from './skill-error';
 import { isTrustedSkillMainFrame } from './skill-ipc-trust';
@@ -18,11 +18,8 @@ const skillRequestChannels = [
   skillIpcChannels.listTargets,
   skillIpcChannels.listInstallations,
   skillIpcChannels.importExisting,
-  skillIpcChannels.beginWatchSession,
-  skillIpcChannels.endWatchSession,
   skillIpcChannels.listPackageFiles,
   skillIpcChannels.readPackageFile,
-  skillIpcChannels.revealPackage,
   skillIpcChannels.revealTarget,
   skillIpcChannels.openTargetDocumentation,
   skillIpcChannels.selectCustomTargetDirectory,
@@ -32,13 +29,8 @@ const skillRequestChannels = [
   skillIpcChannels.removeCustomTarget,
   skillIpcChannels.preflightDistribution,
   skillIpcChannels.distribute,
-  skillIpcChannels.restoreInstallation,
-  skillIpcChannels.promoteInstallation,
-  skillIpcChannels.importInstallationAsNew,
   skillIpcChannels.uninstall,
-  skillIpcChannels.listRevisions,
-  skillIpcChannels.listRevisionFiles,
-  skillIpcChannels.readRevisionFile,
+  skillIpcChannels.preflightStoreDeletion,
   skillIpcChannels.movePackageToTrash,
   skillIpcChannels.listTrash,
   skillIpcChannels.restoreTrashedPackage,
@@ -96,18 +88,10 @@ export class SkillIpcController {
       this.handleRequest(event, (service) => service.listInstallations(input)));
     ipcMain.handle(skillIpcChannels.importExisting, (event) =>
       this.handleRequest(event, (service) => service.importExisting()));
-    ipcMain.handle(skillIpcChannels.beginWatchSession, (event) =>
-      this.handleRequest(event, (service) => service.beginWatchSession(event.sender.id)));
-    ipcMain.handle(skillIpcChannels.endWatchSession, (event, sessionId: unknown) =>
-      this.handleRequest(event, (service) => (
-        service.endWatchSession(event.sender.id, sessionId)
-      )));
     ipcMain.handle(skillIpcChannels.listPackageFiles, (event, skillId: unknown) =>
       this.handleRequest(event, (service) => service.listPackageFiles(skillId)));
     ipcMain.handle(skillIpcChannels.readPackageFile, (event, input: unknown) =>
       this.handleRequest(event, (service) => service.readPackageFile(input)));
-    ipcMain.handle(skillIpcChannels.revealPackage, (event, skillId: unknown) =>
-      this.handleRequest(event, (service) => service.revealPackage(skillId)));
     ipcMain.handle(skillIpcChannels.revealTarget, (event, targetId: unknown) =>
       this.handleRequest(event, (service) => service.revealTarget(targetId)));
     ipcMain.handle(skillIpcChannels.openTargetDocumentation, (event, targetId: unknown) =>
@@ -138,25 +122,10 @@ export class SkillIpcController {
       this.handleRequest(event, (service) => service.preflightDistribution(input)));
     ipcMain.handle(skillIpcChannels.distribute, (event, input: unknown) =>
       this.handleRequest(event, (service) => service.distribute(input)));
-    ipcMain.handle(skillIpcChannels.restoreInstallation, (event, input: unknown) =>
-      this.handleRequest(event, (service) => service.restoreInstallation(input)));
-    ipcMain.handle(skillIpcChannels.promoteInstallation, (event, input: unknown) =>
-      this.handleRequest(event, (service) => service.promoteInstallation(input)));
-    ipcMain.handle(skillIpcChannels.importInstallationAsNew, (event, input: unknown) =>
-      this.handleRequest(event, (service) => service.importInstallationAsNew(input)));
     ipcMain.handle(skillIpcChannels.uninstall, (event, input: unknown) =>
       this.handleRequest(event, (service) => service.uninstall(input)));
-    ipcMain.handle(skillIpcChannels.listRevisions, (event, skillId: unknown) =>
-      this.handleRequest(event, (service) => service.listRevisions(skillId)));
-    ipcMain.handle(
-      skillIpcChannels.listRevisionFiles,
-      (event, skillId: unknown, revisionId: unknown) => this.handleRequest(
-        event,
-        (service) => service.listRevisionFiles(skillId, revisionId),
-      ),
-    );
-    ipcMain.handle(skillIpcChannels.readRevisionFile, (event, input: unknown) =>
-      this.handleRequest(event, (service) => service.readRevisionFile(input)));
+    ipcMain.handle(skillIpcChannels.preflightStoreDeletion, (event, skillId: unknown) =>
+      this.handleRequest(event, (service) => service.preflightStoreDeletion(skillId)));
     ipcMain.handle(skillIpcChannels.movePackageToTrash, (event, skillId: unknown) =>
       this.handleRequest(event, (service) => service.movePackageToTrash(skillId)));
     ipcMain.handle(skillIpcChannels.listTrash, (event) =>
@@ -201,15 +170,6 @@ export class SkillIpcController {
       this.handleRequest(event, (service) => service.checkPackageForUpdates(skillId)));
     ipcMain.handle(skillIpcChannels.applyUpdate, (event, input: unknown) =>
       this.handleRequest(event, (service) => service.applyUpdate(input)));
-  }
-
-  notifyOwners(
-    ownerIds: ReadonlySet<number>,
-    notification: SkillChangedNotification,
-  ): void {
-    for (const ownerId of ownerIds) {
-      this.trustedWebContents.get(ownerId)?.send(skillIpcChannels.changed, notification);
-    }
   }
 
   registerWindow(window: BrowserWindow): void {

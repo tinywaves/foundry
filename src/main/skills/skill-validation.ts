@@ -21,13 +21,11 @@ import type {
   SkillRemoteBrowseInput,
   SkillRemoteResultInput,
   SkillRemoteSearchInput,
-  SkillContentObservation,
   SkillCreateCustomTargetInput,
   SkillDistributionInput,
   SkillFileTarget,
   SkillInstallationCommandInput,
   SkillInstallationListInput,
-  SkillRevisionFileTarget,
   SkillResolveGitSourceInput,
   SkillDirectoryProvider,
   SkillDiscoveryProvider,
@@ -37,17 +35,13 @@ import type {
   SkillTargetKind,
   SkillTargetPolicyInput,
 } from '../../shared/skill-contract';
-import { invalidSkillField, SkillOperationError } from './skill-error';
+import { invalidSkillField } from './skill-error';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const WINDOWS_RESERVED_NAME_PATTERN = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i;
 
 export function parseSkillId(value: unknown): string {
   return parseUuid(value, 'skillId', 'Provide a valid Skill ID.');
-}
-
-export function parseSkillRevisionId(value: unknown): string {
-  return parseUuid(value, 'revisionId', 'Provide a valid Skill Revision ID.');
 }
 
 export function parseSkillTargetId(value: unknown): string {
@@ -58,28 +52,12 @@ export function parseSkillInstallationId(value: unknown): string {
   return parseUuid(value, 'installationId', 'Provide a valid Skill Installation ID.');
 }
 
-export function parseSkillDistributionRecordId(value: unknown): string {
-  return parseUuid(
-    value,
-    'distributionRecordId',
-    'Provide a valid Distribution Record ID.',
-  );
-}
-
-export function parseSkillWatchSessionId(value: unknown): string {
-  return parseUuid(value, 'watchSessionId', 'Provide a valid Watch Session ID.');
-}
-
 export function parseSkillCustomTargetCandidateId(value: unknown): string {
   return parseUuid(value, 'candidateId', 'Select a Custom Target directory again.');
 }
 
 export function parseSkillSourceId(value: unknown): string {
   return parseUuid(value, 'sourceId', 'Provide a valid Skill Source ID.');
-}
-
-export function parseSkillUpdateCandidateId(value: unknown): string {
-  return parseUuid(value, 'candidateId', 'Provide a valid Update Candidate ID.');
 }
 
 export function parseSkillRemoteResultId(value: unknown): string {
@@ -181,7 +159,10 @@ export function parseSkillArtifactDigest(value: unknown): string | null {
   if (value === null) {
     return null;
   }
-  return parseSkillContentFingerprint(value);
+  if (typeof value !== 'string' || !(/^[0-9a-f]{64}$/).test(value)) {
+    return invalidSkillField('artifactDigest', 'Provide a valid remote artifact digest.');
+  }
+  return value;
 }
 
 export function parseSkillCanonicalWebUrl(value: unknown): string {
@@ -231,7 +212,17 @@ export function parseSkillAddRemoteCandidateInput(value: unknown): SkillAddRemot
 
 export function parseSkillApplyUpdateInput(value: unknown): SkillApplyUpdateInput {
   const input = requireRecord(value, 'skillUpdate');
-  return { candidateId: parseSkillUpdateCandidateId(input.candidateId) };
+  const candidate = requireRecord(input.candidate, 'candidate');
+  return {
+    candidate: {
+      sourceId: parseSkillSourceId(candidate.sourceId),
+      packageId: parseSkillId(candidate.packageId),
+      resolvedRevision: parseSkillRemoteRevision(candidate.resolvedRevision),
+      artifactDigest: parseSkillArtifactDigest(candidate.artifactDigest),
+      canonicalWebUrl: parseSkillCanonicalWebUrl(candidate.canonicalWebUrl),
+      checkedAt: parseNonNegativeInteger(candidate.checkedAt, 'checkedAt'),
+    },
+  };
 }
 
 export function parseSkillRemoteBrowseInput(value: unknown): SkillRemoteBrowseInput {
@@ -300,7 +291,7 @@ export function normalizeSkillRelativePath(value: string): string {
 }
 
 export function parseSkillContentFingerprint(value: unknown): string {
-  if (typeof value !== 'string' || !(/^[0-9a-f]{64}$/).test(value)) {
+  if (typeof value !== 'string' || !(/^v[12]:[0-9a-f]{64}$/).test(value)) {
     return invalidSkillField('fingerprint', 'Provide a valid Content Fingerprint.');
   }
   return value;
@@ -335,15 +326,6 @@ export function parseSkillFileTarget(value: unknown): SkillFileTarget {
   const input = requireRecord(value, 'file');
   return {
     skillId: parseSkillId(input.skillId),
-    relativePath: parseSkillRelativePath(input.relativePath),
-  };
-}
-
-export function parseSkillRevisionFileTarget(value: unknown): SkillRevisionFileTarget {
-  const input = requireRecord(value, 'revisionFile');
-  return {
-    skillId: parseSkillId(input.skillId),
-    revisionId: parseSkillRevisionId(input.revisionId),
     relativePath: parseSkillRelativePath(input.relativePath),
   };
 }
@@ -422,41 +404,16 @@ export function parseSkillDistributionInput(value: unknown): SkillDistributionIn
   };
 }
 
-export function parseStoredSkillContentObservation(
-  status: unknown,
-  fingerprint: unknown,
-  observedAt: unknown,
-): SkillContentObservation {
-  try {
-    if (
-      typeof observedAt !== 'number'
-      || !Number.isSafeInteger(observedAt)
-      || observedAt < 0
-    ) {
-      throw new Error('Invalid observation timestamp.');
-    }
-    if (status === 'available') {
-      return {
-        status,
-        fingerprint: parseSkillContentFingerprint(fingerprint),
-        observedAt,
-      } as const;
-    }
-    if ((status === 'missing' || status === 'unreadable') && fingerprint === null) {
-      return { status, observedAt } as const;
-    }
-    throw new Error('Invalid observation state.');
-  } catch {
-    throw new SkillOperationError(
-      'storage-corrupt',
-      'Stored Skill observation is invalid.',
-    );
-  }
-}
-
 function parseUuid(value: unknown, field: string, message: string): string {
   if (typeof value !== 'string' || !UUID_PATTERN.test(value)) {
     return invalidSkillField(field, message);
+  }
+  return value;
+}
+
+function parseNonNegativeInteger(value: unknown, field: string): number {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
+    return invalidSkillField(field, 'Provide a non-negative integer.');
   }
   return value;
 }

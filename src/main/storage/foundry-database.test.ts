@@ -1,47 +1,29 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { access, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import { test } from 'vitest';
-import { PromptRepository } from '../prompts/prompt-repository';
-import { ProviderRepository } from '../providers/provider-repository';
-import { RuntimeRepository } from '../runtimes/runtime-repository';
-import { SettingsRepository } from '../settings/settings-repository';
-import { FOUNDRY_SCHEMA_VERSION, openFoundryDatabase } from './foundry-database';
+import { SkillMetadataRepository } from '../skills/skill-metadata-repository';
+import { fingerprintLegacySkillPackageRoot } from '../skills/skill-package-codec';
+import { SkillSourceRepository } from '../skills/skill-source-repository';
+import { SkillStoreCoordinator } from '../skills/skill-store-coordinator';
+import {
+  FOUNDRY_SCHEMA_VERSION,
+  getFoundryDatabaseMigrationBackupFilename,
+  initializeFoundryDatabase,
+  openFoundryDatabase,
+} from './foundry-database';
 import type { FoundryStorageErrorCode } from './storage-error';
 import { FoundryStorageError } from './storage-error';
 
-function createCodexInput() {
-  return {
-    runtime: 'codex' as const,
-    name: 'Migrated Provider',
-    baseUrl: 'https://api.example.com/v1',
-    apiKey: 'migration-secret',
-    remark: 'Keep this row',
-    officialWebsite: null,
-    modelConfig: { version: 1 as const, defaultModel: 'gpt-default' },
-  };
-}
-
-function dropSkillSchema(database: Database.Database): void {
-  database.exec(`
-    DROP TABLE skill_update_candidates;
-    DROP TABLE skill_sources;
-    DROP TABLE skill_distribution_records;
-    DROP TABLE skill_installations;
-    DROP TABLE skill_revisions;
-    DROP TABLE skill_targets;
-    DROP TABLE skill_packages;
-  `);
-}
-
-function dropRemoteSkillSchema(database: Database.Database): void {
-  database.exec(`
-    DROP TABLE skill_update_candidates;
-    DROP TABLE skill_sources;
-  `);
-}
+const packageId = '00000000-0000-4000-8000-000000001201';
+const currentTargetId = '00000000-0000-4000-8000-000000001202';
+const staleTargetId = '00000000-0000-4000-8000-000000001203';
+const currentInstallationId = '00000000-0000-4000-8000-000000001204';
+const staleInstallationId = '00000000-0000-4000-8000-000000001205';
+const sourceId = '00000000-0000-4000-8000-000000001206';
+const legacyStaleFingerprint = 'b'.repeat(64);
 
 function assertStorageError(
   operation: () => unknown,
@@ -59,434 +41,279 @@ function assertStorageError(
   return caught;
 }
 
-test('creates the complete Foundry schema in migration order', () => {
+async function assertStorageErrorAsync(
+  operation: () => Promise<unknown>,
+  code: FoundryStorageErrorCode,
+): Promise<void> {
+  await assert.rejects(
+    operation,
+    (error: unknown) => error instanceof FoundryStorageError && error.code === code,
+  );
+}
+
+function createLegacyV7Database(filename: string, legacyFingerprint: string): void {
+  const database = new Database(filename);
+  database.exec(`
+    CREATE TABLE skill_packages (
+      id TEXT PRIMARY KEY,
+      distribution_name TEXT NOT NULL,
+      normalized_distribution_name TEXT NOT NULL,
+      store_observation TEXT NOT NULL,
+      store_fingerprint TEXT,
+      store_observed_at INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      trashed_at INTEGER,
+      removed_at INTEGER
+    );
+    CREATE TABLE skill_revisions (id TEXT PRIMARY KEY);
+    CREATE TABLE skill_targets (
+      id TEXT PRIMARY KEY,
+      kind TEXT NOT NULL,
+      display_name TEXT NOT NULL,
+      configured_path TEXT NOT NULL,
+      resolved_path TEXT NOT NULL,
+      resolved_path_key TEXT NOT NULL,
+      documentation_url TEXT,
+      is_built_in INTEGER NOT NULL,
+      is_writable INTEGER NOT NULL,
+      is_enabled INTEGER NOT NULL,
+      policy_source TEXT NOT NULL,
+      max_scan_depth INTEGER NOT NULL,
+      allow_symlink_escape INTEGER NOT NULL,
+      sort_order INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      removed_at INTEGER
+    );
+    CREATE TABLE skill_installations (
+      id TEXT PRIMARY KEY,
+      package_id TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      distribution_name TEXT NOT NULL,
+      normalized_distribution_name TEXT NOT NULL,
+      relative_path TEXT NOT NULL,
+      relative_path_key TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      uninstalled_at INTEGER
+    );
+    CREATE TABLE skill_distribution_records (
+      id TEXT PRIMARY KEY,
+      installation_id TEXT NOT NULL,
+      sequence_number INTEGER NOT NULL,
+      fingerprint TEXT NOT NULL
+    );
+    CREATE TABLE skill_sources (
+      id TEXT PRIMARY KEY,
+      package_id TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      tracking_mode TEXT NOT NULL,
+      source_native_id TEXT NOT NULL,
+      source_identity_key TEXT NOT NULL,
+      directory_provider TEXT,
+      catalog_locator TEXT,
+      source_url TEXT,
+      skill_path TEXT,
+      skill_path_key TEXT NOT NULL,
+      requested_ref TEXT,
+      requested_ref_key TEXT NOT NULL,
+      resolved_revision TEXT NOT NULL,
+      artifact_digest TEXT,
+      observed_content_fingerprint TEXT NOT NULL,
+      canonical_web_url TEXT NOT NULL,
+      fetched_at INTEGER NOT NULL,
+      check_status TEXT NOT NULL,
+      last_checked_at INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE TABLE skill_update_candidates (id TEXT PRIMARY KEY);
+
+    INSERT INTO skill_packages VALUES (
+      '${packageId}', 'legacy-skill', 'legacy-skill', 'available',
+      '${legacyFingerprint}', 10, 10, 20, NULL, NULL
+    );
+    INSERT INTO skill_targets VALUES (
+      '${currentTargetId}', 'custom', 'Current Target', '/tmp/current', '/tmp/current',
+      '/tmp/current', NULL, 0, 1, 1, 'user-override', 4, 1, 100, 10, 10, NULL
+    );
+    INSERT INTO skill_targets VALUES (
+      '${staleTargetId}', 'custom', 'Stale Target', '/tmp/stale', '/tmp/stale',
+      '/tmp/stale', NULL, 0, 1, 1, 'user-override', 4, 1, 101, 10, 10, NULL
+    );
+    INSERT INTO skill_installations VALUES (
+      '${currentInstallationId}', '${packageId}', '${currentTargetId}', 'legacy-skill',
+      'legacy-skill', 'legacy-skill', 'legacy-skill', 10, 20, NULL
+    );
+    INSERT INTO skill_installations VALUES (
+      '${staleInstallationId}', '${packageId}', '${staleTargetId}', 'legacy-skill',
+      'legacy-skill', 'legacy-skill', 'legacy-skill', 10, 20, NULL
+    );
+    INSERT INTO skill_distribution_records VALUES (
+      '00000000-0000-4000-8000-000000001207', '${currentInstallationId}', 1,
+      '${legacyStaleFingerprint}'
+    );
+    INSERT INTO skill_distribution_records VALUES (
+      '00000000-0000-4000-8000-000000001208', '${currentInstallationId}', 2,
+      '${legacyFingerprint}'
+    );
+    INSERT INTO skill_distribution_records VALUES (
+      '00000000-0000-4000-8000-000000001209', '${staleInstallationId}', 1,
+      '${legacyStaleFingerprint}'
+    );
+    INSERT INTO skill_sources VALUES (
+      '${sourceId}', '${packageId}', 'git', 'tracked',
+      'https://github.com/example/skills.git', 'https://github.com/example/skills.git',
+      NULL, NULL, 'https://github.com/example/skills.git', 'legacy-skill',
+      'legacy-skill', 'main', 'main', '${'1'.repeat(40)}', NULL,
+      '${legacyFingerprint}', 'https://github.com/example/skills/tree/main/legacy-skill',
+      20, 'current', 20, 10, 20
+    );
+  `);
+  database.pragma('user_version = 7');
+  database.close();
+}
+
+test('creates the v8 schema without removed Skill state tables or columns', () => {
   const database = openFoundryDatabase(':memory:');
   try {
-    assert.equal(FOUNDRY_SCHEMA_VERSION, 7);
-    assert.equal(database.pragma('user_version', { simple: true }), FOUNDRY_SCHEMA_VERSION);
+    assert.equal(FOUNDRY_SCHEMA_VERSION, 8);
+    assert.equal(database.pragma('user_version', { simple: true }), 8);
     assert.equal(database.pragma('quick_check', { simple: true }), 'ok');
     const tables = database.prepare<[], { name: string }>(`
-      SELECT name FROM sqlite_schema WHERE type = 'table' ORDER BY name
+      SELECT name FROM sqlite_schema WHERE type = 'table' AND name LIKE 'skill_%' ORDER BY name
     `).all().map((row) => row.name);
     assert.deepEqual(tables, [
-      'application_settings',
-      'prompt_versions',
-      'prompts',
-      'providers',
-      'runtime_applications',
-      'skill_distribution_records',
       'skill_installations',
       'skill_packages',
-      'skill_revisions',
       'skill_sources',
       'skill_targets',
-      'skill_update_candidates',
     ]);
   } finally {
     database.close();
   }
 });
 
-test('upgrades a version 4 database without changing existing domain data', () => {
-  const directory = mkdtempSync(path.join(tmpdir(), 'foundry-storage-v4-upgrade-'));
-  const filename = path.join(directory, 'foundry.sqlite');
+test('migrates v7 filesystem content into a verified BLOB and versioned fingerprints', async () => {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), 'foundry-storage-v8-migration-'));
+  const filename = path.join(temporaryRoot, 'foundry.sqlite');
+  const packageRoot = path.join(
+    temporaryRoot,
+    '.foundry',
+    'skills-store',
+    'packages',
+    packageId,
+  );
   try {
-    const versionFourDatabase = openFoundryDatabase(filename);
-    const provider = new ProviderRepository(versionFourDatabase).createProvider(createCodexInput());
-    new RuntimeRepository(versionFourDatabase).recordProviderApplication('codex', provider.id);
-    const prompt = new PromptRepository(versionFourDatabase).createPrompt({
-      title: 'Migrated Prompt',
-      description: 'Keep this Prompt',
-      content: 'Preserve this exact content.\n',
+    await mkdir(packageRoot, { recursive: true });
+    await writeFile(path.join(packageRoot, 'SKILL.md'), '# Legacy content\n');
+    const legacyFingerprint = await fingerprintLegacySkillPackageRoot(packageRoot);
+    createLegacyV7Database(filename, legacyFingerprint);
+
+    const database = await initializeFoundryDatabase(filename, {
+      userHomeDirectory: temporaryRoot,
     });
-    new SettingsRepository(versionFourDatabase).updateApplicationColorMode('dark');
-    dropSkillSchema(versionFourDatabase);
-    versionFourDatabase.pragma('user_version = 4');
-    versionFourDatabase.close();
-
-    const upgradedDatabase = openFoundryDatabase(filename);
     try {
-      assert.equal(
-        upgradedDatabase.pragma('user_version', { simple: true }),
-        FOUNDRY_SCHEMA_VERSION,
-      );
-      assert.equal(
-        new ProviderRepository(upgradedDatabase).getProviderForEdit(provider.id).apiKey,
-        'migration-secret',
-      );
-      assert.equal(
-        new RuntimeRepository(upgradedDatabase).listRuntimes()[0]?.providerId,
-        provider.id,
-      );
-      assert.deepEqual(new PromptRepository(upgradedDatabase).getPrompt(prompt.id), prompt);
-      assert.deepEqual(
-        new SettingsRepository(upgradedDatabase).getApplicationSettings(),
-        { colorMode: 'dark' },
-      );
-      assert.equal(
-        upgradedDatabase.prepare<[], number>(`
-          SELECT COUNT(*) FROM sqlite_schema
-          WHERE type = 'table' AND name LIKE 'skill_%'
-        `).pluck().get(),
-        7,
-      );
-    } finally {
-      upgradedDatabase.close();
-    }
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
-});
-
-test('upgrades version 5 Skill Installations with their distribution paths preserved', () => {
-  const directory = mkdtempSync(path.join(tmpdir(), 'foundry-storage-v5-upgrade-'));
-  const filename = path.join(directory, 'foundry.sqlite');
-  const packageId = '00000000-0000-4000-8000-000000000501';
-  const targetId = '00000000-0000-4000-8000-000000000502';
-  const installationId = '00000000-0000-4000-8000-000000000503';
-  const fingerprint = 'a'.repeat(64);
-
-  try {
-    const versionFiveDatabase = openFoundryDatabase(filename);
-    versionFiveDatabase.prepare(`
-      INSERT INTO skill_packages (
-        id, distribution_name, normalized_distribution_name,
-        store_observation, store_fingerprint, store_observed_at, created_at, updated_at
-      ) VALUES (?, 'Nested Skill', 'nested skill', 'available', ?, 10, 10, 10)
-    `).run(packageId, fingerprint);
-    versionFiveDatabase.prepare(`
-      INSERT INTO skill_targets (
-        id, kind, display_name, configured_path, resolved_path, resolved_path_key,
-        is_built_in, is_writable, is_enabled, policy_source, max_scan_depth,
-        allow_symlink_escape, sort_order, created_at, updated_at
-      ) VALUES (
-        ?, 'generic-agent-skills', 'Agent Skills', '/tmp/skills', '/tmp/skills',
-        '/tmp/skills', 1, 1, 1, 'adapter-default', 4, 0, 0, 10, 10
-      )
-    `).run(targetId);
-    versionFiveDatabase.prepare(`
-      INSERT INTO skill_installations (
-        id, package_id, target_id, distribution_name, normalized_distribution_name,
-        relative_path, relative_path_key, target_observation, target_fingerprint,
-        target_observed_at, created_at, updated_at
-      ) VALUES (
-        ?, ?, ?, 'Nested Skill', 'nested skill', 'group/nested-skill',
-        'group/nested-skill', 'available', ?, 10, 10, 10
-      )
-    `).run(installationId, packageId, targetId, fingerprint);
-    versionFiveDatabase.exec(`
-      DROP INDEX skill_installations_active_relative_path_idx;
-      DROP TRIGGER skill_installations_relative_path_insert_check;
-      DROP TRIGGER skill_installations_relative_path_update_check;
-      ALTER TABLE skill_installations DROP COLUMN relative_path_key;
-      ALTER TABLE skill_installations DROP COLUMN relative_path;
-    `);
-    dropRemoteSkillSchema(versionFiveDatabase);
-    versionFiveDatabase.pragma('user_version = 5');
-    versionFiveDatabase.close();
-
-    const upgradedDatabase = openFoundryDatabase(filename);
-    try {
-      const installation = upgradedDatabase.prepare<[string], {
-        distribution_name: string;
-        relative_path: string;
-        relative_path_key: string;
+      const metadataRepository = new SkillMetadataRepository(database);
+      const migrated = metadataRepository.getActivePackage(packageId);
+      assert.match(migrated.fingerprint, /^v2:[0-9a-f]{64}$/);
+      await new SkillStoreCoordinator(metadataRepository).getVerifiedPackageContent(packageId);
+      const installations = database.prepare<[], {
+        id: string;
+        distributed_fingerprint: string;
       }>(`
-        SELECT distribution_name, relative_path, relative_path_key
-        FROM skill_installations WHERE id = ?
-      `).get(installationId);
-      assert.deepEqual(installation, {
-        distribution_name: 'Nested Skill',
-        relative_path: 'Nested Skill',
-        relative_path_key: 'nested skill',
-      });
-      assert.equal(
-        upgradedDatabase.pragma('user_version', { simple: true }),
-        FOUNDRY_SCHEMA_VERSION,
-      );
-    } finally {
-      upgradedDatabase.close();
-    }
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
-});
-
-test('upgrades version 6 Skills data with remote source tables added', () => {
-  const directory = mkdtempSync(path.join(tmpdir(), 'foundry-storage-v6-upgrade-'));
-  const filename = path.join(directory, 'foundry.sqlite');
-  const packageId = '00000000-0000-4000-8000-000000000601';
-  const fingerprint = 'c'.repeat(64);
-  try {
-    const versionSixDatabase = openFoundryDatabase(filename);
-    versionSixDatabase.prepare(`
-      INSERT INTO skill_packages (
-        id, distribution_name, normalized_distribution_name,
-        store_observation, store_fingerprint, store_observed_at, created_at, updated_at
-      ) VALUES (?, 'Remote Ready', 'remote ready', 'available', ?, 10, 10, 10)
-    `).run(packageId, fingerprint);
-    dropRemoteSkillSchema(versionSixDatabase);
-    versionSixDatabase.pragma('user_version = 6');
-    versionSixDatabase.close();
-
-    const upgradedDatabase = openFoundryDatabase(filename);
-    try {
-      assert.equal(
-        upgradedDatabase.pragma('user_version', { simple: true }),
-        FOUNDRY_SCHEMA_VERSION,
-      );
-      assert.equal(
-        upgradedDatabase.prepare('SELECT distribution_name FROM skill_packages WHERE id = ?')
-          .pluck().get(packageId),
-        'Remote Ready',
-      );
-      assert.deepEqual(
-        upgradedDatabase.prepare<[], { name: string }>(`
-          SELECT name FROM sqlite_schema
-          WHERE type = 'table' AND name IN ('skill_sources', 'skill_update_candidates')
-          ORDER BY name
-        `).all().map((row) => row.name),
-        ['skill_sources', 'skill_update_candidates'],
-      );
-    } finally {
-      upgradedDatabase.close();
-    }
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
-});
-
-test('upgrades a version 3 database without changing existing domain data', () => {
-  const directory = mkdtempSync(path.join(tmpdir(), 'foundry-storage-v3-upgrade-'));
-  const filename = path.join(directory, 'foundry.sqlite');
-  try {
-    const versionThreeDatabase = openFoundryDatabase(filename);
-    const provider = new ProviderRepository(versionThreeDatabase).createProvider(createCodexInput());
-    new RuntimeRepository(versionThreeDatabase).recordProviderApplication('codex', provider.id);
-    const prompt = new PromptRepository(versionThreeDatabase).createPrompt({
-      title: 'Migrated Prompt',
-      description: 'Keep this Prompt',
-      content: 'Preserve this exact content.\n',
-    });
-    dropSkillSchema(versionThreeDatabase);
-    versionThreeDatabase.exec('DROP TABLE application_settings;');
-    versionThreeDatabase.pragma('user_version = 3');
-    versionThreeDatabase.close();
-
-    const upgradedDatabase = openFoundryDatabase(filename);
-    try {
-      assert.equal(
-        upgradedDatabase.pragma('user_version', { simple: true }),
-        FOUNDRY_SCHEMA_VERSION,
-      );
-      assert.equal(
-        new ProviderRepository(upgradedDatabase).getProviderForEdit(provider.id).apiKey,
-        'migration-secret',
-      );
-      assert.deepEqual(new RuntimeRepository(upgradedDatabase).listRuntimes()[0], {
-        runtime: 'codex',
-        status: 'provider',
-        providerId: provider.id,
-        appliedAt: upgradedDatabase.prepare<[], number>(`
-          SELECT applied_at FROM runtime_applications WHERE runtime = 'codex'
-        `).pluck().get(),
-      });
-      assert.deepEqual(new PromptRepository(upgradedDatabase).getPrompt(prompt.id), prompt);
-      assert.equal(
-        upgradedDatabase.prepare('SELECT COUNT(*) FROM prompt_versions').pluck().get(),
-        1,
-      );
-      assert.equal(
-        upgradedDatabase.prepare('SELECT COUNT(*) FROM application_settings').pluck().get(),
-        0,
-      );
-    } finally {
-      upgradedDatabase.close();
-    }
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
-});
-
-test('upgrades a version 2 database without changing Provider or Runtime Application data', () => {
-  const directory = mkdtempSync(path.join(tmpdir(), 'foundry-storage-v2-upgrade-'));
-  const filename = path.join(directory, 'foundry.sqlite');
-  try {
-    const versionTwoDatabase = openFoundryDatabase(filename);
-    const provider = new ProviderRepository(versionTwoDatabase).createProvider(createCodexInput());
-    new RuntimeRepository(versionTwoDatabase).recordProviderApplication('codex', provider.id);
-    dropSkillSchema(versionTwoDatabase);
-    versionTwoDatabase.exec(`
-      DROP TABLE application_settings;
-      DROP TABLE prompt_versions;
-      DROP TABLE prompts;
-    `);
-    versionTwoDatabase.pragma('user_version = 2');
-    versionTwoDatabase.close();
-
-    const upgradedDatabase = openFoundryDatabase(filename);
-    try {
-      assert.equal(
-        upgradedDatabase.pragma('user_version', { simple: true }),
-        FOUNDRY_SCHEMA_VERSION,
-      );
-      assert.equal(new ProviderRepository(upgradedDatabase).getProviderForEdit(provider.id).name, provider.name);
-      assert.deepEqual(new RuntimeRepository(upgradedDatabase).listRuntimes()[0], {
-        runtime: 'codex',
-        status: 'provider',
-        providerId: provider.id,
-        appliedAt: upgradedDatabase.prepare<[], number>(`
-          SELECT applied_at FROM runtime_applications WHERE runtime = 'codex'
-        `).pluck().get(),
-      });
-      const promptTables = upgradedDatabase.prepare<[], { name: string }>(`
-        SELECT name FROM sqlite_schema
-        WHERE type = 'table' AND name IN ('prompts', 'prompt_versions')
-        ORDER BY name
-      `).all().map((row) => row.name);
-      assert.deepEqual(promptTables, ['prompt_versions', 'prompts']);
-    } finally {
-      upgradedDatabase.close();
-    }
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
-});
-
-test('upgrades a version 1 database without changing Provider data', () => {
-  const directory = mkdtempSync(path.join(tmpdir(), 'foundry-storage-upgrade-'));
-  const filename = path.join(directory, 'foundry.sqlite');
-  try {
-    const versionOneDatabase = openFoundryDatabase(filename);
-    const created = new ProviderRepository(versionOneDatabase).createProvider(createCodexInput());
-    dropSkillSchema(versionOneDatabase);
-    versionOneDatabase.exec(`
-      DROP TABLE prompt_versions;
-      DROP TABLE prompts;
-      DROP TABLE runtime_applications;
-      DROP TABLE application_settings;
-    `);
-    versionOneDatabase.pragma('user_version = 1');
-    versionOneDatabase.close();
-
-    const upgradedDatabase = openFoundryDatabase(filename);
-    try {
-      assert.equal(
-        upgradedDatabase.pragma('user_version', { simple: true }),
-        FOUNDRY_SCHEMA_VERSION,
-      );
-      const row = upgradedDatabase.prepare<[string], {
-        api_key: string;
-        name: string;
-        remark: string;
-      }>('SELECT api_key, name, remark FROM providers WHERE id = ?').get(created.id);
-      assert.deepEqual(row, {
-        api_key: 'migration-secret',
-        name: 'Migrated Provider',
-        remark: 'Keep this row',
-      });
-      assert.deepEqual(new ProviderRepository(upgradedDatabase).listProviders('codex'), [
-        {
-          ...created,
-          isInUse: false,
-        },
+        SELECT id, distributed_fingerprint FROM skill_installations ORDER BY id
+      `).all();
+      assert.deepEqual(installations, [
+        { id: currentInstallationId, distributed_fingerprint: migrated.fingerprint },
+        { id: staleInstallationId, distributed_fingerprint: `v1:${legacyStaleFingerprint}` },
       ]);
+      assert.equal(
+        new SkillSourceRepository(database).getSource(sourceId).observedContentFingerprint,
+        migrated.fingerprint,
+      );
     } finally {
-      upgradedDatabase.close();
+      database.close();
     }
+
+    const backupFilename = getFoundryDatabaseMigrationBackupFilename(filename);
+    const backup = new Database(backupFilename, { readonly: true });
+    assert.equal(backup.pragma('user_version', { simple: true }), 7);
+    assert.equal(backup.prepare('SELECT COUNT(*) FROM skill_packages').pluck().get(), 1);
+    backup.close();
+    await assert.rejects(() => access(path.join(temporaryRoot, '.foundry', 'skills-store', 'packages')));
+
+    const reopened = await initializeFoundryDatabase(filename, {
+      userHomeDirectory: temporaryRoot,
+    });
+    assert.equal(reopened.pragma('user_version', { simple: true }), 8);
+    reopened.close();
   } finally {
-    rmSync(directory, { recursive: true, force: true });
+    await rm(temporaryRoot, { recursive: true, force: true });
   }
 });
 
-test('rejects future versions and rolls back a blocked migration without changing data', () => {
-  const directory = mkdtempSync(path.join(tmpdir(), 'foundry-storage-version-'));
-  const futureFilename = path.join(directory, 'future.sqlite');
-  const blockedFilename = path.join(directory, 'blocked.sqlite');
+test('leaves v7 metadata and filesystem authority intact when migration preflight fails', async () => {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), 'foundry-storage-v8-failure-'));
+  const filename = path.join(temporaryRoot, 'foundry.sqlite');
+  const packageRoot = path.join(
+    temporaryRoot,
+    '.foundry',
+    'skills-store',
+    'packages',
+    packageId,
+  );
   try {
-    const futureDatabase = new Database(futureFilename);
-    futureDatabase.exec('CREATE TABLE sentinel (value TEXT NOT NULL); INSERT INTO sentinel VALUES (\'keep\');');
-    futureDatabase.pragma(`user_version = ${FOUNDRY_SCHEMA_VERSION + 1}`);
-    futureDatabase.close();
+    await mkdir(packageRoot, { recursive: true });
+    await writeFile(path.join(packageRoot, 'SKILL.md'), '# Original\n');
+    const legacyFingerprint = await fingerprintLegacySkillPackageRoot(packageRoot);
+    createLegacyV7Database(filename, legacyFingerprint);
+    await writeFile(path.join(packageRoot, 'SKILL.md'), '# Changed before migration\n');
 
-    assertStorageError(
-      () => openFoundryDatabase(futureFilename),
-      'unsupported-database-version',
+    await assertStorageErrorAsync(
+      () => initializeFoundryDatabase(filename, { userHomeDirectory: temporaryRoot }),
+      'storage-corrupt',
     );
-    const unchangedFutureDatabase = new Database(futureFilename, { readonly: true });
+    const unchanged = new Database(filename, { readonly: true });
+    assert.equal(unchanged.pragma('user_version', { simple: true }), 7);
     assert.equal(
-      unchangedFutureDatabase.pragma('user_version', { simple: true }),
-      FOUNDRY_SCHEMA_VERSION + 1,
+      unchanged.prepare('SELECT store_fingerprint FROM skill_packages WHERE id = ?')
+        .pluck().get(packageId),
+      legacyFingerprint,
     );
-    assert.equal(
-      unchangedFutureDatabase.prepare('SELECT value FROM sentinel').pluck().get(),
-      'keep',
-    );
-    unchangedFutureDatabase.close();
-
-    const blockedDatabase = new Database(blockedFilename);
-    blockedDatabase.exec(
-      'CREATE TABLE providers (sentinel TEXT NOT NULL); INSERT INTO providers VALUES (\'keep\');',
-    );
-    blockedDatabase.close();
-    assertStorageError(() => openFoundryDatabase(blockedFilename), 'storage-unavailable');
-    const unchangedBlockedDatabase = new Database(blockedFilename, { readonly: true });
-    assert.equal(unchangedBlockedDatabase.pragma('user_version', { simple: true }), 0);
-    assert.equal(
-      unchangedBlockedDatabase.prepare('SELECT sentinel FROM providers').pluck().get(),
-      'keep',
-    );
-    unchangedBlockedDatabase.close();
+    unchanged.close();
+    await access(path.join(packageRoot, 'SKILL.md'));
   } finally {
-    rmSync(directory, { recursive: true, force: true });
+    await rm(temporaryRoot, { recursive: true, force: true });
   }
 });
 
-test('rolls back the entire version 5 migration when a later Skills table is blocked', () => {
-  const directory = mkdtempSync(path.join(tmpdir(), 'foundry-storage-v5-rollback-'));
-  const filename = path.join(directory, 'foundry.sqlite');
+test('requires asynchronous initialization for a v7 database with Skill content', async () => {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), 'foundry-storage-v8-async-'));
+  const filename = path.join(temporaryRoot, 'foundry.sqlite');
   try {
-    const versionFourDatabase = openFoundryDatabase(filename);
-    dropSkillSchema(versionFourDatabase);
-    versionFourDatabase.exec(`
-      CREATE TABLE skill_targets (sentinel TEXT NOT NULL);
-      INSERT INTO skill_targets VALUES ('keep');
-    `);
-    versionFourDatabase.pragma('user_version = 4');
-    versionFourDatabase.close();
-
+    createLegacyV7Database(filename, 'a'.repeat(64));
     assertStorageError(() => openFoundryDatabase(filename), 'storage-unavailable');
-
-    const unchangedDatabase = new Database(filename, { readonly: true });
-    try {
-      assert.equal(unchangedDatabase.pragma('user_version', { simple: true }), 4);
-      assert.equal(
-        unchangedDatabase.prepare('SELECT sentinel FROM skill_targets').pluck().get(),
-        'keep',
-      );
-      assert.equal(
-        unchangedDatabase.prepare<[], number>(`
-          SELECT COUNT(*) FROM sqlite_schema
-          WHERE type = 'table' AND name IN ('skill_packages', 'skill_revisions')
-        `).pluck().get(),
-        0,
-      );
-    } finally {
-      unchangedDatabase.close();
-    }
   } finally {
-    rmSync(directory, { recursive: true, force: true });
+    await rm(temporaryRoot, { recursive: true, force: true });
   }
 });
 
-test('maps unreadable database content to a non-sensitive corruption error', () => {
-  const directory = mkdtempSync(path.join(tmpdir(), 'foundry-storage-corrupt-'));
-  const filename = path.join(directory, 'foundry.sqlite');
+test('rejects future versions and maps unreadable database bytes without leaking details', async () => {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), 'foundry-storage-errors-'));
+  const futureFilename = path.join(temporaryRoot, 'future.sqlite');
+  const corruptFilename = path.join(temporaryRoot, 'corrupt.sqlite');
   try {
-    writeFileSync(filename, 'not a sqlite database');
-    const error = assertStorageError(() => openFoundryDatabase(filename), 'storage-corrupt');
+    const future = new Database(futureFilename);
+    future.pragma(`user_version = ${FOUNDRY_SCHEMA_VERSION + 1}`);
+    future.close();
+    assertStorageError(() => openFoundryDatabase(futureFilename), 'unsupported-database-version');
+
+    await writeFile(corruptFilename, 'not a sqlite database');
+    const error = assertStorageError(() => openFoundryDatabase(corruptFilename), 'storage-corrupt');
     assert.equal(error.message.includes('not a sqlite database'), false);
   } finally {
-    rmSync(directory, { recursive: true, force: true });
+    await rm(temporaryRoot, { recursive: true, force: true });
   }
 });

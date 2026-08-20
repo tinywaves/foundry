@@ -1,74 +1,64 @@
 import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
 import { test } from 'vitest';
 import { openFoundryDatabase } from '../storage/foundry-database';
 import { SkillMetadataRepository } from './skill-metadata-repository';
+import { SKILL_PACKAGE_CONTENT_FORMAT } from './skill-package-codec';
 
 const packageId = '00000000-0000-4000-8000-000000000101';
-const revisionId = '00000000-0000-4000-8000-000000000102';
-const fingerprint = 'a'.repeat(64);
+const fingerprint = `v2:${'a'.repeat(64)}`;
 
-test('creates an imported Skill Package and its initial revision atomically', () => {
+test('stores one current BLOB while metadata reads omit content bytes', () => {
   const database = openFoundryDatabase(':memory:');
-
   try {
     const repository = new SkillMetadataRepository(database);
-    const result = repository.createImportedPackage({
+    const created = repository.createImportedPackage({
       id: packageId,
-      distributionName: 'Example Skill',
+      distributionName: 'example-skill',
       fingerprint,
-      revisionId,
+      content: Buffer.from('encoded-content'),
       createdAt: 100,
     });
 
-    assert.deepEqual(result, {
-      package: {
-        id: packageId,
-        distributionName: 'Example Skill',
-        storeObservation: {
-          status: 'available',
-          fingerprint,
-          observedAt: 100,
-        },
-        createdAt: 100,
-        updatedAt: 100,
-      },
-      revision: {
-        id: revisionId,
-        packageId,
-        sequenceNumber: 1,
-        fingerprint,
-        reason: 'import',
-        createdAt: 100,
-      },
+    assert.deepEqual(created, {
+      id: packageId,
+      distributionName: 'example-skill',
+      fingerprint,
+      createdAt: 100,
+      updatedAt: 100,
     });
-    assert.deepEqual(repository.getActivePackage(packageId), result.package);
-    assert.deepEqual(repository.listRevisions(packageId), [result.revision]);
+    assert.equal('content' in repository.listActivePackages()[0], false);
+    assert.deepEqual(repository.getActivePackageContent(packageId), {
+      ...created,
+      format: SKILL_PACKAGE_CONTENT_FORMAT,
+      content: Buffer.from('encoded-content'),
+    });
   } finally {
     database.close();
   }
 });
 
-test('rolls back the Skill Package when its initial revision cannot be inserted', () => {
+test('logically removes a trashed Package without deleting its BLOB', () => {
   const database = openFoundryDatabase(':memory:');
-
   try {
-    database.exec(`
-      CREATE TRIGGER reject_initial_revision
-      BEFORE INSERT ON skill_revisions
-      BEGIN
-        SELECT RAISE(ABORT, 'injected revision failure');
-      END;
-    `);
     const repository = new SkillMetadataRepository(database);
-
-    assert.throws(() => repository.createImportedPackage({
+    repository.createImportedPackage({
       id: packageId,
-      distributionName: 'Example Skill',
+      distributionName: 'example-skill',
       fingerprint,
-      revisionId,
+      content: Buffer.from('retained-content'),
       createdAt: 100,
-    }));
+    });
+    repository.commitStoreDeletion(packageId, 200);
+    repository.markTrashedPackageRemoved(packageId, 300);
+
+    assert.equal(repository.isPackageRemoved(packageId), true);
     assert.deepEqual(repository.listActivePackages(), []);
+    assert.deepEqual(repository.listTrashedPackages(), []);
+    const retained = database.prepare<[string], Buffer>(`
+      SELECT content_blob FROM skill_packages WHERE id = ?
+    `).pluck().get(packageId);
+    assert.deepEqual(retained, Buffer.from('retained-content'));
   } finally {
     database.close();
   }

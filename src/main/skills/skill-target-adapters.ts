@@ -2,6 +2,7 @@ import { access, readFile, realpath, stat } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import { shouldAllowSkillTargetSymlinkEscapeByDefault } from '../../shared/skill-contract';
 import type { SkillTargetKind } from '../../shared/skill-contract';
 
 const CODEX_SKILLS_DOCUMENTATION_URL = 'https://developers.openai.com/codex/skills';
@@ -158,7 +159,7 @@ export async function resolveBuiltInSkillTargets(
       documentationUrl: definition.documentationUrl ?? null,
       isWritable: await canWritePath(definition.configuredPath),
       defaultMaxScanDepth: definition.defaultMaxScanDepth ?? 4,
-      defaultAllowSymlinkEscape: false,
+      defaultAllowSymlinkEscape: shouldAllowSkillTargetSymlinkEscapeByDefault,
       excludedRootEntries: definition.excludedRootEntries ?? [],
       sortOrder: definition.sortOrder,
       hint: definition.hint ?? null,

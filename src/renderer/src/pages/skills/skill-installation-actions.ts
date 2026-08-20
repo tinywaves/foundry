@@ -3,32 +3,14 @@ import type {
   SkillInstallationView,
 } from '../../../../shared/skill-contract';
 
-export const skillInstallationActions = [
-  'restore',
-  'promote',
-  'import-as-new',
-  'uninstall',
-] as const;
+export const skillInstallationActions = ['uninstall'] as const;
 
 export type SkillInstallationAction = typeof skillInstallationActions[number];
 
 export function getSkillInstallationActions(
-  installation: SkillInstallationView,
+  _installation: SkillInstallationView,
 ): SkillInstallationAction[] {
-  const canReadStore = installation.storeObservation.status === 'available';
-  if (installation.targetObservation.status === 'missing') {
-    return canReadStore ? ['restore', 'uninstall'] : ['uninstall'];
-  }
-  if (installation.targetObservation.status === 'unreadable') {
-    return canReadStore ? ['restore'] : [];
-  }
-  if (!canReadStore) {
-    return ['promote', 'import-as-new', 'uninstall'];
-  }
-  if (installation.syncStatus === 'synced') {
-    return ['uninstall'];
-  }
-  return ['restore', 'promote', 'import-as-new', 'uninstall'];
+  return ['uninstall'];
 }
 
 export interface SkillDistributionResultSummary {

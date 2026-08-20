@@ -2,13 +2,11 @@ import type {
   SkillApiErrorCode,
   SkillPackageFileEntry,
   SkillPackageFileKind,
-  SkillRevisionReason,
 } from '../../../../shared/skill-contract';
 
 export const skillDetailTabs = [
   { value: 'overview', label: 'Overview' },
   { value: 'files', label: 'Files' },
-  { value: 'revisions', label: 'Revisions' },
   { value: 'installations', label: 'Installations' },
   { value: 'sources', label: 'Sources' },
 ] as const;
@@ -22,13 +20,6 @@ export interface SkillFileTreeNode {
   children?: SkillFileTreeNode[];
 }
 
-const revisionReasonLabels: Record<SkillRevisionReason, string> = {
-  'import': 'Import',
-  'distribution': 'Distribution',
-  'promotion': 'Promotion',
-  'remote-update': 'Remote Update',
-};
-
 export function parseSkillDetailTab(value: string): SkillDetailTab {
   return skillDetailTabs.some((tab) => tab.value === value)
     ? value as SkillDetailTab
@@ -37,10 +28,6 @@ export function parseSkillDetailTab(value: string): SkillDetailTab {
 
 export function abbreviateSkillId(value: string, length = 12): string {
   return value.slice(0, length);
-}
-
-export function getRevisionReasonLabel(reason: SkillRevisionReason): string {
-  return revisionReasonLabels[reason];
 }
 
 export function getSkillFileLanguage(relativePath: string): string {
@@ -105,10 +92,6 @@ export function buildSkillFileTree(
   return roots;
 }
 
-export function canMoveSkillPackageToTrash(activeInstallationCount: number): boolean {
-  return activeInstallationCount === 0;
-}
-
 export function shouldExitMissingSkillDetail(
   errorCode: SkillApiErrorCode | undefined,
 ): boolean {
@@ -117,8 +100,8 @@ export function shouldExitMissingSkillDetail(
 
 export function getEmptySkillTrashDescription(count: number): string {
   return count === 1
-    ? '1 Skill Package will be removed permanently. This cannot be undone.'
-    : `${count} Skill Packages will be removed permanently. This cannot be undone.`;
+    ? '1 Skill Package will be removed from Foundry.'
+    : `${count} Skill Packages will be removed from Foundry.`;
 }
 
 function sortSkillFileNodes(nodes: SkillFileTreeNode[]): void {

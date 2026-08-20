@@ -11,25 +11,22 @@ import type {
   SkillDistributionPreflightResult,
   SkillDistributionResult,
   SkillDistributionTargetResult,
+  SkillEmptyTrashResult,
   SkillFileReadResult,
   SkillGitResolutionView,
   SkillInstallationView,
-  SkillImportInstallationResult,
   SkillPackageFileEntry,
   SkillRemoteDetailView,
   SkillRemoteResultView,
-  SkillRevisionView,
   SkillSourceView,
+  SkillStoreDeletionPreflight,
+  SkillStoreDeletionResult,
   SkillStorePackageView,
   SkillTargetKind,
   SkillTargetView,
   SkillTrashPackageView,
   SkillUpdateCheckResult,
-  SkillEmptyTrashResult,
-  SkillWatchSessionStart,
-  SkillPromotionResult,
 } from '../../shared/skill-contract';
-import { deriveInstallationSyncStatus } from '../../shared/skill-contract';
 import type { SkillDiscoveryCoordinator } from './skill-discovery-coordinator';
 import { SkillOperationError, toSkillOperationError } from './skill-error';
 import type { SkillFileCoordinator } from './skill-file-coordinator';
@@ -42,7 +39,6 @@ import type {
 import type { SkillMetadataRepository } from './skill-metadata-repository';
 import type { SkillSourceRepository } from './skill-source-repository';
 import type { SkillStoreCoordinator } from './skill-store-coordinator';
-import type { SkillStorePaths } from './skill-store-paths';
 import {
   normalizeResolvedPathKey,
   resolvePhysicalPath,
@@ -66,13 +62,9 @@ import {
   parseSkillRemoteSearchInput,
   parseSkillTargetId,
 } from './skill-validation';
-import type { SkillWatchCoordinator } from './skill-watch-coordinator';
 import type { SkillTargetMutationCoordinator } from './skill-target-mutation-coordinator';
 import type { SkillUpdateCoordinator } from './skill-update-coordinator';
-import type {
-  ObservedSkillTrashPackage,
-  SkillTrashCoordinator,
-} from './skill-trash-coordinator';
+import type { SkillTrashCoordinator } from './skill-trash-coordinator';
 
 interface CustomTargetCandidate {
   ownerId: number;
@@ -81,7 +73,6 @@ interface CustomTargetCandidate {
 }
 
 interface SkillServiceOptions {
-  paths: SkillStorePaths;
   metadataRepository: SkillMetadataRepository;
   targetRepository: SkillTargetRepository;
   installationRepository: SkillInstallationRepository;
@@ -92,7 +83,6 @@ interface SkillServiceOptions {
   updateCoordinator: SkillUpdateCoordinator;
   discoveryCoordinator: SkillDiscoveryCoordinator;
   fileCoordinator: SkillFileCoordinator;
-  watchCoordinator: SkillWatchCoordinator;
   targetMutationCoordinator: SkillTargetMutationCoordinator;
   trashCoordinator: SkillTrashCoordinator;
   resolveBuiltInTargets: () => Promise<ResolvedBuiltInSkillTarget[]>;
@@ -133,35 +123,11 @@ export class SkillService {
     const skillPackage = this.options.metadataRepository.getActivePackage(
       installation.packageId,
     );
-    const record = this.options.installationRepository.getLatestDistributionRecord(
-      installation.id,
-    );
-    const distribution = record
-      ? {
-          revisionId: record.revisionId,
-          fingerprint: record.fingerprint,
-          recordedAt: record.createdAt,
-        }
-      : null;
     return {
       ...installation,
-      storeObservation: skillPackage.storeObservation,
-      distribution,
-      syncStatus: deriveInstallationSyncStatus({
-        store: skillPackage.storeObservation,
-        target: installation.targetObservation,
-      }),
-    };
-  }
-
-  private mapTrashPackage(result: ObservedSkillTrashPackage): SkillTrashPackageView {
-    return {
-      id: result.package.id,
-      distributionName: result.package.distributionName,
-      trashObservation: result.observation,
-      createdAt: result.package.createdAt,
-      updatedAt: result.package.updatedAt,
-      trashedAt: result.package.trashedAt,
+      distributionStatus: installation.distributedFingerprint === skillPackage.fingerprint
+        ? 'current'
+        : 'needs-distribution',
     };
   }
 
@@ -191,18 +157,7 @@ export class SkillService {
   }
 
   async importExisting(): Promise<SkillDiscoveryResult> {
-    await this.options.storeCoordinator.reconcileStorePackages();
     return this.options.discoveryCoordinator.scan();
-  }
-
-  beginWatchSession(ownerId: number): Promise<SkillWatchSessionStart> {
-    this.requireWindowOwner(ownerId);
-    return this.options.watchCoordinator.beginSession(ownerId);
-  }
-
-  endWatchSession(ownerId: number, sessionId: unknown): Promise<boolean> {
-    this.requireWindowOwner(ownerId);
-    return this.options.watchCoordinator.endSession(ownerId, sessionId);
   }
 
   listPackageFiles(skillId: unknown): Promise<SkillPackageFileEntry[]> {
@@ -211,13 +166,6 @@ export class SkillService {
 
   readPackageFile(input: unknown): Promise<SkillFileReadResult> {
     return this.options.fileCoordinator.readPackageFile(parseSkillFileTarget(input));
-  }
-
-  async revealPackage(skillIdValue: unknown): Promise<null> {
-    const skillId = parseSkillId(skillIdValue);
-    this.options.metadataRepository.getActivePackage(skillId);
-    await this.options.revealPath(path.join(this.options.paths.packages, skillId));
-    return null;
   }
 
   async revealTarget(targetIdValue: unknown): Promise<null> {
@@ -247,7 +195,6 @@ export class SkillService {
 
   registerWindowOwner(ownerId: number): void {
     this.windowOwners.add(ownerId);
-    this.options.watchCoordinator.registerOwner(ownerId);
   }
 
   async releaseWindowOwner(ownerId: number): Promise<void> {
@@ -258,10 +205,7 @@ export class SkillService {
         this.candidates.delete(candidateId);
       }
     }
-    await Promise.all([
-      this.options.watchCoordinator.releaseOwner(ownerId),
-      this.options.gitSourceCoordinator.releaseOwner(ownerId),
-    ]);
+    await this.options.gitSourceCoordinator.releaseOwner(ownerId);
   }
 
   async registerCustomTargetCandidate(
@@ -319,17 +263,14 @@ export class SkillService {
         allowSymlinkEscape: input.allowSymlinkEscape,
       });
       this.candidates.delete(input.candidateId);
-      await this.options.watchCoordinator.refreshWatchPaths();
       return this.mapCustomTargetResult(result);
     } catch (error) {
       throw toSkillOperationError(error);
     }
   }
 
-  async updateTargetPolicy(input: unknown): Promise<SkillTargetView> {
-    const target = this.options.targetRepository.updateTargetPolicy(input);
-    await this.options.watchCoordinator.refreshWatchPaths();
-    return mapTarget(target);
+  updateTargetPolicy(input: unknown): SkillTargetView {
+    return mapTarget(this.options.targetRepository.updateTargetPolicy(input));
   }
 
   async resetBuiltInTargetPolicy(targetIdValue: unknown): Promise<SkillTargetView> {
@@ -350,7 +291,6 @@ export class SkillService {
       targetId,
       definition,
     );
-    await this.options.watchCoordinator.refreshWatchPaths();
     return mapTarget(reset);
   }
 
@@ -362,7 +302,6 @@ export class SkillService {
     const result = await this.options.targetMutationCoordinator.distribute(input);
     return {
       skillId: result.skillId,
-      revisionId: result.revisionId,
       targets: result.targets.map((target): SkillDistributionTargetResult => {
         if (!target.ok) {
           return target;
@@ -374,50 +313,13 @@ export class SkillService {
           targetId: target.targetId,
           ok: true,
           installation: this.mapInstallation(installation),
-          revisionId: target.revisionId,
         };
       }),
     };
   }
 
-  async restoreInstallation(input: unknown): Promise<SkillDistributionTargetResult> {
-    const target = await this.options.targetMutationCoordinator.restoreInstallation(input);
-    if (!target.ok) {
-      return target;
-    }
-    return {
-      targetId: target.targetId,
-      ok: true,
-      installation: this.mapInstallation(
-        this.options.installationRepository.getActiveInstallation(target.installationId),
-      ),
-      revisionId: target.revisionId,
-    };
-  }
-
-  async promoteInstallation(input: unknown): Promise<SkillPromotionResult> {
-    const result = await this.options.targetMutationCoordinator.promoteInstallation(input);
-    return {
-      skillPackage: result.package,
-      revisionId: result.revision.id,
-      installation: this.mapInstallation(
-        this.options.installationRepository.getActiveInstallation(result.installationId),
-      ),
-    };
-  }
-
-  async importInstallationAsNew(input: unknown): Promise<SkillImportInstallationResult> {
-    const result = await this.options.targetMutationCoordinator
-      .importInstallationAsNew(input);
-    return { skillPackage: result.package, revisionId: result.revision.id };
-  }
-
   uninstall(input: unknown): Promise<null> {
     return this.options.targetMutationCoordinator.uninstall(input);
-  }
-
-  listRevisions(skillIdValue: unknown): SkillRevisionView[] {
-    return this.options.metadataRepository.listRevisions(parseSkillId(skillIdValue));
   }
 
   listSources(skillIdValue: unknown): SkillSourceView[] {
@@ -489,59 +391,43 @@ export class SkillService {
 
   applyUpdate(inputValue: unknown): Promise<SkillApplyUpdateResult> {
     const input = parseSkillApplyUpdateInput(inputValue);
-    return this.options.updateCoordinator.apply(input.candidateId);
+    return this.options.updateCoordinator.apply(input.candidate);
   }
 
-  listRevisionFiles(
-    skillIdValue: unknown,
-    revisionIdValue: unknown,
-  ): Promise<SkillPackageFileEntry[]> {
-    return this.options.fileCoordinator.listRevisionFiles(skillIdValue, revisionIdValue);
+  preflightStoreDeletion(skillIdValue: unknown): Promise<SkillStoreDeletionPreflight> {
+    return this.options.trashCoordinator.preflightStoreDeletion(skillIdValue);
   }
 
-  readRevisionFile(input: unknown): Promise<SkillFileReadResult> {
-    return this.options.fileCoordinator.readRevisionFile(input);
+  movePackageToTrash(skillIdValue: unknown): Promise<SkillStoreDeletionResult> {
+    return this.options.trashCoordinator.movePackageToTrash(skillIdValue);
   }
 
-  async movePackageToTrash(skillIdValue: unknown): Promise<SkillTrashPackageView> {
-    return this.mapTrashPackage(
-      await this.options.trashCoordinator.movePackageToTrash(skillIdValue),
-    );
+  listTrash(): SkillTrashPackageView[] {
+    return this.options.trashCoordinator.listTrash();
   }
 
-  async listTrash(): Promise<SkillTrashPackageView[]> {
-    const trashPackages = await this.options.trashCoordinator.listTrash();
-    return trashPackages.map((item) => (
-      this.mapTrashPackage(item)
-    ));
-  }
-
-  restoreTrashedPackage(skillIdValue: unknown): Promise<SkillStorePackageView> {
+  restoreTrashedPackage(skillIdValue: unknown): SkillStorePackageView {
     return this.options.trashCoordinator.restoreTrashedPackage(skillIdValue);
   }
 
-  removeTrashedPackage(skillIdValue: unknown): Promise<null> {
+  removeTrashedPackage(skillIdValue: unknown): null {
     return this.options.trashCoordinator.removeTrashedPackage(skillIdValue);
   }
 
-  emptyTrash(): Promise<SkillEmptyTrashResult> {
+  emptyTrash(): SkillEmptyTrashResult {
     return this.options.trashCoordinator.emptyTrash();
   }
 
-  async removeCustomTarget(targetId: unknown): Promise<null> {
+  removeCustomTarget(targetId: unknown): Promise<null> {
     this.options.targetRepository.removeCustomTarget(targetId);
-    await this.options.watchCoordinator.refreshWatchPaths();
-    return null;
+    return Promise.resolve(null);
   }
 
   async dispose(): Promise<void> {
     this.windowOwners.clear();
     this.candidates.clear();
     this.options.remoteDiscoveryCoordinator.dispose();
-    await Promise.all([
-      this.options.watchCoordinator.dispose(),
-      this.options.gitSourceCoordinator.dispose(),
-    ]);
+    await this.options.gitSourceCoordinator.dispose();
   }
 }
 

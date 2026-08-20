@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
-import { lstat, mkdtemp, readFile, readlink, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'vitest';
@@ -104,10 +104,10 @@ async function createFixture(runGit: GitCommandRunner) {
   const userHome = await mkdtemp(path.join(tmpdir(), 'foundry-git-source-'));
   const database = openFoundryDatabase(':memory:');
   const paths = new SkillStorePaths(userHome);
+  await paths.initialize();
   const metadataRepository = new SkillMetadataRepository(database);
   const sourceRepository = new SkillSourceRepository(database);
-  const storeCoordinator = new SkillStoreCoordinator(paths, metadataRepository);
-  await storeCoordinator.initialize();
+  const storeCoordinator = new SkillStoreCoordinator(metadataRepository);
   const acquisition = new SkillRemoteAcquisitionCoordinator(paths, {
     createId: () => operationId,
     now: () => 10,
@@ -127,6 +127,7 @@ async function createFixture(runGit: GitCommandRunner) {
     paths,
     metadataRepository,
     sourceRepository,
+    storeCoordinator,
     coordinator,
   };
 }
@@ -167,11 +168,13 @@ test('resolves a Git ref, materializes one package, and attaches exact provenanc
       added.source.canonicalWebUrl,
       `https://github.com/example/skills/tree/${commit}/skills/example`,
     );
-    const packageRoot = path.join(fixture.paths.packages, added.skillPackage.id);
-    assert.equal(await readFile(path.join(packageRoot, 'guide.md'), 'utf8'), 'Guide\n');
-    const linkStats = await lstat(path.join(packageRoot, 'guide-link'));
-    assert.equal(linkStats.isSymbolicLink(), true);
-    assert.equal(await readlink(path.join(packageRoot, 'guide-link')), 'guide.md');
+    const inspected = await fixture.storeCoordinator.getVerifiedPackageContent(
+      added.skillPackage.id,
+    );
+    const guide = inspected.inspected.entries.find((entry) => entry.relativePath === 'guide.md');
+    const link = inspected.inspected.entries.find((entry) => entry.relativePath === 'guide-link');
+    assert.equal(guide?.kind === 'file' && guide.content.toString('utf8'), 'Guide\n');
+    assert.equal(link?.kind === 'symbolic-link' && link.target.toString('utf8'), 'guide.md');
     assert.deepEqual(fixture.sourceRepository.listSources(added.skillPackage.id), [added.source]);
     assert.deepEqual(await readdir(fixture.paths.remoteOperations), []);
   } finally {

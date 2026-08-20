@@ -14,14 +14,11 @@ import { Token } from '@astryxdesign/core/Token';
 import { useToast } from '@astryxdesign/core/Toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowUpToLine,
   BookOpen,
-  CopyPlus,
   Ellipsis,
   FolderOpen,
   Package,
   Plus,
-  RotateCcw,
   Settings,
   Trash2,
   Wrench,
@@ -29,8 +26,6 @@ import {
 import { useState } from 'react';
 import type {
   SkillCustomTargetDirectorySelection,
-  SkillDistributionTargetResult,
-  SkillImportInstallationResult,
   SkillInstallationView,
   SkillTargetView,
 } from '../../../../shared/skill-contract';
@@ -44,12 +39,14 @@ import {
 } from './skill-installation-actions';
 import type { SkillInstallationAction } from './skill-installation-actions';
 import { SkillInventoryLoading } from './skill-loading';
+import type {
+  SkillRequestError,
+} from './skill-query';
 import {
   getSkillInstallationsQueryOptions,
   getSkillTargetsQueryOptions,
   invalidateSkillQueries,
   resolveSkillRequest,
-  SkillRequestError,
 } from './skill-query';
 import { SkillTargetIcon } from './skill-target-icon';
 import { SkillTargetSettingsDialog } from './skill-target-settings-dialog';
@@ -131,41 +128,13 @@ export function SkillTargetsPage() {
     SkillRequestError,
     InstallationActionRequest
   >({
-    mutationFn: async ({ action, installation }) => {
+    mutationFn: async ({ installation }) => {
       const input = { installationId: installation.id };
-      switch (action) {
-        case 'restore': {
-          const restored = await resolveSkillRequest<SkillDistributionTargetResult>(
-            () => globalThis.api.skills.restoreInstallation(input),
-            'The Skill Installation could not be restored.',
-          );
-          if (!restored.ok) {
-            throw new SkillRequestError(restored.error.message, restored.error);
-          }
-          return `${installation.distributionName} was restored from Store.`;
-        }
-        case 'promote': {
-          await resolveSkillRequest(
-            () => globalThis.api.skills.promoteInstallation(input),
-            'The target copy could not be promoted to Store.',
-          );
-          return `${installation.distributionName} was promoted to Store.`;
-        }
-        case 'import-as-new': {
-          const imported = await resolveSkillRequest<SkillImportInstallationResult>(
-            () => globalThis.api.skills.importInstallationAsNew(input),
-            'The target copy could not be imported as a new Skill.',
-          );
-          return `${imported.skillPackage.distributionName} was added to Store.`;
-        }
-        case 'uninstall': {
-          await resolveSkillRequest(
-            () => globalThis.api.skills.uninstall(input),
-            'The Skill Installation could not be removed.',
-          );
-          return `${installation.distributionName} was removed from this Target.`;
-        }
-      }
+      await resolveSkillRequest(
+        () => globalThis.api.skills.uninstall(input),
+        'The Skill Installation could not be removed.',
+      );
+      return `${installation.distributionName} was removed from this Target.`;
     },
     onSuccess: (message) => {
       setInstallationActionToConfirm(undefined);
@@ -298,11 +267,7 @@ export function SkillTargetsPage() {
                                         ),
                                         onClick: () => {
                                           const request = { action, installation };
-                                          if (action === 'import-as-new') {
-                                            installationMutation.mutate(request);
-                                          } else {
-                                            setInstallationActionToConfirm(request);
-                                          }
+                                          setInstallationActionToConfirm(request);
                                         },
                                       }))}
                                     />
@@ -448,38 +413,12 @@ export function SkillTargetsPage() {
   );
 }
 
-function getInstallationActionLabel(action: SkillInstallationAction): string {
-  switch (action) {
-    case 'restore': {
-      return 'Restore from Store';
-    }
-    case 'promote': {
-      return 'Promote to Store';
-    }
-    case 'import-as-new': {
-      return 'Import as New Skill';
-    }
-    case 'uninstall': {
-      return 'Uninstall';
-    }
-  }
+function getInstallationActionLabel(_action: SkillInstallationAction): string {
+  return 'Uninstall';
 }
 
-function getInstallationActionIcon(action: SkillInstallationAction) {
-  switch (action) {
-    case 'restore': {
-      return RotateCcw;
-    }
-    case 'promote': {
-      return ArrowUpToLine;
-    }
-    case 'import-as-new': {
-      return CopyPlus;
-    }
-    case 'uninstall': {
-      return Trash2;
-    }
-  }
+function getInstallationActionIcon(_action: SkillInstallationAction) {
+  return Trash2;
 }
 
 function getInstallationConfirmation(request: InstallationActionRequest): {
@@ -488,34 +427,9 @@ function getInstallationConfirmation(request: InstallationActionRequest): {
   actionLabel: string;
 } {
   const name = request.installation.distributionName;
-  switch (request.action) {
-    case 'restore': {
-      return {
-        title: `Restore ${name} from Store?`,
-        description: 'The current target copy will be replaced with the latest Store content.',
-        actionLabel: 'Restore from Store',
-      };
-    }
-    case 'promote': {
-      return {
-        title: `Promote ${name} to Store?`,
-        description: 'The Store Working Copy will be replaced with this target copy. Other installations will not change.',
-        actionLabel: 'Promote to Store',
-      };
-    }
-    case 'uninstall': {
-      return {
-        title: `Uninstall ${name}?`,
-        description: 'The target copy will be removed. The Store package and Distribution Records will remain.',
-        actionLabel: 'Uninstall',
-      };
-    }
-    case 'import-as-new': {
-      return {
-        title: `Import ${name} as a New Skill?`,
-        description: 'A separate Skill identity will be added to Store.',
-        actionLabel: 'Import as New Skill',
-      };
-    }
-  }
+  return {
+    title: `Uninstall ${name}?`,
+    description: 'The target copy will be removed. The Store Package will remain.',
+    actionLabel: 'Uninstall',
+  };
 }

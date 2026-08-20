@@ -261,6 +261,9 @@ importers:
       yauzl:
         specifier: ^3.4.0
         version: 3.4.0
+      yazl:
+        specifier: ^3.3.1
+        version: 3.3.1
     devDependencies:
       '@astryxdesign/cli':
         specifier: ^0.2.0
@@ -331,9 +334,6 @@ importers:
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@22.20.1)(vite@7.3.6(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.33.0)(yaml@2.9.0))
-      yazl:
-        specifier: ^3.3.1
-        version: 3.3.1
 
 packages:
 

@@ -4,6 +4,10 @@
 
 `in_progress`
 
+## Superseded Decisions
+
+[Plan 037](../037_replace-skill-store-with-sqlite-blobs/index.md) removes the Store observation Status established by Task 006 and the live Installation observation presentation established by Task 009. The completed tasks remain historical UI records; current Skills presentation comes from Plan 037 and [ADR 0005](../adr/0005-store-current-skill-content-in-sqlite.md).
+
 ## Goal
 
 Coordinate focused Skills experience optimizations while preserving the established Skills domain, process boundaries, and verified local and remote management workflows.

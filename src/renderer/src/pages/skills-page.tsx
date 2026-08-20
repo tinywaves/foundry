@@ -1,14 +1,9 @@
-import { Banner } from '@astryxdesign/core/Banner';
 import { StackItem, VStack } from '@astryxdesign/core/Stack';
 import { Tab, TabList } from '@astryxdesign/core/TabList';
-import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { PageHeader } from '@renderer/components/page-header';
 import { routePaths } from '@renderer/routes';
 import { SkillActionBar } from './skills/skill-action-bar';
-import { invalidateSkillQueries } from './skills/skill-query';
-import { startSkillWatchSession } from './skills/skill-watch-session';
 
 const skillViews = [
   { value: 'store', label: 'Store', path: routePaths.agentExtensionsSkills },
@@ -18,37 +13,9 @@ const skillViews = [
 ] as const;
 
 export function SkillsPage() {
-  const queryClient = useQueryClient();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const [observationError, setObservationError] = useState<string>();
   const activeView = getActiveSkillView(pathname);
-
-  const refreshInventory = useCallback(() => {
-    void invalidateSkillQueries(queryClient);
-  }, [queryClient]);
-
-  useEffect(() => {
-    const unsubscribe = globalThis.api.skills.onChanged((notification) => {
-      if (notification.reason === 'watch-error') {
-        setObservationError('Filesystem observation reported a problem. Inventory was refreshed.');
-      }
-      refreshInventory();
-    });
-    const stopSession = startSkillWatchSession({
-      begin: () => globalThis.api.skills.beginWatchSession(),
-      end: (sessionId) => globalThis.api.skills.endWatchSession(sessionId),
-      onStarted: () => {
-        setObservationError(undefined);
-        refreshInventory();
-      },
-      onError: setObservationError,
-    });
-    return () => {
-      unsubscribe();
-      stopSession();
-    };
-  }, [refreshInventory]);
 
   const handleViewChange = (value: string) => {
     const view = skillViews.find((item) => item.value === value);
@@ -75,14 +42,6 @@ export function SkillsPage() {
           </TabList>
         )}
       />
-      {observationError && (
-        <Banner
-          status="warning"
-          container="section"
-          title="Skill Observation Is Limited"
-          description={observationError}
-        />
-      )}
       <StackItem size="fill">
         <Outlet />
       </StackItem>

@@ -17,7 +17,10 @@ import type {
   SkillCustomTargetDirectorySelection,
   SkillTargetView,
 } from '../../../../shared/skill-contract';
-import { SKILL_TARGET_MAX_SCAN_DEPTH } from '../../../../shared/skill-contract';
+import {
+  SKILL_TARGET_MAX_SCAN_DEPTH,
+  shouldAllowSkillTargetSymlinkEscapeByDefault,
+} from '../../../../shared/skill-contract';
 import {
   invalidateSkillQueries,
   resolveSkillRequest,
@@ -47,7 +50,9 @@ export function SkillTargetSettingsDialog({
     request.kind === 'create' ? 4 : request.target.maxScanDepth,
   );
   const [allowSymlinkEscape, setAllowSymlinkEscape] = useState(
-    request.kind === 'create' ? false : request.target.allowSymlinkEscape,
+    request.kind === 'create'
+      ? shouldAllowSkillTargetSymlinkEscapeByDefault
+      : request.target.allowSymlinkEscape,
   );
   const saveMutation = useMutation<SkillTargetView, SkillRequestError>({
     mutationFn: async () => {
@@ -162,7 +167,7 @@ export function SkillTargetSettingsDialog({
                 )}
                 <CheckboxInput
                   label="Enable discovery"
-                  description="Include this location in page-scoped scans and observation."
+                  description="Include this location when Import Existing is run."
                   value={enabled}
                   onChange={setEnabled}
                 />

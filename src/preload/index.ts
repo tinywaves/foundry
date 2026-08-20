@@ -13,7 +13,7 @@ import type { RuntimeApi, RuntimeApiResult } from '../shared/runtime-contract';
 import { runtimeIpcChannels } from '../shared/runtime-contract';
 import type { SettingsApi, SettingsApiResult } from '../shared/settings-contract';
 import { settingsIpcChannels } from '../shared/settings-contract';
-import type { SkillApi, SkillApiResult, SkillChangedNotification } from '../shared/skill-contract';
+import type { SkillApi, SkillApiResult } from '../shared/skill-contract';
 import { skillIpcChannels } from '../shared/skill-contract';
 
 type ProviderIpcChannel = typeof providerIpcChannels[keyof typeof providerIpcChannels];
@@ -129,11 +129,8 @@ const skills: SkillApi = {
   listTargets: () => invokeSkill(skillIpcChannels.listTargets),
   listInstallations: (input) => invokeSkill(skillIpcChannels.listInstallations, input),
   importExisting: () => invokeSkill(skillIpcChannels.importExisting),
-  beginWatchSession: () => invokeSkill(skillIpcChannels.beginWatchSession),
-  endWatchSession: (sessionId) => invokeSkill(skillIpcChannels.endWatchSession, sessionId),
   listPackageFiles: (skillId) => invokeSkill(skillIpcChannels.listPackageFiles, skillId),
   readPackageFile: (input) => invokeSkill(skillIpcChannels.readPackageFile, input),
-  revealPackage: (skillId) => invokeSkill(skillIpcChannels.revealPackage, skillId),
   revealTarget: (targetId) => invokeSkill(skillIpcChannels.revealTarget, targetId),
   openTargetDocumentation: (targetId) => invokeSkill(
     skillIpcChannels.openTargetDocumentation,
@@ -157,26 +154,11 @@ const skills: SkillApi = {
     input,
   ),
   distribute: (input) => invokeSkill(skillIpcChannels.distribute, input),
-  restoreInstallation: (input) => invokeSkill(
-    skillIpcChannels.restoreInstallation,
-    input,
-  ),
-  promoteInstallation: (input) => invokeSkill(
-    skillIpcChannels.promoteInstallation,
-    input,
-  ),
-  importInstallationAsNew: (input) => invokeSkill(
-    skillIpcChannels.importInstallationAsNew,
-    input,
-  ),
   uninstall: (input) => invokeSkill(skillIpcChannels.uninstall, input),
-  listRevisions: (skillId) => invokeSkill(skillIpcChannels.listRevisions, skillId),
-  listRevisionFiles: (skillId, revisionId) => ipcRenderer.invoke(
-    skillIpcChannels.listRevisionFiles,
+  preflightStoreDeletion: (skillId) => invokeSkill(
+    skillIpcChannels.preflightStoreDeletion,
     skillId,
-    revisionId,
   ),
-  readRevisionFile: (input) => invokeSkill(skillIpcChannels.readRevisionFile, input),
   movePackageToTrash: (skillId) => invokeSkill(skillIpcChannels.movePackageToTrash, skillId),
   listTrash: () => invokeSkill(skillIpcChannels.listTrash),
   restoreTrashedPackage: (skillId) => invokeSkill(
@@ -212,13 +194,6 @@ const skills: SkillApi = {
     skillId,
   ),
   applyUpdate: (input) => invokeSkill(skillIpcChannels.applyUpdate, input),
-  onChanged: (listener) => {
-    const handleChanged = (_event: unknown, notification: SkillChangedNotification) => {
-      listener(notification);
-    };
-    ipcRenderer.on(skillIpcChannels.changed, handleChanged);
-    return () => ipcRenderer.removeListener(skillIpcChannels.changed, handleChanged);
-  },
 };
 
 const api: FoundryApi = {

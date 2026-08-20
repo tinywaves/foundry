@@ -1,24 +1,21 @@
-import { randomUUID } from 'node:crypto';
 import type {
   SkillApplyUpdateResult,
   SkillSourceView,
+  SkillUpdateCandidateView,
   SkillUpdateCheckResult,
 } from '../../shared/skill-contract';
 import type { SkillClawHubProvider } from './skill-clawhub-provider';
 import { SkillOperationError, toSkillOperationError } from './skill-error';
 import type { SkillGitSourceCoordinator } from './skill-git-source-coordinator';
 import type { SkillMetadataRepository } from './skill-metadata-repository';
+import type { SkillOperationQueue } from './skill-operation-queue';
 import type {
   SkillMaterializedSourceRevision,
   SkillResolvedSourceRevision,
 } from './skill-remote-source';
 import type { SkillSourceRepository } from './skill-source-repository';
 import type { SkillStoreCoordinator } from './skill-store-coordinator';
-import {
-  parseSkillId,
-  parseSkillSourceId,
-  parseSkillUpdateCandidateId,
-} from './skill-validation';
+import { parseSkillId, parseSkillSourceId } from './skill-validation';
 
 interface SkillUpdateCoordinatorOptions {
   metadataRepository: SkillMetadataRepository;
@@ -26,7 +23,7 @@ interface SkillUpdateCoordinatorOptions {
   storeCoordinator: SkillStoreCoordinator;
   gitSourceCoordinator: SkillGitSourceCoordinator;
   clawHubProvider: SkillClawHubProvider;
-  createId?: () => string;
+  operationQueue: SkillOperationQueue;
   now?: () => number;
 }
 
@@ -40,12 +37,10 @@ const unavailableErrorCodes = new Set([
 ]);
 
 export class SkillUpdateCoordinator {
-  private readonly createId: () => string;
   private readonly now: () => number;
   private readonly checks = new Map<string, Promise<SkillUpdateCheckResult>>();
 
   constructor(private readonly options: SkillUpdateCoordinatorOptions) {
-    this.createId = options.createId ?? randomUUID;
     this.now = options.now ?? Date.now;
   }
 
@@ -66,22 +61,21 @@ export class SkillUpdateCoordinator {
     return Promise.all(sources.map((source) => this.checkSource(source.id)));
   }
 
-  async apply(candidateIdValue: unknown): Promise<SkillApplyUpdateResult> {
-    const candidateId = parseSkillUpdateCandidateId(candidateIdValue);
-    const candidate = this.options.sourceRepository.getActiveCandidate(candidateId);
+  apply(candidate: SkillUpdateCandidateView): Promise<SkillApplyUpdateResult> {
+    return this.options.operationQueue.run(() => this.applyUnlocked(candidate));
+  }
+
+  // eslint-disable-next-line unicorn/consistent-class-member-order
+  private async applyUnlocked(candidate: SkillUpdateCandidateView): Promise<SkillApplyUpdateResult> {
     const source = this.options.sourceRepository.getSource(candidate.sourceId);
-    if (source.trackingMode !== 'tracked') {
-      throw new SkillOperationError('conflict', 'Fixed Skill Sources do not track updates.');
-    }
-    const resolved = await this.resolveSource(source);
-    if (
-      resolved.resolvedRevision !== candidate.resolvedRevision
-      || !hasMatchingDigest(resolved.artifactDigest, candidate.artifactDigest)
-    ) {
+    if (source.packageId !== candidate.packageId) {
       throw new SkillOperationError(
         'stale-result',
-        'The remote Source changed after Update Check.',
+        'The Update Candidate no longer matches its Skill Package.',
       );
+    }
+    if (source.trackingMode !== 'tracked') {
+      throw new SkillOperationError('conflict', 'Fixed Skill Sources do not track updates.');
     }
     const materialized = await this.materializeSource(source, candidate.resolvedRevision);
     try {
@@ -95,37 +89,30 @@ export class SkillUpdateCoordinator {
         );
       }
       const before = this.options.metadataRepository.getActivePackage(candidate.packageId);
-      const promoted = await this.options.storeCoordinator.promoteStorePackage(
-        candidate.packageId,
+      const prepared = await this.options.storeCoordinator.preparePackageContent(
         materialized.contentRoot,
-        'remote-update',
+        candidate.packageId,
       );
-      if (promoted.package.storeObservation.status !== 'available') {
-        throw new SkillOperationError('content-unavailable', 'The updated Store content is unavailable.');
-      }
-      const sourceView = this.options.sourceRepository.markCandidateApplied({
-        candidateId,
+      const committed = this.options.sourceRepository.commitRemoteUpdate({
+        sourceId: source.id,
+        distributionName: prepared.distributionName,
+        content: prepared.encoded.content,
+        fingerprint: prepared.encoded.fingerprint,
         resolvedRevision: materialized.resolvedRevision,
         artifactDigest: materialized.artifactDigest,
-        observedContentFingerprint: promoted.package.storeObservation.fingerprint,
         canonicalWebUrl: materialized.canonicalWebUrl,
         fetchedAt: this.now(),
       });
-      const hasContentChanged = before.storeObservation.status !== 'available'
-        || before.storeObservation.fingerprint
-        !== promoted.package.storeObservation.fingerprint;
       return {
-        skillPackage: promoted.package,
-        revisionId: promoted.revision.id,
-        source: sourceView,
-        contentChanged: hasContentChanged,
+        skillPackage: committed.skillPackage,
+        source: committed.source,
+        contentChanged: before.fingerprint !== committed.skillPackage.fingerprint,
       };
     } finally {
       await ignoreFailure(materialized.release);
     }
   }
 
-  // eslint-disable-next-line unicorn/consistent-class-member-order
   private async checkSourceOnce(sourceId: string): Promise<SkillUpdateCheckResult> {
     const source = this.options.sourceRepository.getSource(sourceId);
     if (source.trackingMode === 'fixed') {
@@ -141,36 +128,26 @@ export class SkillUpdateCoordinator {
             'The remote immutable revision changed content.',
           );
         }
-        return {
-          status: 'current',
-          source: this.options.sourceRepository.recordCurrent(source.id, checkedAt),
-        };
-      }
-      const updatedSource = this.options.sourceRepository.recordUpdateCandidate({
-        id: parseSkillUpdateCandidateId(this.createId()),
-        sourceId: source.id,
-        resolvedRevision: resolved.resolvedRevision,
-        artifactDigest: resolved.artifactDigest,
-        canonicalWebUrl: resolved.canonicalWebUrl,
-        checkedAt,
-      });
-      if (updatedSource.check.status !== 'update-available') {
-        throw new SkillOperationError('storage-corrupt', 'Stored Update Candidate is invalid.');
+        return { status: 'current', source };
       }
       return {
         status: 'update-available',
-        source: updatedSource,
-        candidate: updatedSource.check.candidate,
+        source,
+        candidate: {
+          sourceId: source.id,
+          packageId: source.packageId,
+          resolvedRevision: resolved.resolvedRevision,
+          artifactDigest: resolved.artifactDigest,
+          canonicalWebUrl: resolved.canonicalWebUrl,
+          checkedAt,
+        },
       };
     } catch (error) {
       const skillError = toSkillOperationError(error);
       if (!unavailableErrorCodes.has(skillError.code)) {
         throw skillError;
       }
-      return {
-        status: 'unavailable',
-        source: this.options.sourceRepository.recordUnavailable(source.id, checkedAt),
-      };
+      return { status: 'unavailable', source };
     }
   }
 
@@ -230,6 +207,6 @@ async function ignoreFailure(operation: () => Promise<void>): Promise<void> {
   try {
     await operation();
   } catch {
-    // Startup recovery removes marker-owned staging after cleanup failures.
+    // Remote staging is disposable after the Store transaction commits or fails.
   }
 }

@@ -2,6 +2,7 @@ import { useToast } from '@astryxdesign/core/Toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type {
   SkillEmptyTrashResult,
+  SkillStoreDeletionResult,
   SkillStorePackageView,
   SkillTrashPackageView,
 } from '../../../../shared/skill-contract';
@@ -18,7 +19,7 @@ export function useSkillTrashActions() {
   const queryClient = useQueryClient();
   const showToast = useToast();
   const moveMutation = useMutation<
-    SkillTrashPackageView,
+    SkillStoreDeletionResult,
     SkillRequestError,
     SkillStorePackageView
   >({
@@ -27,11 +28,16 @@ export function useSkillTrashActions() {
       'Skill Package could not be moved to Trash.',
     ),
     retry: false,
-    onSuccess: (trashedPackage) => {
-      moveSkillPackageToTrashCaches(queryClient, trashedPackage);
+    onSuccess: (result, skillPackage) => {
+      if (result.skillPackage) {
+        moveSkillPackageToTrashCaches(queryClient, result.skillPackage);
+      }
       showToast({
-        body: 'Skill Package moved to Trash.',
-        uniqueID: `skill-trash-move-success-${trashedPackage.id}`,
+        body: result.deleted
+          ? 'Skill Package moved to Trash.'
+          : `${result.failures.length} Target${result.failures.length === 1 ? '' : 's'} could not be removed.`,
+        ...(!result.deleted && { type: 'error' as const }),
+        uniqueID: `skill-trash-move-result-${skillPackage.id}`,
       });
     },
     onError: (error, skillPackage) => {
@@ -76,7 +82,7 @@ export function useSkillTrashActions() {
     onSuccess: (_value, skillPackage) => {
       removeSkillPackageFromTrashCaches(queryClient, skillPackage.id);
       showToast({
-        body: 'Skill Package removed permanently.',
+        body: 'Skill Package removed from Foundry.',
         uniqueID: `skill-trash-remove-success-${skillPackage.id}`,
       });
     },
@@ -102,7 +108,7 @@ export function useSkillTrashActions() {
       emptySkillTrashCaches(queryClient, result);
       showToast({
         body: result.failures.length === 0
-          ? `${result.removedIds.length} Skill Packages removed permanently.`
+          ? `${result.removedIds.length} Skill Packages removed from Foundry.`
           : `${result.removedIds.length} removed; ${result.failures.length} could not be removed.`,
         ...(result.failures.length > 0 && { type: 'error' }),
         uniqueID: 'skill-trash-empty-result',

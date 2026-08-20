@@ -6,14 +6,11 @@ import { IconButton } from '@astryxdesign/core/IconButton';
 import { Link } from '@astryxdesign/core/Link';
 import { Section } from '@astryxdesign/core/Section';
 import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
-import { StatusDot } from '@astryxdesign/core/StatusDot';
 import { proportional, Table } from '@astryxdesign/core/Table';
 import type { TableColumn } from '@astryxdesign/core/Table';
-import { Text } from '@astryxdesign/core/Text';
 import { TextInput } from '@astryxdesign/core/TextInput';
-import { useToast } from '@astryxdesign/core/Toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Compass, FolderOpen, Import, PackagePlus, Search, Wrench } from 'lucide-react';
+import { Compass, Import, PackagePlus, Search, Wrench } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink } from 'react-router';
 import type {
@@ -28,10 +25,7 @@ import {
   describeSkillImport,
   getSkillImportWarningCount,
 } from './skill-import-result-model';
-import {
-  filterSkillStorePackages,
-  getStoreObservationPresentation,
-} from './skill-inventory-model';
+import { filterSkillStorePackages } from './skill-inventory-model';
 import { SkillInventoryLoading } from './skill-loading';
 import {
   getSkillStorePackagesQueryOptions,
@@ -41,23 +35,26 @@ import {
 } from './skill-query';
 import type { SkillRequestError } from './skill-query';
 import { SkillDistributionDialog } from './skill-distribution-dialog';
+import { SkillStoreCorruptionDialog } from './skill-store-corruption-dialog';
+import { SkillStoreDeletionDialog } from './skill-store-deletion-dialog';
 
 interface SkillStoreRow extends Record<string, unknown> {
   id: string;
   distributionName: string;
   skillPackage: SkillStorePackageView;
-  status: string;
+  fingerprint: string;
 }
 
 const IMPORT_RESULT_AUTO_HIDE_MS = 8000;
 
 export function SkillStorePage() {
   const queryClient = useQueryClient();
-  const showToast = useToast();
   const [search, setSearch] = useState('');
   const [importResult, setImportResult] = useState<SkillDiscoveryResult>();
   const [areImportIssuesOpen, setAreImportIssuesOpen] = useState(false);
   const [packageToDistribute, setPackageToDistribute] = useState<SkillStorePackageView>();
+  const [corruptPackage, setCorruptPackage] = useState<SkillStorePackageView>();
+  const [packageToDelete, setPackageToDelete] = useState<SkillStorePackageView>();
   const storeQuery = useQuery(getSkillStorePackagesQueryOptions());
   const targetsQuery = useQuery(getSkillTargetsQueryOptions());
   const importIssues = useMemo(() => importResult
@@ -86,23 +83,12 @@ export function SkillStorePage() {
     }, IMPORT_RESULT_AUTO_HIDE_MS);
     return () => clearTimeout(timeoutId);
   }, [areImportIssuesOpen, importResult]);
-  const revealMutation = useMutation<null, SkillRequestError, string>({
-    mutationFn: (skillId) => resolveSkillRequest(
-      () => globalThis.api.skills.revealPackage(skillId),
-      'The Store package could not be revealed.',
-    ),
-    onError: (error) => showToast({
-      body: error.message,
-      type: 'error',
-      uniqueID: 'skill-store-reveal',
-    }),
-  });
   const filteredPackages = filterSkillStorePackages(storeQuery.data ?? [], search);
   const rows = useMemo<SkillStoreRow[]>(() => filteredPackages.map((skillPackage) => ({
     id: skillPackage.id,
     distributionName: skillPackage.distributionName,
     skillPackage,
-    status: getStoreObservationPresentation(skillPackage.storeObservation.status).label,
+    fingerprint: skillPackage.fingerprint.slice(0, 15),
   })), [filteredPackages]);
   const columns = useMemo<Array<TableColumn<SkillStoreRow>>>(() => [
     {
@@ -120,20 +106,9 @@ export function SkillStorePage() {
       ),
     },
     {
-      key: 'status',
-      header: 'Status',
+      key: 'fingerprint',
+      header: 'Fingerprint',
       width: proportional(1),
-      renderCell: (row) => {
-        const presentation = getStoreObservationPresentation(
-          row.skillPackage.storeObservation.status,
-        );
-        return (
-          <HStack gap={1.5} vAlign="center">
-            <StatusDot variant={presentation.variant} label={presentation.label} />
-            <Text type="supporting">{presentation.label}</Text>
-          </HStack>
-        );
-      },
     },
     {
       key: 'id',
@@ -148,22 +123,12 @@ export function SkillStorePage() {
             icon={<Icon icon={PackagePlus} size="sm" color="inherit" />}
             variant="ghost"
             size="sm"
-            isDisabled={row.skillPackage.storeObservation.status !== 'available'}
             onClick={() => setPackageToDistribute(row.skillPackage)}
-          />
-          <IconButton
-            label={`Reveal ${row.distributionName} in Finder`}
-            tooltip="Reveal in Finder"
-            icon={<Icon icon={FolderOpen} size="sm" color="inherit" />}
-            variant="ghost"
-            size="sm"
-            isLoading={revealMutation.isPending && revealMutation.variables === row.id}
-            onClick={() => revealMutation.mutate(row.id)}
           />
         </HStack>
       ),
     },
-  ], [revealMutation]);
+  ], []);
 
   let content;
   if (storeQuery.isPending) {
@@ -296,6 +261,28 @@ export function SkillStorePage() {
         <SkillDistributionDialog
           skillPackage={packageToDistribute}
           onClose={() => setPackageToDistribute(undefined)}
+          onStoreCorrupt={() => {
+            setPackageToDistribute(undefined);
+            setCorruptPackage(packageToDistribute);
+          }}
+        />
+      )}
+      {corruptPackage && (
+        <SkillStoreCorruptionDialog
+          isOpen
+          skillPackage={corruptPackage}
+          onDismiss={() => setCorruptPackage(undefined)}
+          onDelete={() => {
+            setPackageToDelete(corruptPackage);
+            setCorruptPackage(undefined);
+          }}
+        />
+      )}
+      {packageToDelete && (
+        <SkillStoreDeletionDialog
+          skillPackage={packageToDelete}
+          onClose={() => setPackageToDelete(undefined)}
+          onDeleted={() => setPackageToDelete(undefined)}
         />
       )}
       {areImportIssuesOpen && importIssues.length > 0 && (

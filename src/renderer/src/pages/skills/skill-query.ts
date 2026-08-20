@@ -8,7 +8,6 @@ import type {
   SkillInstallationListInput,
   SkillInstallationView,
   SkillPackageFileEntry,
-  SkillRevisionView,
   SkillSourceView,
   SkillStorePackageView,
   SkillTargetView,
@@ -32,24 +31,10 @@ export const skillQueryKeys = {
     ...skillQueryKeys.packageFiles(skillId),
     relativePath,
   ] as const,
-  revisions: (skillId: string) => [
-    ...skillQueryKeys.all,
-    'revisions',
-    skillId,
-  ] as const,
   sources: (skillId: string) => [
     ...skillQueryKeys.all,
     'sources',
     skillId,
-  ] as const,
-  revisionFiles: (skillId: string, revisionId: string) => [
-    ...skillQueryKeys.revisions(skillId),
-    revisionId,
-    'files',
-  ] as const,
-  revisionFile: (skillId: string, revisionId: string, relativePath: string) => [
-    ...skillQueryKeys.revisionFiles(skillId, revisionId),
-    relativePath,
   ] as const,
   trash: () => [...skillQueryKeys.all, 'trash'] as const,
   targets: () => [...skillQueryKeys.all, 'targets'] as const,
@@ -154,56 +139,12 @@ export function getSkillPackageFileQueryOptions(
   });
 }
 
-export function getSkillRevisionsQueryOptions(skillId: string) {
-  return queryOptions({
-    queryKey: skillQueryKeys.revisions(skillId),
-    queryFn: () => resolveSkillRequest<SkillRevisionView[]>(
-      () => globalThis.api.skills.listRevisions(skillId),
-      'Skill Revisions could not be loaded.',
-    ),
-    ...skillReadQueryDefaults,
-  });
-}
-
 export function getSkillSourcesQueryOptions(skillId: string) {
   return queryOptions({
     queryKey: skillQueryKeys.sources(skillId),
     queryFn: () => resolveSkillRequest<SkillSourceView[]>(
       () => globalThis.api.skills.listSources(skillId),
       'Skill Sources could not be loaded.',
-    ),
-    ...skillReadQueryDefaults,
-  });
-}
-
-export function getSkillRevisionFilesQueryOptions(
-  skillId: string,
-  revisionId: string,
-) {
-  return queryOptions({
-    queryKey: skillQueryKeys.revisionFiles(skillId, revisionId),
-    queryFn: () => resolveSkillRequest<SkillPackageFileEntry[]>(
-      () => globalThis.api.skills.listRevisionFiles(skillId, revisionId),
-      'Skill Revision files could not be loaded.',
-    ),
-    ...skillReadQueryDefaults,
-  });
-}
-
-export function getSkillRevisionFileQueryOptions(
-  skillId: string,
-  revisionId: string,
-  relativePath: string,
-) {
-  return queryOptions({
-    queryKey: skillQueryKeys.revisionFile(skillId, revisionId, relativePath),
-    queryFn: () => resolveSkillRequest<SkillFileReadResult>(
-      () => globalThis.api.skills.readRevisionFile({
-        skillId,
-        revisionId,
-        relativePath,
-      }),
-      'Skill Revision file could not be loaded.',
     ),
     ...skillReadQueryDefaults,
   });
@@ -260,7 +201,6 @@ export async function invalidateSkillUpdateQueries(
     }),
     queryClient.invalidateQueries({ queryKey: skillQueryKeys.packageFiles(skillId) }),
     queryClient.invalidateQueries({ queryKey: skillQueryKeys.sources(skillId) }),
-    queryClient.invalidateQueries({ queryKey: skillQueryKeys.revisions(skillId) }),
     queryClient.invalidateQueries({ queryKey: skillQueryKeys.installationLists() }),
   ]);
 }
@@ -279,9 +219,6 @@ export function moveSkillPackageToTrashCaches(
   });
   queryClient.removeQueries({
     queryKey: skillQueryKeys.packageFiles(trashedPackage.id),
-  });
-  queryClient.removeQueries({
-    queryKey: skillQueryKeys.revisions(trashedPackage.id),
   });
   queryClient.setQueryData<SkillTrashPackageView[]>(
     skillQueryKeys.trash(),

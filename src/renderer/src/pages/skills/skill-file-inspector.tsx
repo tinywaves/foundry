@@ -10,7 +10,6 @@ import type { TreeListItemData } from '@astryxdesign/core/TreeList';
 import { useQuery } from '@tanstack/react-query';
 import type { UseQueryResult } from '@tanstack/react-query';
 import {
-  CircleAlert,
   File,
   FileArchive,
   FileQuestion,
@@ -19,7 +18,7 @@ import {
   Folder,
   Link2,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type {
   SkillFileReadResult,
   SkillPackageFileEntry,
@@ -34,36 +33,22 @@ import { SkillInventoryLoading } from './skill-loading';
 import {
   getSkillPackageFileQueryOptions,
   getSkillPackageFilesQueryOptions,
-  getSkillRevisionFileQueryOptions,
-  getSkillRevisionFilesQueryOptions,
+  SkillRequestError,
 } from './skill-query';
 
 interface SkillFileInspectorProps {
   skillId: string;
-  revisionId?: string;
+  onStoreCorrupt?: () => void;
 }
 
-export function SkillFileInspector({ skillId, revisionId }: SkillFileInspectorProps) {
-  return revisionId
-    ? <SkillRevisionFileInspector key={revisionId} skillId={skillId} revisionId={revisionId} />
-    : <SkillCurrentFileInspector skillId={skillId} />;
-}
-
-function SkillCurrentFileInspector({ skillId }: { skillId: string }) {
+export function SkillFileInspector({ skillId, onStoreCorrupt }: SkillFileInspectorProps) {
   const filesQuery = useQuery(getSkillPackageFilesQueryOptions(skillId));
-  return <SkillFileInspectorView skillId={skillId} filesQuery={filesQuery} />;
-}
-
-function SkillRevisionFileInspector({
-  skillId,
-  revisionId,
-}: Required<SkillFileInspectorProps>) {
-  const filesQuery = useQuery(getSkillRevisionFilesQueryOptions(skillId, revisionId));
+  useStoreCorruptNotification(filesQuery.error, onStoreCorrupt);
   return (
     <SkillFileInspectorView
       skillId={skillId}
-      revisionId={revisionId}
       filesQuery={filesQuery}
+      onStoreCorrupt={onStoreCorrupt}
     />
   );
 }
@@ -74,8 +59,8 @@ interface SkillFileInspectorViewProps extends SkillFileInspectorProps {
 
 function SkillFileInspectorView({
   skillId,
-  revisionId,
   filesQuery,
+  onStoreCorrupt,
 }: SkillFileInspectorViewProps) {
   const [selectedPath, setSelectedPath] = useState<string>();
 
@@ -132,8 +117,8 @@ function SkillFileInspectorView({
             ? (
                 <SkillFilePreview
                   skillId={skillId}
-                  revisionId={revisionId}
                   relativePath={selectedPath}
+                  onStoreCorrupt={onStoreCorrupt}
                 />
               )
             : (
@@ -151,45 +136,17 @@ function SkillFileInspectorView({
 
 interface SkillFilePreviewProps {
   skillId: string;
-  revisionId?: string;
   relativePath: string;
+  onStoreCorrupt?: () => void;
 }
 
 function SkillFilePreview({
   skillId,
-  revisionId,
   relativePath,
+  onStoreCorrupt,
 }: SkillFilePreviewProps) {
-  return revisionId
-    ? (
-        <SkillRevisionFilePreview
-          key={revisionId}
-          skillId={skillId}
-          revisionId={revisionId}
-          relativePath={relativePath}
-        />
-      )
-    : <SkillCurrentFilePreview skillId={skillId} relativePath={relativePath} />;
-}
-
-function SkillCurrentFilePreview({
-  skillId,
-  relativePath,
-}: Omit<SkillFilePreviewProps, 'revisionId'>) {
   const fileQuery = useQuery(getSkillPackageFileQueryOptions(skillId, relativePath));
-  return <SkillFilePreviewQuery fileQuery={fileQuery} />;
-}
-
-function SkillRevisionFilePreview({
-  skillId,
-  revisionId,
-  relativePath,
-}: Required<SkillFilePreviewProps>) {
-  const fileQuery = useQuery(getSkillRevisionFileQueryOptions(
-    skillId,
-    revisionId,
-    relativePath,
-  ));
+  useStoreCorruptNotification(fileQuery.error, onStoreCorrupt);
   return <SkillFilePreviewQuery fileQuery={fileQuery} />;
 }
 
@@ -233,7 +190,6 @@ function SkillFileReadPreview({ result }: { result: SkillFileReadResult }) {
     'oversized': { title: 'File Too Large', icon: FileArchive },
     'symbolic-link': { title: 'Symbolic Link', icon: Link2 },
     'missing': { title: 'File Missing', icon: FileQuestion },
-    'unreadable': { title: 'File Unreadable', icon: CircleAlert },
   } as const;
   const presentation = presentations[result.status];
   return (
@@ -288,8 +244,19 @@ function getFileIcon(entry: SkillPackageFileEntry) {
   if (entry.kind === 'symbolic-link') {
     return Link2;
   }
-  if (entry.kind === 'unreadable') {
-    return CircleAlert;
-  }
   return entry.relativePath.endsWith('.md') ? FileText : File;
+}
+
+function useStoreCorruptNotification(
+  error: Error | null,
+  onStoreCorrupt: (() => void) | undefined,
+): void {
+  useEffect(() => {
+    if (
+      error instanceof SkillRequestError
+      && error.apiError?.code === 'store-corrupt'
+    ) {
+      onStoreCorrupt?.();
+    }
+  }, [error, onStoreCorrupt]);
 }

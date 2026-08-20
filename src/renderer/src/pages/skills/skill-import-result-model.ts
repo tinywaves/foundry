@@ -40,10 +40,6 @@ const warningPresentations: Record<
     title: 'Skill Package couldn\'t be imported',
     description: 'The package could not be imported or matched to the Skill Store.',
   },
-  'content-changed-during-adoption': {
-    title: 'Skill Package changed during import',
-    description: 'The package changed while Foundry was importing it. Run the import again.',
-  },
 };
 
 export function getSkillImportWarningCount(result: SkillDiscoveryResult): number {

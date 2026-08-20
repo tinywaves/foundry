@@ -6,7 +6,7 @@
 
 ## Superseded Decisions
 
-[Plan 036](../036_simplify-skill-distribution-and-installation-state/index.md) replaces this plan's three-way `Store / Distribution Record / Target` state derivation and destination ownership conflicts. The task records below remain the historical account of the original implementation; current Distribution and Installation Status semantics come from Plan 036 and [ADR 0004](../adr/0004-treat-distribution-as-target-synchronization.md).
+[Plan 037](../037_replace-skill-store-with-sqlite-blobs/index.md) replaces this plan's filesystem Store, Skill Revisions, observations, Distribution Records, Watch Sessions, drift workflows, physical Trash, and recoverable Target replacement. The task records below remain the historical account of the original implementation; current Store and Distribution semantics come from Plan 037 and [ADR 0005](../adr/0005-store-current-skill-content-in-sqlite.md).
 
 ## Goal
 

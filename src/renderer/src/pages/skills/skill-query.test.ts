@@ -28,10 +28,6 @@ test('isolates Skill query keys by inventory resource and filters', () => {
     skillQueryKeys.packageFile('skill-1', 'references/guide.md'),
     ['skills', 'package-files', 'skill-1', 'references/guide.md'],
   );
-  assert.deepEqual(
-    skillQueryKeys.revisionFile('skill-1', 'revision-1', 'SKILL.md'),
-    ['skills', 'revisions', 'skill-1', 'revision-1', 'files', 'SKILL.md'],
-  );
   assert.deepEqual(skillQueryKeys.trash(), ['skills', 'trash']);
   assert.deepEqual(skillQueryKeys.targets(), ['skills', 'targets']);
   assert.deepEqual(
@@ -115,18 +111,14 @@ test('keeps Store and Trash caches coherent across the deletion lifecycle', () =
   const storePackage: SkillStorePackageView = {
     id: 'skill-1',
     distributionName: 'shared-skill',
-    storeObservation: {
-      status: 'available',
-      fingerprint: 'a'.repeat(64),
-      observedAt: 10,
-    },
+    fingerprint: 'v2:abc',
     createdAt: 10,
     updatedAt: 10,
   };
   const trashedPackage: SkillTrashPackageView = {
     id: storePackage.id,
     distributionName: storePackage.distributionName,
-    trashObservation: storePackage.storeObservation,
+    fingerprint: storePackage.fingerprint,
     createdAt: storePackage.createdAt,
     updatedAt: 20,
     trashedAt: 20,
@@ -134,7 +126,6 @@ test('keeps Store and Trash caches coherent across the deletion lifecycle', () =
   queryClient.setQueryData(skillQueryKeys.storePackages(), [storePackage]);
   queryClient.setQueryData(skillQueryKeys.storePackage(storePackage.id), storePackage);
   queryClient.setQueryData(skillQueryKeys.packageFiles(storePackage.id), []);
-  queryClient.setQueryData(skillQueryKeys.revisions(storePackage.id), []);
   queryClient.setQueryData(skillQueryKeys.trash(), []);
 
   moveSkillPackageToTrashCaches(queryClient, trashedPackage);
@@ -146,10 +137,6 @@ test('keeps Store and Trash caches coherent across the deletion lifecycle', () =
   );
   assert.equal(
     queryClient.getQueryData(skillQueryKeys.packageFiles(storePackage.id)),
-    undefined,
-  );
-  assert.equal(
-    queryClient.getQueryData(skillQueryKeys.revisions(storePackage.id)),
     undefined,
   );
   assert.deepEqual(queryClient.getQueryData(skillQueryKeys.trash()), [trashedPackage]);

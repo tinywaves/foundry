@@ -387,41 +387,38 @@ export class SkillGitSourceCoordinator {
         runGit: (args) => this.runRepositoryCommand(args, session.workspace),
         policy: this.policy,
       });
-      const imported = await this.options.storeCoordinator.importPackage(packageRoot);
-      const snapshot = imported.revision
-        ? { revision: imported.revision }
-        : await this.options.storeCoordinator.snapshotStorePackage(imported.package.id, 'import');
-      if (imported.package.storeObservation.status !== 'available') {
-        throw new SkillOperationError('content-unavailable', 'The imported Skill content is unavailable.');
-      }
+      const packageId = parseSkillId(this.createId());
+      const prepared = await this.options.storeCoordinator.preparePackageContent(
+        packageRoot,
+        packageId,
+      );
       const fetchedAt = this.now();
-      const source = this.options.sourceRepository.attachOrRefresh({
-        id: parseSkillId(this.createId()),
-        packageId: imported.package.id,
-        provider: 'git',
-        trackingMode: inferTrackingMode(session.locator.requestedRef),
-        sourceNativeId: session.locator.remoteUrl,
-        directoryProvider: session.directoryProvenance?.provider ?? null,
-        catalogLocator: session.directoryProvenance?.locator ?? null,
-        sourceUrl: session.locator.remoteUrl,
-        skillPath: candidate.packagePath,
-        requestedRef: session.locator.requestedRef,
-        resolvedRevision: session.locator.resolvedRevision,
-        artifactDigest: null,
-        observedContentFingerprint: imported.package.storeObservation.fingerprint,
-        canonicalWebUrl: buildCanonicalRevisionUrl(
-          session.locator,
-          candidate.packagePath,
-        ),
-        fetchedAt,
-        checkedAt: null,
+      return this.options.sourceRepository.importPackageWithSource({
+        packageId,
+        distributionName: prepared.distributionName,
+        content: prepared.encoded.content,
+        fingerprint: prepared.encoded.fingerprint,
+        createdAt: fetchedAt,
+        source: {
+          id: parseSkillId(this.createId()),
+          provider: 'git',
+          trackingMode: inferTrackingMode(session.locator.requestedRef),
+          sourceNativeId: session.locator.remoteUrl,
+          directoryProvider: session.directoryProvenance?.provider ?? null,
+          catalogLocator: session.directoryProvenance?.locator ?? null,
+          sourceUrl: session.locator.remoteUrl,
+          skillPath: candidate.packagePath,
+          requestedRef: session.locator.requestedRef,
+          resolvedRevision: session.locator.resolvedRevision,
+          artifactDigest: null,
+          observedContentFingerprint: prepared.encoded.fingerprint,
+          canonicalWebUrl: buildCanonicalRevisionUrl(
+            session.locator,
+            candidate.packagePath,
+          ),
+          fetchedAt,
+        },
       });
-      return {
-        skillPackage: imported.package,
-        revisionId: snapshot.revision.id,
-        source,
-        reusedPackage: imported.reused,
-      };
     } finally {
       await ignoreFailure(() => this.releaseSession(session));
     }

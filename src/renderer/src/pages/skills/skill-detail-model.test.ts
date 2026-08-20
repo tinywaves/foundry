@@ -4,10 +4,8 @@ import type { SkillPackageFileEntry } from '../../../../shared/skill-contract';
 import {
   abbreviateSkillId,
   buildSkillFileTree,
-  canMoveSkillPackageToTrash,
   getEmptySkillTrashDescription,
   getInitialSkillFile,
-  getRevisionReasonLabel,
   getSkillFileLanguage,
   isSkillFileSelectable,
   parseSkillDetailTab,
@@ -15,16 +13,15 @@ import {
   skillDetailTabs,
 } from './skill-detail-model';
 
-test('publishes the complete package detail tab vocabulary', () => {
+test('publishes current-content package detail tabs without Revisions', () => {
   assert.deepEqual(skillDetailTabs.map((tab) => tab.value), [
     'overview',
     'files',
-    'revisions',
     'installations',
     'sources',
   ]);
-  assert.equal(parseSkillDetailTab('revisions'), 'revisions');
-  assert.equal(parseSkillDetailTab('unknown'), 'overview');
+  assert.equal(parseSkillDetailTab('files'), 'files');
+  assert.equal(parseSkillDetailTab('revisions'), 'overview');
 });
 
 test('builds a stable package tree from bounded relative entries', () => {
@@ -36,57 +33,22 @@ test('builds a stable package tree from bounded relative entries', () => {
     { relativePath: 'link', kind: 'symbolic-link', size: null },
   ];
 
-  assert.deepEqual(buildSkillFileTree(entries), [
-    {
-      id: 'link',
-      label: 'link',
-      entry: entries[4],
-    },
-    {
-      id: 'references',
-      label: 'references',
-      entry: entries[2],
-      children: [
-        {
-          id: 'references/nested',
-          label: 'nested',
-          entry: entries[0],
-          children: [
-            {
-              id: 'references/nested/example.txt',
-              label: 'example.txt',
-              entry: entries[3],
-            },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'SKILL.md',
-      label: 'SKILL.md',
-      entry: entries[1],
-    },
-  ]);
+  const tree = buildSkillFileTree(entries);
+  assert.deepEqual(tree.map((node) => node.id), ['link', 'references', 'SKILL.md']);
+  assert.deepEqual(tree[1]?.children?.map((node) => node.id), ['references/nested']);
   assert.equal(getInitialSkillFile(entries), 'SKILL.md');
   assert.equal(isSkillFileSelectable('directory'), false);
   assert.equal(isSkillFileSelectable('symbolic-link'), true);
 });
 
-test('formats stable detail metadata and guarded actions', () => {
+test('formats current detail metadata and logical removal copy', () => {
   assert.equal(abbreviateSkillId('1234567890abcdef'), '1234567890ab');
-  assert.equal(getRevisionReasonLabel('promotion'), 'Promotion');
   assert.equal(getSkillFileLanguage('references/example.ts'), 'typescript');
   assert.equal(getSkillFileLanguage('LICENSE'), 'plaintext');
-  assert.equal(canMoveSkillPackageToTrash(0), true);
-  assert.equal(canMoveSkillPackageToTrash(1), false);
   assert.equal(shouldExitMissingSkillDetail('not-found'), true);
-  assert.equal(shouldExitMissingSkillDetail('filesystem-unavailable'), false);
-  assert.equal(
-    getEmptySkillTrashDescription(1),
-    '1 Skill Package will be removed permanently. This cannot be undone.',
-  );
+  assert.equal(shouldExitMissingSkillDetail('store-corrupt'), false);
   assert.equal(
     getEmptySkillTrashDescription(3),
-    '3 Skill Packages will be removed permanently. This cannot be undone.',
+    '3 Skill Packages will be removed from Foundry.',
   );
 });

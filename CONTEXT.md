@@ -21,7 +21,7 @@ The logical name declared by a Skill Package for use within a Distribution Targe
 _Avoid_: Skill ID
 
 **Distribution Name**:
-The stable directory name Foundry uses when creating new Skill Installations for a Skill Package. It is initially derived from the manifest name when readable, otherwise from the imported directory name, and does not change automatically with later content edits.
+The stable directory name Foundry uses when creating new Skill Installations for a Skill Package. It is initially derived from the manifest name when readable, otherwise from the imported directory name, and does not change automatically when Stored Skill Content changes.
 _Avoid_: Skill ID, display name
 
 **Skill Source**:
@@ -37,11 +37,11 @@ A Skill Source pinned to an immutable commit or exact registry version and there
 _Avoid_: Tracked Source
 
 **Unavailable Source**:
-A Skill Source that Foundry can no longer resolve or access. Its failure does not remove the associated Skill Package, Skill Revisions, or Skill Installations.
+A Skill Source that Foundry can no longer resolve or access. Its failure does not remove the associated Skill Package, Stored Skill Content, or Skill Installations.
 _Avoid_: Deleted skill, missing package
 
 **Local Package**:
-A Skill Package that has no remaining remote Skill Source. It remains fully manageable and distributable from the Skill Store.
+A Skill Package that has no remaining remote Skill Source. Its Stored Skill Content is an import snapshot that remains distributable but is not updated in the current product scope.
 _Avoid_: Unsourced skill, local installation
 
 **Git Source**:
@@ -57,20 +57,28 @@ A searchable remote index that points to packages owned by other Skill Sources. 
 _Avoid_: Skill Registry, marketplace
 
 **Skill Store**:
-The canonical local collection of Skill Packages managed by Foundry. Skill Installations are derived from packages in this collection.
+The canonical local collection of Skill Packages whose contents can be changed only through Foundry operations. Skill Installations are derived from packages in this collection.
 _Avoid_: Skill library, skill registry
 
-**Store Working Copy**:
-The current readable contents of a Skill Package in the Skill Store. It is the source of the package's latest observed Content Fingerprint.
-_Avoid_: Installed skill
+**Stored Skill Content**:
+The authoritative content of a Skill Package held in an application-private representation within the Skill Store. It is not exposed as an editable package directory.
+_Avoid_: Store Working Copy, installed skill
+
+**Store Corruption**:
+Stored Skill Content that cannot be decoded or whose decoded Content Fingerprint differs from its recorded value. It is an operation failure, not a persistent Skill Package status.
+_Avoid_: BLOB problem, Store drift
 
 **Skill Installation**:
-A Skill Package made available to a specific Distribution Target. It remains distinct from the canonical package in the Skill Store.
+A Skill Package materialized in a specific Distribution Target by Foundry. It is treated as unchanged except through Foundry operations.
 _Avoid_: Installed skill, skill copy
 
 **Distribution**:
-A user-directed synchronization that makes a Skill Package's destination in a selected Distribution Target match its current Store Working Copy. Existing destination content does not retain ownership or conflict status against this command.
+A user-directed synchronization that makes a Skill Package's destination in a selected Distribution Target match its Stored Skill Content. Existing destination content does not retain ownership or conflict status against this command.
 _Avoid_: Deployment, download
+
+**Distributed Fingerprint**:
+The Content Fingerprint most recently written to a Skill Installation by Foundry. Comparing it with the Stored Skill Content identifies whether another Distribution is needed without inspecting the Target.
+_Avoid_: Target observation, Target fingerprint
 
 **Distribution Target**:
 A physical local skill root to which Foundry can distribute selected Skill Packages.
@@ -89,82 +97,45 @@ A user-approved local location that Foundry scans for existing Skill Packages. I
 _Avoid_: Search path, scan folder
 
 **Discovery Scan**:
-A bounded, point-in-time inspection of configured Discovery Roots for new, changed, or missing Skill Packages.
+A user-initiated, point-in-time inspection of enabled Discovery Roots for Skill Packages not yet known to the Skill Store. It does not observe changes to existing Skill Installations.
 _Avoid_: Manual watch, background scan
 
-**Watch Session**:
-Temporary observation of configured Discovery Roots while the Skills interface is active. It supplements, but does not replace, a Discovery Scan.
-_Avoid_: Background service, continuous scan
+**Import Existing**:
+The user action that runs a Discovery Scan across enabled Distribution Targets and automatically imports its newly discovered Skill Packages.
+_Avoid_: Watch Session, automatic scan
 
 **Automatic Import**:
 The process that adds a newly discovered Skill Package to the Skill Store without requiring prior user confirmation. When discovered in a Distribution Target, the existing package is also recorded as a Skill Installation.
 _Avoid_: Discovery, distribution
 
 **Content Fingerprint**:
-A value representing the complete contents of a Skill Package at a point in time. Foundry uses it to recognize identical content and detect change.
+A value representing a Skill Package's paths, entry kinds, file bytes, symbolic-link targets, and executable bits. Timestamps and other incidental filesystem metadata do not affect it.
 _Avoid_: Version, Skill ID
-
-**Skill Revision**:
-An immutable snapshot of a Skill Package created at an import, remote update, distribution, or promotion boundary. Distribution Records refer to the exact Skill Revision that was distributed.
-_Avoid_: Skill version, backup
 
 **Update Check**:
 A user-initiated comparison between recorded Skill Sources and their current remote state. It may identify an Update Candidate but never downloads or distributes content.
 _Avoid_: Automatic update, refresh
 
 **Update Candidate**:
-A remote source revision found by an Update Check that differs from the Skill Package content currently held in the Skill Store. It becomes current Store content only when the user explicitly adds it as a Skill Revision.
-_Avoid_: Skill Revision, available update
-
-**Distribution Record**:
-The historical record that associates a Skill Installation with the exact Skill Revision confirmed by a successful Distribution, Restore from Store, or Automatic Import.
-_Avoid_: Install log, deployment history
+An ephemeral remote source revision found by an Update Check that differs from the Stored Skill Content. It replaces that content only when the user explicitly applies the update.
+_Avoid_: Stored Skill Content, available update
 
 **Uninstall**:
 The direct removal of a Skill Installation from one Distribution Target without removing its Skill Package from the Skill Store.
 _Avoid_: Delete skill, detach
 
 **Store Deletion**:
-The removal of a Skill Package from the Skill Store after all of its Skill Installations have been removed.
-_Avoid_: Uninstall
+The placement of a Skill Package in Foundry Trash after all of its Skill Installations have been removed. It remains recoverable.
+_Avoid_: Uninstall, remove from Foundry
 
-**Restore from Store**:
-The replacement of a changed Skill Installation with the current contents of its Skill Package in the Skill Store.
-_Avoid_: Update, distribute
-
-**Promote to Store**:
-The replacement of a Skill Package's current Store contents with the changed contents of one of its Skill Installations, creating a new Skill Revision.
-_Avoid_: Automatic import, restore
-
-**Import as New Skill**:
-The creation of a new Skill Package and Skill ID from the changed contents of an existing Skill Installation, without changing its original Skill Package.
-_Avoid_: Promote to Store, duplicate
+**Remove from Foundry**:
+The logical removal of a Skill Package from active and Trash views without physically deleting its metadata or Stored Skill Content. It is not recoverable through the product.
+_Avoid_: Permanently delete, Store Deletion
 
 **Foundry Trash**:
-A recoverable holding area for content removed by Store Deletion. Content remains there until the user explicitly deletes it permanently.
+A recoverable state for a Skill Package removed by Store Deletion. Removing it from Foundry hides it permanently without physically deleting its Stored Skill Content.
 _Avoid_: Archive, recycle bin
 
-### Store States
-
-**Available Store Package**:
-A Skill Package whose Store Working Copy is readable and whose latest Content Fingerprint has been recorded.
-
-**Missing Store Package**:
-A recorded Skill Package whose Store Working Copy is no longer present.
-
-**Unreadable Store Package**:
-A Skill Package whose Store Working Copy cannot currently be inspected by Foundry.
-
-### Installation Statuses
-
-**Synced Installation**:
-A Skill Installation whose readable target contents match its current Store Working Copy.
-
-**Different Installation**:
-A Skill Installation whose readable target contents differ from its current Store Working Copy, regardless of which copy changed after the last Distribution.
-
-**Missing Installation**:
-A recorded Skill Installation whose expected contents are no longer present in its Distribution Target.
-
-**Unreadable Installation**:
-A recorded Skill Installation whose target contents cannot currently be inspected by Foundry.
+**Restore from Trash**:
+The restoration of a Skill Package from Foundry Trash without recreating any of its former Skill Installations.
+_Avoid_: Distribute, restore Target

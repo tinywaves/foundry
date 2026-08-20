@@ -16,7 +16,7 @@ import { Text } from '@astryxdesign/core/Text';
 import * as stylex from '@stylexjs/stylex';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PackageCheck } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type {
   SkillDistributionPreflightResult,
   SkillDistributionResult,
@@ -55,9 +55,11 @@ const styles = stylex.create({
 export function SkillDistributionDialog({
   skillPackage,
   onClose,
+  onStoreCorrupt,
 }: {
   skillPackage: SkillStorePackageView;
   onClose: () => void;
+  onStoreCorrupt?: () => void;
 }) {
   const queryClient = useQueryClient();
   const targetsQuery = useQuery(getSkillTargetsQueryOptions());
@@ -119,6 +121,15 @@ export function SkillDistributionDialog({
     ?? installationsQuery.error
     ?? preflightMutation.error
     ?? distributionMutation.error;
+
+  useEffect(() => {
+    if (
+      distributionMutation.error?.apiError?.code === 'store-corrupt'
+      && onStoreCorrupt
+    ) {
+      onStoreCorrupt();
+    }
+  }, [distributionMutation.error, onStoreCorrupt]);
 
   const changeSelection = (next: Set<string>) => {
     setSelectedTargetIds(next);

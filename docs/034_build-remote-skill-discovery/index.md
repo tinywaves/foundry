@@ -4,9 +4,9 @@
 
 `completed`
 
-## Superseded Terminology
+## Superseded Decisions
 
-[Plan 036](../036_simplify-skill-distribution-and-installation-state/index.md) replaces the `Outdated` Installation label used below with `Different`. Remote updates remain Store-only and still require a separate explicit Distribution to synchronize Targets.
+[Plan 037](../037_replace-skill-store-with-sqlite-blobs/index.md) replaces filesystem Store replacement, Skill Revisions, persisted Update Candidates, and observed Installation labels used below. Remote providers, bounded acquisition, Source identity, manual Update Check, and explicit Store-only Update remain; current content is one SQLite BLOB and the candidate exists only in the current UI request.
 
 ## Goal
 

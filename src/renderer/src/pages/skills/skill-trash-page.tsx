@@ -6,7 +6,6 @@ import { Icon } from '@astryxdesign/core/Icon';
 import { IconButton } from '@astryxdesign/core/IconButton';
 import { Section } from '@astryxdesign/core/Section';
 import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
-import { StatusDot } from '@astryxdesign/core/StatusDot';
 import { proportional, Table } from '@astryxdesign/core/Table';
 import type { TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
@@ -16,7 +15,6 @@ import { useMemo, useState } from 'react';
 import type { SkillTrashPackageView } from '../../../../shared/skill-contract';
 import { SkillActionBar } from './skill-action-bar';
 import { getEmptySkillTrashDescription } from './skill-detail-model';
-import { getStoreObservationPresentation } from './skill-inventory-model';
 import { SkillInventoryLoading } from './skill-loading';
 import { getSkillTrashQueryOptions } from './skill-query';
 import { useSkillTrashActions } from './use-skill-trash-actions';
@@ -26,7 +24,6 @@ interface SkillTrashRow extends Record<string, unknown> {
   skillId: string;
   distributionName: string;
   skillPackage: SkillTrashPackageView;
-  status: string;
   deleted: string;
 }
 
@@ -38,19 +35,15 @@ export function SkillTrashPage() {
   const isBusy = emptyMutation.isPending
     || removalMutation.isPending
     || restoreMutation.isPending;
-  const rows = useMemo<SkillTrashRow[]>(() => (trashQuery.data ?? []).map((skillPackage) => {
-    const presentation = getStoreObservationPresentation(
-      skillPackage.trashObservation.status,
-    );
-    return {
+  const rows = useMemo<SkillTrashRow[]>(() => (trashQuery.data ?? []).map((skillPackage) => (
+    {
       id: skillPackage.id,
       skillId: skillPackage.id,
       distributionName: skillPackage.distributionName,
       skillPackage,
-      status: presentation.label,
       deleted: formatTrashTimestamp(skillPackage.trashedAt),
-    };
-  }), [trashQuery.data]);
+    }
+  )), [trashQuery.data]);
   const columns = useMemo<Array<TableColumn<SkillTrashRow>>>(() => [
     {
       key: 'distributionName',
@@ -63,22 +56,6 @@ export function SkillTrashPage() {
       ),
     },
     { key: 'skillId', header: 'Skill ID', width: proportional(1) },
-    {
-      key: 'status',
-      header: 'Content',
-      width: proportional(1),
-      renderCell: (row) => {
-        const presentation = getStoreObservationPresentation(
-          row.skillPackage.trashObservation.status,
-        );
-        return (
-          <HStack gap={1.5} vAlign="center">
-            <StatusDot variant={presentation.variant} label={presentation.label} />
-            <Text type="supporting">{presentation.label}</Text>
-          </HStack>
-        );
-      },
-    },
     { key: 'deleted', header: 'Deleted', width: proportional(1) },
     {
       key: 'id',
@@ -93,14 +70,14 @@ export function SkillTrashPage() {
             icon={<Icon icon={RotateCcw} size="sm" color="inherit" />}
             variant="ghost"
             size="sm"
-            isDisabled={isBusy || row.skillPackage.trashObservation.status !== 'available'}
+            isDisabled={isBusy}
             isLoading={restoreMutation.isPending
               && restoreMutation.variables.id === row.id}
             onClick={() => restoreMutation.mutate(row.skillPackage)}
           />
           <IconButton
-            label={`Remove ${row.distributionName} permanently`}
-            tooltip="Remove Permanently"
+            label={`Remove ${row.distributionName} from Foundry`}
+            tooltip="Remove from Foundry"
             icon={<Icon icon={Trash2} size="sm" color="inherit" />}
             variant="ghost"
             size="sm"
@@ -181,11 +158,11 @@ export function SkillTrashPage() {
             setPackageToRemove(undefined);
           }
         }}
-        title="Remove Skill Package Permanently?"
+        title="Remove Skill Package from Foundry?"
         description={packageToRemove
-          ? `"${packageToRemove.distributionName}" and its revision history will no longer be accessible in Foundry. This cannot be undone.`
-          : 'This Skill Package will no longer be accessible in Foundry. This cannot be undone.'}
-        actionLabel="Remove Permanently"
+          ? `"${packageToRemove.distributionName}" will no longer appear in Foundry.`
+          : 'This Skill Package will no longer appear in Foundry.'}
+        actionLabel="Remove from Foundry"
         actionVariant="destructive"
         isActionLoading={removalMutation.isPending}
         onAction={() => {

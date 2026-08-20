@@ -4,16 +4,14 @@ import type { SkillSourceView, SkillUpdateCheckResult } from '../../../../shared
 import {
   describeSkillSourceChecks,
   describeSkillUpdateResult,
-  getSkillSourceCandidateId,
-  getSkillSourceCheckedAt,
+  getSkillSourceCandidate,
   getSkillSourceProviderLabel,
   getSkillSourceStatusPresentation,
-  mergeSkillSourceChecks,
+  mergeSkillSourceCheckResults,
 } from './skill-source-model';
 
 function createSource(
   id: string,
-  check: SkillSourceView['check'],
   trackingMode: SkillSourceView['trackingMode'] = 'tracked',
 ): SkillSourceView {
   return {
@@ -29,79 +27,56 @@ function createSource(
     requestedRef: trackingMode === 'tracked' ? 'main' : '1'.repeat(40),
     resolvedRevision: '1'.repeat(40),
     artifactDigest: null,
-    observedContentFingerprint: 'a'.repeat(64),
+    observedContentFingerprint: 'v2:abc',
     canonicalWebUrl: 'https://github.com/example/skills/tree/main/example',
     fetchedAt: 10,
-    check,
     createdAt: 10,
     updatedAt: 10,
   };
 }
 
-test('presents fixed and tracked Source lifecycle states', () => {
-  const fixed = createSource('fixed', { status: 'never' }, 'fixed');
-  const unavailable = createSource('unavailable', { status: 'unavailable', checkedAt: 20 });
-  assert.deepEqual(getSkillSourceStatusPresentation(fixed), {
+test('presents Source state from ephemeral check results', () => {
+  const fixed = createSource('fixed', 'fixed');
+  const tracked = createSource('tracked');
+  assert.deepEqual(getSkillSourceStatusPresentation(fixed, undefined), {
     label: 'Fixed',
     variant: 'neutral',
   });
-  assert.equal(getSkillSourceStatusPresentation(unavailable).label, 'Unavailable');
-  assert.equal(getSkillSourceCheckedAt(fixed), null);
-  assert.equal(getSkillSourceCheckedAt(unavailable), 20);
+  assert.deepEqual(getSkillSourceStatusPresentation(tracked, undefined), {
+    label: 'Not checked',
+    variant: 'neutral',
+  });
   assert.equal(getSkillSourceProviderLabel('clawhub'), 'ClawHub');
 });
 
-test('exposes only an active Update Candidate and merges check results by Source ID', () => {
-  const first = createSource('first', { status: 'never' });
-  const second = createSource('second', { status: 'never' });
-  const updated = createSource('first', {
+test('retains Update Candidates only in the current in-memory Map', () => {
+  const source = createSource('source');
+  const result: SkillUpdateCheckResult = {
     status: 'update-available',
-    checkedAt: 30,
+    source,
     candidate: {
-      id: 'candidate',
-      sourceId: 'first',
-      packageId: first.packageId,
+      sourceId: source.id,
+      packageId: source.packageId,
       resolvedRevision: '2'.repeat(40),
       artifactDigest: null,
-      canonicalWebUrl: first.canonicalWebUrl,
+      canonicalWebUrl: source.canonicalWebUrl,
       checkedAt: 30,
     },
-  });
-  const candidate = updated.check.status === 'update-available'
-    ? updated.check.candidate
-    : assert.fail('Expected candidate.');
-  const results: SkillUpdateCheckResult[] = [
-    {
-      status: 'update-available',
-      source: updated,
-      candidate,
-    },
-  ];
-  assert.equal(getSkillSourceCandidateId(first), null);
-  assert.equal(getSkillSourceCandidateId(updated), 'candidate');
-  assert.deepEqual(mergeSkillSourceChecks([first, second], results), [updated, second]);
-  assert.equal(mergeSkillSourceChecks(undefined, results), undefined);
+  };
+  const checks = mergeSkillSourceCheckResults(new Map(), [result]);
+  assert.equal(checks.get(source.id), result);
+  assert.deepEqual(getSkillSourceCandidate(checks.get(source.id)), result.candidate);
+  assert.equal(getSkillSourceCandidate(undefined), null);
 });
 
-test('summarizes manual checks and explicit Store updates without claiming distribution', () => {
-  const current = createSource('current', { status: 'current', checkedAt: 20 });
-  const unavailable = createSource('unavailable', { status: 'unavailable', checkedAt: 20 });
+test('summarizes checks and Store-only updates without claiming Distribution', () => {
+  const current = createSource('current');
   assert.equal(
     describeSkillSourceChecks([{ status: 'current', source: current }]),
     'Tracked Sources are current.',
   );
-  assert.equal(describeSkillSourceChecks([
-    { status: 'current', source: current },
-    { status: 'unavailable', source: unavailable },
-  ]), '1 Source is unavailable.');
-
-  const result = { contentChanged: true };
   assert.equal(
-    describeSkillUpdateResult(result),
+    describeSkillUpdateResult({ contentChanged: true }),
     'Store updated. Existing installations were left unchanged.',
-  );
-  assert.equal(
-    describeSkillUpdateResult({ ...result, contentChanged: false }),
-    'Source revision updated; Store content was already current.',
   );
 });

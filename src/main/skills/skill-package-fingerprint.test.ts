@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, symlink, utimes, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, rm, symlink, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'vitest';
@@ -86,6 +86,25 @@ test('ignores filesystem timestamps', async () => {
     await utimes(manifestPath, new Date('2020-01-01T00:00:00Z'), new Date('2030-01-01T00:00:00Z'));
 
     assert.equal(await fingerprintSkillPackage(packageRoot), before);
+  } finally {
+    await rm(packageRoot, { recursive: true, force: true });
+  }
+});
+
+test('tracks executable permission but ignores other permission bits', async () => {
+  const packageRoot = await mkdtemp(path.join(tmpdir(), 'foundry-skill-fingerprint-mode-'));
+
+  try {
+    const manifestPath = path.join(packageRoot, 'SKILL.md');
+    await writeFile(manifestPath, '# Example\n');
+    await chmod(manifestPath, 0o600);
+    const regular = await fingerprintSkillPackage(packageRoot);
+
+    await chmod(manifestPath, 0o644);
+    assert.equal(await fingerprintSkillPackage(packageRoot), regular);
+
+    await chmod(manifestPath, 0o755);
+    assert.notEqual(await fingerprintSkillPackage(packageRoot), regular);
   } finally {
     await rm(packageRoot, { recursive: true, force: true });
   }

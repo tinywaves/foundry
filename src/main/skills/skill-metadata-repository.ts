@@ -1,58 +1,43 @@
+import { Buffer } from 'node:buffer';
 import type Database from 'better-sqlite3';
-import type {
-  SkillContentFingerprint,
-  SkillContentObservation,
-  SkillRevisionReason,
-} from '../../shared/skill-contract';
-import { skillRevisionReasons } from '../../shared/skill-contract';
+import type { SkillContentFingerprint } from '../../shared/skill-contract';
 import { SkillOperationError, toSkillOperationError } from './skill-error';
+import { SKILL_PACKAGE_CONTENT_FORMAT } from './skill-package-codec';
 import {
   normalizeSkillDistributionName,
   parseSkillContentFingerprint,
   parseSkillDistributionName,
   parseSkillId,
-  parseSkillRevisionId,
-  parseStoredSkillContentObservation,
 } from './skill-validation';
 
 interface SkillPackageRow {
   id: string;
   distribution_name: string;
-  store_observation: string;
-  store_fingerprint: string | null;
-  store_observed_at: number;
+  content_fingerprint: string;
   created_at: number;
   updated_at: number;
+}
+
+interface SkillPackageContentRow extends SkillPackageRow {
+  content_format: string;
+  content_blob: Buffer;
 }
 
 interface SkillTrashPackageRow extends SkillPackageRow {
   trashed_at: number;
 }
 
-interface SkillRevisionRow {
-  id: string;
-  package_id: string;
-  sequence_number: number;
-  fingerprint: string;
-  reason: string;
-  created_at: number;
-}
-
 export interface SkillPackageMetadata {
   id: string;
   distributionName: string;
-  storeObservation: SkillContentObservation;
+  fingerprint: SkillContentFingerprint;
   createdAt: number;
   updatedAt: number;
 }
 
-export interface SkillRevisionMetadata {
-  id: string;
-  packageId: string;
-  sequenceNumber: number;
-  fingerprint: SkillContentFingerprint;
-  reason: SkillRevisionReason;
-  createdAt: number;
+export interface SkillPackageContent extends SkillPackageMetadata {
+  format: typeof SKILL_PACKAGE_CONTENT_FORMAT;
+  content: Buffer;
 }
 
 export interface SkillTrashPackageMetadata extends SkillPackageMetadata {
@@ -63,203 +48,88 @@ export interface CreateImportedPackageInput {
   id: string;
   distributionName: string;
   fingerprint: string;
-  revisionId: string;
+  content: Uint8Array;
   createdAt: number;
 }
 
-export interface ImportedPackageMetadata {
-  package: SkillPackageMetadata;
-  revision: SkillRevisionMetadata;
-}
-
-export interface CreateSkillRevisionInput {
-  id: string;
+export interface ReplaceSkillPackageContentInput {
   packageId: string;
+  distributionName: string;
   fingerprint: string;
-  reason: SkillRevisionReason;
-  createdAt: number;
-}
-
-export interface CommitSkillStorePromotionInput {
-  packageId: string;
-  observation: Extract<SkillContentObservation, { status: 'available' }>;
-  revision: CreateSkillRevisionInput | SkillRevisionMetadata;
-  createRevision: boolean;
-}
-
-export interface CommitSkillStorePromotionResult {
-  package: SkillPackageMetadata;
-  revision: SkillRevisionMetadata;
+  content: Uint8Array;
+  updatedAt: number;
 }
 
 export class SkillMetadataRepository {
   constructor(private readonly database: Database.Database) {}
 
-  private execute<T>(operation: () => T): T {
-    try {
-      return operation();
-    } catch (error) {
-      throw toSkillOperationError(error);
-    }
-  }
-
-  private getActivePackageInternal(id: string): SkillPackageMetadata {
-    const row = this.selectActivePackage(id);
-    if (!row) {
-      throw new SkillOperationError('not-found', 'Skill Package was not found.');
-    }
-    return this.mapPackage(row);
-  }
-
-  private selectActivePackage(id: string): SkillPackageRow | undefined {
-    return this.database.prepare<[string], SkillPackageRow>(`
-      SELECT
-        id,
-        distribution_name,
-        store_observation,
-        store_fingerprint,
-        store_observed_at,
-        created_at,
-        updated_at
-      FROM skill_packages
-      WHERE id = ? AND trashed_at IS NULL AND removed_at IS NULL
-    `).get(id);
-  }
-
-  private selectTrashedPackage(id: string): SkillTrashPackageRow | undefined {
-    return this.database.prepare<[string], SkillTrashPackageRow>(`
-      SELECT
-        id,
-        distribution_name,
-        store_observation,
-        store_fingerprint,
-        store_observed_at,
-        created_at,
-        updated_at,
-        trashed_at
-      FROM skill_packages
-      WHERE id = ? AND trashed_at IS NOT NULL AND removed_at IS NULL
-    `).get(id);
-  }
-
-  private getRevisionInternal(id: string): SkillRevisionMetadata {
-    const row = this.selectRevision(id);
-    if (!row) {
-      throw new SkillOperationError('not-found', 'Skill Revision was not found.');
-    }
-    return this.mapRevision(row);
-  }
-
-  private selectRevision(id: string): SkillRevisionRow | undefined {
-    return this.database.prepare<[string], SkillRevisionRow>(`
-      SELECT id, package_id, sequence_number, fingerprint, reason, created_at
-      FROM skill_revisions
-      WHERE id = ?
-    `).get(id);
-  }
-
-  private mapPackage(row: SkillPackageRow): SkillPackageMetadata {
-    const id = parseStoredId(row.id, parseSkillId, 'Stored Skill Package data is invalid.');
-    const distributionName = parseStoredDistributionName(row.distribution_name);
-    const storeObservation = parseStoredSkillContentObservation(
-      row.store_observation,
-      row.store_fingerprint,
-      row.store_observed_at,
-    );
-    const createdAt = parseStoredTimestamp(row.created_at, 'Stored Skill Package data is invalid.');
-    const updatedAt = parseStoredTimestamp(row.updated_at, 'Stored Skill Package data is invalid.');
-    if (updatedAt < createdAt) {
-      throw new SkillOperationError('storage-corrupt', 'Stored Skill Package data is invalid.');
-    }
-    return { id, distributionName, storeObservation, createdAt, updatedAt };
-  }
-
-  private mapTrashPackage(row: SkillTrashPackageRow): SkillTrashPackageMetadata {
-    return {
-      ...this.mapPackage(row),
-      trashedAt: parseStoredTimestamp(
-        row.trashed_at,
-        'Stored Skill Package data is invalid.',
-      ),
-    };
-  }
-
-  private mapRevision(row: SkillRevisionRow): SkillRevisionMetadata {
-    const id = parseStoredId(row.id, parseSkillRevisionId, 'Stored Skill Revision data is invalid.');
-    const packageId = parseStoredId(
-      row.package_id,
-      parseSkillId,
-      'Stored Skill Revision data is invalid.',
-    );
-    const fingerprint = parseStoredFingerprint(row.fingerprint);
-    const createdAt = parseStoredTimestamp(row.created_at, 'Stored Skill Revision data is invalid.');
-    if (!Number.isSafeInteger(row.sequence_number) || row.sequence_number < 1) {
-      throw new SkillOperationError('storage-corrupt', 'Stored Skill Revision data is invalid.');
-    }
-    if (!skillRevisionReasons.includes(row.reason as SkillRevisionReason)) {
-      throw new SkillOperationError('storage-corrupt', 'Stored Skill Revision data is invalid.');
-    }
-    return {
-      id,
-      packageId,
-      sequenceNumber: row.sequence_number,
-      fingerprint,
-      reason: row.reason as SkillRevisionReason,
-      createdAt,
-    };
-  }
-
-  createImportedPackage(input: CreateImportedPackageInput): ImportedPackageMetadata {
+  createImportedPackage(input: CreateImportedPackageInput): SkillPackageMetadata {
     return this.execute(() => {
       const id = parseSkillId(input.id);
-      const revisionId = parseSkillRevisionId(input.revisionId);
       const distributionName = parseSkillDistributionName(input.distributionName);
       const fingerprint = parseSkillContentFingerprint(input.fingerprint);
+      const content = parseContent(input.content);
       const createdAt = parseTimestamp(input.createdAt);
-
-      return this.database.transaction(() => {
-        this.database.prepare(`
-          INSERT INTO skill_packages (
-            id,
-            distribution_name,
-            normalized_distribution_name,
-            store_observation,
-            store_fingerprint,
-            store_observed_at,
-            created_at,
-            updated_at
-          ) VALUES (
-            @id,
-            @distributionName,
-            @normalizedDistributionName,
-            'available',
-            @fingerprint,
-            @createdAt,
-            @createdAt,
-            @createdAt
-          )
-        `).run({
+      this.database.prepare(`
+        INSERT INTO skill_packages (
           id,
-          distributionName,
-          normalizedDistributionName: normalizeSkillDistributionName(distributionName),
-          fingerprint,
-          createdAt,
-        });
-        this.database.prepare(`
-          INSERT INTO skill_revisions (
-            id, package_id, sequence_number, fingerprint, reason, created_at
-          ) VALUES (@id, @packageId, 1, @fingerprint, 'import', @createdAt)
-        `).run({
-          id: revisionId,
-          packageId: id,
-          fingerprint,
-          createdAt,
-        });
-        return {
-          package: this.getActivePackageInternal(id),
-          revision: this.getRevisionInternal(revisionId),
-        };
-      }).immediate();
+          distribution_name,
+          normalized_distribution_name,
+          content_format,
+          content_fingerprint,
+          content_blob,
+          created_at,
+          updated_at
+        ) VALUES (
+          @id,
+          @distributionName,
+          @normalizedDistributionName,
+          '${SKILL_PACKAGE_CONTENT_FORMAT}',
+          @fingerprint,
+          @content,
+          @createdAt,
+          @createdAt
+        )
+      `).run({
+        id,
+        distributionName,
+        normalizedDistributionName: normalizeSkillDistributionName(distributionName),
+        fingerprint,
+        content,
+        createdAt,
+      });
+      return this.getActivePackageInternal(id);
+    });
+  }
+
+  replacePackageContent(input: ReplaceSkillPackageContentInput): SkillPackageMetadata {
+    return this.execute(() => {
+      const packageId = parseSkillId(input.packageId);
+      const distributionName = parseSkillDistributionName(input.distributionName);
+      const fingerprint = parseSkillContentFingerprint(input.fingerprint);
+      const content = parseContent(input.content);
+      const updatedAt = parseTimestamp(input.updatedAt);
+      const result = this.database.prepare(`
+        UPDATE skill_packages
+        SET distribution_name = @distributionName,
+            normalized_distribution_name = @normalizedDistributionName,
+            content_format = '${SKILL_PACKAGE_CONTENT_FORMAT}',
+            content_fingerprint = @fingerprint,
+            content_blob = @content,
+            updated_at = MAX(updated_at, @updatedAt)
+        WHERE id = @packageId AND trashed_at IS NULL AND removed_at IS NULL
+      `).run({
+        packageId,
+        distributionName,
+        normalizedDistributionName: normalizeSkillDistributionName(distributionName),
+        fingerprint,
+        content,
+        updatedAt,
+      });
+      if (result.changes !== 1) {
+        throw new SkillOperationError('not-found', 'Skill Package was not found.');
+      }
+      return this.getActivePackageInternal(packageId);
     });
   }
 
@@ -267,14 +137,42 @@ export class SkillMetadataRepository {
     return this.execute(() => this.getActivePackageInternal(parseSkillId(idValue)));
   }
 
-  getTrashedPackage(idValue: unknown): SkillTrashPackageMetadata {
+  getActivePackageContent(idValue: unknown): SkillPackageContent {
     return this.execute(() => {
       const id = parseSkillId(idValue);
-      const row = this.selectTrashedPackage(id);
+      const row = this.database.prepare<[string], SkillPackageContentRow>(`
+        SELECT
+          id,
+          distribution_name,
+          content_format,
+          content_fingerprint,
+          content_blob,
+          created_at,
+          updated_at
+        FROM skill_packages
+        WHERE id = ? AND trashed_at IS NULL AND removed_at IS NULL
+      `).get(id);
+      if (!row) {
+        throw new SkillOperationError('not-found', 'Skill Package was not found.');
+      }
+      return this.mapPackageContent(row);
+    });
+  }
+
+  getTrashedPackage(idValue: unknown): SkillTrashPackageMetadata {
+    return this.execute(() => {
+      const row = this.selectTrashedPackage(parseSkillId(idValue));
       if (!row) {
         throw new SkillOperationError('not-found', 'Trashed Skill Package was not found.');
       }
       return this.mapTrashPackage(row);
+    });
+  }
+
+  findActivePackageById(idValue: unknown): SkillPackageMetadata | null {
+    return this.execute(() => {
+      const row = this.selectActivePackage(parseSkillId(idValue));
+      return row ? this.mapPackage(row) : null;
     });
   }
 
@@ -285,35 +183,13 @@ export class SkillMetadataRepository {
     });
   }
 
-  isPackageRemoved(idValue: unknown): boolean {
-    return this.execute(() => (this.database.prepare<[string], number>(`
-      SELECT COUNT(*) FROM skill_packages WHERE id = ? AND removed_at IS NOT NULL
-    `).pluck().get(parseSkillId(idValue)) ?? 0) === 1);
-  }
-
-  findActivePackageById(idValue: unknown): SkillPackageMetadata | null {
-    return this.execute(() => {
-      const id = parseSkillId(idValue);
-      const row = this.selectActivePackage(id);
-      return row ? this.mapPackage(row) : null;
-    });
-  }
-
   findActivePackageByFingerprint(fingerprintValue: unknown): SkillPackageMetadata | null {
     return this.execute(() => {
       const fingerprint = parseSkillContentFingerprint(fingerprintValue);
       const row = this.database.prepare<[string], SkillPackageRow>(`
-        SELECT
-          id,
-          distribution_name,
-          store_observation,
-          store_fingerprint,
-          store_observed_at,
-          created_at,
-          updated_at
+        SELECT id, distribution_name, content_fingerprint, created_at, updated_at
         FROM skill_packages
-        WHERE store_fingerprint = ?
-          AND store_observation = 'available'
+        WHERE content_fingerprint = ?
           AND trashed_at IS NULL
           AND removed_at IS NULL
         ORDER BY created_at, id
@@ -323,65 +199,27 @@ export class SkillMetadataRepository {
     });
   }
 
-  listRevisions(packageIdValue: unknown): SkillRevisionMetadata[] {
-    return this.execute(() => {
-      const packageId = parseSkillId(packageIdValue);
-      this.getActivePackageInternal(packageId);
-      return this.database.prepare<[string], SkillRevisionRow>(`
-        SELECT id, package_id, sequence_number, fingerprint, reason, created_at
-        FROM skill_revisions
-        WHERE package_id = ?
-        ORDER BY sequence_number DESC
-      `).all(packageId).map((row) => this.mapRevision(row));
-    });
-  }
-
-  getRevision(packageIdValue: unknown, revisionIdValue: unknown): SkillRevisionMetadata {
-    return this.execute(() => {
-      const packageId = parseSkillId(packageIdValue);
-      this.getActivePackageInternal(packageId);
-      const revision = this.getRevisionInternal(parseSkillRevisionId(revisionIdValue));
-      if (revision.packageId !== packageId) {
-        throw new SkillOperationError('not-found', 'Skill Revision was not found.');
-      }
-      return revision;
-    });
-  }
-
   listActivePackages(limitValue = 500): SkillPackageMetadata[] {
     return this.execute(() => {
-      if (!Number.isSafeInteger(limitValue) || limitValue < 1 || limitValue > 1000) {
-        throw new SkillOperationError('invalid-input', 'Skill Package list limit is invalid.');
-      }
+      const limit = parseListLimit(limitValue);
       return this.database.prepare<[number], SkillPackageRow>(`
-        SELECT
-          id,
-          distribution_name,
-          store_observation,
-          store_fingerprint,
-          store_observed_at,
-          created_at,
-          updated_at
+        SELECT id, distribution_name, content_fingerprint, created_at, updated_at
         FROM skill_packages
         WHERE trashed_at IS NULL AND removed_at IS NULL
         ORDER BY created_at, id
         LIMIT ?
-      `).all(limitValue).map((row) => this.mapPackage(row));
+      `).all(limit).map((row) => this.mapPackage(row));
     });
   }
 
   listTrashedPackages(limitValue = 500): SkillTrashPackageMetadata[] {
     return this.execute(() => {
-      if (!Number.isSafeInteger(limitValue) || limitValue < 1 || limitValue > 1000) {
-        throw new SkillOperationError('invalid-input', 'Skill Trash list limit is invalid.');
-      }
+      const limit = parseListLimit(limitValue);
       return this.database.prepare<[number], SkillTrashPackageRow>(`
         SELECT
           id,
           distribution_name,
-          store_observation,
-          store_fingerprint,
-          store_observed_at,
+          content_fingerprint,
           created_at,
           updated_at,
           trashed_at
@@ -389,26 +227,25 @@ export class SkillMetadataRepository {
         WHERE trashed_at IS NOT NULL AND removed_at IS NULL
         ORDER BY trashed_at DESC, id
         LIMIT ?
-      `).all(limitValue).map((row) => this.mapTrashPackage(row));
+      `).all(limit).map((row) => this.mapTrashPackage(row));
     });
   }
 
-  markPackageTrashed(packageIdValue: unknown, trashedAtValue: unknown): SkillTrashPackageMetadata {
+  commitStoreDeletion(
+    packageIdValue: unknown,
+    trashedAtValue: unknown,
+  ): SkillTrashPackageMetadata {
     return this.execute(() => {
       const packageId = parseSkillId(packageIdValue);
       const trashedAt = parseTimestamp(trashedAtValue);
       return this.database.transaction(() => {
         this.getActivePackageInternal(packageId);
-        const activeInstallationCount = this.database.prepare<[string], number>(`
-          SELECT COUNT(*) FROM skill_installations
-          WHERE package_id = ? AND uninstalled_at IS NULL
-        `).pluck().get(packageId) ?? 0;
-        if (activeInstallationCount > 0) {
-          throw new SkillOperationError(
-            'conflict',
-            'Uninstall this Skill from every Distribution Target before moving it to Trash.',
-          );
-        }
+        this.database.prepare(`
+          UPDATE skill_installations
+          SET uninstalled_at = @trashedAt,
+              updated_at = MAX(updated_at, @trashedAt)
+          WHERE package_id = @packageId AND uninstalled_at IS NULL
+        `).run({ packageId, trashedAt });
         const result = this.database.prepare(`
           UPDATE skill_packages
           SET trashed_at = @trashedAt,
@@ -418,42 +255,25 @@ export class SkillMetadataRepository {
         if (result.changes !== 1) {
           throw new SkillOperationError('not-found', 'Skill Package was not found.');
         }
-        return this.mapTrashPackage(this.selectTrashedPackage(packageId)!);
+        return this.getTrashedPackageInternal(packageId);
       }).immediate();
     });
   }
 
   restoreTrashedPackage(
     packageIdValue: unknown,
-    observation: SkillContentObservation,
     restoredAtValue: unknown,
   ): SkillPackageMetadata {
     return this.execute(() => {
       const packageId = parseSkillId(packageIdValue);
       const restoredAt = parseTimestamp(restoredAtValue);
-      const parsedObservation = parseStoredSkillContentObservation(
-        observation.status,
-        observation.status === 'available' ? observation.fingerprint : null,
-        observation.observedAt,
-      );
-      const fingerprint = parsedObservation.status === 'available'
-        ? parsedObservation.fingerprint
-        : null;
+      this.getTrashedPackageInternal(packageId);
       const result = this.database.prepare(`
         UPDATE skill_packages
         SET trashed_at = NULL,
-            store_observation = @status,
-            store_fingerprint = @fingerprint,
-            store_observed_at = @observedAt,
             updated_at = MAX(updated_at, @restoredAt)
         WHERE id = @packageId AND trashed_at IS NOT NULL AND removed_at IS NULL
-      `).run({
-        packageId,
-        status: parsedObservation.status,
-        fingerprint,
-        observedAt: parsedObservation.observedAt,
-        restoredAt,
-      });
+      `).run({ packageId, restoredAt });
       if (result.changes !== 1) {
         throw new SkillOperationError('not-found', 'Trashed Skill Package was not found.');
       }
@@ -461,10 +281,14 @@ export class SkillMetadataRepository {
     });
   }
 
-  markTrashedPackageRemoved(packageIdValue: unknown, removedAtValue: unknown): void {
-    this.execute(() => {
+  markTrashedPackageRemoved(
+    packageIdValue: unknown,
+    removedAtValue: unknown,
+  ): SkillTrashPackageMetadata {
+    return this.execute(() => {
       const packageId = parseSkillId(packageIdValue);
       const removedAt = parseTimestamp(removedAtValue);
+      const skillPackage = this.getTrashedPackageInternal(packageId);
       const result = this.database.prepare(`
         UPDATE skill_packages
         SET removed_at = @removedAt,
@@ -474,181 +298,121 @@ export class SkillMetadataRepository {
       if (result.changes !== 1) {
         throw new SkillOperationError('not-found', 'Trashed Skill Package was not found.');
       }
+      return skillPackage;
     });
   }
 
-  updateStoreObservation(
-    packageIdValue: unknown,
-    observation: SkillContentObservation,
-  ): SkillPackageMetadata {
-    return this.execute(() => {
-      const packageId = parseSkillId(packageIdValue);
-      const parsedObservation = parseStoredSkillContentObservation(
-        observation.status,
-        observation.status === 'available' ? observation.fingerprint : null,
-        observation.observedAt,
-      );
-      const fingerprint = parsedObservation.status === 'available'
-        ? parsedObservation.fingerprint
-        : null;
-      const result = this.database.prepare(`
-        UPDATE skill_packages
-        SET store_observation = @status,
-            store_fingerprint = @fingerprint,
-            store_observed_at = @observedAt,
-            updated_at = CASE
-              WHEN store_observation != @status
-                OR store_fingerprint IS NOT @fingerprint
-              THEN MAX(updated_at, @observedAt)
-              ELSE updated_at
-            END
-        WHERE id = @packageId AND trashed_at IS NULL AND removed_at IS NULL
-      `).run({
-        packageId,
-        status: parsedObservation.status,
-        fingerprint,
-        observedAt: parsedObservation.observedAt,
-      });
-      if (result.changes !== 1) {
-        throw new SkillOperationError('not-found', 'Skill Package was not found.');
-      }
-      return this.getActivePackageInternal(packageId);
-    });
+  isPackageRemoved(idValue: unknown): boolean {
+    return this.execute(() => (this.database.prepare<[string], number>(`
+      SELECT COUNT(*) FROM skill_packages WHERE id = ? AND removed_at IS NOT NULL
+    `).pluck().get(parseSkillId(idValue)) ?? 0) === 1);
   }
 
-  findRevisionById(idValue: unknown): SkillRevisionMetadata | null {
-    return this.execute(() => {
-      const id = parseSkillRevisionId(idValue);
-      const row = this.selectRevision(id);
-      return row ? this.mapRevision(row) : null;
-    });
+  // eslint-disable-next-line unicorn/consistent-class-member-order
+  private execute<T>(operation: () => T): T {
+    try {
+      return operation();
+    } catch (error) {
+      throw toSkillOperationError(error);
+    }
   }
 
-  findRevisionByFingerprint(
-    packageIdValue: unknown,
-    fingerprintValue: unknown,
-  ): SkillRevisionMetadata | null {
-    return this.execute(() => {
-      const packageId = parseSkillId(packageIdValue);
-      const fingerprint = parseSkillContentFingerprint(fingerprintValue);
-      const row = this.database.prepare<[string, string], SkillRevisionRow>(`
-        SELECT id, package_id, sequence_number, fingerprint, reason, created_at
-        FROM skill_revisions
-        WHERE package_id = ? AND fingerprint = ?
-        ORDER BY sequence_number
-        LIMIT 1
-      `).get(packageId, fingerprint);
-      return row ? this.mapRevision(row) : null;
-    });
+  private selectActivePackage(id: string): SkillPackageRow | undefined {
+    return this.database.prepare<[string], SkillPackageRow>(`
+      SELECT id, distribution_name, content_fingerprint, created_at, updated_at
+      FROM skill_packages
+      WHERE id = ? AND trashed_at IS NULL AND removed_at IS NULL
+    `).get(id);
   }
 
-  createRevision(input: CreateSkillRevisionInput): SkillRevisionMetadata {
-    return this.execute(() => {
-      const id = parseSkillRevisionId(input.id);
-      const packageId = parseSkillId(input.packageId);
-      const fingerprint = parseSkillContentFingerprint(input.fingerprint);
-      const reason = parseRevisionReason(input.reason);
-      const createdAt = parseTimestamp(input.createdAt);
-      return this.database.transaction(() => {
-        this.getActivePackageInternal(packageId);
-        const sequenceNumber = this.database.prepare<[string], number>(`
-          SELECT COALESCE(MAX(sequence_number), 0) + 1
-          FROM skill_revisions
-          WHERE package_id = ?
-        `).pluck().get(packageId);
-        this.database.prepare(`
-          INSERT INTO skill_revisions (
-            id, package_id, sequence_number, fingerprint, reason, created_at
-          ) VALUES (
-            @id, @packageId, @sequenceNumber, @fingerprint, @reason, @createdAt
-          )
-        `).run({ id, packageId, sequenceNumber, fingerprint, reason, createdAt });
-        return this.getRevisionInternal(id);
-      }).immediate();
-    });
+  private selectTrashedPackage(id: string): SkillTrashPackageRow | undefined {
+    return this.database.prepare<[string], SkillTrashPackageRow>(`
+      SELECT
+        id,
+        distribution_name,
+        content_fingerprint,
+        created_at,
+        updated_at,
+        trashed_at
+      FROM skill_packages
+      WHERE id = ? AND trashed_at IS NOT NULL AND removed_at IS NULL
+    `).get(id);
   }
 
-  commitStorePromotion(
-    input: CommitSkillStorePromotionInput,
-  ): CommitSkillStorePromotionResult {
-    return this.execute(() => {
-      const packageId = parseSkillId(input.packageId);
-      const fingerprint = parseSkillContentFingerprint(input.observation.fingerprint);
-      const observedAt = parseTimestamp(input.observation.observedAt);
-      if (input.revision.packageId !== packageId || input.revision.fingerprint !== fingerprint) {
-        throw new SkillOperationError('invalid-input', 'Skill promotion metadata is invalid.');
-      }
-      return this.database.transaction(() => {
-        this.getActivePackageInternal(packageId);
-        let revision: SkillRevisionMetadata;
-        if (input.createRevision) {
-          const revisionId = parseSkillRevisionId(input.revision.id);
-          const reason = parseRevisionReason(input.revision.reason);
-          const createdAt = parseTimestamp(input.revision.createdAt);
-          const sequenceNumber = this.database.prepare<[string], number>(`
-            SELECT COALESCE(MAX(sequence_number), 0) + 1
-            FROM skill_revisions
-            WHERE package_id = ?
-          `).pluck().get(packageId);
-          this.database.prepare(`
-            INSERT INTO skill_revisions (
-              id, package_id, sequence_number, fingerprint, reason, created_at
-            ) VALUES (
-              @id, @packageId, @sequenceNumber, @fingerprint, @reason, @createdAt
-            )
-          `).run({
-            id: revisionId,
-            packageId,
-            sequenceNumber,
-            fingerprint,
-            reason,
-            createdAt,
-          });
-          revision = this.getRevisionInternal(revisionId);
-        } else {
-          revision = this.getRevisionInternal(parseSkillRevisionId(input.revision.id));
-          if (revision.packageId !== packageId || revision.fingerprint !== fingerprint) {
-            throw new SkillOperationError('conflict', 'Skill Revision no longer matches.');
-          }
-        }
-        this.database.prepare(`
-          UPDATE skill_packages
-          SET store_observation = 'available',
-              store_fingerprint = @fingerprint,
-              store_observed_at = @observedAt,
-              updated_at = MAX(updated_at, @observedAt)
-          WHERE id = @packageId AND trashed_at IS NULL AND removed_at IS NULL
-        `).run({ packageId, fingerprint, observedAt });
-        return { package: this.getActivePackageInternal(packageId), revision };
-      }).immediate();
-    });
+  private getActivePackageInternal(id: string): SkillPackageMetadata {
+    const row = this.selectActivePackage(id);
+    if (!row) {
+      throw new SkillOperationError('not-found', 'Skill Package was not found.');
+    }
+    return this.mapPackage(row);
+  }
+
+  private getTrashedPackageInternal(id: string): SkillTrashPackageMetadata {
+    const row = this.selectTrashedPackage(id);
+    if (!row) {
+      throw new SkillOperationError('not-found', 'Trashed Skill Package was not found.');
+    }
+    return this.mapTrashPackage(row);
+  }
+
+  private mapPackage(row: SkillPackageRow): SkillPackageMetadata {
+    const id = parseStoredId(row.id);
+    const distributionName = parseStoredDistributionName(row.distribution_name);
+    const fingerprint = parseStoredFingerprint(row.content_fingerprint);
+    const createdAt = parseStoredTimestamp(row.created_at);
+    const updatedAt = parseStoredTimestamp(row.updated_at);
+    if (updatedAt < createdAt) {
+      throw storedPackageError();
+    }
+    return { id, distributionName, fingerprint, createdAt, updatedAt };
+  }
+
+  private mapPackageContent(row: SkillPackageContentRow): SkillPackageContent {
+    if (row.content_format !== SKILL_PACKAGE_CONTENT_FORMAT || !Buffer.isBuffer(row.content_blob)) {
+      throw storedPackageError();
+    }
+    return {
+      ...this.mapPackage(row),
+      format: SKILL_PACKAGE_CONTENT_FORMAT,
+      content: Buffer.from(row.content_blob),
+    };
+  }
+
+  private mapTrashPackage(row: SkillTrashPackageRow): SkillTrashPackageMetadata {
+    return {
+      ...this.mapPackage(row),
+      trashedAt: parseStoredTimestamp(row.trashed_at),
+    };
   }
 }
 
-function parseTimestamp(value: unknown): number {
-  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
-    throw new SkillOperationError('invalid-input', 'Skill input is invalid.');
+function parseContent(value: Uint8Array): Buffer {
+  const content = Buffer.from(value);
+  if (content.length === 0) {
+    throw new SkillOperationError('invalid-input', 'Skill Package content is empty.');
+  }
+  return content;
+}
+
+function parseListLimit(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1 || value > 1000) {
+    throw new SkillOperationError('invalid-input', 'Skill Package list limit is invalid.');
   }
   return value;
 }
 
-function parseStoredTimestamp(value: unknown, message: string): number {
-  try {
-    return parseTimestamp(value);
-  } catch {
-    throw new SkillOperationError('storage-corrupt', message);
+function parseTimestamp(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
+    throw new SkillOperationError('invalid-input', 'Skill Package timestamp is invalid.');
   }
+  return value;
 }
 
-function parseStoredId(
-  value: unknown,
-  parse: (input: unknown) => string,
-  message: string,
-): string {
+function parseStoredId(value: unknown): string {
   try {
-    return parse(value);
+    return parseSkillId(value);
   } catch {
-    throw new SkillOperationError('storage-corrupt', message);
+    throw storedPackageError();
   }
 }
 
@@ -656,7 +420,7 @@ function parseStoredDistributionName(value: unknown): string {
   try {
     return parseSkillDistributionName(value);
   } catch {
-    throw new SkillOperationError('storage-corrupt', 'Stored Skill Package data is invalid.');
+    throw storedPackageError();
   }
 }
 
@@ -664,13 +428,18 @@ function parseStoredFingerprint(value: unknown): string {
   try {
     return parseSkillContentFingerprint(value);
   } catch {
-    throw new SkillOperationError('storage-corrupt', 'Stored Skill Revision data is invalid.');
+    throw storedPackageError();
   }
 }
 
-function parseRevisionReason(value: unknown): SkillRevisionReason {
-  if (!skillRevisionReasons.includes(value as SkillRevisionReason)) {
-    throw new SkillOperationError('invalid-input', 'Skill Revision reason is invalid.');
+function parseStoredTimestamp(value: unknown): number {
+  try {
+    return parseTimestamp(value);
+  } catch {
+    throw storedPackageError();
   }
-  return value as SkillRevisionReason;
+}
+
+function storedPackageError(): SkillOperationError {
+  return new SkillOperationError('storage-corrupt', 'Stored Skill Package data is invalid.');
 }

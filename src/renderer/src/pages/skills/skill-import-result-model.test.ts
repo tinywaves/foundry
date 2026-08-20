@@ -46,7 +46,6 @@ function createResult(
     packagesFound: 2,
     packagesImported: 1,
     installationsAdopted: 1,
-    observationsUpdated: 0,
     warnings: warningCodes.map((code, index) => ({
       targetId: target.id,
       relativePath: index === 2 ? null : `skill-${index}`,
@@ -74,7 +73,6 @@ test('builds readable details for every candidate warning code', () => {
     'traversal-limit-reached',
     'candidate-unreadable',
     'candidate-reconciliation-failed',
-    'content-changed-during-adoption',
   ];
   const result = createResult(warningCodes);
   const issues = buildSkillImportIssues(result, [target]);
@@ -82,7 +80,7 @@ test('builds readable details for every candidate warning code', () => {
   assert.equal(getSkillImportWarningCount(result), warningCodes.length);
   assert.equal(
     describeSkillImport(result),
-    'Imported 1 and adopted 1. 6 scan warnings need attention.',
+    'Imported 1 and adopted 1. 5 scan warnings need attention.',
   );
   assert.deepEqual(issues.map((issue) => issue.code), warningCodes);
   assert.equal(issues.every((issue) => issue.targetName === target.displayName), true);

@@ -70,7 +70,8 @@
     "lucide-react": "^1.28.0",
     "react-router": "^8.3.0",
     "yaml": "^2.9.0",
-    "yauzl": "^3.4.0"
+    "yauzl": "^3.4.0",
+    "yazl": "^3.3.1"
   },
   "devDependencies": {
     "@astryxdesign/cli": "^0.2.0",
@@ -94,7 +95,6 @@
     "react-dom": "^19.2.1",
     "typescript": "^5.9.3",
     "vite": "^7.2.6",
-    "vitest": "^4.1.10",
-    "yazl": "^3.3.1"
+    "vitest": "^4.1.10"
   }
 }

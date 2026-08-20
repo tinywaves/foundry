@@ -3,7 +3,6 @@ import type { SkillDiscoveryResult } from '../../shared/skill-contract';
 import { scanSkillTarget } from './skill-discovery-scanner';
 import type { SkillTargetScanResult } from './skill-discovery-scanner';
 import type { SkillInstallationRepository } from './skill-installation-repository';
-import { observeSkillPackage } from './skill-package-observer';
 import type { SkillStoreCoordinator } from './skill-store-coordinator';
 import {
   resolveBuiltInSkillTargets,
@@ -17,7 +16,6 @@ import type {
   SkillTargetMetadata,
   SkillTargetRepository,
 } from './skill-target-repository';
-import { normalizeSkillRelativePath } from './skill-validation';
 import type { SkillOperationQueue } from './skill-operation-queue';
 
 interface SkillDiscoveryCoordinatorOptions extends SkillTargetAdapterContext {
@@ -49,14 +47,13 @@ export class SkillDiscoveryCoordinator {
     });
     this.options.targetRepository.synchronizeBuiltInTargets(definitions);
     const targets = this.options.targetRepository.listTargets();
-    const observedAt = this.now();
+    const importedAt = this.now();
     const result: SkillDiscoveryResult = {
       roots: [],
       rootsInspected: 0,
       packagesFound: 0,
       packagesImported: 0,
       installationsAdopted: 0,
-      observationsUpdated: 0,
       warnings: [],
       rootFailures: [],
     };
@@ -65,7 +62,7 @@ export class SkillDiscoveryCoordinator {
       if (!target.enabled) {
         continue;
       }
-      await this.scanTarget(target, definitions, observedAt, result);
+      await this.scanTarget(target, definitions, importedAt, result);
     }
     return result;
   }
@@ -73,7 +70,7 @@ export class SkillDiscoveryCoordinator {
   private async scanTarget(
     target: SkillTargetMetadata,
     definitions: readonly ResolvedBuiltInSkillTarget[],
-    observedAt: number,
+    importedAt: number,
     result: SkillDiscoveryResult,
   ): Promise<void> {
     const definition = definitions.find((candidate) => candidate.kind === target.kind);
@@ -118,46 +115,22 @@ export class SkillDiscoveryCoordinator {
 
     result.rootsInspected += 1;
     result.packagesFound += scanResult.candidates.length;
-    const observedRelativePaths = new Set<string>();
     for (const candidate of scanResult.candidates) {
-      observedRelativePaths.add(normalizeSkillRelativePath(candidate.relativePath));
-      await this.reconcileCandidate(target, candidate, observedAt, result);
-    }
-
-    const isCompleteObservation = !scanResult.truncated
-      && scanResult.warnings.every((warning) => warning.code !== 'entry-unreadable');
-    if (isCompleteObservation) {
-      result.observationsUpdated += this.options.installationRepository
-        .markMissingInstallations(target.id, observedRelativePaths, observedAt)
-        .length;
+      await this.reconcileCandidate(target, candidate, importedAt, result);
     }
   }
 
   private async reconcileCandidate(
     target: SkillTargetMetadata,
     candidate: { relativePath: string; contentPath: string },
-    observedAt: number,
+    importedAt: number,
     result: SkillDiscoveryResult,
   ): Promise<void> {
-    const observation = await observeSkillPackage(candidate.contentPath, observedAt);
-    if (observation.status !== 'available') {
-      result.warnings.push({
-        targetId: target.id,
-        relativePath: candidate.relativePath,
-        code: 'candidate-unreadable',
-      });
-      return;
-    }
     const existing = this.options.installationRepository.findActiveInstallationByLocation(
       target.id,
       candidate.relativePath,
     );
     if (existing) {
-      this.options.installationRepository.updateInstallationObservation(
-        existing.id,
-        observation,
-      );
-      result.observationsUpdated += 1;
       return;
     }
 
@@ -166,30 +139,13 @@ export class SkillDiscoveryCoordinator {
       if (!imported.reused) {
         result.packagesImported += 1;
       }
-      let revision = imported.revision;
-      if (!revision) {
-        const snapshot = await this.options.storeCoordinator.snapshotStorePackage(
-          imported.package.id,
-          'distribution',
-        );
-        revision = snapshot.revision;
-      }
-      if (revision.fingerprint !== observation.fingerprint) {
-        result.warnings.push({
-          targetId: target.id,
-          relativePath: candidate.relativePath,
-          code: 'content-changed-during-adoption',
-        });
-        return;
-      }
       const adoption = this.options.installationRepository.adoptInstallation({
         packageId: imported.package.id,
         targetId: target.id,
-        revisionId: revision.id,
         distributionName: path.posix.basename(candidate.relativePath),
         relativePath: candidate.relativePath,
-        fingerprint: observation.fingerprint,
-        observedAt,
+        fingerprint: imported.package.fingerprint,
+        importedAt,
       });
       if (!adoption.reused) {
         result.installationsAdopted += 1;

@@ -1,6 +1,5 @@
 import type {
-  SkillContentObservationStatus,
-  SkillInstallationSyncStatus,
+  SkillInstallationDistributionStatus,
   SkillInstallationView,
   SkillStorePackageView,
   SkillTargetView,
@@ -18,43 +17,12 @@ export interface SkillTargetInventoryRow {
   statusCounts: Record<string, number>;
 }
 
-const observationPresentations: Record<
-  SkillContentObservationStatus,
+const distributionPresentations: Record<
+  SkillInstallationDistributionStatus,
   SkillStatePresentation
 > = {
-  available: { label: 'Available', variant: 'success' },
-  missing: { label: 'Missing', variant: 'error' },
-  unreadable: { label: 'Unreadable', variant: 'warning' },
-};
-
-const syncPresentations: Record<SkillInstallationSyncStatus, SkillStatePresentation> = {
-  synced: { label: 'Synced', variant: 'success' },
-  different: { label: 'Different', variant: 'warning' },
-  unknown: { label: 'Unknown', variant: 'neutral' },
-};
-
-const unavailableStorePresentations = {
-  'store-missing': { label: 'Store missing', variant: 'error' },
-  'store-unreadable': { label: 'Store unreadable', variant: 'warning' },
-} satisfies Record<string, SkillStatePresentation>;
-
-const missingInstallationPresentation: SkillStatePresentation = {
-  label: 'Missing',
-  variant: 'error',
-};
-
-const unreadableInstallationPresentation: SkillStatePresentation = {
-  label: 'Unreadable',
-  variant: 'warning',
-};
-
-const targetInstallationPresentations: Record<
-  SkillContentObservationStatus,
-  SkillStatePresentation
-> = {
-  available: { label: 'Installed', variant: 'success' },
-  missing: { label: 'Missing', variant: 'error' },
-  unreadable: { label: 'Unreadable', variant: 'warning' },
+  'current': { label: 'Current', variant: 'success' },
+  'needs-distribution': { label: 'Needs distribution', variant: 'warning' },
 };
 
 const notInstalledPresentation: SkillStatePresentation = {
@@ -75,32 +43,17 @@ export function filterSkillStorePackages(
   ));
 }
 
-export function getStoreObservationPresentation(
-  status: SkillContentObservationStatus,
-): SkillStatePresentation {
-  return observationPresentations[status];
-}
-
 export function getInstallationStatusPresentation(
   installation: SkillInstallationView,
 ): SkillStatePresentation {
-  if (installation.targetObservation.status === 'missing') {
-    return missingInstallationPresentation;
-  }
-  if (installation.targetObservation.status === 'unreadable') {
-    return unreadableInstallationPresentation;
-  }
-  if (installation.storeObservation.status !== 'available') {
-    return unavailableStorePresentations[`store-${installation.storeObservation.status}`];
-  }
-  return syncPresentations[installation.syncStatus];
+  return distributionPresentations[installation.distributionStatus];
 }
 
 export function getTargetInstallationPresentation(
   installation: SkillInstallationView | undefined,
 ): SkillStatePresentation {
   return installation
-    ? targetInstallationPresentations[installation.targetObservation.status]
+    ? getInstallationStatusPresentation(installation)
     : notInstalledPresentation;
 }
 

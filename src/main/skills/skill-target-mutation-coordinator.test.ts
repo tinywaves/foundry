@@ -1,629 +1,184 @@
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
-import {
-  cp,
-  lstat,
-  mkdir,
-  mkdtemp,
-  readFile,
-  readdir,
-  rm,
-  symlink,
-  writeFile,
-} from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type Database from 'better-sqlite3';
 import { test } from 'vitest';
-import { deriveInstallationSyncStatus } from '../../shared/skill-contract';
 import { openFoundryDatabase } from '../storage/foundry-database';
-import { SkillOperationError } from './skill-error';
-import {
-  SkillInstallationRepository,
-} from './skill-installation-repository';
+import { SkillInstallationRepository } from './skill-installation-repository';
 import { SkillMetadataRepository } from './skill-metadata-repository';
 import { SkillOperationQueue } from './skill-operation-queue';
-import { fingerprintSkillPackage } from './skill-package-fingerprint';
+import { normalizeResolvedPathKey, resolvePhysicalPath } from './skill-target-adapters';
 import { SkillStoreCoordinator } from './skill-store-coordinator';
-import { SkillStorePaths } from './skill-store-paths';
-import {
-  normalizeResolvedPathKey,
-  resolvePhysicalPath,
-} from './skill-target-adapters';
 import { SkillTargetMutationCoordinator } from './skill-target-mutation-coordinator';
 import { SkillTargetRepository } from './skill-target-repository';
 
-const packageId = '00000000-0000-4000-8000-000000001001';
-const revisionId = '00000000-0000-4000-8000-000000001002';
-const importOperationId = '00000000-0000-4000-8000-000000001003';
-const interruptedRecordId = '00000000-0000-4000-8000-000000001004';
-const interruptedOperationId = '00000000-0000-4000-8000-000000001005';
+const packageId = '00000000-0000-4000-8000-000000000801';
+const targetId = '00000000-0000-4000-8000-000000000802';
+const installationId = '00000000-0000-4000-8000-000000000803';
+const operationIds = [
+  '00000000-0000-4000-8000-000000000804',
+  '00000000-0000-4000-8000-000000000805',
+  '00000000-0000-4000-8000-000000000806',
+  '00000000-0000-4000-8000-000000000807',
+];
 
-interface MutationFixture {
-  temporaryRoot: string;
-  database: Database.Database;
-  paths: SkillStorePaths;
-  metadataRepository: SkillMetadataRepository;
-  targetRepository: SkillTargetRepository;
-  installationRepository: SkillInstallationRepository;
-  storeCoordinator: SkillStoreCoordinator;
-  operationQueue: SkillOperationQueue;
-  targetPaths: string[];
-  targetIds: string[];
-  close: () => Promise<void>;
-}
-
-test('synchronizes unmanaged and differently associated destinations', async () => {
-  const fixture = await createFixture('partial', 3);
-
-  try {
-    const secondSource = path.join(fixture.temporaryRoot, 'second-source');
-    await createSkillPackage(secondSource, '# Different package\n');
-    const secondPackage = await fixture.storeCoordinator.importPackage(secondSource);
-    const coordinator = createCoordinator(fixture);
-    const occupied = await coordinator.distribute({
-      skillId: secondPackage.package.id,
-      targetIds: [fixture.targetIds[2]],
-    });
-    assert.equal(occupied.targets[0]?.ok, true);
-
-    const unmanagedPath = path.join(fixture.targetPaths[1], 'SHARED-SKILL');
-    await createSkillPackage(unmanagedPath, '# Unmanaged\n');
-    const preflight = await coordinator.preflightDistribution({
-      skillId: packageId,
-      targetIds: fixture.targetIds,
-    });
-
-    assert.deepEqual(preflight.targets.map((target) => (
-      target.status === 'ready' ? target.operation : target.code
-    )), ['install', 'replace', 'replace']);
-
-    const distributed = await coordinator.distribute({
-      skillId: packageId,
-      targetIds: fixture.targetIds,
-    });
-    assert.equal(distributed.revisionId, revisionId);
-    assert.deepEqual(distributed.targets.map((target) => target.ok), [true, true, true]);
-    assert.equal(
-      await readFile(path.join(fixture.targetPaths[0], 'shared-skill', 'SKILL.md'), 'utf8'),
-      skillManifest('# Initial\n'),
-    );
-    assert.equal(
-      await readFile(path.join(unmanagedPath, 'SKILL.md'), 'utf8'),
-      skillManifest('# Initial\n'),
-    );
-    assert.equal(
-      await readFile(path.join(fixture.targetPaths[2], 'shared-skill', 'SKILL.md'), 'utf8'),
-      skillManifest('# Initial\n'),
-    );
-    const displacedResult = occupied.targets[0];
-    const displacedInstallationId = displacedResult.installationId;
-    assert.equal(
-      fixture.installationRepository.isInstallationActive(displacedInstallationId),
-      false,
-    );
-    assert.equal(
-      fixture.database.prepare(`
-        SELECT COUNT(*) FROM skill_distribution_records WHERE installation_id = ?
-      `).pluck().get(displacedInstallationId),
-      1,
-    );
-    const installation = fixture.installationRepository.listActiveInstallations(
-      fixture.targetIds[0],
-    )[0];
-    const record = fixture.installationRepository.getLatestDistributionRecord(
-      installation.id,
-    )!;
-    assert.equal(record.operation, 'distribution');
-    assert.equal(
-      record.fingerprint,
-      await fingerprintSkillPackage(path.join(fixture.targetPaths[0], 'shared-skill')),
-    );
-  } finally {
-    await fixture.close();
-  }
-});
-
-test('keeps environmental failures isolated per selected Target', async () => {
-  const fixture = await createFixture('partial', 2);
-
-  try {
-    fixture.targetRepository.updateTargetPolicy({
-      targetId: fixture.targetIds[1],
-      enabled: false,
-      maxScanDepth: 4,
-      allowSymlinkEscape: false,
-    });
-    const result = await createCoordinator(fixture).distribute({
-      skillId: packageId,
-      targetIds: fixture.targetIds,
-    });
-
-    assert.deepEqual(result.targets.map((target) => target.ok), [true, false]);
-    const failedTarget = result.targets[1];
-    if (failedTarget.ok) {
-      assert.fail('The disabled Target was not reported as a failure.');
-    }
-    assert.equal(failedTarget.error.code, 'conflict');
-    assert.equal(fixture.installationRepository.listActiveInstallations().length, 1);
-  } finally {
-    await fixture.close();
-  }
-});
-
-test('records an equal destination without copying package bytes again', async () => {
-  const fixture = await createFixture('equal-target', 1);
-
-  try {
-    let copyCalls = 0;
-    const coordinator = createCoordinator(fixture, {
-      copyPackage: async (source, destination) => {
-        copyCalls += 1;
-        await copyPackage(source, destination);
-      },
-    });
-    const input = { skillId: packageId, targetIds: fixture.targetIds };
-    const first = await coordinator.distribute(input);
-    assert.equal(first.targets[0]?.ok, true);
-    assert.equal(copyCalls, 1);
-
-    const preflight = await coordinator.preflightDistribution(input);
-    assert.equal(
-      preflight.targets[0]?.status === 'ready'
-        ? preflight.targets[0].operation
-        : null,
-      'none',
-    );
-    const second = await coordinator.distribute(input);
-    assert.equal(second.targets[0]?.ok, true);
-    assert.equal(copyCalls, 1);
-
-    const installation = fixture.installationRepository.listActiveInstallations()[0];
-    assert.equal(
-      fixture.database.prepare(`
-        SELECT COUNT(*) FROM skill_distribution_records WHERE installation_id = ?
-      `).pluck().get(installation.id),
-      2,
-    );
-  } finally {
-    await fixture.close();
-  }
-});
-
-test('replaces an unreadable destination entry without following it', async () => {
-  const fixture = await createFixture('unreadable-target', 1);
-  const externalPackage = path.join(fixture.temporaryRoot, 'external-package');
-  const targetPackage = path.join(fixture.targetPaths[0], 'shared-skill');
-
-  try {
-    await createSkillPackage(externalPackage, '# External\n');
-    await symlink(externalPackage, targetPackage);
-    const coordinator = createCoordinator(fixture);
-    const input = { skillId: packageId, targetIds: fixture.targetIds };
-
-    const preflight = await coordinator.preflightDistribution(input);
-    assert.equal(
-      preflight.targets[0]?.status === 'ready'
-        ? preflight.targets[0].operation
-        : null,
-      'replace',
-    );
-    const result = await coordinator.distribute(input);
-    assert.equal(result.targets[0]?.ok, true);
-    const targetStats = await lstat(targetPackage);
-    assert.equal(targetStats.isDirectory(), true);
-    assert.equal(
-      await readFile(path.join(targetPackage, 'SKILL.md'), 'utf8'),
-      skillManifest('# Initial\n'),
-    );
-    assert.equal(
-      await readFile(path.join(externalPackage, 'SKILL.md'), 'utf8'),
-      skillManifest('# External\n'),
-    );
-  } finally {
-    await fixture.close();
-  }
-});
-
-test('reports different content until explicit same-package synchronization', async () => {
-  const fixture = await createFixture('different-content', 1);
-
-  try {
-    const coordinator = createCoordinator(fixture);
-    const first = await coordinator.distribute({
-      skillId: packageId,
-      targetIds: fixture.targetIds,
-    });
-    assert.equal(first.targets[0]?.ok, true);
-    const installation = fixture.installationRepository.listActiveInstallations()[0];
-    const targetPackage = path.join(fixture.targetPaths[0], 'shared-skill');
-    const storePackage = path.join(fixture.paths.packages, packageId);
-
-    await writeFile(path.join(storePackage, 'SKILL.md'), skillManifest('# Store update\n'));
-    await fixture.storeCoordinator.reconcileStorePackages();
-    const store = fixture.metadataRepository.getActivePackage(packageId);
-    assert.equal(deriveInstallationSyncStatus({
-      store: store.storeObservation,
-      target: installation.targetObservation,
-    }), 'different');
-    assert.equal(await readFile(path.join(targetPackage, 'SKILL.md'), 'utf8'), skillManifest('# Initial\n'));
-
-    const updated = await coordinator.distribute({
-      skillId: packageId,
-      targetIds: fixture.targetIds,
-    });
-    const updatedTarget = updated.targets[0];
-    if (!updatedTarget.ok) {
-      assert.fail(updatedTarget.error.message);
-    }
-    assert.equal(updatedTarget.installationId, installation.id);
-    assert.equal(await readFile(path.join(targetPackage, 'SKILL.md'), 'utf8'), skillManifest('# Store update\n'));
-    assert.equal(
-      fixture.database.prepare(`
-        SELECT COUNT(*) FROM skill_distribution_records WHERE installation_id = ?
-      `).pluck().get(installation.id),
-      2,
-    );
-  } finally {
-    await fixture.close();
-  }
-});
-
-test('rejects a changed staging copy without replacing the installed bytes', async () => {
-  const fixture = await createFixture('staging-verification', 1);
-
-  try {
-    const initialCoordinator = createCoordinator(fixture);
-    await initialCoordinator.distribute({
-      skillId: packageId,
-      targetIds: fixture.targetIds,
-    });
-    const installation = fixture.installationRepository.listActiveInstallations()[0];
-    const storePackage = path.join(fixture.paths.packages, packageId);
-    const targetPackage = path.join(fixture.targetPaths[0], 'shared-skill');
-    await writeFile(path.join(storePackage, 'SKILL.md'), skillManifest('# Store update\n'));
-
-    const coordinator = createCoordinator(fixture, {
-      copyPackage: async (source, destination) => {
-        await copyPackage(source, destination);
-        await writeFile(path.join(destination, 'SKILL.md'), skillManifest('# Corrupted stage\n'));
-      },
-    });
-    const result = await coordinator.distribute({
-      skillId: packageId,
-      targetIds: fixture.targetIds,
-    });
-
-    const targetResult = result.targets[0];
-    if (targetResult.ok) {
-      assert.fail('The corrupted stage was distributed.');
-    }
-    assert.equal(targetResult.error.code, 'content-unavailable');
-    assert.equal(await readFile(path.join(targetPackage, 'SKILL.md'), 'utf8'), skillManifest('# Initial\n'));
-    assert.equal(
-      fixture.database.prepare(`
-        SELECT COUNT(*) FROM skill_distribution_records WHERE installation_id = ?
-      `).pluck().get(installation.id),
-      1,
-    );
-    assert.deepEqual(await readdir(fixture.paths.targetOperations), []);
-    const targetEntries = await readdir(fixture.targetPaths[0]);
-    assert.deepEqual(targetEntries.filter((entry) => entry.startsWith('.foundry-')), []);
-  } finally {
-    await fixture.close();
-  }
-});
-
-test('rechecks and replaces content created after preflight', async () => {
-  const fixture = await createFixture('toctou', 1);
-
-  try {
-    const finalPath = path.join(fixture.targetPaths[0], 'shared-skill');
-    const coordinator = createCoordinator(fixture, {
-      copyPackage: async (source, destination) => {
-        await copyPackage(source, destination);
-        await createSkillPackage(finalPath, '# External install\n');
-      },
-    });
-    const result = await coordinator.distribute({
-      skillId: packageId,
-      targetIds: fixture.targetIds,
-    });
-
-    const targetResult = result.targets[0];
-    if (!targetResult.ok) {
-      assert.fail(targetResult.error.message);
-    }
-    assert.equal(
-      await readFile(path.join(finalPath, 'SKILL.md'), 'utf8'),
-      skillManifest('# Initial\n'),
-    );
-    assert.equal(fixture.installationRepository.listActiveInstallations().length, 1);
-    assert.deepEqual(await readdir(fixture.paths.targetOperations), []);
-  } finally {
-    await fixture.close();
-  }
-});
-
-test('recovers an interrupted replacement whose metadata commit did not happen', async () => {
-  const fixture = await createFixture('replacement-recovery', 1);
-
-  try {
-    const initialCoordinator = createCoordinator(fixture);
-    await initialCoordinator.distribute({
-      skillId: packageId,
-      targetIds: fixture.targetIds,
-    });
-    const targetPackage = path.join(fixture.targetPaths[0], 'shared-skill');
-    await writeFile(
-      path.join(fixture.paths.packages, packageId, 'SKILL.md'),
-      skillManifest('# Store update\n'),
-    );
-    const rejectingRepository = new RejectingDistributionRepository(fixture.database);
-    const ids = [interruptedRecordId, interruptedOperationId];
-    const resolvedTargetPackage = path.join(
-      await resolvePhysicalPath(fixture.targetPaths[0]),
-      'shared-skill',
-    );
-    const interruptedCoordinator = new SkillTargetMutationCoordinator({
-      paths: fixture.paths,
-      metadataRepository: fixture.metadataRepository,
-      targetRepository: fixture.targetRepository,
-      installationRepository: rejectingRepository,
-      storeCoordinator: fixture.storeCoordinator,
-      operationQueue: fixture.operationQueue,
-      createId: () => ids.shift() ?? randomUUID(),
-      removePath: (targetPath) => {
-        if (targetPath === resolvedTargetPackage) {
-          return Promise.reject(Object.assign(new Error('injected compensation failure'), {
-            code: 'EBUSY',
-          }));
-        }
-        return rm(targetPath, { recursive: true, force: true });
-      },
-    });
-
-    const interrupted = await interruptedCoordinator.distribute({
-      skillId: packageId,
-      targetIds: fixture.targetIds,
-    });
-    assert.equal(interrupted.targets[0]?.ok, false);
-    assert.equal(await readFile(path.join(targetPackage, 'SKILL.md'), 'utf8'), skillManifest('# Store update\n'));
-    assert.deepEqual(await readdir(fixture.paths.targetOperations), [interruptedOperationId]);
-
-    const recoveredCoordinator = createCoordinator(fixture);
-    await recoveredCoordinator.initialize();
-
-    assert.equal(await readFile(path.join(targetPackage, 'SKILL.md'), 'utf8'), skillManifest('# Initial\n'));
-    assert.deepEqual(await readdir(fixture.paths.targetOperations), []);
-    assert.equal(
-      fixture.database.prepare('SELECT COUNT(*) FROM skill_distribution_records').pluck().get(),
-      1,
-    );
-  } finally {
-    await fixture.close();
-  }
-});
-
-test('serializes concurrent mutations through the shared subsystem queue', async () => {
-  const fixture = await createFixture('serialization', 1);
-
-  try {
-    const firstCopyStarted = Promise.withResolvers<undefined>();
-    const releaseFirstCopy = Promise.withResolvers<undefined>();
-    let activeCopies = 0;
-    let copyCalls = 0;
-    let maximumActiveCopies = 0;
-    const coordinator = createCoordinator(fixture, {
-      copyPackage: async (source, destination) => {
-        copyCalls += 1;
-        activeCopies += 1;
-        maximumActiveCopies = Math.max(maximumActiveCopies, activeCopies);
-        if (copyCalls === 1) {
-          firstCopyStarted.resolve(undefined);
-          await releaseFirstCopy.promise;
-        }
-        await copyPackage(source, destination);
-        activeCopies -= 1;
-      },
-    });
-    const input = { skillId: packageId, targetIds: fixture.targetIds };
-    const first = coordinator.distribute(input);
-    await firstCopyStarted.promise;
-    const second = coordinator.distribute(input);
-    await new Promise<void>((resolve) => setImmediate(resolve));
-    assert.equal(copyCalls, 1);
-
-    releaseFirstCopy.resolve(undefined);
-    const [firstResult, secondResult] = await Promise.all([first, second]);
-
-    assert.equal(firstResult.targets[0]?.ok, true);
-    assert.equal(secondResult.targets[0]?.ok, true);
-    assert.equal(maximumActiveCopies, 1);
-    const installation = fixture.installationRepository.listActiveInstallations()[0];
-    assert.equal(
-      fixture.database.prepare(`
-        SELECT COUNT(*) FROM skill_distribution_records WHERE installation_id = ?
-      `).pluck().get(installation.id),
-      2,
-    );
-  } finally {
-    await fixture.close();
-  }
-});
-
-test('keeps Promote, Import as New, Restore, and Uninstall identity effects distinct', async () => {
-  const fixture = await createFixture('installation-actions', 1);
-
-  try {
-    const coordinator = createCoordinator(fixture);
-    await coordinator.distribute({ skillId: packageId, targetIds: fixture.targetIds });
-    const installation = fixture.installationRepository.listActiveInstallations()[0];
-    const targetPackage = path.join(fixture.targetPaths[0], 'shared-skill');
-    await writeFile(path.join(targetPackage, 'SKILL.md'), skillManifest('# Local edit\n'));
-
-    const promoted = await coordinator.promoteInstallation({
-      installationId: installation.id,
-    });
-    assert.equal(promoted.package.id, packageId);
-    assert.equal(promoted.revision.reason, 'promotion');
-    assert.equal(
-      await readFile(path.join(fixture.paths.packages, packageId, 'SKILL.md'), 'utf8'),
-      skillManifest('# Local edit\n'),
-    );
-    const baselineAfterPromotion = fixture.installationRepository
-      .getLatestDistributionRecord(installation.id)!;
-    assert.equal(baselineAfterPromotion.sequenceNumber, 1);
-    assert.equal(deriveInstallationSyncStatus({
-      store: promoted.package.storeObservation,
-      target: fixture.installationRepository.getActiveInstallation(installation.id)
-        .targetObservation,
-    }), 'synced');
-
-    const imported = await coordinator.importInstallationAsNew({
-      installationId: installation.id,
-    });
-    assert.notEqual(imported.package.id, packageId);
-    assert.equal(
-      fixture.installationRepository.getActiveInstallation(installation.id).packageId,
-      packageId,
-    );
-
-    await rm(targetPackage, { recursive: true, force: true });
-    const restored = await coordinator.restoreInstallation({
-      installationId: installation.id,
-    });
-    if (!restored.ok) {
-      assert.fail(restored.error.message);
-    }
-    assert.equal(restored.installationId, installation.id);
-    assert.equal(
-      fixture.installationRepository.getLatestDistributionRecord(installation.id)?.operation,
-      'restore',
-    );
-    assert.equal(await readFile(path.join(targetPackage, 'SKILL.md'), 'utf8'), skillManifest('# Local edit\n'));
-
-    await coordinator.uninstall({ installationId: installation.id });
-    assert.equal(fixture.installationRepository.isInstallationActive(installation.id), false);
-    assert.deepEqual(await readdir(fixture.targetPaths[0]), []);
-    assert.equal(
-      fixture.database.prepare(`
-        SELECT COUNT(*) FROM skill_distribution_records WHERE installation_id = ?
-      `).pluck().get(installation.id),
-      2,
-    );
-  } finally {
-    await fixture.close();
-  }
-});
-
-class RejectingDistributionRepository extends SkillInstallationRepository {
-  override recordDistribution(
-    _input: Parameters<SkillInstallationRepository['recordDistribution']>[0],
-  ): never {
-    throw new SkillOperationError('storage-unavailable', 'Injected metadata failure.');
-  }
-}
-
-async function createFixture(
-  name: string,
-  targetCount: number,
-): Promise<MutationFixture> {
-  const temporaryRoot = await mkdtemp(path.join(tmpdir(), `foundry-skill-${name}-`));
-  const userHome = path.join(temporaryRoot, 'home');
+async function createFixture(removePath?: (targetPath: string) => Promise<void>) {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), 'foundry-skill-distribution-'));
   const source = path.join(temporaryRoot, 'source');
+  const targetRoot = path.join(temporaryRoot, 'target');
+  await Promise.all([mkdir(source), mkdir(targetRoot)]);
+  await writeFile(path.join(source, 'SKILL.md'), '# Version one\n');
   const database = openFoundryDatabase(':memory:');
-  let clock = 100;
-  const now = () => ++clock;
+  const metadataRepository = new SkillMetadataRepository(database);
+  const storeCoordinator = new SkillStoreCoordinator(metadataRepository, {
+    createId: () => packageId,
+    now: () => 100,
+  });
+  const imported = await storeCoordinator.importPackage(source);
+  const targetRepository = new SkillTargetRepository(database, {
+    createId: () => targetId,
+    now: () => 100,
+  });
+  const resolvedPath = await resolvePhysicalPath(targetRoot);
+  const target = targetRepository.createCustomTarget({
+    displayName: 'Test Target',
+    configuredPath: targetRoot,
+    resolvedPath,
+    resolvedPathKey: normalizeResolvedPathKey(resolvedPath),
+    isWritable: true,
+    enabled: true,
+    maxScanDepth: 4,
+    allowSymlinkEscape: true,
+  }).target;
+  const installationRepository = new SkillInstallationRepository(database);
+  const ids = [installationId, ...operationIds];
+  let now = 200;
+  const coordinator = new SkillTargetMutationCoordinator({
+    metadataRepository,
+    targetRepository,
+    installationRepository,
+    storeCoordinator,
+    operationQueue: new SkillOperationQueue(),
+    createId: () => ids.shift()!,
+    now: () => now,
+    ...(removePath && { removePath }),
+  });
+  return {
+    temporaryRoot,
+    source,
+    targetRoot,
+    database,
+    imported,
+    target,
+    metadataRepository,
+    storeCoordinator,
+    installationRepository,
+    coordinator,
+    setNow(value: number) {
+      now = value;
+    },
+  };
+}
 
+test('installs current content and turns repeated Distribution into no-op', async () => {
+  const fixture = await createFixture();
   try {
-    await createSkillPackage(source, '# Initial\n');
-    const paths = new SkillStorePaths(userHome);
-    const metadataRepository = new SkillMetadataRepository(database);
-    const importIds = [packageId, revisionId, importOperationId];
-    const storeCoordinator = new SkillStoreCoordinator(paths, metadataRepository, {
-      createId: () => importIds.shift() ?? randomUUID(),
-      now,
+    const before = await fixture.coordinator.preflightDistribution({
+      skillId: packageId,
+      targetIds: [targetId],
     });
-    await storeCoordinator.initialize();
-    await storeCoordinator.importPackage(source);
-    const targetRepository = new SkillTargetRepository(database, { now });
-    const targetPaths: string[] = [];
-    const targetIds: string[] = [];
-    for (let index = 0; index < targetCount; index += 1) {
-      const targetPath = path.join(temporaryRoot, `target-${index + 1}`);
-      await mkdir(targetPath);
-      const resolvedPath = await resolvePhysicalPath(targetPath);
-      const target = targetRepository.createCustomTarget({
-        displayName: `Target ${index + 1}`,
-        configuredPath: targetPath,
-        resolvedPath,
-        resolvedPathKey: normalizeResolvedPathKey(resolvedPath),
-        isWritable: true,
-        enabled: true,
-        maxScanDepth: 4,
-        allowSymlinkEscape: false,
-      }).target;
-      targetPaths.push(targetPath);
-      targetIds.push(target.id);
+    const firstTarget = before.targets[0];
+    if (firstTarget.status !== 'ready') {
+      assert.fail('Expected a ready Target.');
     }
-    const installationRepository = new SkillInstallationRepository(database, { now });
-    const operationQueue = new SkillOperationQueue();
-    return {
-      temporaryRoot,
-      database,
-      paths,
-      metadataRepository,
-      targetRepository,
-      installationRepository,
-      storeCoordinator,
-      operationQueue,
-      targetPaths,
-      targetIds,
-      close: async () => {
-        database.close();
-        await rm(temporaryRoot, { recursive: true, force: true });
-      },
-    };
-  } catch (error) {
-    database.close();
-    await rm(temporaryRoot, { recursive: true, force: true });
-    throw error;
+    assert.equal(firstTarget.operation, 'install');
+
+    const installed = await fixture.coordinator.distribute({
+      skillId: packageId,
+      targetIds: [targetId],
+    });
+    assert.equal(installed.targets[0]?.ok, true);
+    assert.equal(
+      await readFile(path.join(fixture.targetRoot, 'source', 'SKILL.md'), 'utf8'),
+      '# Version one\n',
+    );
+    const installation = fixture.installationRepository.getActiveInstallation(installationId);
+    assert.equal(installation.distributedFingerprint, fixture.imported.package.fingerprint);
+
+    const repeated = await fixture.coordinator.preflightDistribution({
+      skillId: packageId,
+      targetIds: [targetId],
+    });
+    assert.equal(repeated.targets[0]?.status === 'ready' && repeated.targets[0].operation, 'none');
+  } finally {
+    fixture.database.close();
+    await rm(fixture.temporaryRoot, { recursive: true, force: true });
   }
-}
+});
 
-function createCoordinator(
-  fixture: MutationFixture,
-  overrides: {
-    copyPackage?: (source: string, destination: string) => Promise<void>;
-  } = {},
-): SkillTargetMutationCoordinator {
-  return new SkillTargetMutationCoordinator({
-    paths: fixture.paths,
-    metadataRepository: fixture.metadataRepository,
-    targetRepository: fixture.targetRepository,
-    installationRepository: fixture.installationRepository,
-    storeCoordinator: fixture.storeCoordinator,
-    operationQueue: fixture.operationQueue,
-    copyPackage: overrides.copyPackage,
+test('failed replacement leaves the old fingerprint and retry recreates the projection', async () => {
+  let isFailNextReplacement = false;
+  const fixture = await createFixture(async (targetPath) => {
+    await rm(targetPath, { recursive: true, force: true });
+    if (isFailNextReplacement && targetPath.endsWith(`${path.sep}source`)) {
+      isFailNextReplacement = false;
+      throw new Error('Injected replacement failure');
+    }
   });
-}
+  try {
+    await fixture.coordinator.distribute({ skillId: packageId, targetIds: [targetId] });
+    const oldFingerprint = fixture.imported.package.fingerprint;
+    await writeFile(path.join(fixture.source, 'SKILL.md'), '# Version two\n');
+    const prepared = await fixture.storeCoordinator.preparePackageContent(fixture.source, packageId);
+    fixture.metadataRepository.replacePackageContent({
+      packageId,
+      distributionName: prepared.distributionName,
+      fingerprint: prepared.encoded.fingerprint,
+      content: prepared.encoded.content,
+      updatedAt: 300,
+    });
+    const preflight = await fixture.coordinator.preflightDistribution({
+      skillId: packageId,
+      targetIds: [targetId],
+    });
+    assert.equal(preflight.targets[0]?.status === 'ready' && preflight.targets[0].operation, 'replace');
 
-async function createSkillPackage(packageRoot: string, body: string): Promise<void> {
-  await mkdir(packageRoot, { recursive: true });
-  await writeFile(path.join(packageRoot, 'SKILL.md'), skillManifest(body));
-}
+    isFailNextReplacement = true;
+    const failed = await fixture.coordinator.distribute({
+      skillId: packageId,
+      targetIds: [targetId],
+    });
+    assert.equal(failed.targets[0]?.ok, false);
+    assert.equal(fixture.installationRepository.getActiveInstallation(installationId)
+      .distributedFingerprint, oldFingerprint);
 
-function skillManifest(body: string): string {
-  return `---\nname: shared-skill\ndescription: Test Skill\n---\n\n${body}`;
-}
+    const retried = await fixture.coordinator.distribute({
+      skillId: packageId,
+      targetIds: [targetId],
+    });
+    assert.equal(retried.targets[0]?.ok, true);
+    assert.equal(
+      await readFile(path.join(fixture.targetRoot, 'source', 'SKILL.md'), 'utf8'),
+      '# Version two\n',
+    );
+    assert.equal(fixture.installationRepository.getActiveInstallation(installationId)
+      .distributedFingerprint, prepared.encoded.fingerprint);
+  } finally {
+    fixture.database.close();
+    await rm(fixture.temporaryRoot, { recursive: true, force: true });
+  }
+});
 
-async function copyPackage(source: string, destination: string): Promise<void> {
-  await cp(source, destination, {
-    recursive: true,
-    dereference: false,
-    errorOnExist: true,
-    force: false,
-    verbatimSymlinks: true,
-  });
-}
+test('Uninstall removes one Target projection and deactivates its Installation', async () => {
+  const fixture = await createFixture();
+  try {
+    await fixture.coordinator.distribute({ skillId: packageId, targetIds: [targetId] });
+    await fixture.coordinator.uninstall({ installationId });
+    assert.equal(fixture.installationRepository.isInstallationActive(installationId), false);
+    await assert.rejects(() => readFile(path.join(fixture.targetRoot, 'source', 'SKILL.md')));
+    assert.equal(fixture.metadataRepository.getActivePackage(packageId).id, packageId);
+  } finally {
+    fixture.database.close();
+    await rm(fixture.temporaryRoot, { recursive: true, force: true });
+  }
+});

@@ -445,37 +445,35 @@ export class SkillClawHubProvider {
       expectedDigest,
     });
     try {
-      const imported = await this.options.storeCoordinator.importPackage(acquired.contentRoot);
-      const snapshot = imported.revision
-        ? { revision: imported.revision }
-        : await this.options.storeCoordinator.snapshotStorePackage(imported.package.id, 'import');
-      if (imported.package.storeObservation.status !== 'available') {
-        throw new SkillOperationError('content-unavailable', 'The imported Skill content is unavailable.');
-      }
-      const source = this.options.sourceRepository.attachOrRefresh({
-        id: parseSkillId(this.createId()),
-        packageId: imported.package.id,
-        provider: 'clawhub',
-        trackingMode: candidate.trackingMode,
-        sourceNativeId: `${candidate.ownerHandle}/${candidate.slug}`,
-        directoryProvider: null,
-        catalogLocator: null,
-        sourceUrl: null,
-        skillPath: null,
-        requestedRef: candidate.requestedRef,
-        resolvedRevision: candidate.version,
-        artifactDigest: acquired.artifactDigest,
-        observedContentFingerprint: imported.package.storeObservation.fingerprint,
-        canonicalWebUrl: candidate.canonicalWebUrl,
-        fetchedAt: this.now(),
-        checkedAt: null,
+      const packageId = parseSkillId(this.createId());
+      const prepared = await this.options.storeCoordinator.preparePackageContent(
+        acquired.contentRoot,
+        packageId,
+      );
+      const fetchedAt = this.now();
+      return this.options.sourceRepository.importPackageWithSource({
+        packageId,
+        distributionName: prepared.distributionName,
+        content: prepared.encoded.content,
+        fingerprint: prepared.encoded.fingerprint,
+        createdAt: fetchedAt,
+        source: {
+          id: parseSkillId(this.createId()),
+          provider: 'clawhub',
+          trackingMode: candidate.trackingMode,
+          sourceNativeId: `${candidate.ownerHandle}/${candidate.slug}`,
+          directoryProvider: null,
+          catalogLocator: null,
+          sourceUrl: null,
+          skillPath: null,
+          requestedRef: candidate.requestedRef,
+          resolvedRevision: candidate.version,
+          artifactDigest: acquired.artifactDigest,
+          observedContentFingerprint: prepared.encoded.fingerprint,
+          canonicalWebUrl: candidate.canonicalWebUrl,
+          fetchedAt,
+        },
       });
-      return {
-        skillPackage: imported.package,
-        revisionId: snapshot.revision.id,
-        source,
-        reusedPackage: imported.reused,
-      };
     } finally {
       await ignoreFailure(() => this.options.acquisition.release(acquired.operationId));
     }
@@ -505,9 +503,6 @@ export class SkillClawHubProvider {
       candidate.ownerId,
       selected.id,
     );
-    if (added.skillPackage.storeObservation.status !== 'available') {
-      throw new SkillOperationError('content-unavailable', 'The imported Skill content is unavailable.');
-    }
     const source = this.options.sourceRepository.attachOrRefresh({
       id: parseSkillId(this.createId()),
       packageId: added.skillPackage.id,
@@ -521,10 +516,9 @@ export class SkillClawHubProvider {
       requestedRef: candidate.requestedRef,
       resolvedRevision: candidate.version,
       artifactDigest: handoff.contentHash,
-      observedContentFingerprint: added.skillPackage.storeObservation.fingerprint,
+      observedContentFingerprint: added.skillPackage.fingerprint,
       canonicalWebUrl: candidate.canonicalWebUrl,
       fetchedAt: this.now(),
-      checkedAt: null,
     });
     return { ...added, source };
   }

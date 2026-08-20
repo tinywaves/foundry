@@ -122,7 +122,7 @@ test('resets built-in policy and removes only custom Targets', async () => {
       targetId: generic.id,
       enabled: false,
       maxScanDepth: 8,
-      allowSymlinkEscape: true,
+      allowSymlinkEscape: false,
     });
 
     now = 600;
@@ -131,7 +131,7 @@ test('resets built-in policy and removes only custom Targets', async () => {
       ...generic,
       enabled: true,
       maxScanDepth: definitions[0].defaultMaxScanDepth,
-      allowSymlinkEscape: false,
+      allowSymlinkEscape: definitions[0].defaultAllowSymlinkEscape,
       policySource: 'adapter-default',
       updatedAt: 600,
     });

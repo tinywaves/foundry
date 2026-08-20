@@ -4,6 +4,10 @@
 
 `completed`
 
+## Superseded Decisions
+
+[Plan 037](../037_replace-skill-store-with-sqlite-blobs/index.md) replaces current Store-to-Target observation, Distribution Records, verified atomic replacement with compensation, startup recovery, and Installation status presentation. This plan remains the historical record of the previous synchronization model.
+
 ## Goal
 
 Make Skill Distribution a predictable desired-state synchronization command and reduce Installation state to the current relationship between Store and Target content.

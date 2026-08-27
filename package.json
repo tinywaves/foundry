@@ -1,13 +1,12 @@
 {
-  "name": "foundry",
-  "type": "commonjs",
+  "name": "@dhzh/foundry",
+  "type": "module",
   "version": "0.2.2",
-  "main": "./out/main/index.js",
-  "packageManager": "pnpm@11.9.0",
+  "packageManager": "pnpm@11.22.0",
   "devEngines": {
     "packageManager": {
       "name": "pnpm",
-      "version": "^11.9.0",
+      "version": "^11.22.0",
       "onFail": "download"
     },
     "runtime": {
@@ -27,74 +26,56 @@
     "agent",
     "ai"
   ],
-  "files": [],
+  "exports": {
+    ".": {
+      "types": {
+        "import": "./dist/index.d.mts",
+        "require": "./dist/index.d.cts"
+      },
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.mts",
+  "files": [
+    "dist"
+  ],
   "repository": {
     "url": "git+https://github.com/tinywaves/foundry.git",
     "type": "git"
   },
   "sideEffects": false,
   "scripts": {
-    "build": "pnpm run typecheck && electron-vite build",
-    "build:linux": "electron-vite build && electron-builder --linux",
-    "build:mac": "electron-vite build && electron-builder --mac",
-    "build:unpack": "pnpm run build && electron-builder --dir",
-    "build:win": "npm run build && electron-builder --win",
-    "dev": "electron-vite dev",
-    "dev:watch": "electron-vite dev --watch",
-    "postinstall": "electron-builder install-app-deps",
+    "build": "tsdown",
+    "build:dev": "tsdown --watch",
+    "dev": "tsx watch --clear-screen=false src/index.ts",
     "lint": "eslint",
     "lint-fix": "eslint --fix .",
+    "prepare": "husky",
     "release": "bumpp",
-    "start": "electron-vite preview",
+    "release:publish": "pnpm release && pnpm publish --access public",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "typecheck": "pnpm run typecheck:node && pnpm run typecheck:web",
-    "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
-    "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false"
-  },
-  "dependencies": {
-    "@astryxdesign/core": "^0.2.0",
-    "@astryxdesign/theme-neutral": "^0.2.0",
-    "@codemirror/lang-markdown": "^6.5.2",
-    "@codemirror/language-data": "^6.5.2",
-    "@decimalturn/toml-patch": "^3.0.2",
-    "@electron-toolkit/preload": "^3.0.2",
-    "@electron-toolkit/utils": "^4.0.0",
-    "@lobehub/icons-static-svg": "^1.94.0",
-    "@stylexjs/stylex": "^0.19.0",
-    "@tanstack/react-query": "^5.101.4",
-    "@uiw/react-codemirror": "^4.25.11",
-    "better-sqlite3": "^13.0.3",
-    "chokidar": "^5.0.0",
-    "electron-updater": "^6.3.9",
-    "lucide-react": "^1.28.0",
-    "react-router": "^8.3.0",
-    "yaml": "^2.9.0",
-    "yauzl": "^3.4.0",
-    "yazl": "^3.3.1"
+    "test:coverage": "pnpm run test --coverage",
+    "test:dev": "vitest",
+    "version:update": "taze major",
+    "version:update:w": "taze major -w"
   },
   "devDependencies": {
-    "@astryxdesign/cli": "^0.2.0",
-    "@dhzh/eslint-config": "^2.4.2",
-    "@electron-toolkit/tsconfig": "^2.0.0",
-    "@stylexjs/unplugin": "^0.19.0",
-    "@types/better-sqlite3": "^9.6.0",
-    "@types/node": "^22.19.1",
-    "@types/react": "^19.2.7",
-    "@types/react-dom": "^19.2.3",
-    "@types/yauzl": "^3.4.0",
-    "@types/yazl": "^3.3.1",
-    "@vitejs/plugin-react": "^5.1.1",
-    "bumpp": "^12.1.1",
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2",
+    "@dhzh/eslint-config": "^2.4.3",
+    "@types/node": "^26.2.0",
+    "@vitest/coverage-v8": "^4.1.11",
+    "bumpp": "^12.2.1",
     "changelogithub": "^15.0.4",
-    "electron": "^39.2.6",
-    "electron-builder": "^26.0.12",
-    "electron-vite": "^5.0.0",
-    "eslint": "^10.6.0",
-    "react": "^19.2.1",
-    "react-dom": "^19.2.1",
-    "typescript": "^5.9.3",
-    "vite": "^7.2.6",
-    "vitest": "^4.1.10"
+    "eslint": "^10.9.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
+    "taze": "^21.1.0",
+    "tsdown": "^0.22.14",
+    "tsx": "^4.23.12",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.11"
   }
 }

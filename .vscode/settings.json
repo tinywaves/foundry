@@ -6,6 +6,7 @@
 
   // Disable the default formatter, use eslint instead
   "prettier.enable": false,
+  "editor.formatOnSave": false,
 
   // Auto fix
   "editor.codeActionsOnSave": {
@@ -107,14 +108,10 @@
   },
   "js/ts.tsdk.path": "node_modules/typescript/lib",
   "cSpell.words": [
-    "astryx",
-    "astryxdesign",
     "bumpp",
     "changelogithub",
-    "electronjs",
-    "nsis",
-    "shopt",
-    "stylexjs",
-    "xstyle"
+    "esbuild",
+    "taze",
+    "unrs"
   ]
 }

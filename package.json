@@ -50,7 +50,7 @@
     "build:dev": "tsdown --watch",
     "dev": "tsx watch --clear-screen=false src/index.ts",
     "lint": "eslint",
-    "lint-fix": "eslint --fix .",
+    "lint-fix": "eslint --fix",
     "prepare": "husky",
     "release": "bumpp",
     "release:publish": "pnpm release && pnpm publish --access public",

@@ -1,0 +1,25 @@
+{
+  "name": "@dhzh/foundry-app",
+  "private": true,
+  "type": "module",
+  "description": "The local web interface for Foundry.",
+  "scripts": {
+    "build": "rsbuild build",
+    "dev": "rsbuild",
+    "preview": "rsbuild preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@dhzh/foundry-api-contract": "workspace:*",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@rsbuild/core": "^2.2.1",
+    "@rsbuild/plugin-react": "^2.1.0",
+    "@types/node": "catalog:",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "typescript": "catalog:"
+  }
+}

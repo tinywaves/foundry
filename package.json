@@ -54,6 +54,7 @@
     "dev:server": "tsx watch --clear-screen=false src/server/dev.ts",
     "lint": "eslint",
     "lint-fix": "eslint --fix",
+    "prepack": "pnpm build",
     "prepare": "husky",
     "release": "bumpp",
     "release:publish": "pnpm release && pnpm publish --access public",

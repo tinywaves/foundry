@@ -35,7 +35,7 @@
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
   "bin": {
-    "foundry": "./dist/index.mjs"
+    "foundry": "./dist/cli.mjs"
   },
   "files": [
     "dist"
@@ -48,7 +48,9 @@
   "scripts": {
     "build": "tsdown",
     "build:dev": "tsdown --watch",
-    "dev": "tsx watch --clear-screen=false src/index.ts",
+    "dev": "pnpm run dev:server",
+    "dev:cli": "tsx src/cli/index.ts ui",
+    "dev:server": "tsx watch --clear-screen=false src/server/dev.ts",
     "lint": "eslint",
     "lint-fix": "eslint --fix",
     "prepare": "husky",
@@ -57,6 +59,7 @@
     "test": "vitest run",
     "test:coverage": "pnpm run test --coverage",
     "test:dev": "vitest",
+    "typecheck": "tsc --noEmit",
     "version:update": "taze major",
     "version:update:w": "taze major -w"
   },
@@ -76,5 +79,11 @@
     "tsx": "^4.23.12",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.1",
+    "citty": "^0.2.2",
+    "hono": "^4.13.5",
+    "open": "^11.0.2"
   }
 }

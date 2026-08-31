@@ -130,3 +130,8 @@ dist
 .pnp.*
 .DS_Store
 .pnpm-store
+
+# Local workspace files
+*.local
+.rspack-profile-*/
+.idea

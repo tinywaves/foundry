@@ -8,7 +8,7 @@ it('listens only on loopback and closes cleanly', async () => {
     expect(server.hostname).toBe('127.0.0.1');
     expect(server.url).toBe(`http://127.0.0.1:${server.port}`);
 
-    const response = await fetch(server.url);
+    const response = await fetch(`${server.url}/api/health`);
     expect(response.status).toBe(200);
   } finally {
     await server.close();

@@ -46,9 +46,10 @@
   },
   "sideEffects": false,
   "scripts": {
-    "build": "tsdown",
-    "build:dev": "tsdown --watch",
-    "dev": "pnpm run dev:server",
+    "build": "pnpm run build:server && pnpm run build:app",
+    "build:app": "pnpm --filter @dhzh/foundry-app build",
+    "build:server": "tsdown",
+    "dev:app": "pnpm --filter @dhzh/foundry-app dev",
     "dev:cli": "tsx src/cli/index.ts ui",
     "dev:server": "tsx watch --clear-screen=false src/server/dev.ts",
     "lint": "eslint",
@@ -67,7 +68,8 @@
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.2",
     "@dhzh/eslint-config": "^2.4.3",
-    "@types/node": "^26.2.0",
+    "@dhzh/foundry-api-contract": "workspace:*",
+    "@types/node": "catalog:",
     "@vitest/coverage-v8": "^4.1.11",
     "bumpp": "^12.2.1",
     "changelogithub": "^15.0.4",
@@ -77,13 +79,15 @@
     "taze": "^21.1.0",
     "tsdown": "^0.22.14",
     "tsx": "^4.23.12",
-    "typescript": "^6.0.3",
+    "typescript": "catalog:",
     "vitest": "^4.1.11"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
+    "@hono/zod-validator": "^0.9.0",
     "citty": "^0.2.2",
     "hono": "^4.13.5",
-    "open": "^11.0.2"
+    "open": "^11.0.2",
+    "zod": "^4.5.4"
   }
 }

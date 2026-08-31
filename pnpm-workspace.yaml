@@ -1,3 +1,9 @@
+packages:
+  - app
+  - packages/*
+catalog:
+  '@types/node': ^26.2.0
+  typescript: ^6.0.3
 allowBuilds:
   esbuild: true
   unrs-resolver: true

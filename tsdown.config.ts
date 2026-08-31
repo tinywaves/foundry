@@ -5,6 +5,9 @@ export default defineConfig({
     cli: 'src/cli/index.ts',
     index: 'src/index.ts',
   },
+  deps: {
+    alwaysBundle: ['@dhzh/foundry-api-contract'],
+  },
   banner: ({ fileName }) => {
     if (fileName === 'cli.mjs') {
       return {

@@ -9,7 +9,7 @@ The `foundry` executable through which a user accesses Foundry from a terminal. 
 _Avoid_: Foundry command, terminal UI
 
 **Local Web UI**:
-A browser-based Foundry interface served on and accessible only from the user's machine. It is distinct from the retained Electron reference implementation.
+A browser-based Foundry interface served on and accessible only from the user's machine.
 _Avoid_: Electron UI, desktop UI
 
 **Foundry Server**:

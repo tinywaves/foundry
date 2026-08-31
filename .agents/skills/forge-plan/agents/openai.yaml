@@ -1,6 +1,0 @@
-interface:
-  display_name: "Forge Plan"
-  short_description: "Shape plans and track incremental optimizations"
-  default_prompt: "Use $forge-plan to turn my goal into a reviewable task sequence or track an incremental optimization series."
-policy:
-  allow_implicit_invocation: false

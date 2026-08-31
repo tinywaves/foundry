@@ -1,4 +1,7 @@
 import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { expect, it } from 'vitest';
@@ -16,6 +19,24 @@ function runCli(...args: string[]) {
   });
 }
 
+function runCliThroughSymlink(...args: string[]) {
+  const temporaryDirectory = mkdtempSync(path.join(tmpdir(), 'foundry-cli-'));
+  const symlinkPath = path.join(temporaryDirectory, 'foundry.ts');
+  symlinkSync(cliPath, symlinkPath);
+
+  try {
+    return spawnSync(process.execPath, ['--import', 'tsx', symlinkPath, ...args], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NO_COLOR: '1',
+      },
+    });
+  } finally {
+    rmSync(temporaryDirectory, { force: true, recursive: true });
+  }
+}
+
 it('shows root help when invoked without a command', () => {
   const result = runCli();
 
@@ -26,6 +47,13 @@ it('shows root help when invoked without a command', () => {
 
 it.each(['--version', '-v'])('prints the package version for %s', (flag) => {
   const result = runCli(flag);
+
+  expect(result.status).toBe(0);
+  expect(result.stdout.trim()).toBe(packageJson.version);
+});
+
+it('runs when invoked through an npm-style executable symlink', () => {
+  const result = runCliThroughSymlink('--version');
 
   expect(result.status).toBe(0);
   expect(result.stdout.trim()).toBe(packageJson.version);

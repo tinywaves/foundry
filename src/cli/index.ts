@@ -1,10 +1,9 @@
 import { defineCommand, renderUsage, runMain } from 'citty';
 import process from 'node:process';
-import { pathToFileURL } from 'node:url';
 import packageJson from '../../package.json' with { type: 'json' };
 import { createUiCommand } from './ui-command';
 
-export const foundryCommand = defineCommand({
+const foundryCommand = defineCommand({
   meta: {
     description: 'An AI-native local developer runtime',
     name: 'foundry',
@@ -31,7 +30,7 @@ function getRootArgumentError(rawArgs: string[]): string | undefined {
   return `Unknown option: ${rawArgs[0]}`;
 }
 
-export async function runCli(rawArgs: string[] = process.argv.slice(2)): Promise<void> {
+async function runCli(rawArgs: string[] = process.argv.slice(2)): Promise<void> {
   if (rawArgs.length === 0) {
     console.info(`${await renderUsage(foundryCommand)}\n`);
     return;
@@ -47,6 +46,4 @@ export async function runCli(rawArgs: string[] = process.argv.slice(2)): Promise
   await runMain(foundryCommand, { rawArgs });
 }
 
-if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
-  void runCli();
-}
+void runCli();

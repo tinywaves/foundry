@@ -1,3 +1,5 @@
-export function sum(a: number, b: number) {
-  return a + b;
+import packageJson from '../package.json' with { type: 'json' };
+
+export function getVersion(): string {
+  return packageJson.version;
 }

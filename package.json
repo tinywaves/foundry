@@ -70,18 +70,22 @@
     "@commitlint/config-conventional": "^21.2.2",
     "@dhzh/eslint-config": "^2.4.3",
     "@dhzh/foundry-api-contract": "workspace:*",
+    "@tailwindcss/vite": "4.3.3",
     "@types/node": "catalog:",
+    "@vitejs/plugin-react": "^6.1.1",
+    "@vitest/browser-playwright": "4.1.11",
     "@vitest/coverage-v8": "^4.1.11",
     "bumpp": "^12.2.1",
     "changelogithub": "^15.0.4",
     "eslint": "^10.9.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.3.0",
+    "playwright": "^1.62.1",
     "taze": "^21.1.0",
     "tsdown": "^0.22.14",
     "tsx": "^4.23.12",
     "typescript": "catalog:",
-    "vitest": "^4.1.11"
+    "vitest": "catalog:"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",

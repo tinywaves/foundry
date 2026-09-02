@@ -17,7 +17,12 @@
 
     /* type checking */
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+
+    /* import aliases */
+    "paths": {
+      "#/*": ["./src/*"]
+    }
   },
-  "include": ["src", "rsbuild.config.ts"]
+  "include": ["src", "test", "rsbuild.config.ts"]
 }

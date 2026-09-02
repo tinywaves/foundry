@@ -16,6 +16,10 @@ _Avoid_: Electron UI, desktop UI
 The local service that provides the Local Web UI and Foundry's HTTP API. It may be started through the Foundry CLI or directly for development.
 _Avoid_: CLI server, Web UI server
 
+**Service Health**:
+An application-wide indication of whether the Local Web UI can communicate successfully with the Foundry Server. It has the states Checking, Healthy, and Unhealthy.
+_Avoid_: Connection status, API health
+
 **Foundry Library API**:
 A potential programmatic interface exposed if Foundry is consumed as an npm package. It is independent of the Foundry CLI and is not yet a committed product surface.
 _Avoid_: CLI API, command API

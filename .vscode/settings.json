@@ -113,7 +113,9 @@
     "citty",
     "esbuild",
     "rsbuild",
+    "shadcn",
     "taze",
-    "unrs"
+    "unrs",
+    "vitest"
   ]
 }

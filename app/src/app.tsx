@@ -1,5 +1,9 @@
-import { Button } from './components/ui/button';
+import { Outlet } from 'react-router';
+
+import { useHealth } from '#/hooks/use-health';
 
 export default function App() {
-  return <Button>Click me</Button>;
+  useHealth();
+
+  return <Outlet />;
 }

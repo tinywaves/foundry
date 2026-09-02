@@ -115,6 +115,7 @@
     "rsbuild",
     "shadcn",
     "taze",
-    "unrs"
+    "unrs",
+    "vitest"
   ]
 }

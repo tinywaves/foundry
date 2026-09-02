@@ -115,6 +115,35 @@ describe('application routing and layouts', () => {
       .toHaveAttribute('aria-current', 'page');
   });
 
+  test('renders capability and execution navigation groups', async () => {
+    const screen = await renderApp('/dashboard');
+
+    await expect.element(screen.getByText('Capabilities')).toBeVisible();
+    await expect.element(screen.getByText('Execution')).toBeVisible();
+  });
+
+  test.each([
+    ['Skills', '/skills', 'Local skill management will be added here.'],
+    ['MCPs', '/mcps', 'MCP server management will be added here.'],
+    [
+      'Providers',
+      '/providers',
+      'Model provider management will be added here.',
+    ],
+    [
+      'Runtimes',
+      '/runtimes',
+      'Local agent runtime management will be added here.',
+    ],
+  ])('renders the %s placeholder page', async (title, path, description) => {
+    const screen = await renderApp(path);
+
+    await expect.element(screen.getByText(description)).toBeVisible();
+    await expect
+      .element(screen.getByRole('link', { name: title }))
+      .toHaveAttribute('aria-current', 'page');
+  });
+
   test('renders settings without sidebar navigation', async () => {
     const screen = await renderApp('/settings');
 

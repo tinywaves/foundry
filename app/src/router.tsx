@@ -4,10 +4,14 @@ import { Navigate, createHashRouter } from 'react-router';
 import App from '#/app';
 import { SidebarLayout } from '#/layouts/sidebar-layout';
 import { StandaloneLayout } from '#/layouts/standalone-layout';
-import { DashboardPage } from '#/pages/dashboard-page';
-import { NotFoundPage } from '#/pages/not-found-page';
-import { PromptsPage } from '#/pages/prompts-page';
-import { SettingsPage } from '#/pages/settings-page';
+import { McpsPage } from '#/pages/capabilities/mcps';
+import { PromptsPage } from '#/pages/capabilities/prompts';
+import { SkillsPage } from '#/pages/capabilities/skills';
+import { DashboardPage } from '#/pages/dashboard';
+import { ProvidersPage } from '#/pages/execution/providers';
+import { RuntimesPage } from '#/pages/execution/runtimes';
+import { NotFoundPage } from '#/pages/not-found';
+import { SettingsPage } from '#/pages/settings';
 
 export const routes: RouteObject[] = [
   {
@@ -27,6 +31,22 @@ export const routes: RouteObject[] = [
           {
             path: 'prompts',
             Component: PromptsPage,
+          },
+          {
+            path: 'skills',
+            Component: SkillsPage,
+          },
+          {
+            path: 'mcps',
+            Component: McpsPage,
+          },
+          {
+            path: 'providers',
+            Component: ProvidersPage,
+          },
+          {
+            path: 'runtimes',
+            Component: RuntimesPage,
           },
         ],
       },

@@ -1,23 +1,68 @@
 import {
+  AiCloudIcon,
+  BotIcon,
+  LanguageSkillIcon,
   LayoutDashboardIcon,
+  McpServerIcon,
   MessageProgrammingIcon,
 } from '@hugeicons/core-free-icons';
 
-export const sidebarNavigation = [
+export const sidebarNavigationSections = [
   {
-    title: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboardIcon,
+    title: null,
+    items: [
+      {
+        title: 'Dashboard',
+        href: '/dashboard',
+        icon: LayoutDashboardIcon,
+      },
+    ],
   },
   {
-    title: 'Prompts',
-    href: '/prompts',
-    icon: MessageProgrammingIcon,
+    title: 'Capabilities',
+    items: [
+      {
+        title: 'Skills',
+        href: '/skills',
+        icon: LanguageSkillIcon,
+      },
+      {
+        title: 'MCPs',
+        href: '/mcps',
+        icon: McpServerIcon,
+      },
+      {
+        title: 'Prompts',
+        href: '/prompts',
+        icon: MessageProgrammingIcon,
+      },
+    ],
+  },
+  {
+    title: 'Execution',
+    items: [
+      {
+        title: 'Providers',
+        href: '/providers',
+        icon: AiCloudIcon,
+      },
+      {
+        title: 'Runtimes',
+        href: '/runtimes',
+        icon: BotIcon,
+      },
+    ],
   },
 ] as const;
 
 export function getPageTitle(pathname: string): string {
-  return (
-    sidebarNavigation.find((item) => item.href === pathname)?.title ?? 'Foundry'
-  );
+  for (const section of sidebarNavigationSections) {
+    for (const item of section.items) {
+      if (item.href === pathname) {
+        return item.title;
+      }
+    }
+  }
+
+  return 'Foundry';
 }

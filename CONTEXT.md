@@ -1,6 +1,6 @@
 # Foundry
 
-Foundry provides local interfaces for working with its developer runtime.
+Foundry provides local interfaces for managing agent capabilities and execution configuration.
 
 ## Language
 
@@ -11,6 +11,30 @@ _Avoid_: Foundry command, terminal UI
 **Local Web UI**:
 A browser-based Foundry interface served on and accessible only from the user's machine.
 _Avoid_: Electron UI, desktop UI
+
+**Capability**:
+A reusable resource that expands what a local agent can do. Foundry groups Skills, MCP Servers, and Prompts as Capabilities.
+_Avoid_: Plugin, extension
+
+**Skill**:
+A packaged set of instructions and supporting resources that can be installed for supported local agents.
+_Avoid_: Plugin, extension
+
+**MCP Server**:
+A configured Model Context Protocol server that exposes tools or context to supported local agents.
+_Avoid_: MCP tool, MCP plugin
+
+**Prompt**:
+Reusable instruction text managed by Foundry.
+_Avoid_: Prompt template
+
+**Provider**:
+A saved model-provider configuration that can be applied to a compatible Runtime.
+_Avoid_: Model, backend
+
+**Runtime**:
+A supported local agent application whose provider configuration Foundry can manage.
+_Avoid_: Provider, model
 
 **Foundry Server**:
 The local service that provides the Local Web UI and Foundry's HTTP API. It may be started through the Foundry CLI or directly for development.

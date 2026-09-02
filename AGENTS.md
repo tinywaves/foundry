@@ -4,9 +4,9 @@
 
 - `src/cli/` contains the Citty CLI and the `foundry ui` command.
 - `src/server/` contains the loopback-only Hono server, HTTP handlers, static file serving, and shutdown lifecycle.
-- `app/` is the private React and Rsbuild workspace for the local web interface.
+- `app/` is the private React and Rsbuild workspace for the local web interface, including Vitest Browser Mode tests in `app/test/`.
 - `packages/api-contract/` is the private workspace module shared by the server and app.
-- `test/` contains the Vitest coverage for the CLI, server, contracts, and frontend health client.
+- `test/` contains the Vitest coverage for the CLI, server, and contracts.
 
 Keep local web interface changes within these modules. The frontend consumes server contracts through `@dhzh/foundry-api-contract` and communicates with the server through relative `/api` requests.
 
@@ -23,6 +23,15 @@ Keep local web interface changes within these modules. The frontend consumes ser
 - Prefer the direct implementation when a wrapper only forwards arguments or returns one expression. Introduce a helper, factory, hook, class, or other abstraction only when it centralizes reusable behavior, enforces a policy, creates a meaningful test seam, or hides substantial complexity.
 - Keep module APIs minimal. Export a symbol only when another module imports it; keep module-local implementation details unexported.
 - Before adding or retaining an export, search its call sites. Remove the export when no external consumer exists, and remove the symbol entirely when it adds no local value.
+
+## Local Web UI
+
+- Keep route definitions in `app/src/router.tsx` and sidebar labels, groups, and destinations in `app/src/navigation.ts`.
+- Preserve the nested sidebar and standalone layouts. Use hash routing for browser navigation; read [ADR 0002](docs/adr/0002-use-hash-routing-for-local-web-ui.md) before changing the routing strategy.
+- Group sidebar page modules by product area under `app/src/pages/`; keep pages outside the sidebar, such as settings and Not Found, at the page root.
+- Use TanStack Query for server state and relative `/api` requests. Read [ADR 0004](docs/adr/0004-use-tanstack-query-for-server-state.md) before introducing another server-state pattern.
+- Add shadcn/ui components on demand. Do not reinitialize the project; preserve the Base UI, Mira, and Neutral configuration in `app/components.json`, and treat generated components as source-owned code that may be adapted.
+- Use the existing theme provider for appearance state and persistence instead of introducing a parallel theme store.
 
 ## HTTP Contracts
 

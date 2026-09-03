@@ -218,7 +218,12 @@ describe('application routing and layouts', () => {
       state: { returnTo: '/skills' },
     });
 
-    await expect.element(screen.getByText('Page not found')).toBeVisible();
+    await expect
+      .element(screen.getByRole('heading', {
+        name: 'This page doesn\'t exist',
+      }))
+      .toBeVisible();
+    await expect.element(screen.getByText('/missing')).toBeVisible();
     expect(
       document.querySelector('[data-testid="not-found-dashboard"]'),
     ).toBeInstanceOf(HTMLAnchorElement);

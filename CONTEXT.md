@@ -12,6 +12,10 @@ _Avoid_: Foundry command, terminal UI
 A browser-based Foundry interface served on and accessible only from the user's machine.
 _Avoid_: Electron UI, desktop UI
 
+**Capabilities**:
+The Foundry product area for reusable resources that expand supported local agents. It contains Skills, MCP Servers, and Prompts.
+_Avoid_: Extensions, integrations
+
 **Capability**:
 A reusable resource that expands what a local agent can do. Foundry groups Skills, MCP Servers, and Prompts as Capabilities.
 _Avoid_: Plugin, extension
@@ -27,6 +31,10 @@ _Avoid_: MCP tool, MCP plugin
 **Prompt**:
 Reusable instruction text managed by Foundry.
 _Avoid_: Prompt template
+
+**Execution**:
+The Foundry product area for configuring how supported local agents run and access model providers. It contains Providers and Runtimes.
+_Avoid_: Infrastructure, environments
 
 **Provider**:
 A saved model-provider configuration that can be applied to a compatible Runtime.

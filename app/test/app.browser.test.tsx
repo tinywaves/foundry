@@ -198,6 +198,12 @@ describe('responsive sidebar', () => {
     );
   });
 
+  test('does not render a resize-style sidebar rail', async () => {
+    await renderApp('/dashboard');
+
+    expect(document.querySelector('[data-sidebar="rail"]')).toBeNull();
+  });
+
   test('persists the collapsed state and exposes navigation tooltips', async () => {
     const screen = await renderApp('/dashboard');
     const trigger = page.getByTestId('sidebar-trigger');

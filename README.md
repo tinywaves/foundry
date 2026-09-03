@@ -1,6 +1,6 @@
 # Foundry
 
-Foundry provides a CLI-managed local web interface backed by a loopback-only Hono server. It is distributed as an ESM-only Node.js package.
+Foundry is an AI-native local developer runtime for managing Skills, MCP Servers, Prompts, model Providers, and local agent Runtimes. It provides a CLI-managed web interface that runs entirely on the user's machine.
 
 ## Usage
 
@@ -15,6 +15,17 @@ The server listens on `http://127.0.0.1:54321` and opens the interface in the de
 ```bash
 pnpm dlx @dhzh/foundry ui --port 61234 --no-open
 ```
+
+## Local Web Interface
+
+The current Local Web UI provides the application shell for Foundry's management surfaces. It uses hash-based URLs so navigation does not require server-side route fallbacks.
+
+- `/#/dashboard` - Dashboard entry point.
+- `/#/skills`, `/#/mcps`, and `/#/prompts` - Capability management placeholders.
+- `/#/providers` and `/#/runtimes` - Execution management placeholders.
+- `/#/settings` - Standalone appearance settings with a persisted light or dark theme.
+
+The management pages are placeholders for later workflows. The browser tab title reports Foundry Server connectivity as `Checking…`, `Healthy`, or `Unhealthy`, and unknown routes render an in-app Not Found page.
 
 ## Development
 
@@ -58,14 +69,16 @@ Unexpected query parameters are rejected with HTTP 400.
 
 - `src/cli/` - CLI entry point and the `foundry ui` command.
 - `src/server/` - Hono server, health handler, static app serving, and lifecycle management.
-- `app/` - React and Rsbuild local web interface.
+- `app/` - React and Rsbuild local web interface with Vitest Browser Mode coverage.
 - `packages/api-contract/` - Shared response constants and TypeScript types.
-- `test/` - Vitest test suite.
+- `test/` - Vitest coverage for the CLI, server, and shared contracts.
 
 ## Verification
 
 ```bash
 pnpm test
+pnpm lint
+pnpm typecheck
 pnpm --filter @dhzh/foundry-app typecheck
 pnpm build
 ```

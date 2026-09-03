@@ -68,7 +68,7 @@
   "devDependencies": {
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.2",
-    "@dhzh/eslint-config": "^2.4.3",
+    "@dhzh/eslint-config": "^2.6.1",
     "@dhzh/foundry-api-contract": "workspace:*",
     "@tailwindcss/vite": "4.3.3",
     "@types/node": "catalog:",

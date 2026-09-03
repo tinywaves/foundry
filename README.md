@@ -1,6 +1,6 @@
 # Foundry
 
-Foundry provides a CLI-managed local web interface backed by a loopback-only Hono server. It is distributed as an ESM-only Node.js package.
+Foundry is an AI-native local developer runtime for managing Skills, MCP Servers, Prompts, model Providers, and local agent Runtimes. It provides a CLI-managed web interface that runs entirely on the user's machine.
 
 ## Usage
 

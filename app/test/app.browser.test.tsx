@@ -43,7 +43,7 @@ async function renderApp(initialPath: string) {
 beforeEach(async () => {
   await page.viewport(1280, 800);
   document.title = 'Foundry';
-  document.cookie = 'sidebar_state=; path=/; max-age=0';
+  await cookieStore.delete({ name: 'sidebar_state', path: '/' });
   localStorage.setItem('theme', 'light');
   document.documentElement.classList.remove('light', 'dark');
 });
@@ -209,7 +209,12 @@ describe('responsive sidebar', () => {
         getComputedStyle(page.getByTestId('app-sidebar').element()).width,
       )
       .toBe('48px');
-    expect(document.cookie).toContain('sidebar_state=false');
+    await expect
+      .poll(async () => {
+        const sidebarState = await cookieStore.get('sidebar_state');
+        return sidebarState?.value;
+      })
+      .toBe('false');
 
     await screen
       .getByRole('link', { name: 'Dashboard', exact: true })

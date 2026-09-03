@@ -5,6 +5,13 @@ export default defineConfig({
     '.agents',
     './app/src/components/ui',
     './app/src/components/theme-provider.tsx',
-    './app/test',
+  ],
+  customLinterConfigs: [
+    {
+      files: ['./app/test/app.browser.test.tsx'],
+      rules: {
+        'n/no-unsupported-features/node-builtins': 'off',
+      },
+    },
   ],
 });

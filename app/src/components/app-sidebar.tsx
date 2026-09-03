@@ -10,7 +10,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail,
   useSidebar,
 } from '#/components/ui/sidebar';
 import { sidebarNavigationSections } from '#/navigation';
@@ -59,8 +58,6 @@ export function AppSidebar() {
           </SidebarGroup>
         ))}
       </SidebarContent>
-
-      <SidebarRail />
     </Sidebar>
   );
 }

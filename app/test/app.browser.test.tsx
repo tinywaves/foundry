@@ -11,6 +11,7 @@ import {
 } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { createMemoryRouter } from 'react-router';
+import type { InitialEntry } from 'react-router';
 import { RouterProvider } from 'react-router/dom';
 
 import { ThemeProvider } from '#/components/theme-provider';
@@ -21,10 +22,12 @@ function createHealthResponse(status = 200) {
   return new Response(null, { status });
 }
 
-async function renderApp(initialPath: string) {
+async function renderApp(initialEntries: InitialEntry | InitialEntry[]) {
   const queryClient = new QueryClient();
   const router = createMemoryRouter(routes, {
-    initialEntries: [initialPath],
+    initialEntries: Array.isArray(initialEntries)
+      ? initialEntries
+      : [initialEntries],
   });
 
   return render(
@@ -115,6 +118,28 @@ describe('application routing and layouts', () => {
       .toHaveAttribute('aria-current', 'page');
   });
 
+  test('opens settings from the header and returns to the previous page', async () => {
+    const screen = await renderApp('/prompts');
+    const settingsButton = document.querySelector(
+      '[data-testid="settings-button"]',
+    );
+
+    expect(settingsButton).toBeInstanceOf(HTMLButtonElement);
+    (settingsButton as HTMLButtonElement).click();
+    await expect
+      .element(screen.getByText('Choose how Foundry looks on this device.'))
+      .toBeVisible();
+
+    const backLink = document.querySelector(
+      '[data-testid="standalone-back"]',
+    );
+    expect(backLink).toBeInstanceOf(HTMLAnchorElement);
+    (backLink as HTMLAnchorElement).click();
+    await expect
+      .element(screen.getByText('Prompt management will be added here.'))
+      .toBeVisible();
+  });
+
   test('renders capability and execution navigation groups', async () => {
     const screen = await renderApp('/dashboard');
 
@@ -144,8 +169,11 @@ describe('application routing and layouts', () => {
       .toHaveAttribute('aria-current', 'page');
   });
 
-  test('renders settings without sidebar navigation', async () => {
-    const screen = await renderApp('/settings');
+  test('renders settings with standalone navigation', async () => {
+    const screen = await renderApp({
+      pathname: '/settings',
+      state: { returnTo: '/prompts' },
+    });
 
     await expect
       .element(screen.getByText('Choose how Foundry looks on this device.'))
@@ -154,10 +182,15 @@ describe('application routing and layouts', () => {
       .element(screen.getByRole('button', { name: 'Toggle Sidebar' }))
       .not
       .toBeInTheDocument();
+
+    const backLink = document.querySelector(
+      '[data-testid="standalone-back"]',
+    );
+    expect(backLink).toBeInstanceOf(HTMLAnchorElement);
+    (backLink as HTMLAnchorElement).click();
     await expect
-      .element(screen.getByRole('link', { name: 'Dashboard' }))
-      .not
-      .toBeInTheDocument();
+      .element(screen.getByText('Prompt management will be added here.'))
+      .toBeVisible();
   });
 
   test('toggles and persists the application theme from settings', async () => {
@@ -179,11 +212,34 @@ describe('application routing and layouts', () => {
     expect(localStorage.getItem('theme')).toBe('light');
   });
 
-  test('renders an independent not found page and returns to dashboard', async () => {
-    const screen = await renderApp('/missing');
+  test('renders an independent not found page and returns to the previous page', async () => {
+    const screen = await renderApp({
+      pathname: '/missing',
+      state: { returnTo: '/skills' },
+    });
 
     await expect.element(screen.getByText('Page not found')).toBeVisible();
-    await screen.getByRole('button', { name: 'Back to dashboard' }).click();
+    expect(
+      document.querySelector('[data-testid="not-found-dashboard"]'),
+    ).toBeInstanceOf(HTMLAnchorElement);
+    const backLink = document.querySelector(
+      '[data-testid="standalone-back"]',
+    );
+    expect(backLink).toBeInstanceOf(HTMLAnchorElement);
+    (backLink as HTMLAnchorElement).click();
+    await expect
+      .element(screen.getByText('Local skill management will be added here.'))
+      .toBeVisible();
+  });
+
+  test('returns to the dashboard from the not found recovery action', async () => {
+    const screen = await renderApp('/missing');
+    const dashboardLink = document.querySelector(
+      '[data-testid="not-found-dashboard"]',
+    );
+
+    expect(dashboardLink).toBeInstanceOf(HTMLAnchorElement);
+    (dashboardLink as HTMLAnchorElement).click();
     await expect
       .element(screen.getByText('Dashboard content will be added here.'))
       .toBeVisible();
@@ -196,6 +252,12 @@ describe('responsive sidebar', () => {
       'fetch',
       vi.fn(() => Promise.resolve(createHealthResponse())),
     );
+  });
+
+  test('does not render a resize-style sidebar rail', async () => {
+    await renderApp('/dashboard');
+
+    expect(document.querySelector('[data-sidebar="rail"]')).toBeNull();
   });
 
   test('persists the collapsed state and exposes navigation tooltips', async () => {

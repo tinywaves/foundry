@@ -10,7 +10,17 @@ export function NotFoundPage() {
       description="The page you requested does not exist."
       action={
         (
-          <Button nativeButton={false} render={<Link to="/dashboard" />}>
+          <Button
+            nativeButton={false}
+            render={
+              (
+                <Link
+                  to="/dashboard"
+                  data-testid="not-found-dashboard"
+                />
+              )
+            }
+          >
             Back to dashboard
           </Button>
         )

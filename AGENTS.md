@@ -28,6 +28,9 @@ Keep local web interface changes within these modules. The frontend consumes ser
 
 - Keep route definitions in `app/src/router.tsx` and sidebar labels, groups, and destinations in `app/src/navigation.ts`.
 - Preserve the nested sidebar and standalone layouts. Use hash routing for browser navigation; read [ADR 0002](docs/adr/0002-use-hash-routing-for-local-web-ui.md) before changing the routing strategy.
+- Match navigation controls to their native semantics. Use `Link` for a known destination, including Back links with an explicit return path; use `Button` for actions or triggers, including the header Settings control. Preserve native cursor behavior instead of forcing buttons and links to share a cursor style.
+- When an action opens a standalone route, pass its return path in router location state so the standalone Back control remains a real link. Use Dashboard as the fallback destination for direct entry without return state.
+- Give icon-only header buttons an accessible name and a `ghost`-style hover background. Do not add a tooltip to the Settings button.
 - Group sidebar page modules by product area under `app/src/pages/`; keep pages outside the sidebar, such as settings and Not Found, at the page root.
 - Use TanStack Query for server state and relative `/api` requests. Read [ADR 0004](docs/adr/0004-use-tanstack-query-for-server-state.md) before introducing another server-state pattern.
 - Add shadcn/ui components on demand. Do not reinitialize the project; preserve the Base UI, Mira, and Neutral configuration in `app/components.json`, and treat generated components as source-owned code that may be adapted.

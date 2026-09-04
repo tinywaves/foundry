@@ -1,6 +1,8 @@
 import { serve } from '@hono/node-server';
 import type { ServerType } from '@hono/node-server';
 import { createFoundryApp } from './app';
+import { openFoundryDatabase } from './database';
+import { DrizzleSettingsStore } from './settings-store';
 
 export const FOUNDRY_SERVER_HOSTNAME = '127.0.0.1';
 export const FOUNDRY_SERVER_PORT = 54_321;
@@ -13,6 +15,8 @@ export interface FoundryServer {
 }
 
 export interface StartFoundryServerOptions {
+  databasePath?: string;
+  migrationsFolder?: string;
   port?: number;
 }
 
@@ -33,15 +37,23 @@ export async function startFoundryServer(
   options: StartFoundryServerOptions = {},
 ): Promise<FoundryServer> {
   const port = options.port ?? FOUNDRY_SERVER_PORT;
+  const database = await openFoundryDatabase({
+    databasePath: options.databasePath,
+    migrationsFolder: options.migrationsFolder,
+  });
+  const app = createFoundryApp({
+    settingsStore: new DrizzleSettingsStore(database.db),
+  });
 
   return new Promise((resolve, reject) => {
     const handleListenError = (error: Error): void => {
+      database.client.close();
       reject(error);
     };
 
     const server = serve(
       {
-        fetch: createFoundryApp().fetch,
+        fetch: app.fetch,
         hostname: FOUNDRY_SERVER_HOSTNAME,
         port,
       },
@@ -51,9 +63,17 @@ export async function startFoundryServer(
         let closePromise: Promise<void> | undefined;
         const actualPort = address.port;
 
+        const closeFoundryServer = async () => {
+          try {
+            await closeServer(server);
+          } finally {
+            database.client.close();
+          }
+        };
+
         resolve({
           close: () => {
-            closePromise ??= closeServer(server);
+            closePromise ??= closeFoundryServer();
             return closePromise;
           },
           hostname: FOUNDRY_SERVER_HOSTNAME,

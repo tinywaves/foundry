@@ -48,6 +48,14 @@ _Avoid_: Provider, model
 The local service that provides the Local Web UI and Foundry's HTTP API. It may be started through the Foundry CLI or directly for development.
 _Avoid_: CLI server, Web UI server
 
+**Application Settings**:
+User-controlled preferences that shape Foundry's presentation and behavior across Local Web UI sessions and clients. Appearance is the first supported setting category; Application Settings are shared rather than browser-specific.
+_Avoid_: Preferences, configuration
+
+**Color Mode**:
+The Application Setting that selects Foundry's light, dark, or system-matched appearance.
+_Avoid_: Theme, dark mode
+
 **Service Health**:
 An application-wide indication of whether the Local Web UI can communicate successfully with the Foundry Server. It has the states Checking, Healthy, and Unhealthy.
 _Avoid_: Connection status, API health

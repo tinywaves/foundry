@@ -23,7 +23,7 @@ The current Local Web UI provides the application shell for Foundry's management
 - `/#/dashboard` - Dashboard entry point.
 - `/#/skills`, `/#/mcps`, and `/#/prompts` - Capability management placeholders.
 - `/#/providers` and `/#/runtimes` - Execution management placeholders.
-- `/#/settings` - Standalone appearance settings with a persisted light or dark theme.
+- `/#/settings` - Standalone appearance settings persisted by the Foundry Server.
 
 The management pages are placeholders for later workflows. The browser tab title reports Foundry Server connectivity as `Checking…`, `Healthy`, or `Unhealthy`, and unknown routes render an in-app Not Found page.
 

@@ -1,0 +1,103 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "93932b5e-7d6b-4010-8b64-0e2d01cc1756",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "settings": {
+      "name": "settings",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "settings_key_unique": {
+          "name": "settings_key_unique",
+          "columns": [
+            "key"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "settings_id_not_empty": {
+          "name": "settings_id_not_empty",
+          "value": "length(\"settings\".\"id\") > 0"
+        },
+        "settings_key_not_empty": {
+          "name": "settings_key_not_empty",
+          "value": "length(trim(\"settings\".\"key\")) > 0"
+        },
+        "settings_value_json": {
+          "name": "settings_value_json",
+          "value": "json_valid(\"settings\".\"value\")"
+        },
+        "settings_created_at_nonnegative": {
+          "name": "settings_created_at_nonnegative",
+          "value": "\"settings\".\"created_at\" >= 0"
+        },
+        "settings_updated_at_valid": {
+          "name": "settings_updated_at_valid",
+          "value": "\"settings\".\"updated_at\" >= \"settings\".\"created_at\""
+        },
+        "settings_deleted_at_valid": {
+          "name": "settings_deleted_at_valid",
+          "value": "\"settings\".\"deleted_at\" IS NULL OR \"settings\".\"deleted_at\" >= \"settings\".\"created_at\""
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

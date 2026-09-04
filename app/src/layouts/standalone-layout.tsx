@@ -11,26 +11,28 @@ export function StandaloneLayout() {
     : '/dashboard';
 
   return (
-    <div className="flex min-h-svh flex-col gap-4 p-4">
-      <Link
-        to={returnTo}
-        replace
-        className={buttonVariants({
-          variant: 'link',
-          size: 'sm',
-          className: '-ms-2 self-start',
-        })}
-        data-testid="standalone-back"
-      >
-        <HugeiconsIcon
-          icon={ArrowLeft01Icon}
-          strokeWidth={2}
-          data-icon="inline-start"
-        />
-        Back
-      </Link>
-      <div className="flex flex-1">
-        <Outlet />
+    <div className="min-h-svh p-4">
+      <div className="mx-auto flex min-h-[calc(100svh-2rem)] w-full max-w-2xl flex-col gap-4">
+        <Link
+          to={returnTo}
+          replace
+          className={buttonVariants({
+            variant: 'link',
+            size: 'sm',
+            className: '-ms-2 self-start',
+          })}
+          data-testid="standalone-back"
+        >
+          <HugeiconsIcon
+            icon={ArrowLeft01Icon}
+            strokeWidth={2}
+            data-icon="inline-start"
+          />
+          Back
+        </Link>
+        <div className="flex flex-1">
+          <Outlet />
+        </div>
       </div>
     </div>
   );

@@ -15,6 +15,11 @@ export default defineConfig({
       };
     }
   },
+  copy: {
+    from: 'drizzle',
+    rename: 'migrations',
+    to: 'dist',
+  },
   outDir: 'dist',
   shims: true,
   clean: true,

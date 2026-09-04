@@ -11,3 +11,17 @@ export interface ApiResponse<TData> {
 }
 
 export type HealthResponse = ApiResponse<true>;
+
+export const applicationColorModes = ['system', 'light', 'dark'] as const;
+
+export type ApplicationColorMode = typeof applicationColorModes[number];
+
+export interface ApplicationSettings {
+  colorMode: ApplicationColorMode;
+}
+
+export interface UpdateApplicationSettingsRequest {
+  colorMode: ApplicationColorMode;
+}
+
+export type SettingsResponse = ApiResponse<ApplicationSettings>;

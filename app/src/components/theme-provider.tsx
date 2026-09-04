@@ -1,235 +1,135 @@
-import * as React from "react"
+import type { ApplicationColorMode } from '@dhzh/foundry-api-contract';
+import * as React from 'react';
 
-type Theme = "dark" | "light" | "system"
-type ResolvedTheme = "dark" | "light"
+import { Alert, AlertDescription, AlertTitle } from '#/components/ui/alert';
+import { Button } from '#/components/ui/button';
+import { Spinner } from '#/components/ui/spinner';
+import { useSettingsQuery } from '#/hooks/use-settings';
 
-type ThemeProviderProps = {
-  children: React.ReactNode
-  defaultTheme?: Theme
-  storageKey?: string
-  disableTransitionOnChange?: boolean
+type ResolvedTheme = 'dark' | 'light';
+
+interface ThemeProviderProps {
+  children: React.ReactNode;
+  disableTransitionOnChange?: boolean;
 }
 
-type ThemeProviderState = {
-  theme: Theme
-  resolvedTheme: ResolvedTheme
-  setTheme: (theme: Theme) => void
+interface ThemeProviderState {
+  resolvedTheme: ResolvedTheme;
+  theme: ApplicationColorMode;
 }
 
-const COLOR_SCHEME_QUERY = "(prefers-color-scheme: dark)"
-const THEME_VALUES: Theme[] = ["dark", "light", "system"]
-
-const ThemeProviderContext = React.createContext<
-  ThemeProviderState | undefined
->(undefined)
-
-function isTheme(value: string | null): value is Theme {
-  if (value === null) {
-    return false
-  }
-
-  return THEME_VALUES.includes(value as Theme)
-}
+const COLOR_SCHEME_QUERY = '(prefers-color-scheme: dark)';
+const ThemeProviderContext = React.createContext<ThemeProviderState | undefined>(
+  undefined,
+);
 
 function getSystemTheme(): ResolvedTheme {
-  if (window.matchMedia(COLOR_SCHEME_QUERY).matches) {
-    return "dark"
-  }
-
-  return "light"
+  return window.matchMedia(COLOR_SCHEME_QUERY).matches ? 'dark' : 'light';
 }
 
 function disableTransitionsTemporarily() {
-  const style = document.createElement("style")
-  style.appendChild(
-    document.createTextNode(
-      "*,*::before,*::after{-webkit-transition:none!important;transition:none!important}"
-    )
-  )
-  document.head.appendChild(style)
+  const style = document.createElement('style');
+  style.appendChild(document.createTextNode(
+    '*,*::before,*::after{-webkit-transition:none!important;transition:none!important}',
+  ));
+  document.head.appendChild(style);
 
   return () => {
-    window.getComputedStyle(document.body)
+    window.getComputedStyle(document.body);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        style.remove()
-      })
-    })
-  }
+        style.remove();
+      });
+    });
+  };
 }
 
-function isEditableTarget(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) {
-    return false
-  }
+function applyDocumentTheme(
+  theme: ApplicationColorMode,
+  disableTransitionOnChange: boolean,
+): ResolvedTheme {
+  const resolvedTheme = theme === 'system' ? getSystemTheme() : theme;
+  const restoreTransitions = disableTransitionOnChange
+    ? disableTransitionsTemporarily()
+    : null;
 
-  if (target.isContentEditable) {
-    return true
-  }
+  document.documentElement.classList.remove('light', 'dark');
+  document.documentElement.classList.add(resolvedTheme);
+  restoreTransitions?.();
 
-  const editableParent = target.closest(
-    "input, textarea, select, [contenteditable='true']"
-  )
-  if (editableParent) {
-    return true
-  }
-
-  return false
+  return resolvedTheme;
 }
 
 export function ThemeProvider({
   children,
-  defaultTheme = "system",
-  storageKey = "theme",
   disableTransitionOnChange = true,
-  ...props
 }: ThemeProviderProps) {
-  const [theme, setThemeState] = React.useState<Theme>(() => {
-    const storedTheme = localStorage.getItem(storageKey)
-    if (isTheme(storedTheme)) {
-      return storedTheme
+  const settingsQuery = useSettingsQuery();
+  const theme = settingsQuery.data?.colorMode ?? 'system';
+  const [resolvedTheme, setResolvedTheme] = React.useState<ResolvedTheme>(
+    getSystemTheme,
+  );
+
+  React.useLayoutEffect(() => {
+    localStorage.removeItem('theme');
+    setResolvedTheme(applyDocumentTheme(theme, disableTransitionOnChange));
+
+    if (theme !== 'system') {
+      return undefined;
     }
 
-    return defaultTheme
-  })
-  const [resolvedTheme, setResolvedTheme] = React.useState<ResolvedTheme>(() =>
-    theme === "system" ? getSystemTheme() : theme
-  )
-
-  const setTheme = React.useCallback(
-    (nextTheme: Theme) => {
-      localStorage.setItem(storageKey, nextTheme)
-      setThemeState(nextTheme)
-    },
-    [storageKey]
-  )
-
-  const applyTheme = React.useCallback(
-    (nextTheme: Theme) => {
-      const root = document.documentElement
-      const nextResolvedTheme =
-        nextTheme === "system" ? getSystemTheme() : nextTheme
-      const restoreTransitions = disableTransitionOnChange
-        ? disableTransitionsTemporarily()
-        : null
-
-      root.classList.remove("light", "dark")
-      root.classList.add(nextResolvedTheme)
-      setResolvedTheme(nextResolvedTheme)
-
-      if (restoreTransitions) {
-        restoreTransitions()
-      }
-    },
-    [disableTransitionOnChange]
-  )
-
-  React.useEffect(() => {
-    applyTheme(theme)
-
-    if (theme !== "system") {
-      return undefined
-    }
-
-    const mediaQuery = window.matchMedia(COLOR_SCHEME_QUERY)
+    const mediaQuery = window.matchMedia(COLOR_SCHEME_QUERY);
     const handleChange = () => {
-      applyTheme("system")
-    }
+      setResolvedTheme(applyDocumentTheme('system', disableTransitionOnChange));
+    };
 
-    mediaQuery.addEventListener("change", handleChange)
-
+    mediaQuery.addEventListener('change', handleChange);
     return () => {
-      mediaQuery.removeEventListener("change", handleChange)
-    }
-  }, [theme, applyTheme])
+      mediaQuery.removeEventListener('change', handleChange);
+    };
+  }, [disableTransitionOnChange, theme]);
 
-  React.useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.repeat) {
-        return
-      }
-
-      if (event.metaKey || event.ctrlKey || event.altKey) {
-        return
-      }
-
-      if (isEditableTarget(event.target)) {
-        return
-      }
-
-      if (event.key.toLowerCase() !== "d") {
-        return
-      }
-
-      setThemeState((currentTheme) => {
-        const nextTheme =
-          currentTheme === "dark"
-            ? "light"
-            : currentTheme === "light"
-              ? "dark"
-              : getSystemTheme() === "dark"
-                ? "light"
-                : "dark"
-
-        localStorage.setItem(storageKey, nextTheme)
-        return nextTheme
-      })
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown)
-    }
-  }, [storageKey])
-
-  React.useEffect(() => {
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.storageArea !== localStorage) {
-        return
-      }
-
-      if (event.key !== storageKey) {
-        return
-      }
-
-      if (isTheme(event.newValue)) {
-        setThemeState(event.newValue)
-        return
-      }
-
-      setThemeState(defaultTheme)
-    }
-
-    window.addEventListener("storage", handleStorageChange)
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange)
-    }
-  }, [defaultTheme, storageKey])
-
-  const value = React.useMemo(
-    () => ({
-      theme,
-      resolvedTheme,
-      setTheme,
-    }),
-    [theme, resolvedTheme, setTheme]
-  )
-
-  return (
-    <ThemeProviderContext.Provider {...props} value={value}>
-      {children}
-    </ThemeProviderContext.Provider>
-  )
-}
-
-export const useTheme = () => {
-  const context = React.useContext(ThemeProviderContext)
-
-  if (context === undefined) {
-    throw new Error("useTheme must be used within a ThemeProvider")
+  if (settingsQuery.isPending) {
+    return (
+      <div className="grid min-h-svh place-items-center">
+        <Spinner aria-label="Loading Foundry" />
+      </div>
+    );
   }
 
-  return context
+  if (settingsQuery.isError) {
+    return (
+      <main className="grid min-h-svh place-items-center p-4">
+        <Alert variant="destructive" className="max-w-sm">
+          <AlertTitle>Unable to load Foundry</AlertTitle>
+          <AlertDescription>
+            Application Settings could not be loaded.
+          </AlertDescription>
+          <Button
+            className="mt-2 justify-self-start"
+            size="sm"
+            variant="outline"
+            onClick={() => settingsQuery.refetch()}
+          >
+            Retry
+          </Button>
+        </Alert>
+      </main>
+    );
+  }
+
+  return (
+    <ThemeProviderContext.Provider value={{ resolvedTheme, theme }}>
+      {children}
+    </ThemeProviderContext.Provider>
+  );
+}
+
+export function useTheme() {
+  const context = React.useContext(ThemeProviderContext);
+  if (!context) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+
+  return context;
 }

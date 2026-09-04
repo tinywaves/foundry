@@ -22,6 +22,49 @@ function createHealthResponse(status = 200) {
   return new Response(null, { status });
 }
 
+function createSettingsResponse(
+  colorMode: 'dark' | 'light' | 'system' = 'system',
+  status = 200,
+) {
+  return Response.json({
+    status: 'SUCCESS',
+    data: { colorMode },
+  }, {
+    status,
+  });
+}
+
+function getRequestPath(input: RequestInfo | URL): string {
+  if (typeof input === 'string') {
+    return input;
+  }
+
+  return input instanceof URL ? input.pathname : new URL(input.url).pathname;
+}
+
+function createDefaultFetchMock() {
+  return vi.fn((input: RequestInfo | URL) => Promise.resolve(
+    getRequestPath(input) === '/api/settings'
+      ? createSettingsResponse()
+      : createHealthResponse(),
+  ));
+}
+
+function throwDeferredNotInitialized(): never {
+  throw new Error('Deferred promise was not initialized');
+}
+
+function createDeferred<T>() {
+  let resolve: (value: T | PromiseLike<T>) => void = throwDeferredNotInitialized;
+  // The app's current TypeScript lib predates Promise.withResolvers.
+  // eslint-disable-next-line unicorn/prefer-promise-with-resolvers
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+
+  return { promise, resolve };
+}
+
 async function renderApp(initialEntries: InitialEntry | InitialEntry[]) {
   const queryClient = new QueryClient();
   const router = createMemoryRouter(routes, {
@@ -32,13 +75,13 @@ async function renderApp(initialEntries: InitialEntry | InitialEntry[]) {
 
   return render(
     <StrictMode>
-      <ThemeProvider>
-        <QueryClientProvider client={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
           <TooltipProvider>
             <RouterProvider router={router} />
           </TooltipProvider>
-        </QueryClientProvider>
-      </ThemeProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     </StrictMode>,
   );
 }
@@ -56,8 +99,12 @@ afterEach(() => {
 });
 
 describe('service health title', () => {
-  test('moves from checking to healthy after one HTTP 200 response', async () => {
-    const fetchMock = vi.fn(async () => {
+  test('moves from checking to healthy after an HTTP 200 response', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (getRequestPath(input) === '/api/settings') {
+        return createSettingsResponse();
+      }
+
       await new Promise((resolve) => setTimeout(resolve, 100));
       return createHealthResponse();
     });
@@ -68,8 +115,8 @@ describe('service health title', () => {
     await expect.poll(() => document.title).toBe('Foundry · Checking…');
 
     await expect.poll(() => document.title).toBe('Foundry · Healthy');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith('/api/health', {
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/health', {
       cache: 'no-store',
     });
   });
@@ -78,7 +125,10 @@ describe('service health title', () => {
     ['a non-200 response', () => Promise.resolve(createHealthResponse(503))],
     ['a network failure', () => Promise.reject(new TypeError('offline'))],
   ])('marks the service unhealthy after %s', async (_scenario, result) => {
-    vi.stubGlobal('fetch', vi.fn(result));
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) =>
+      (getRequestPath(input) === '/api/settings'
+        ? Promise.resolve(createSettingsResponse())
+        : result())));
 
     await renderApp('/dashboard');
 
@@ -88,10 +138,32 @@ describe('service health title', () => {
 
 describe('application routing and layouts', () => {
   beforeEach(() => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => Promise.resolve(createHealthResponse())),
-    );
+    vi.stubGlobal('fetch', createDefaultFetchMock());
+  });
+
+  test('waits for Application Settings before rendering a route', async () => {
+    const {
+      promise: settingsResponse,
+      resolve: resolveSettings,
+    } = createDeferred<Response>();
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) =>
+      (getRequestPath(input) === '/api/settings'
+        ? settingsResponse
+        : Promise.resolve(createHealthResponse()))));
+
+    const screen = await renderApp('/dashboard');
+
+    await expect.element(screen.getByRole('status', { name: 'Loading Foundry' }))
+      .toBeVisible();
+    await expect
+      .element(screen.getByText('Dashboard content will be added here.'))
+      .not
+      .toBeInTheDocument();
+
+    resolveSettings(createSettingsResponse());
+
+    await expect.element(screen.getByText('Dashboard content will be added here.'))
+      .toBeVisible();
   });
 
   test('redirects the root route to the dashboard', async () => {
@@ -120,15 +192,19 @@ describe('application routing and layouts', () => {
 
   test('opens settings from the header and returns to the previous page', async () => {
     const screen = await renderApp('/prompts');
+    await expect.element(screen.getByText('Prompt management will be added here.'))
+      .toBeVisible();
     const settingsButton = document.querySelector(
       '[data-testid="settings-button"]',
     );
 
     expect(settingsButton).toBeInstanceOf(HTMLButtonElement);
     (settingsButton as HTMLButtonElement).click();
-    await expect
-      .element(screen.getByText('Choose how Foundry looks on this device.'))
+    await expect.element(screen.getByRole('heading', { name: 'Settings' }))
       .toBeVisible();
+    await expect.element(screen.getByRole('heading', { name: 'Color mode' }))
+      .toBeVisible();
+    await expect.element(screen.getByText('Appearance')).not.toBeInTheDocument();
 
     const backLink = document.querySelector(
       '[data-testid="standalone-back"]',
@@ -175,9 +251,11 @@ describe('application routing and layouts', () => {
       state: { returnTo: '/prompts' },
     });
 
-    await expect
-      .element(screen.getByText('Choose how Foundry looks on this device.'))
+    await expect.element(screen.getByRole('heading', { name: 'Settings' }))
       .toBeVisible();
+    await expect.element(screen.getByRole('heading', { name: 'Color mode' }))
+      .toBeVisible();
+    await expect.element(screen.getByText('Appearance')).not.toBeInTheDocument();
     await expect
       .element(screen.getByRole('button', { name: 'Toggle Sidebar' }))
       .not
@@ -193,23 +271,65 @@ describe('application routing and layouts', () => {
       .toBeVisible();
   });
 
-  test('toggles and persists the application theme from settings', async () => {
-    const screen = await renderApp('/settings');
-    const themeSwitch = screen.getByRole('switch', { name: 'Dark mode' });
+  test('persists Color Mode before applying it to the application', async () => {
+    const {
+      promise: updateResponse,
+      resolve: resolveUpdate,
+    } = createDeferred<Response>();
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (getRequestPath(input) === '/api/settings' && init?.method === 'PATCH') {
+        return updateResponse;
+      }
+      if (getRequestPath(input) === '/api/settings') {
+        return Promise.resolve(createSettingsResponse('light'));
+      }
+      return Promise.resolve(createHealthResponse());
+    });
+    vi.stubGlobal('fetch', fetchMock);
 
-    await themeSwitch.click();
+    const screen = await renderApp('/settings');
+    const darkMode = screen.getByRole('button', { name: 'Dark' });
+
+    expect(localStorage.getItem('theme')).toBeNull();
+    await expect.element(screen.getByRole('button', { name: 'System' })).toBeVisible();
+    await expect.element(screen.getByRole('button', { name: 'Light' })).toBeVisible();
+    await darkMode.click();
+
+    expect(document.documentElement.classList.contains('light')).toBe(true);
+    await expect.element(darkMode).toBeDisabled();
+    await expect.element(screen.getByRole('status', { name: 'Saving Color Mode' }))
+      .toBeVisible();
+    expect(fetchMock).toHaveBeenCalledWith('/api/settings', {
+      body: JSON.stringify({ colorMode: 'dark' }),
+      headers: { 'content-type': 'application/json' },
+      method: 'PATCH',
+    });
+
+    resolveUpdate(createSettingsResponse('dark'));
 
     await expect
       .poll(() => document.documentElement.classList.contains('dark'))
       .toBe(true);
-    expect(localStorage.getItem('theme')).toBe('dark');
+    await expect.element(darkMode).not.toBeDisabled();
+  });
 
-    await themeSwitch.click();
+  test('keeps the current Color Mode when saving fails', async () => {
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (getRequestPath(input) === '/api/settings' && init?.method === 'PATCH') {
+        return Promise.resolve(createSettingsResponse('dark', 500));
+      }
+      if (getRequestPath(input) === '/api/settings') {
+        return Promise.resolve(createSettingsResponse('light'));
+      }
+      return Promise.resolve(createHealthResponse());
+    }));
 
-    await expect
-      .poll(() => document.documentElement.classList.contains('light'))
-      .toBe(true);
-    expect(localStorage.getItem('theme')).toBe('light');
+    const screen = await renderApp('/settings');
+    await screen.getByRole('button', { name: 'Dark' }).click();
+
+    await expect.element(screen.getByText('Color Mode was not saved')).toBeVisible();
+    expect(document.documentElement.classList.contains('light')).toBe(true);
+    expect(document.documentElement.classList.contains('dark')).toBe(false);
   });
 
   test('renders an independent not found page and returns to the previous page', async () => {
@@ -239,6 +359,9 @@ describe('application routing and layouts', () => {
 
   test('returns to the dashboard from the not found recovery action', async () => {
     const screen = await renderApp('/missing');
+    await expect.element(screen.getByRole('heading', {
+      name: 'This page doesn\'t exist',
+    })).toBeVisible();
     const dashboardLink = document.querySelector(
       '[data-testid="not-found-dashboard"]',
     );
@@ -253,10 +376,7 @@ describe('application routing and layouts', () => {
 
 describe('responsive sidebar', () => {
   beforeEach(() => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() => Promise.resolve(createHealthResponse())),
-    );
+    vi.stubGlobal('fetch', createDefaultFetchMock());
   });
 
   test('does not render a resize-style sidebar rail', async () => {

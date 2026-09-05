@@ -44,6 +44,30 @@ _Avoid_: Model, backend, vendor
 A supported local agent application whose provider configuration Foundry can manage.
 _Avoid_: Provider, model
 
+**Installed Runtime**:
+A Runtime that Foundry has detected on the current machine and therefore permits the user to configure.
+_Avoid_: Available Runtime, enabled Runtime
+
+**Runtime Configuration Application**:
+The operation that updates the Foundry-managed portion of an Installed Runtime's user configuration from a selected Provider Option.
+_Avoid_: Provider installation, Runtime installation
+
+**Provider Option**:
+A selectable Runtime configuration source, either a saved Provider or the Runtime's virtual Official Default.
+_Avoid_: Provider record, configuration preset
+
+**Runtime Assignment**:
+Foundry's recorded Provider Option for a Managed Runtime. The assignment remains unchanged when the Runtime's configuration is edited outside Foundry.
+_Avoid_: Current configuration, detected Provider
+
+**Official Default**:
+A virtual Provider Option that leaves Provider selection and authentication to the Runtime's official behavior rather than a saved Provider.
+_Avoid_: No Provider, unmanaged Runtime
+
+**Managed Runtime**:
+A Runtime whose Provider Option Foundry records and may apply again, even when its configuration is later edited outside Foundry.
+_Avoid_: Configured Runtime, synchronized Runtime
+
 **Foundry Server**:
 The local service that provides the Local Web UI and Foundry's HTTP API. It may be started through the Foundry CLI or directly for development.
 _Avoid_: CLI server, Web UI server

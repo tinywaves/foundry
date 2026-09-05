@@ -6,7 +6,7 @@ import path from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 
 import { openFoundryDatabase } from '../src/server/database';
-import { DrizzleProviderStore } from '../src/server/provider-store';
+import { DrizzleProviderStore } from '../src/server/providers/store';
 
 const migrationsFolder = path.resolve(import.meta.dirname, '../drizzle');
 const temporaryRoots: string[] = [];
@@ -118,6 +118,23 @@ it('does not list soft-deleted Providers', async () => {
     `).run();
 
     expect(store.listProviders('codex')).toEqual([]);
+    expect(store.getProvider('provider')).toBeNull();
+  } finally {
+    database.client.close();
+  }
+});
+
+it('reads a Provider by ID', async () => {
+  const database = await openFoundryDatabase({
+    databasePath: await createDatabasePath(),
+    migrationsFolder,
+  });
+  const store = new DrizzleProviderStore(database.db, () => 100, () => 'provider');
+
+  try {
+    const provider = store.createProvider(createCodexProvider('By ID'));
+    expect(store.getProvider(provider.id)).toEqual(provider);
+    expect(store.getProvider('missing')).toBeNull();
   } finally {
     database.client.close();
   }

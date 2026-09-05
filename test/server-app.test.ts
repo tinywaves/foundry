@@ -6,10 +6,12 @@ import type {
   CreateProviderRequest,
   Provider,
   ProviderRuntime,
+  RuntimeConfigurationPreview,
 } from '@dhzh/foundry-api-contract';
 import { createFoundryApp } from '../src/server/app';
-import type { ProviderStore } from '../src/server/provider-store';
-import type { SettingsStore } from '../src/server/settings-store';
+import type { ProviderStore } from '../src/server/providers/store';
+import type { RuntimeService } from '../src/server/runtimes/service';
+import type { SettingsStore } from '../src/server/settings/store';
 
 const fixture = { webRoot: '' };
 
@@ -29,8 +31,69 @@ function createTestApp() {
       providers.unshift(provider);
       return provider;
     },
+    getProvider: (id: string) => providers.find((provider) => provider.id === id) ?? null,
     listProviders: (runtime: ProviderRuntime) => providers
       .filter((provider) => provider.runtime === runtime),
+  };
+  const detection = {
+    configurationExists: false,
+    configurationPath: '/home/user/.codex/config.toml',
+    executablePath: '/usr/local/bin/codex',
+    message: null,
+    status: 'detected',
+    version: 'codex-cli 1.0.0',
+  } as const;
+  const preview = {
+    changes: [],
+    file: {
+      exists: false,
+      hash: '0'.repeat(64),
+      path: detection.configurationPath,
+    },
+    kind: 'ready',
+    providerKey: null,
+    runtime: 'codex',
+    target: { kind: 'official-default' },
+    unchanged: [],
+  } satisfies RuntimeConfigurationPreview;
+  const runtimeService: RuntimeService = {
+    applyConfiguration: (runtime, input) => Promise.resolve({
+      appliedAt: 100,
+      detection: {
+        ...detection,
+        configurationExists: true,
+        configurationPath: runtime === 'codex'
+          ? detection.configurationPath
+          : '/home/user/.claude/settings.json',
+      },
+      managed: true,
+      providerId: input.target.kind === 'provider' ? input.target.providerId : null,
+      runtime,
+    }),
+    listRuntimes: () => Promise.resolve([
+      {
+        appliedAt: null,
+        detection,
+        managed: false,
+        providerId: null,
+        runtime: 'codex',
+      },
+      {
+        appliedAt: null,
+        detection: {
+          ...detection,
+          configurationPath: '/home/user/.claude/settings.json',
+          executablePath: null,
+          message: 'claude was not found in PATH.',
+          status: 'not-detected',
+          version: null,
+        },
+        managed: false,
+        providerId: null,
+        runtime: 'claude-code',
+      },
+    ]),
+    previewConfiguration: () => Promise.resolve(preview),
   };
   const settingsStore: SettingsStore = {
     getApplicationSettings: () => ({ colorMode }),
@@ -42,6 +105,7 @@ function createTestApp() {
 
   return createFoundryApp({
     providerStore,
+    runtimeService,
     settingsStore,
     webRoot: fixture.webRoot,
   });
@@ -261,6 +325,70 @@ it.each([
     headers: { 'content-type': 'application/json' },
     method: 'POST',
   });
+
+  expect(response.status).toBe(400);
+});
+
+it('lists Runtime assignments with detection state', async () => {
+  const response = await createTestApp().request('/api/runtimes');
+
+  expect(response.status).toBe(200);
+  await expect(response.json()).resolves.toMatchObject({
+    status: 'SUCCESS',
+    data: [
+      { runtime: 'codex', detection: { status: 'detected' } },
+      { runtime: 'claude-code', detection: { status: 'not-detected' } },
+    ],
+  });
+});
+
+it('returns Runtime Preview and Apply envelopes', async () => {
+  const app = createTestApp();
+  const previewResponse = await app.request('/api/runtimes/codex/preview', {
+    body: JSON.stringify({ target: { kind: 'official-default' } }),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+  expect(previewResponse.status).toBe(200);
+  await expect(previewResponse.json()).resolves.toMatchObject({
+    status: 'SUCCESS',
+    data: { kind: 'ready', runtime: 'codex' },
+  });
+
+  const applyResponse = await app.request('/api/runtimes/codex/apply', {
+    body: JSON.stringify({
+      expectedFileHash: '0'.repeat(64),
+      target: { kind: 'official-default' },
+    }),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+  expect(applyResponse.status).toBe(200);
+  await expect(applyResponse.json()).resolves.toMatchObject({
+    status: 'SUCCESS',
+    data: { managed: true, providerId: null, runtime: 'codex' },
+  });
+});
+
+it.each([
+  ['/api/runtimes?unexpected=true', undefined],
+  ['/api/runtimes/unknown/preview', { target: { kind: 'official-default' } }],
+  ['/api/runtimes/codex/preview', {}],
+  [
+    '/api/runtimes/codex/apply',
+    {
+      expectedFileHash: 'invalid',
+      target: { kind: 'official-default' },
+    },
+  ],
+])('rejects invalid Runtime input for %s', async (requestPath, body) => {
+  const response = await createTestApp().request(requestPath, body === undefined
+    ? undefined
+    : {
+        body: JSON.stringify(body),
+        headers: { 'content-type': 'application/json' },
+        method: 'POST',
+      });
 
   expect(response.status).toBe(400);
 });

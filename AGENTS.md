@@ -18,6 +18,14 @@ Keep local web interface changes within these modules. The frontend consumes ser
 - Use `pnpm build` to build the server package followed by the React app in `dist/app`.
 - Verify changes with `pnpm test`, `pnpm --filter @dhzh/foundry-app typecheck`, and `pnpm build` as relevant to the modified modules.
 
+## Database Migrations
+
+- Stop and obtain the user's explicit confirmation before beginning any change that would add, remove, rename, or alter a database table, column, index, constraint, or persisted data shape. Approval is required before implementation, not only before generating the migration.
+- Before requesting confirmation, explain the proposed schema change, why a migration is required, and whether existing data will be transformed or could be lost. If the requirement can be implemented without changing the schema, prefer that approach and state it explicitly.
+- Until confirmation is received, do not modify `src/server/database/schema.ts`, create, edit, delete, or regenerate files under `drizzle/`, run `pnpm db:generate`, or run any command that could apply a pending migration to the persistent Foundry database.
+- Treat committed or previously applied migrations as immutable. Never rewrite, squash, renumber, or replace their SQL or `drizzle/meta/` history; create a new forward-only migration after receiving confirmation.
+- Before applying a confirmed migration to the persistent Foundry database, create a consistent backup and report its path. Verify the resulting migration history and database integrity after application.
+
 ## Code Design
 
 - Prefer the direct implementation when a wrapper only forwards arguments or returns one expression. Introduce a helper, factory, hook, class, or other abstraction only when it centralizes reusable behavior, enforces a policy, creates a meaningful test seam, or hides substantial complexity.

@@ -2,8 +2,12 @@ import { serve } from '@hono/node-server';
 import type { ServerType } from '@hono/node-server';
 import { createFoundryApp } from './app';
 import { openFoundryDatabase } from './database';
-import { DrizzleProviderStore } from './provider-store';
-import { DrizzleSettingsStore } from './settings-store';
+import { DrizzleProviderStore } from './providers/store';
+import { RuntimeConfigurationManager } from './runtimes/configuration/manager';
+import { LocalRuntimeDetector } from './runtimes/detection';
+import { LocalRuntimeService } from './runtimes/service';
+import { DrizzleRuntimeStore } from './runtimes/store';
+import { DrizzleSettingsStore } from './settings/store';
 
 export const FOUNDRY_SERVER_HOSTNAME = '127.0.0.1';
 export const FOUNDRY_SERVER_PORT = 54_321;
@@ -42,8 +46,15 @@ export async function startFoundryServer(
     databasePath: options.databasePath,
     migrationsFolder: options.migrationsFolder,
   });
+  const providerStore = new DrizzleProviderStore(database.db);
   const app = createFoundryApp({
-    providerStore: new DrizzleProviderStore(database.db),
+    providerStore,
+    runtimeService: new LocalRuntimeService(
+      new DrizzleRuntimeStore(database.db),
+      providerStore,
+      new LocalRuntimeDetector(),
+      new RuntimeConfigurationManager(),
+    ),
     settingsStore: new DrizzleSettingsStore(database.db),
   });
 

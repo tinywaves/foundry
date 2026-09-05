@@ -6,8 +6,8 @@ import { applicationColorModes } from '@dhzh/foundry-api-contract';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-import type { FoundryDatabase } from './database';
-import { settings } from './database/schema';
+import type { FoundryDatabase } from '../database';
+import { settings } from '../database/schema';
 
 const COLOR_MODE_KEY = 'color_mode';
 const colorModeSchema = z.enum(applicationColorModes);

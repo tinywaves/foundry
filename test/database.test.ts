@@ -6,7 +6,7 @@ import path from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 
 import { openFoundryDatabase } from '../src/server/database';
-import { DrizzleSettingsStore } from '../src/server/settings-store';
+import { DrizzleSettingsStore } from '../src/server/settings/store';
 
 const temporaryRoots: string[] = [];
 const migrationsFolder = path.resolve(import.meta.dirname, '../drizzle');
@@ -44,6 +44,24 @@ it('migrates a new database and seeds System Color Mode', async () => {
     );
     expect(row.created_at).toEqual(expect.any(Number));
     expect(row.updated_at).toBe(row.created_at);
+    expect(database.client.prepare(`
+      SELECT runtime, managed, provider_id, applied_at
+      FROM runtimes
+      ORDER BY runtime
+    `).all()).toEqual([
+      {
+        applied_at: null,
+        managed: 0,
+        provider_id: null,
+        runtime: 'claude-code',
+      },
+      {
+        applied_at: null,
+        managed: 0,
+        provider_id: null,
+        runtime: 'codex',
+      },
+    ]);
   } finally {
     database.client.close();
   }

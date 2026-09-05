@@ -12,7 +12,7 @@ import {
 import { render } from 'vitest-browser-react';
 import { createMemoryRouter } from 'react-router';
 import type { InitialEntry } from 'react-router';
-import type { Provider } from '@dhzh/foundry-api-contract';
+import type { Provider, RuntimeSummary } from '@dhzh/foundry-api-contract';
 import { RouterProvider } from 'react-router/dom';
 
 import { ThemeProvider } from '#/components/theme-provider';
@@ -53,6 +53,46 @@ function createProviderResponse(provider: Provider, status = 201) {
   });
 }
 
+function createRuntimesResponse(runtimes: RuntimeSummary[], status = 200) {
+  return Response.json({
+    status: 'SUCCESS',
+    data: runtimes,
+  }, { status });
+}
+
+function createRuntimeSummaries(): RuntimeSummary[] {
+  return [
+    {
+      appliedAt: null,
+      detection: {
+        configurationExists: true,
+        configurationPath: '/Users/test/.codex/config.toml',
+        executablePath: '/usr/local/bin/codex',
+        message: null,
+        status: 'detected',
+        version: 'codex-cli 1.0.0',
+      },
+      managed: false,
+      providerId: null,
+      runtime: 'codex',
+    },
+    {
+      appliedAt: null,
+      detection: {
+        configurationExists: false,
+        configurationPath: '/Users/test/.claude/settings.json',
+        executablePath: null,
+        message: 'claude was not found in PATH.',
+        status: 'not-detected',
+        version: null,
+      },
+      managed: false,
+      providerId: null,
+      runtime: 'claude-code',
+    },
+  ];
+}
+
 function createCodexProvider(overrides: Partial<Provider> = {}): Provider {
   return {
     avatar: null,
@@ -90,6 +130,9 @@ function createDefaultFetchMock() {
     }
     if (requestPath === '/api/providers') {
       return Promise.resolve(createProvidersResponse());
+    }
+    if (requestPath === '/api/runtimes') {
+      return Promise.resolve(createRuntimesResponse(createRuntimeSummaries()));
     }
     return Promise.resolve(createHealthResponse());
   });
@@ -271,11 +314,6 @@ describe('application routing and layouts', () => {
   test.each([
     ['Skills', '/skills', 'Local skill management will be added here.'],
     ['MCPs', '/mcps', 'MCP server management will be added here.'],
-    [
-      'Runtimes',
-      '/runtimes',
-      'Local agent runtime management will be added here.',
-    ],
   ])('renders the %s placeholder page', async (title, path, description) => {
     const screen = await renderApp(path);
 
@@ -283,6 +321,92 @@ describe('application routing and layouts', () => {
     await expect
       .element(screen.getByRole('link', { name: title }))
       .toHaveAttribute('aria-current', 'page');
+  });
+
+  test('previews and applies a Provider from the Runtime card', async () => {
+    const provider = createCodexProvider();
+    const runtimes = createRuntimeSummaries();
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string'
+        ? new URL(input, 'http://localhost')
+        : (input instanceof URL ? input : new URL(input.url));
+      if (url.pathname === '/api/settings') {
+        return Promise.resolve(createSettingsResponse());
+      }
+      if (url.pathname === '/api/runtimes' && init?.method === undefined) {
+        return Promise.resolve(createRuntimesResponse(runtimes));
+      }
+      if (url.pathname === '/api/providers') {
+        return Promise.resolve(createProvidersResponse(
+          url.searchParams.get('runtime') === 'codex' ? [provider] : [],
+        ));
+      }
+      if (url.pathname === '/api/runtimes/codex/preview') {
+        return Promise.resolve(Response.json({
+          status: 'SUCCESS',
+          data: {
+            changes: [
+              {
+                current: { kind: 'absent' },
+                key: 'model_provider',
+                operation: 'add',
+                proposed: { kind: 'plain', value: 'foundry' },
+              },
+              {
+                current: { kind: 'absent' },
+                key: '[model_providers.foundry].experimental_bearer_token',
+                operation: 'add',
+                proposed: { kind: 'secret', value: 'codex-secret' },
+              },
+            ],
+            file: {
+              exists: true,
+              hash: '0'.repeat(64),
+              path: '/Users/test/.codex/config.toml',
+            },
+            kind: 'ready',
+            providerKey: 'foundry',
+            runtime: 'codex',
+            target: { kind: 'provider', providerId: provider.id },
+            unchanged: [],
+          },
+        }));
+      }
+      if (url.pathname === '/api/runtimes/codex/apply') {
+        return Promise.resolve(Response.json({
+          status: 'SUCCESS',
+          data: {
+            ...runtimes[0],
+            appliedAt: 100,
+            managed: true,
+            providerId: provider.id,
+          },
+        }));
+      }
+      return Promise.resolve(createHealthResponse());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const screen = await renderApp('/runtimes');
+
+    await expect.element(screen.getByText('codex-cli 1.0.0')).toBeVisible();
+    await expect.element(screen.getByText('claude was not found in PATH.')).toBeVisible();
+    const saveButtons = screen.getByRole('button', { name: 'Save' });
+    await expect.element(saveButtons.nth(1)).toBeDisabled();
+
+    const providerSelect = screen.getByRole('combobox', { name: 'Provider' }).first();
+    await providerSelect.click();
+    await screen.getByRole('option', { name: 'Example Provider' }).click();
+    await saveButtons.first().click();
+
+    await expect.element(screen.getByRole('heading', { name: 'Preview Changes' }))
+      .toBeVisible();
+    await expect.element(screen.getByText('model_provider', { exact: true })).toBeVisible();
+    await expect.element(screen.getByText('••••••••')).toBeVisible();
+    await screen.getByRole('button', { name: 'Show API Key' }).click();
+    await expect.element(screen.getByText('"codex-secret"')).toBeVisible();
+    await screen.getByRole('button', { name: 'Apply' }).click();
+    await expect.element(screen.getByText('Runtime saved')).toBeVisible();
   });
 
   test('filters and renders the complete Provider list', async () => {

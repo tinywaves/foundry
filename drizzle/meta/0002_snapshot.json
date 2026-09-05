@@ -1,0 +1,306 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "fc062b2d-1e13-49d0-a30e-387ca6aa1e4e",
+  "prevId": "e35a392c-c7bd-4709-a7a0-c5836e47f7d5",
+  "tables": {
+    "providers": {
+      "name": "providers",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "runtime": {
+          "name": "runtime",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "official_website": {
+          "name": "official_website",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "remark": {
+          "name": "remark",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "avatar_mime_type": {
+          "name": "avatar_mime_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "avatar_data": {
+          "name": "avatar_data",
+          "type": "blob",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "configuration": {
+          "name": "configuration",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "providers_runtime_created_at_index": {
+          "name": "providers_runtime_created_at_index",
+          "columns": [
+            "runtime",
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "providers_id_not_empty": {
+          "name": "providers_id_not_empty",
+          "value": "length(\"providers\".\"id\") > 0"
+        },
+        "providers_runtime_valid": {
+          "name": "providers_runtime_valid",
+          "value": "\"providers\".\"runtime\" IN ('codex', 'claude-code')"
+        },
+        "providers_name_valid": {
+          "name": "providers_name_valid",
+          "value": "length(trim(\"providers\".\"name\")) BETWEEN 1 AND 100"
+        },
+        "providers_official_website_valid": {
+          "name": "providers_official_website_valid",
+          "value": "\"providers\".\"official_website\" IS NULL OR length(\"providers\".\"official_website\") <= 2048"
+        },
+        "providers_remark_valid": {
+          "name": "providers_remark_valid",
+          "value": "\"providers\".\"remark\" IS NULL OR length(\"providers\".\"remark\") <= 2000"
+        },
+        "providers_avatar_valid": {
+          "name": "providers_avatar_valid",
+          "value": "(\"providers\".\"avatar_mime_type\" IS NULL AND \"providers\".\"avatar_data\" IS NULL) OR (\"providers\".\"avatar_mime_type\" IN ('image/png', 'image/jpeg', 'image/webp', 'image/svg+xml') AND \"providers\".\"avatar_data\" IS NOT NULL AND length(\"providers\".\"avatar_data\") BETWEEN 1 AND 2097152)"
+        },
+        "providers_configuration_json": {
+          "name": "providers_configuration_json",
+          "value": "json_valid(\"providers\".\"configuration\")"
+        },
+        "providers_created_at_nonnegative": {
+          "name": "providers_created_at_nonnegative",
+          "value": "\"providers\".\"created_at\" >= 0"
+        },
+        "providers_updated_at_valid": {
+          "name": "providers_updated_at_valid",
+          "value": "\"providers\".\"updated_at\" >= \"providers\".\"created_at\""
+        },
+        "providers_deleted_at_valid": {
+          "name": "providers_deleted_at_valid",
+          "value": "\"providers\".\"deleted_at\" IS NULL OR \"providers\".\"deleted_at\" >= \"providers\".\"created_at\""
+        }
+      }
+    },
+    "runtimes": {
+      "name": "runtimes",
+      "columns": {
+        "runtime": {
+          "name": "runtime",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "managed": {
+          "name": "managed",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "provider_id": {
+          "name": "provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "applied_at": {
+          "name": "applied_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "runtimes_provider_id_providers_id_fk": {
+          "name": "runtimes_provider_id_providers_id_fk",
+          "tableFrom": "runtimes",
+          "tableTo": "providers",
+          "columnsFrom": [
+            "provider_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "runtimes_runtime_valid": {
+          "name": "runtimes_runtime_valid",
+          "value": "\"runtimes\".\"runtime\" IN ('codex', 'claude-code')"
+        },
+        "runtimes_state_valid": {
+          "name": "runtimes_state_valid",
+          "value": "(\"runtimes\".\"managed\" = 0 AND \"runtimes\".\"provider_id\" IS NULL AND \"runtimes\".\"applied_at\" IS NULL) OR (\"runtimes\".\"managed\" = 1 AND \"runtimes\".\"applied_at\" IS NOT NULL)"
+        },
+        "runtimes_applied_at_nonnegative": {
+          "name": "runtimes_applied_at_nonnegative",
+          "value": "\"runtimes\".\"applied_at\" IS NULL OR \"runtimes\".\"applied_at\" >= 0"
+        }
+      }
+    },
+    "settings": {
+      "name": "settings",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "settings_key_unique": {
+          "name": "settings_key_unique",
+          "columns": [
+            "key"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "settings_id_not_empty": {
+          "name": "settings_id_not_empty",
+          "value": "length(\"settings\".\"id\") > 0"
+        },
+        "settings_key_not_empty": {
+          "name": "settings_key_not_empty",
+          "value": "length(trim(\"settings\".\"key\")) > 0"
+        },
+        "settings_value_json": {
+          "name": "settings_value_json",
+          "value": "json_valid(\"settings\".\"value\")"
+        },
+        "settings_created_at_nonnegative": {
+          "name": "settings_created_at_nonnegative",
+          "value": "\"settings\".\"created_at\" >= 0"
+        },
+        "settings_updated_at_valid": {
+          "name": "settings_updated_at_valid",
+          "value": "\"settings\".\"updated_at\" >= \"settings\".\"created_at\""
+        },
+        "settings_deleted_at_valid": {
+          "name": "settings_deleted_at_valid",
+          "value": "\"settings\".\"deleted_at\" IS NULL OR \"settings\".\"deleted_at\" >= \"settings\".\"created_at\""
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

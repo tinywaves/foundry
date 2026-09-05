@@ -1,35 +1,24 @@
 import { serveStatic } from '@hono/node-server/serve-static';
 import { zValidator } from '@hono/zod-validator';
-import {
-  apiStatusCodes,
-  applicationColorModes,
-} from '@dhzh/foundry-api-contract';
-import type {
-  HealthResponse,
-  ProviderResponse,
-  ProvidersResponse,
-  SettingsResponse,
-} from '@dhzh/foundry-api-contract';
+import { apiStatusCodes } from '@dhzh/foundry-api-contract';
+import type { HealthResponse } from '@dhzh/foundry-api-contract';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
-import type { SettingsStore } from './settings-store';
-import type { ProviderStore } from './provider-store';
-import {
-  providerCreationSchema,
-  providersQuerySchema,
-} from './provider-validation';
+import type { ProviderStore } from './providers/store';
+import { registerProviderRoutes } from './providers/routes';
+import { registerRuntimeRoutes } from './runtimes/routes';
+import type { RuntimeService } from './runtimes/service';
+import { registerSettingsRoutes } from './settings/routes';
+import type { SettingsStore } from './settings/store';
 
 const healthQuerySchema = z.strictObject({});
-const settingsQuerySchema = z.strictObject({});
-const updateSettingsSchema = z.strictObject({
-  colorMode: z.enum(applicationColorModes),
-});
 
 export interface CreateFoundryAppOptions {
   providerStore: ProviderStore;
+  runtimeService: RuntimeService;
   settingsStore: SettingsStore;
   webRoot?: string;
 }
@@ -57,45 +46,9 @@ export function createFoundryApp(options: CreateFoundryAppOptions): Hono {
     } satisfies HealthResponse),
   );
 
-  app.get(
-    '/api/settings',
-    zValidator('query', settingsQuerySchema),
-    (context) => context.json({
-      status: apiStatusCodes.success,
-      data: options.settingsStore.getApplicationSettings(),
-    } satisfies SettingsResponse),
-  );
-
-  app.patch(
-    '/api/settings',
-    zValidator('json', updateSettingsSchema),
-    (context) => context.json({
-      status: apiStatusCodes.success,
-      data: options.settingsStore.updateApplicationSettings(
-        context.req.valid('json'),
-      ),
-    } satisfies SettingsResponse),
-  );
-
-  app.get(
-    '/api/providers',
-    zValidator('query', providersQuerySchema),
-    (context) => context.json({
-      status: apiStatusCodes.success,
-      data: options.providerStore.listProviders(
-        context.req.valid('query').runtime,
-      ),
-    } satisfies ProvidersResponse),
-  );
-
-  app.post(
-    '/api/providers',
-    zValidator('json', providerCreationSchema),
-    (context) => context.json({
-      status: apiStatusCodes.success,
-      data: options.providerStore.createProvider(context.req.valid('json')),
-    } satisfies ProviderResponse, 201),
-  );
+  registerSettingsRoutes(app, options.settingsStore);
+  registerProviderRoutes(app, options.providerStore);
+  registerRuntimeRoutes(app, options.runtimeService);
 
   const webRoot = options.webRoot ?? findDefaultWebRoot();
   if (webRoot) {

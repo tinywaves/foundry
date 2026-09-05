@@ -9,17 +9,18 @@ import { and, desc, eq, isNull } from 'drizzle-orm';
 import type { Buffer } from 'node:buffer';
 import { randomUUIDv7 } from 'node:crypto';
 
-import type { FoundryDatabase } from './database';
-import { providers } from './database/schema';
+import type { FoundryDatabase } from '../database';
+import { providers } from '../database/schema';
 import {
   decodeProviderAvatar,
   parseCreateProviderRequest,
   parseClaudeCodeProviderConfiguration,
   parseCodexProviderConfiguration,
-} from './provider-validation';
+} from './validation';
 
 export interface ProviderStore {
   createProvider: (input: CreateProviderRequest) => Provider;
+  getProvider: (id: string) => Provider | null;
   listProviders: (runtime: ProviderRuntime) => Provider[];
 }
 
@@ -115,6 +116,14 @@ export class DrizzleProviderStore implements ProviderStore {
       runtime: input.runtime,
       updatedAt: timestamp,
     });
+  }
+
+  getProvider(id: string): Provider | null {
+    const row = this.database.select().from(providers).where(
+      and(eq(providers.id, id), isNull(providers.deletedAt)),
+    ).get();
+
+    return row ? mapProvider(row) : null;
   }
 
   listProviders(runtime: ProviderRuntime): Provider[] {

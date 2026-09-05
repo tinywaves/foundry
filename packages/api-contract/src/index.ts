@@ -1,4 +1,9 @@
 export const apiStatusCodes = {
+  providerNotFound: 'PROVIDER_NOT_FOUND',
+  runtimeApplyFailed: 'RUNTIME_APPLY_FAILED',
+  runtimeConfigurationChanged: 'RUNTIME_CONFIGURATION_CHANGED',
+  runtimeConfigurationInvalid: 'RUNTIME_CONFIGURATION_INVALID',
+  runtimeNotDetected: 'RUNTIME_NOT_DETECTED',
   success: 'SUCCESS',
 } as const;
 
@@ -127,3 +132,95 @@ export type CreateProviderRequest
 export type ProviderResponse = ApiResponse<Provider>;
 
 export type ProvidersResponse = ApiResponse<Provider[]>;
+
+export const runtimeDetectionStatuses = [
+  'detected',
+  'not-detected',
+  'failed',
+] as const;
+
+export type RuntimeDetectionStatus = typeof runtimeDetectionStatuses[number];
+
+export interface RuntimeDetection {
+  configurationExists: boolean;
+  configurationPath: string;
+  executablePath: string | null;
+  message: string | null;
+  status: RuntimeDetectionStatus;
+  version: string | null;
+}
+
+export interface RuntimeAssignment {
+  appliedAt: number | null;
+  managed: boolean;
+  providerId: string | null;
+  runtime: ProviderRuntime;
+}
+
+export interface RuntimeSummary extends RuntimeAssignment {
+  detection: RuntimeDetection;
+}
+
+export type RuntimesResponse = ApiResponse<RuntimeSummary[]>;
+
+export type RuntimeConfigurationTarget
+  = | { kind: 'official-default' }
+    | { kind: 'provider'; providerId: string };
+
+export interface PreviewRuntimeConfigurationRequest {
+  providerKey?: string;
+  target: RuntimeConfigurationTarget;
+}
+
+export type RuntimeConfigurationPreviewOperation
+  = 'add'
+    | 'remove'
+    | 'unchanged'
+    | 'update';
+
+export type RuntimeConfigurationPreviewValue
+  = | { kind: 'absent' }
+    | { kind: 'plain'; value: string }
+    | { kind: 'secret'; value: string };
+
+export interface RuntimeConfigurationPreviewField {
+  current: RuntimeConfigurationPreviewValue;
+  key: string;
+  operation: RuntimeConfigurationPreviewOperation;
+  proposed: RuntimeConfigurationPreviewValue;
+}
+
+export interface RuntimeConfigurationFilePreview {
+  exists: boolean;
+  hash: string;
+  path: string;
+}
+
+export type RuntimeConfigurationPreview
+  = | {
+    file: RuntimeConfigurationFilePreview;
+    kind: 'provider-key-selection';
+    providerKeys: string[];
+    runtime: 'codex';
+    target: Extract<RuntimeConfigurationTarget, { kind: 'provider' }>;
+  }
+  | {
+    changes: RuntimeConfigurationPreviewField[];
+    file: RuntimeConfigurationFilePreview;
+    kind: 'ready';
+    providerKey: string | null;
+    runtime: ProviderRuntime;
+    target: RuntimeConfigurationTarget;
+    unchanged: RuntimeConfigurationPreviewField[];
+  };
+
+export type RuntimeConfigurationPreviewResponse
+  = ApiResponse<RuntimeConfigurationPreview | null>;
+
+export interface ApplyRuntimeConfigurationRequest {
+  expectedFileHash: string;
+  providerKey?: string;
+  target: RuntimeConfigurationTarget;
+}
+
+export type RuntimeConfigurationApplyResponse = ApiResponse<RuntimeSummary | null>;

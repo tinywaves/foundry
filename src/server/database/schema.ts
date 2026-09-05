@@ -85,3 +85,29 @@ export const providers = sqliteTable(
     ),
   ],
 );
+
+export const runtimes = sqliteTable(
+  'runtimes',
+  {
+    runtime: text('runtime', { enum: ['codex', 'claude-code'] }).primaryKey(),
+    managed: integer('managed', { mode: 'boolean' }).notNull().default(false),
+    providerId: text('provider_id').references(() => providers.id, {
+      onDelete: 'restrict',
+    }),
+    appliedAt: integer('applied_at'),
+  },
+  (table) => [
+    check(
+      'runtimes_runtime_valid',
+      sql`${table.runtime} IN ('codex', 'claude-code')`,
+    ),
+    check(
+      'runtimes_state_valid',
+      sql`(${table.managed} = 0 AND ${table.providerId} IS NULL AND ${table.appliedAt} IS NULL) OR (${table.managed} = 1 AND ${table.appliedAt} IS NOT NULL)`,
+    ),
+    check(
+      'runtimes_applied_at_nonnegative',
+      sql`${table.appliedAt} IS NULL OR ${table.appliedAt} >= 0`,
+    ),
+  ],
+);

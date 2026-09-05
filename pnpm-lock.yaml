@@ -219,6 +219,9 @@ importers:
 
   .:
     dependencies:
+      '@decimalturn/toml-patch':
+        specifier: ^3.0.5
+        version: 3.0.5
       '@hono/node-server':
         specifier: ^2.1.1
         version: 2.1.1(hono@4.13.5)
@@ -675,6 +678,10 @@ packages:
   '@conventional-changelog/template@1.2.0':
     resolution: {integrity: sha512-12qHxvlKjHmP0PQ+17EREgC7lWyLwbph1RKcZQZ7k7ZWGmrxfxC9gadHGfvzr0g0u8BhiBGg3tks93txodlyRQ==}
     engines: {node: '>=22'}
+
+  '@decimalturn/toml-patch@3.0.5':
+    resolution: {integrity: sha512-awLRLA6DfoQFiv8xB6+BZBtTh1DuiUSxxIn26i7v6wnMRj6+fhcEIgAFuKo8PArK7iy882yN+jBdA26fjKOj8A==}
+    engines: {node: '>=16'}
 
   '@dhzh/eslint-config@2.6.1':
     resolution: {integrity: sha512-oGaMVPmJ5YmLZ7DndIb7qw7BHxlNQtijVjpl4idtauvWZza9QR8otJQ1Jw2cwtNtuhRYkVsIZpfHIyvbhl+sdw==}
@@ -5761,6 +5768,8 @@ snapshots:
       semver: 7.8.5
 
   '@conventional-changelog/template@1.2.0': {}
+
+  '@decimalturn/toml-patch@3.0.5': {}
 
   '@dhzh/eslint-config@2.6.1(@typescript-eslint/eslint-plugin@8.69.0(@typescript-eslint/parser@8.69.0(eslint@10.9.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(eslint@10.9.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(@typescript-eslint/parser@8.69.0(eslint@10.9.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(@typescript-eslint/utils@8.69.0(eslint@10.9.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(@vue/compiler-sfc@3.5.38)(eslint@10.9.0(jiti@2.7.0)(supports-color@7.2.0))(prettier@3.8.4)(supports-color@7.2.0)(tailwindcss@4.3.3)(typescript@6.0.3)':
     dependencies:

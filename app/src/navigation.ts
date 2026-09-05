@@ -1,6 +1,6 @@
 import {
-  AiCloudIcon,
   BotIcon,
+  ConnectIcon,
   LanguageSkillIcon,
   LayoutDashboardIcon,
   McpServerIcon,
@@ -42,14 +42,15 @@ export const sidebarNavigationSections = [
     title: 'Execution',
     items: [
       {
-        title: 'Providers',
-        href: '/providers',
-        icon: AiCloudIcon,
-      },
-      {
         title: 'Runtimes',
         href: '/runtimes',
         icon: BotIcon,
+      },
+      {
+        title: 'Providers',
+        href: '/providers',
+        icon: ConnectIcon,
+        description: 'Saved model-service connections for each Runtime.',
       },
     ],
   },
@@ -65,4 +66,16 @@ export function getPageTitle(pathname: string): string {
   }
 
   return 'Foundry';
+}
+
+export function getPageDescription(pathname: string): string | null {
+  for (const section of sidebarNavigationSections) {
+    for (const item of section.items) {
+      if (item.href === pathname) {
+        return 'description' in item ? item.description : null;
+      }
+    }
+  }
+
+  return null;
 }

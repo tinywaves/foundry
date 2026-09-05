@@ -35,6 +35,7 @@ Keep local web interface changes within these modules. The frontend consumes ser
 - Use TanStack Query for server state and relative `/api` requests. Read [ADR 0004](docs/adr/0004-use-tanstack-query-for-server-state.md) before introducing another server-state pattern.
 - Add shadcn/ui components on demand. Do not reinitialize the project; preserve the Base UI, Mira, and Neutral configuration in `app/components.json`, and treat generated components as source-owned code that may be adapted.
 - Use the existing theme provider for appearance state and persistence instead of introducing a parallel theme store.
+- For JSX conditional rendering without an alternate UI, prefer `condition && (...)` over `condition ? (...) : null`; use a ternary when both branches render meaningful alternatives.
 
 ## HTTP Contracts
 

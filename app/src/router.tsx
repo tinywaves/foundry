@@ -8,6 +8,7 @@ import { McpsPage } from '#/pages/capabilities/mcps';
 import { PromptsPage } from '#/pages/capabilities/prompts';
 import { SkillsPage } from '#/pages/capabilities/skills';
 import { DashboardPage } from '#/pages/dashboard';
+import { ProviderAddPage } from '#/pages/execution/provider-add';
 import { ProvidersPage } from '#/pages/execution/providers';
 import { RuntimesPage } from '#/pages/execution/runtimes';
 import { NotFoundPage } from '#/pages/not-found';
@@ -53,6 +54,10 @@ export const routes: RouteObject[] = [
       {
         Component: StandaloneLayout,
         children: [
+          {
+            path: 'providers/new',
+            Component: ProviderAddPage,
+          },
           {
             path: 'settings',
             Component: SettingsPage,

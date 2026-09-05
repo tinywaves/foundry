@@ -37,8 +37,8 @@ The Foundry product area for configuring how supported local agents run and acce
 _Avoid_: Infrastructure, environments
 
 **Provider**:
-A saved model-provider configuration that can be applied to a compatible Runtime.
-_Avoid_: Model, backend
+A user-defined model-service connection configuration scoped to exactly one Runtime type. It has no built-in vendor identity, and its display name need not be unique.
+_Avoid_: Model, backend, vendor
 
 **Runtime**:
 A supported local agent application whose provider configuration Foundry can manage.

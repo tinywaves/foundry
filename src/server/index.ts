@@ -2,6 +2,7 @@ import { serve } from '@hono/node-server';
 import type { ServerType } from '@hono/node-server';
 import { createFoundryApp } from './app';
 import { openFoundryDatabase } from './database';
+import { DrizzleProviderStore } from './provider-store';
 import { DrizzleSettingsStore } from './settings-store';
 
 export const FOUNDRY_SERVER_HOSTNAME = '127.0.0.1';
@@ -42,6 +43,7 @@ export async function startFoundryServer(
     migrationsFolder: options.migrationsFolder,
   });
   const app = createFoundryApp({
+    providerStore: new DrizzleProviderStore(database.db),
     settingsStore: new DrizzleSettingsStore(database.db),
   });
 

@@ -10,12 +10,13 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '#/components/ui/sidebar';
-import { getPageTitle } from '#/navigation';
+import { getPageDescription, getPageTitle } from '#/navigation';
 
 export function SidebarLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const pageTitle = getPageTitle(location.pathname);
+  const pageDescription = getPageDescription(location.pathname);
   const returnTo = `${location.pathname}${location.search}${location.hash}`;
 
   return (
@@ -25,7 +26,14 @@ export function SidebarLayout() {
         <header className="flex h-10 shrink-0 items-center gap-2 px-3">
           <SidebarTrigger data-testid="sidebar-trigger" />
           <Separator orientation="vertical" className="h-4" />
-          <span className="text-xs font-medium">{pageTitle}</span>
+          <span className="text-xs font-medium" data-testid="page-title">
+            {pageTitle}
+          </span>
+          {pageDescription && (
+            <span className="text-xs text-muted-foreground">
+              {pageDescription}
+            </span>
+          )}
           <Button
             variant="ghost"
             size="icon-sm"

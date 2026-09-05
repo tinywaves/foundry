@@ -18,14 +18,16 @@ pnpm dlx @dhzh/foundry ui --port 61234 --no-open
 
 ## Local Web Interface
 
-The current Local Web UI provides the application shell for Foundry's management surfaces. It uses hash-based URLs so navigation does not require server-side route fallbacks.
+The Local Web UI uses hash-based URLs so navigation does not require server-side route fallbacks. It currently provides working management flows for Providers, Runtimes, and Application Settings, while the remaining capability surfaces are placeholders for future workflows.
 
-- `/#/dashboard` - Dashboard entry point.
+- `/#/dashboard` - Dashboard placeholder and application entry point.
 - `/#/skills`, `/#/mcps`, and `/#/prompts` - Capability management placeholders.
-- `/#/providers` and `/#/runtimes` - Execution management placeholders.
-- `/#/settings` - Standalone appearance settings persisted by the Foundry Server.
+- `/#/providers` - Browse saved Codex and Claude Code Provider configurations by Runtime.
+- `/#/providers/new` - Create a Provider with connection, authentication, model, and optional presentation details.
+- `/#/runtimes` - Detect installed Codex and Claude Code Runtimes, select a saved Provider or Official Default, preview managed configuration changes, and apply them to the Runtime configuration file.
+- `/#/settings` - Choose a system, light, or dark Color Mode persisted by the Foundry Server.
 
-The management pages are placeholders for later workflows. The browser tab title reports Foundry Server connectivity as `Checking…`, `Healthy`, or `Unhealthy`, and unknown routes render an in-app Not Found page.
+Provider records, Runtime assignments, and Application Settings are stored in Foundry's local SQLite database. The browser tab title reports Foundry Server connectivity as `Checking…`, `Healthy`, or `Unhealthy`, and unknown routes render an in-app Not Found page.
 
 ## Development
 

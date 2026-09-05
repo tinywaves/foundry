@@ -12,6 +12,7 @@ import {
 import { render } from 'vitest-browser-react';
 import { createMemoryRouter } from 'react-router';
 import type { InitialEntry } from 'react-router';
+import type { Provider } from '@dhzh/foundry-api-contract';
 import { RouterProvider } from 'react-router/dom';
 
 import { ThemeProvider } from '#/components/theme-provider';
@@ -34,20 +35,64 @@ function createSettingsResponse(
   });
 }
 
+function createProvidersResponse(providers: Provider[] = [], status = 200) {
+  return Response.json({
+    status: 'SUCCESS',
+    data: providers,
+  }, {
+    status,
+  });
+}
+
+function createProviderResponse(provider: Provider, status = 201) {
+  return Response.json({
+    status: 'SUCCESS',
+    data: provider,
+  }, {
+    status,
+  });
+}
+
+function createCodexProvider(overrides: Partial<Provider> = {}): Provider {
+  return {
+    avatar: null,
+    configuration: {
+      apiKey: 'local-secret',
+      baseUrl: 'https://example.com/v1',
+      primaryModel: 'example-model',
+      protocol: 'responses',
+      reviewModel: null,
+    },
+    createdAt: Date.UTC(2026, 8, 4),
+    id: 'provider-1',
+    name: 'Example Provider',
+    officialWebsite: 'https://example.com',
+    remark: 'Example remark',
+    runtime: 'codex',
+    updatedAt: Date.UTC(2026, 8, 4),
+    ...overrides,
+  } as Provider;
+}
+
 function getRequestPath(input: RequestInfo | URL): string {
   if (typeof input === 'string') {
-    return input;
+    return new URL(input, 'http://localhost').pathname;
   }
 
   return input instanceof URL ? input.pathname : new URL(input.url).pathname;
 }
 
 function createDefaultFetchMock() {
-  return vi.fn((input: RequestInfo | URL) => Promise.resolve(
-    getRequestPath(input) === '/api/settings'
-      ? createSettingsResponse()
-      : createHealthResponse(),
-  ));
+  return vi.fn((input: RequestInfo | URL) => {
+    const requestPath = getRequestPath(input);
+    if (requestPath === '/api/settings') {
+      return Promise.resolve(createSettingsResponse());
+    }
+    if (requestPath === '/api/providers') {
+      return Promise.resolve(createProvidersResponse());
+    }
+    return Promise.resolve(createHealthResponse());
+  });
 }
 
 function throwDeferredNotInitialized(): never {
@@ -227,11 +272,6 @@ describe('application routing and layouts', () => {
     ['Skills', '/skills', 'Local skill management will be added here.'],
     ['MCPs', '/mcps', 'MCP server management will be added here.'],
     [
-      'Providers',
-      '/providers',
-      'Model provider management will be added here.',
-    ],
-    [
       'Runtimes',
       '/runtimes',
       'Local agent runtime management will be added here.',
@@ -243,6 +283,136 @@ describe('application routing and layouts', () => {
     await expect
       .element(screen.getByRole('link', { name: title }))
       .toHaveAttribute('aria-current', 'page');
+  });
+
+  test('filters and renders the complete Provider list', async () => {
+    const provider = createCodexProvider();
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const requestPath = getRequestPath(input);
+      if (requestPath === '/api/settings') {
+        return Promise.resolve(createSettingsResponse());
+      }
+      if (requestPath === '/api/providers') {
+        return Promise.resolve(createProvidersResponse([provider]));
+      }
+      return Promise.resolve(createHealthResponse());
+    }));
+
+    const screen = await renderApp('/providers?runtime=codex');
+
+    await expect.element(screen.getByTestId('page-title'))
+      .toHaveTextContent('Providers');
+    await expect.element(screen.getByText(
+      'Saved model-service connections for each Runtime.',
+    ))
+      .toBeVisible();
+    await expect.element(screen.getByText('Example Provider')).toBeVisible();
+    await expect.element(screen.getByText(/example-model/)).toBeVisible();
+    const apiKey = screen.getByLabelText('Example Provider API Key');
+    await expect.element(apiKey).toHaveAttribute('type', 'password');
+    await screen.getByRole('button', { name: 'Show API Key' }).click();
+    await expect.element(apiKey).toHaveAttribute('type', 'text');
+  });
+
+  test('confirms before clearing a dirty Provider form for another Runtime', async () => {
+    const screen = await renderApp('/providers/new');
+
+    await screen.getByRole('button', { name: 'Codex' }).click();
+    await screen.getByLabelText('Name', { exact: true }).fill('Draft Provider');
+    await screen.getByRole('button', { name: 'Claude Code' }).click();
+
+    await expect.element(screen.getByText(
+      'Changing the Runtime will clear the information you\'ve entered.',
+    )).toBeVisible();
+    await screen.getByRole('button', { name: 'Change Runtime' }).click();
+    await expect.element(screen.getByLabelText('Name', { exact: true })).toHaveValue('');
+    await expect.element(screen.getByLabelText('Protocol'))
+      .toHaveValue('Anthropic Messages API');
+  });
+
+  test('keeps the Claude Code Provider form within the viewport', async () => {
+    await page.viewport(640, 800);
+    const screen = await renderApp('/providers/new');
+
+    await screen.getByRole('button', { name: 'Claude Code' }).click();
+
+    await expect.element(screen.getByLabelText('Auth Token', { exact: true }))
+      .toBeVisible();
+    const authTokenOption = screen.getByRole('button', { name: 'Auth Token' });
+    const apiKeyOption = screen.getByRole('button', { name: 'API Key', exact: true });
+    await expect.element(authTokenOption).toBeVisible();
+    await expect.element(apiKeyOption).toBeVisible();
+    await authTokenOption.hover();
+    await expect.element(screen.getByText('Authorization: Bearer <xxx>'))
+      .toBeVisible();
+    await apiKeyOption.hover();
+    await expect.element(screen.getByText('X-Api-Key: <xxx>'))
+      .toBeVisible();
+    await apiKeyOption.click();
+    await expect.element(screen.getByLabelText('API Key', { exact: true }))
+      .toBeVisible();
+
+    expect(document.documentElement.scrollWidth)
+      .toBeLessThanOrEqual(document.documentElement.clientWidth);
+  });
+
+  test('enables Claude model capabilities after entering a Model ID', async () => {
+    const screen = await renderApp('/providers/new');
+
+    await screen.getByRole('button', { name: 'Claude Code' }).click();
+
+    const primaryModel = screen.getByRole('group', { name: 'Primary model' });
+    const capabilities = primaryModel.getByRole('combobox', {
+      name: 'Supported capabilities',
+    });
+
+    await expect.element(capabilities).toBeDisabled();
+    await primaryModel.getByLabelText('Model ID').fill('claude-example');
+    await expect.element(capabilities).not.toBeDisabled();
+
+    await capabilities.click();
+    await screen.getByRole('option', { name: 'Effort', exact: true }).click();
+    await screen.getByRole('option', { name: 'Thinking', exact: true }).click();
+    await expect.element(capabilities).toHaveTextContent('Effort, Thinking');
+  });
+
+  test('creates a Codex Provider and returns to its filtered list', async () => {
+    let createdProvider: Provider | undefined;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const requestPath = getRequestPath(input);
+      if (requestPath === '/api/settings') {
+        return Promise.resolve(createSettingsResponse());
+      }
+      if (requestPath === '/api/providers' && init?.method === 'POST') {
+        const request = JSON.parse(init.body as string) as Provider;
+        createdProvider = createCodexProvider({
+          ...request,
+          id: 'created-provider',
+        });
+        return Promise.resolve(createProviderResponse(createdProvider));
+      }
+      if (requestPath === '/api/providers') {
+        return Promise.resolve(createProvidersResponse(
+          createdProvider ? [createdProvider] : [],
+        ));
+      }
+      return Promise.resolve(createHealthResponse());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const screen = await renderApp('/providers/new');
+
+    await screen.getByRole('button', { name: 'Codex' }).click();
+    await screen.getByLabelText('Name', { exact: true }).fill('Created Provider');
+    await screen.getByLabelText('Base URL').fill('https://created.example.com/v1');
+    await screen.getByRole('textbox', { name: 'API Key', exact: true })
+      .fill('created-secret');
+    await screen.getByLabelText('Primary model').fill('created-model');
+    await screen.getByRole('button', { name: 'Add Provider' }).click();
+
+    await expect.element(screen.getByText('Created Provider')).toBeVisible();
+    expect(fetchMock).toHaveBeenCalledWith('/api/providers', expect.objectContaining({
+      method: 'POST',
+    }));
   });
 
   test('renders settings with standalone navigation', async () => {

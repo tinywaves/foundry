@@ -6,6 +6,8 @@ import {
 } from '@dhzh/foundry-api-contract';
 import type {
   HealthResponse,
+  ProviderResponse,
+  ProvidersResponse,
   SettingsResponse,
 } from '@dhzh/foundry-api-contract';
 import { existsSync } from 'node:fs';
@@ -14,6 +16,11 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 
 import type { SettingsStore } from './settings-store';
+import type { ProviderStore } from './provider-store';
+import {
+  providerCreationSchema,
+  providersQuerySchema,
+} from './provider-validation';
 
 const healthQuerySchema = z.strictObject({});
 const settingsQuerySchema = z.strictObject({});
@@ -22,6 +29,7 @@ const updateSettingsSchema = z.strictObject({
 });
 
 export interface CreateFoundryAppOptions {
+  providerStore: ProviderStore;
   settingsStore: SettingsStore;
   webRoot?: string;
 }
@@ -67,6 +75,26 @@ export function createFoundryApp(options: CreateFoundryAppOptions): Hono {
         context.req.valid('json'),
       ),
     } satisfies SettingsResponse),
+  );
+
+  app.get(
+    '/api/providers',
+    zValidator('query', providersQuerySchema),
+    (context) => context.json({
+      status: apiStatusCodes.success,
+      data: options.providerStore.listProviders(
+        context.req.valid('query').runtime,
+      ),
+    } satisfies ProvidersResponse),
+  );
+
+  app.post(
+    '/api/providers',
+    zValidator('json', providerCreationSchema),
+    (context) => context.json({
+      status: apiStatusCodes.success,
+      data: options.providerStore.createProvider(context.req.valid('json')),
+    } satisfies ProviderResponse, 201),
   );
 
   const webRoot = options.webRoot ?? findDefaultWebRoot();

@@ -1,0 +1,3 @@
+# Store Runtime-specific Provider configuration as validated JSON
+
+Provider identity, presentation metadata, Runtime type, avatar data, timestamps, and soft-deletion state are stored in dedicated database columns, while the fields specific to Codex or Claude Code are stored in a `configuration` JSON column. The API contract and server validation treat this value as a strict Runtime-discriminated union rather than arbitrary JSON, allowing Runtime configuration shapes to evolve without adding columns that are meaningless for other Runtime types while keeping list filtering and presentation fields directly queryable.

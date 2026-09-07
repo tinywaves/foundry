@@ -28,7 +28,7 @@ const providerInput = {
   configuration: {
     apiKey: 'secret',
     baseUrl: 'https://example.com/v1',
-    primaryModel: 'example-model',
+    defaultModel: 'example-model',
     protocol: 'responses',
     reviewModel: null,
   },

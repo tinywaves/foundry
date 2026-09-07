@@ -77,13 +77,13 @@ Remove the following only when Foundry wrote them for the applied Provider:
 - `CLAUDE_CODE_API_KEY_HELPER_TTL_MS`
 - `ANTHROPIC_CUSTOM_HEADERS`
 - `ANTHROPIC_MODEL`
-- `ANTHROPIC_DEFAULT_MODEL`
 - `ANTHROPIC_DEFAULT_OPUS_MODEL`
 - `ANTHROPIC_DEFAULT_SONNET_MODEL`
 - `ANTHROPIC_DEFAULT_HAIKU_MODEL`
 - `ANTHROPIC_DEFAULT_FABLE_MODEL`
-- Any Foundry-written companion `*_NAME`, `*_DESCRIPTION`, or `*_SUPPORTED_CAPABILITIES` variables for those pinned models
+- Any Foundry-written companion `*_NAME`, `*_DESCRIPTION`, or `*_SUPPORTED_CAPABILITIES` variables for family-pinned models
 - `CLAUDE_CODE_SUBAGENT_MODEL`
+- `CLAUDE_CODE_SUBAGENT_MODEL_FORCE`
 
 Removing both the endpoint override and higher-precedence custom credential sources is essential: `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_API_KEY`, and `apiKeyHelper` all outrank the normal `/login` subscription credential. Removing model overrides lets Claude Code resolve its official account/organization default rather than retaining a gateway-specific deployment name. [Anthropic gateway configuration](https://code.claude.com/docs/en/llm-gateway-connect#set-the-base-url-and-credential) [Anthropic authentication precedence](https://code.claude.com/docs/en/authentication#authentication-precedence) [Anthropic model selection](https://code.claude.com/docs/en/model-config#how-model-selection-works) [Anthropic pinned model configuration](https://code.claude.com/docs/en/model-config#pin-models-for-third-party-deployments)
 
@@ -95,7 +95,7 @@ If Foundry supports native cloud-provider Providers, it must also remove every F
 
 Foundry should not set or remove `forceLoginMethod` or `forceLoginOrgUUID` as part of Provider application/reset; those are account or organization login policy, not Provider connection fields. [Anthropic Bedrock setup](https://code.claude.com/docs/en/amazon-bedrock#set-up-manually) [Anthropic Vertex setup](https://code.claude.com/docs/en/google-vertex-ai#configure-claude-code) [Anthropic Microsoft Foundry setup](https://code.claude.com/docs/en/microsoft-foundry#configure-claude-code) [Anthropic login policy settings](https://code.claude.com/docs/en/settings-reference#forceloginmethod)
 
-After deleting Foundry-owned entries, preserve every remaining `env` key. Remove the `env` object only when Foundry created it and it is now empty; never replace the entire object.
+After deleting Foundry-owned entries, preserve every remaining `env` key, including `ANTHROPIC_DEFAULT_MODEL` and any companion suffixes. Remove the `env` object only when Foundry created it and it is now empty; never replace the entire object.
 
 ### Credential and state Foundry must not touch
 

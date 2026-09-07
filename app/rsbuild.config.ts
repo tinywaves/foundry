@@ -19,5 +19,6 @@ export default defineConfig({
     proxy: {
       '/api': 'http://127.0.0.1:54321',
     },
+    port: 12_345,
   },
 });

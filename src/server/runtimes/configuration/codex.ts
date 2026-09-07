@@ -143,7 +143,7 @@ export function createCodexPlan(
   const providerKey = resolution.key;
   const providerTable = getProviderTable(source.values, providerKey);
   const proposedTopLevel = {
-    model: provider.configuration.primaryModel,
+    model: provider.configuration.defaultModel,
     model_provider: providerKey,
     review_model: provider.configuration.reviewModel ?? undefined,
   };

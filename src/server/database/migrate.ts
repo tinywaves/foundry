@@ -60,7 +60,7 @@ function assertCompatibleHistory(
 async function retainNewestBackup(backupsDirectory: string): Promise<void> {
   const directoryEntries = await readdir(backupsDirectory);
   const backupNames = directoryEntries
-    .filter((name) => name.endsWith('.sqlite'))
+    .filter((name) => name.startsWith('foundry-before-') && name.endsWith('.sqlite'))
     .toSorted((left, right) => left.localeCompare(right));
   const staleBackupNames = backupNames.slice(0, -1);
 

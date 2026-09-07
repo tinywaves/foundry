@@ -26,7 +26,7 @@ const codexProvider: Extract<Provider, { runtime: 'codex' }> = {
   configuration: {
     apiKey: 'codex-secret',
     baseUrl: 'https://gateway.example/v1',
-    primaryModel: 'primary-model',
+    defaultModel: 'default-model',
     protocol: 'responses',
     reviewModel: 'review-model',
   },
@@ -53,15 +53,16 @@ const claudeProvider: Extract<Provider, { runtime: 'claude-code' }> = {
       model: 'opus-custom',
       supportedCapabilities: ['thinking', 'max_effort'],
     },
-    primaryModel: {
-      description: null,
-      displayName: 'Primary Custom',
-      model: 'primary-custom',
-      supportedCapabilities: [],
-    },
+    defaultModel: 'default-custom',
     protocol: 'messages',
     sonnetModel: null,
     subagentModel: 'subagent-custom',
+    subagentModelForce: true,
+    hideAiAttribution: true,
+    teammatesMode: true,
+    enableToolSearch: true,
+    maxEffortThinking: true,
+    disableAutoUpdater: true,
   },
   createdAt: 1,
   id: 'claude-provider',
@@ -109,7 +110,7 @@ it('uses foundry when Codex has no nested Provider table and preserves formattin
   const appliedFile = await stat(filename);
   expect(appliedFile.mode & 0o777).toBe(0o640);
   expect(parseToml(content)).toMatchObject({
-    model: 'primary-model',
+    model: 'default-model',
     model_provider: 'foundry',
     model_providers: {
       foundry: {
@@ -159,7 +160,7 @@ it('reuses one Codex Provider key and overwrites wrong managed value types', asy
     preview.file.hash,
   );
   expect(parseToml(await readFile(filename, 'utf8'))).toMatchObject({
-    model: 'primary-model',
+    model: 'default-model',
     model_provider: 'existing',
     model_providers: { existing: { custom: 'preserved' } },
   });
@@ -218,7 +219,16 @@ it('writes Claude managed env fields and removes only those fields for Official 
   await writeFile(filename, `${JSON.stringify({
     env: {
       ANTHROPIC_AUTH_TOKEN: 'old-secret',
+      ANTHROPIC_CUSTOM_MODEL_OPTION: 'keep-custom',
+      ANTHROPIC_DEFAULT_MODEL: 'old-default',
+      ANTHROPIC_DEFAULT_MODEL_NAME: 'Old Default',
       KEEP_ME: 'yes',
+    },
+    attribution: {
+      commit: 'old commit attribution',
+      custom: 'keep-attribution-custom',
+      pr: 'old PR attribution',
+      sessionUrl: true,
     },
     permissions: { allow: ['Read'] },
   }, null, '\t')}\n`);
@@ -237,6 +247,14 @@ it('writes Claude managed env fields and removes only those fields for Official 
     key: 'env.ANTHROPIC_API_KEY',
     proposed: { kind: 'secret', value: 'claude-secret' },
   }));
+  expect([
+    ...providerPreview.changes,
+    ...providerPreview.unchanged,
+  ].map((field) => field.key)).not.toContain('env.ANTHROPIC_DEFAULT_MODEL');
+  expect([
+    ...providerPreview.changes,
+    ...providerPreview.unchanged,
+  ].map((field) => field.key)).not.toContain('env.ANTHROPIC_DEFAULT_MODEL_NAME');
   await manager.apply(
     'claude-code',
     filename,
@@ -246,21 +264,46 @@ it('writes Claude managed env fields and removes only those fields for Official 
   );
   const applied = JSON.parse(await readFile(filename, 'utf8'));
   expect(applied).toMatchObject({
+    attribution: {
+      commit: '',
+      custom: 'keep-attribution-custom',
+      pr: '',
+      sessionUrl: false,
+    },
     env: {
       ANTHROPIC_API_KEY: 'claude-secret',
       ANTHROPIC_BASE_URL: 'https://gateway.example',
-      ANTHROPIC_DEFAULT_MODEL: 'primary-custom',
-      ANTHROPIC_DEFAULT_MODEL_NAME: 'Primary Custom',
+      ANTHROPIC_CUSTOM_MODEL_OPTION: 'keep-custom',
+      ANTHROPIC_DEFAULT_MODEL: 'old-default',
+      ANTHROPIC_DEFAULT_MODEL_NAME: 'Old Default',
       ANTHROPIC_DEFAULT_OPUS_MODEL: 'opus-custom',
       ANTHROPIC_DEFAULT_OPUS_MODEL_DESCRIPTION: 'Strong model',
       ANTHROPIC_DEFAULT_OPUS_MODEL_NAME: 'Opus Custom',
       ANTHROPIC_DEFAULT_OPUS_MODEL_SUPPORTED_CAPABILITIES: 'thinking,max_effort',
+      ANTHROPIC_MODEL: 'default-custom',
+      CLAUDE_CODE_EFFORT_LEVEL: 'max',
+      CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: '1',
       CLAUDE_CODE_SUBAGENT_MODEL: 'subagent-custom',
+      CLAUDE_CODE_SUBAGENT_MODEL_FORCE: '1',
+      DISABLE_AUTOUPDATER: '1',
+      ENABLE_TOOL_SEARCH: 'true',
       KEEP_ME: 'yes',
     },
     permissions: { allow: ['Read'] },
   });
   expect(applied.env).not.toHaveProperty('ANTHROPIC_AUTH_TOKEN');
+
+  const settledProviderPreview = await manager.preview(
+    'claude-code',
+    filename,
+    providerTarget,
+    claudeProvider,
+  );
+  if (settledProviderPreview.kind !== 'ready') {
+    throw new Error('Expected a ready Preview.');
+  }
+  expect(settledProviderPreview.changes).toEqual([]);
+  expect(settledProviderPreview.unchanged).toHaveLength(28);
 
   const officialTarget = { kind: 'official-default' } as const;
   const officialPreview = await manager.preview(
@@ -272,6 +315,14 @@ it('writes Claude managed env fields and removes only those fields for Official 
   if (officialPreview.kind !== 'ready') {
     throw new Error('Expected a ready Preview.');
   }
+  expect([
+    ...officialPreview.changes,
+    ...officialPreview.unchanged,
+  ].map((field) => field.key)).not.toContain('env.ANTHROPIC_DEFAULT_MODEL');
+  expect([
+    ...officialPreview.changes,
+    ...officialPreview.unchanged,
+  ].map((field) => field.key)).not.toContain('env.ANTHROPIC_DEFAULT_MODEL_NAME');
   await manager.apply(
     'claude-code',
     filename,
@@ -280,7 +331,15 @@ it('writes Claude managed env fields and removes only those fields for Official 
     officialPreview.file.hash,
   );
   expect(JSON.parse(await readFile(filename, 'utf8'))).toEqual({
-    env: { KEEP_ME: 'yes' },
+    attribution: {
+      custom: 'keep-attribution-custom',
+    },
+    env: {
+      ANTHROPIC_CUSTOM_MODEL_OPTION: 'keep-custom',
+      ANTHROPIC_DEFAULT_MODEL: 'old-default',
+      ANTHROPIC_DEFAULT_MODEL_NAME: 'Old Default',
+      KEEP_ME: 'yes',
+    },
     permissions: { allow: ['Read'] },
   });
 });

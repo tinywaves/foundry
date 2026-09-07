@@ -67,7 +67,7 @@ function previewValue(
 export function createPreviewField(
   key: string,
   current: unknown,
-  proposed: string | undefined,
+  proposed: unknown,
   isSecret = false,
 ): RuntimeConfigurationPreviewField {
   let operation: RuntimeConfigurationPreviewField['operation'];

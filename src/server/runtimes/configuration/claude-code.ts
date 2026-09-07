@@ -16,8 +16,7 @@ import {
   stringifyClaude,
 } from './file';
 
-const modelPrefixes = [
-  'ANTHROPIC_DEFAULT_MODEL',
+const roleModelPrefixes = [
   'ANTHROPIC_DEFAULT_OPUS_MODEL',
   'ANTHROPIC_DEFAULT_SONNET_MODEL',
   'ANTHROPIC_DEFAULT_HAIKU_MODEL',
@@ -29,14 +28,55 @@ const modelSuffixes = [
   '_DESCRIPTION',
   '_SUPPORTED_CAPABILITIES',
 ] as const;
+const roleModelEnvironmentKeys = roleModelPrefixes.flatMap((prefix) =>
+  modelSuffixes.map((suffix) => `${prefix}${suffix}`));
+const subagentEnvironmentKeys = [
+  'CLAUDE_CODE_SUBAGENT_MODEL',
+  'CLAUDE_CODE_SUBAGENT_MODEL_FORCE',
+] as const;
+const otherEnvironmentKeys = [
+  'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS',
+  'ENABLE_TOOL_SEARCH',
+  'CLAUDE_CODE_EFFORT_LEVEL',
+  'DISABLE_AUTOUPDATER',
+] as const;
+const attributionKeys = ['commit', 'pr', 'sessionUrl'] as const;
 const managedEnvironmentKeys = [
   'ANTHROPIC_BASE_URL',
   'ANTHROPIC_AUTH_TOKEN',
   'ANTHROPIC_API_KEY',
-  ...modelPrefixes.flatMap((prefix) =>
-    modelSuffixes.map((suffix) => `${prefix}${suffix}`)),
-  'CLAUDE_CODE_SUBAGENT_MODEL',
+  'ANTHROPIC_MODEL',
+  ...roleModelEnvironmentKeys,
+  ...subagentEnvironmentKeys,
+  ...otherEnvironmentKeys,
 ] as const;
+
+function previewEnvironmentKeys(
+  environment: Record<string, unknown>,
+  configuration: ClaudeCodeProviderConfiguration | null,
+): string[] {
+  if (configuration === null) {
+    return managedEnvironmentKeys.filter((key) => environment[key] !== undefined);
+  }
+
+  const authenticationKey = configuration.apiKeyHeader === 'authorization'
+    ? 'ANTHROPIC_AUTH_TOKEN'
+    : 'ANTHROPIC_API_KEY';
+  const configuredKeys = [
+    'ANTHROPIC_BASE_URL',
+    authenticationKey,
+    'ANTHROPIC_MODEL',
+    ...roleModelEnvironmentKeys,
+    ...subagentEnvironmentKeys,
+    ...otherEnvironmentKeys,
+  ];
+  const configuredKeySet = new Set<string>(configuredKeys);
+  return [
+    ...configuredKeys,
+    ...managedEnvironmentKeys.filter((key) =>
+      !configuredKeySet.has(key) && environment[key] !== undefined),
+  ];
+}
 
 function modelValues(
   configuration: ClaudeModelConfiguration | null,
@@ -71,22 +111,44 @@ function createProposedEnvironment(
   proposed.ANTHROPIC_API_KEY = configuration.apiKeyHeader === 'x-api-key'
     ? configuration.apiKey
     : undefined;
+  proposed.ANTHROPIC_MODEL = configuration.defaultModel;
 
   const models = [
-    configuration.primaryModel,
     configuration.opusModel,
     configuration.sonnetModel,
     configuration.haikuModel,
     configuration.fableModel,
   ];
-  for (const [index, prefix] of modelPrefixes.entries()) {
+  for (const [index, prefix] of roleModelPrefixes.entries()) {
     const values = modelValues(models[index]);
     for (const [suffixIndex, suffix] of modelSuffixes.entries()) {
       proposed[`${prefix}${suffix}`] = values[suffixIndex];
     }
   }
   proposed.CLAUDE_CODE_SUBAGENT_MODEL = configuration.subagentModel ?? undefined;
+  proposed.CLAUDE_CODE_SUBAGENT_MODEL_FORCE = configuration.subagentModelForce
+    ? '1'
+    : undefined;
+  proposed.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = configuration.teammatesMode
+    ? '1'
+    : undefined;
+  proposed.ENABLE_TOOL_SEARCH = configuration.enableToolSearch ? 'true' : undefined;
+  proposed.CLAUDE_CODE_EFFORT_LEVEL = configuration.maxEffortThinking
+    ? 'max'
+    : undefined;
+  proposed.DISABLE_AUTOUPDATER = configuration.disableAutoUpdater ? '1' : undefined;
   return proposed;
+}
+
+function createProposedAttribution(
+  configuration: ClaudeCodeProviderConfiguration | null,
+): Record<(typeof attributionKeys)[number], string | boolean | undefined> {
+  const shouldHideAiAttribution = configuration?.hideAiAttribution === true;
+  return {
+    commit: shouldHideAiAttribution ? '' : undefined,
+    pr: shouldHideAiAttribution ? '' : undefined,
+    sessionUrl: shouldHideAiAttribution ? false : undefined,
+  };
 }
 
 export function createClaudeCodePlan(
@@ -104,12 +166,31 @@ export function createClaudeCodePlan(
   }
   const environment = environmentValue ?? {};
   const proposed = createProposedEnvironment(provider?.configuration ?? null);
-  const fields = managedEnvironmentKeys.map((key) => createPreviewField(
-    `env.${key}`,
-    environment[key],
-    proposed[key],
-    key === 'ANTHROPIC_AUTH_TOKEN' || key === 'ANTHROPIC_API_KEY',
-  ));
+  const attributionValue = source.values.attribution;
+  if (attributionValue !== undefined && !isRecord(attributionValue)) {
+    throw new RuntimeOperationError(
+      'RUNTIME_CONFIGURATION_INVALID',
+      'Claude Code attribution must be an object.',
+    );
+  }
+  const attribution = attributionValue ?? {};
+  const proposedAttribution = createProposedAttribution(provider?.configuration ?? null);
+  const fields = [
+    ...previewEnvironmentKeys(
+      environment,
+      provider?.configuration ?? null,
+    ).map((key) => createPreviewField(
+      `env.${key}`,
+      environment[key],
+      proposed[key],
+      key === 'ANTHROPIC_AUTH_TOKEN' || key === 'ANTHROPIC_API_KEY',
+    )),
+    ...attributionKeys.map((key) => createPreviewField(
+      `attribution.${key}`,
+      attribution[key],
+      proposedAttribution[key],
+    )),
+  ];
   const updated = cloneValues(source.values);
   const updatedEnvironment: Record<string, unknown> = isRecord(updated.env)
     ? updated.env
@@ -120,6 +201,21 @@ export function createClaudeCodePlan(
   }
   if (Object.keys(updatedEnvironment).length === 0) {
     delete updated.env;
+  }
+  const updatedAttribution: Record<string, unknown> = isRecord(updated.attribution)
+    ? updated.attribution
+    : {};
+  updated.attribution = updatedAttribution;
+  for (const key of attributionKeys) {
+    const value = proposedAttribution[key];
+    if (value === undefined) {
+      delete updatedAttribution[key];
+    } else {
+      updatedAttribution[key] = value;
+    }
+  }
+  if (Object.keys(updatedAttribution).length === 0) {
+    delete updated.attribution;
   }
   const split = splitFields(fields);
   return {

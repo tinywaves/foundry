@@ -22,7 +22,7 @@ The Local Web UI uses hash-based URLs so navigation does not require server-side
 
 - `/#/dashboard` - Dashboard placeholder and application entry point.
 - `/#/skills`, `/#/mcps`, and `/#/prompts` - Capability management placeholders.
-- `/#/providers` - Browse saved Codex and Claude Code Provider configurations by Runtime.
+- `/#/providers` - Browse saved Codex and Claude Code Providers by Runtime.
 - `/#/providers/new` - Create a Provider with connection, authentication, model, and optional presentation details.
 - `/#/runtimes` - Detect installed Codex and Claude Code Runtimes, select a saved Provider or Official Default, preview managed configuration changes, and apply them to the Runtime configuration file.
 - `/#/settings` - Choose a system, light, or dark Color Mode persisted by the Foundry Server.
@@ -45,7 +45,7 @@ Start the Hono server:
 pnpm dev:server
 ```
 
-In another terminal, start the React app at [http://localhost:3000](http://localhost:3000):
+In another terminal, start the React app at [http://localhost:12345](http://localhost:12345):
 
 ```bash
 pnpm dev:app

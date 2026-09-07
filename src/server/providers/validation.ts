@@ -153,10 +153,15 @@ const claudeModelConfigurationSchema = z.strictObject({
   supportedCapabilities: supportedCapabilitiesSchema,
 });
 
+const claudeDefaultModelSchema = z.union([
+  requiredModelSchema,
+  claudeModelConfigurationSchema.transform((configuration) => configuration.model),
+]);
+
 export const codexProviderConfigurationSchema = z.strictObject({
   apiKey: optionalApiKeySchema,
   baseUrl: baseUrlSchema,
-  primaryModel: requiredModelSchema,
+  defaultModel: requiredModelSchema,
   protocol: z.literal('responses'),
   reviewModel: optionalModelSchema,
 });
@@ -168,10 +173,16 @@ export const claudeCodeProviderConfigurationSchema = z.strictObject({
   fableModel: claudeModelConfigurationSchema.nullable(),
   haikuModel: claudeModelConfigurationSchema.nullable(),
   opusModel: claudeModelConfigurationSchema.nullable(),
-  primaryModel: claudeModelConfigurationSchema,
+  defaultModel: claudeDefaultModelSchema,
   protocol: z.literal('messages'),
   sonnetModel: claudeModelConfigurationSchema.nullable(),
   subagentModel: optionalModelSchema,
+  subagentModelForce: z.boolean().default(false),
+  hideAiAttribution: z.boolean().default(false),
+  teammatesMode: z.boolean().default(false),
+  enableToolSearch: z.boolean().default(false),
+  maxEffortThinking: z.boolean().default(false),
+  disableAutoUpdater: z.boolean().default(false),
 });
 
 const commonProviderFields = {

@@ -17,7 +17,7 @@ const provider: Extract<Provider, { runtime: 'codex' }> = {
   configuration: {
     apiKey: null,
     baseUrl: 'https://example.com/v1',
-    primaryModel: 'model',
+    defaultModel: 'model',
     protocol: 'responses',
     reviewModel: null,
   },

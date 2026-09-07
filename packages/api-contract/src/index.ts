@@ -74,7 +74,7 @@ export interface ClaudeModelConfiguration {
 export interface CodexProviderConfiguration {
   apiKey: string | null;
   baseUrl: string;
-  primaryModel: string;
+  defaultModel: string;
   protocol: 'responses';
   reviewModel: string | null;
 }
@@ -86,10 +86,16 @@ export interface ClaudeCodeProviderConfiguration {
   fableModel: ClaudeModelConfiguration | null;
   haikuModel: ClaudeModelConfiguration | null;
   opusModel: ClaudeModelConfiguration | null;
-  primaryModel: ClaudeModelConfiguration;
+  defaultModel: string;
   protocol: 'messages';
   sonnetModel: ClaudeModelConfiguration | null;
   subagentModel: string | null;
+  subagentModelForce: boolean;
+  hideAiAttribution: boolean;
+  teammatesMode: boolean;
+  enableToolSearch: boolean;
+  maxEffortThinking: boolean;
+  disableAutoUpdater: boolean;
 }
 
 interface ProviderBase {
@@ -112,6 +118,16 @@ export type Provider
     runtime: 'claude-code';
   };
 
+export interface ProviderSummary {
+  avatar: ProviderAvatar | null;
+  baseUrl: string;
+  id: string;
+  name: string;
+  officialWebsite: string | null;
+  remark: string | null;
+  runtime: ProviderRuntime;
+}
+
 interface CreateProviderBase {
   avatar: ProviderAvatar | null;
   name: string;
@@ -129,9 +145,9 @@ export type CreateProviderRequest
     runtime: 'claude-code';
   };
 
-export type ProviderResponse = ApiResponse<Provider>;
+export type ProviderResponse = ApiResponse<ProviderSummary>;
 
-export type ProvidersResponse = ApiResponse<Provider[]>;
+export type ProvidersResponse = ApiResponse<ProviderSummary[]>;
 
 export const runtimeDetectionStatuses = [
   'detected',

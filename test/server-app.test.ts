@@ -124,7 +124,7 @@ const codexProviderRequest = {
   configuration: {
     apiKey: null,
     baseUrl: 'https://example.com/v1',
-    primaryModel: 'example-model',
+    defaultModel: 'example-model',
     protocol: 'responses',
     reviewModel: null,
   },
@@ -234,18 +234,33 @@ it('creates and lists Providers for the selected Runtime', async () => {
   });
 
   expect(response.status).toBe(201);
-  await expect(response.json()).resolves.toMatchObject({
+  await expect(response.json()).resolves.toEqual({
     status: 'SUCCESS',
     data: {
-      ...codexProviderRequest,
+      avatar: null,
+      baseUrl: 'https://example.com/v1',
       id: 'provider-1',
+      name: 'Example',
+      officialWebsite: 'https://example.com',
+      remark: null,
+      runtime: 'codex',
     },
   });
 
   const codexResponse = await app.request('/api/providers?runtime=codex');
-  await expect(codexResponse.json()).resolves.toMatchObject({
+  await expect(codexResponse.json()).resolves.toEqual({
     status: 'SUCCESS',
-    data: [{ id: 'provider-1', runtime: 'codex' }],
+    data: [
+      {
+        avatar: null,
+        baseUrl: 'https://example.com/v1',
+        id: 'provider-1',
+        name: 'Example',
+        officialWebsite: 'https://example.com',
+        remark: null,
+        runtime: 'codex',
+      },
+    ],
   });
 
   const claudeResponse = await app.request('/api/providers?runtime=claude-code');
@@ -255,7 +270,7 @@ it('creates and lists Providers for the selected Runtime', async () => {
   });
 });
 
-it('returns complete Claude Code credentials after creation', async () => {
+it('does not return Claude Code credentials after creation', async () => {
   const app = createTestApp();
   const request = {
     avatar: null,
@@ -266,15 +281,16 @@ it('returns complete Claude Code credentials after creation', async () => {
       fableModel: null,
       haikuModel: null,
       opusModel: null,
-      primaryModel: {
-        description: 'Primary model',
-        displayName: 'Gateway Sonnet',
-        model: 'gateway-sonnet',
-        supportedCapabilities: ['thinking', 'effort'],
-      },
+      defaultModel: 'gateway-sonnet',
       protocol: 'messages',
       sonnetModel: null,
       subagentModel: null,
+      subagentModelForce: false,
+      hideAiAttribution: true,
+      teammatesMode: true,
+      enableToolSearch: true,
+      maxEffortThinking: true,
+      disableAutoUpdater: true,
     },
     name: 'Gateway',
     officialWebsite: null,
@@ -288,12 +304,16 @@ it('returns complete Claude Code credentials after creation', async () => {
   });
 
   expect(response.status).toBe(201);
-  await expect(response.json()).resolves.toMatchObject({
+  await expect(response.json()).resolves.toEqual({
+    status: 'SUCCESS',
     data: {
-      configuration: {
-        apiKey: 'local-secret',
-        apiKeyHeader: 'authorization',
-      },
+      avatar: null,
+      baseUrl: 'https://gateway.example.com',
+      id: 'provider-1',
+      name: 'Gateway',
+      officialWebsite: null,
+      remark: 'Local configuration',
+      runtime: 'claude-code',
     },
   });
 });

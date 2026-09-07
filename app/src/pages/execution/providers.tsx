@@ -1,14 +1,16 @@
-import type {
-  Provider,
-  ProviderRuntime,
-} from '@dhzh/foundry-api-contract';
+import type { ProviderRuntime, ProviderSummary } from '@dhzh/foundry-api-contract';
 import { providerRuntimes } from '@dhzh/foundry-api-contract';
-import { Add01Icon } from '@hugeicons/core-free-icons';
+import {
+  Activity03Icon,
+  Add01Icon,
+  Copy01Icon,
+  Delete02Icon,
+  Edit02Icon,
+} from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
-import { SecretInput } from '#/components/secret-input';
 import {
   Alert,
   AlertDescription,
@@ -22,7 +24,7 @@ import {
 import { Button } from '#/components/ui/button';
 import {
   Card,
-  CardContent,
+  CardAction,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -34,6 +36,11 @@ import {
   EmptyTitle,
 } from '#/components/ui/empty';
 import { Skeleton } from '#/components/ui/skeleton';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '#/components/ui/tooltip';
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -50,13 +57,11 @@ function isProviderRuntime(value: string | null): value is ProviderRuntime {
     && providerRuntimes.includes(value as ProviderRuntime);
 }
 
-function ProviderCard({ provider }: { provider: Provider }) {
-  const { apiKey, ...visibleConfiguration } = provider.configuration;
-
+function ProviderCard({ provider }: { provider: ProviderSummary }) {
   return (
-    <Card data-testid={`provider-${provider.id}`}>
-      <CardHeader>
-        <div className="flex items-center gap-3">
+    <Card data-testid={`provider-${provider.id}`} size="sm">
+      <CardHeader className="has-data-[slot=card-action]:grid-cols-1 @sm/card-header:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
+        <div className="flex min-w-0 items-center gap-3">
           <Avatar size="lg">
             {provider.avatar
               ? (
@@ -69,50 +74,78 @@ function ProviderCard({ provider }: { provider: Provider }) {
             <AvatarFallback>{provider.name.charAt(0) || 'P'}</AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <CardTitle>{provider.name}</CardTitle>
-            <CardDescription>{runtimeLabels[provider.runtime]}</CardDescription>
+            <CardTitle className="truncate">{provider.name}</CardTitle>
+            <CardDescription className="truncate">
+              {provider.baseUrl}
+            </CardDescription>
           </div>
         </div>
+        <CardAction className="col-start-1 row-start-2 mt-2 flex flex-wrap items-center gap-1 justify-self-start @sm/card-header:col-start-2 @sm/card-header:row-span-2 @sm/card-header:row-start-1 @sm/card-header:mt-0 @sm/card-header:self-center @sm/card-header:justify-self-end">
+          <Button aria-label={`Enable ${provider.name}`} type="button">
+            Enable
+          </Button>
+          <Tooltip>
+            <TooltipTrigger
+              render={(
+                <Button
+                  aria-label={`Edit ${provider.name}`}
+                  size="icon"
+                  type="button"
+                  variant="ghost"
+                />
+              )}
+            >
+              <HugeiconsIcon icon={Edit02Icon} strokeWidth={2} />
+            </TooltipTrigger>
+            <TooltipContent>Edit</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={(
+                <Button
+                  aria-label={`Copy ${provider.name}`}
+                  size="icon"
+                  type="button"
+                  variant="ghost"
+                />
+              )}
+            >
+              <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} />
+            </TooltipTrigger>
+            <TooltipContent>Copy</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={(
+                <Button
+                  aria-label={`Test ${provider.name} connection`}
+                  size="icon"
+                  type="button"
+                  variant="ghost"
+                />
+              )}
+            >
+              <HugeiconsIcon icon={Activity03Icon} strokeWidth={2} />
+            </TooltipTrigger>
+            <TooltipContent>Test connection</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={(
+                <Button
+                  aria-label={`Delete ${provider.name}`}
+                  size="icon"
+                  type="button"
+                  variant="destructive"
+                />
+              )}
+            >
+              <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+            </TooltipTrigger>
+            <TooltipContent>Delete</TooltipContent>
+          </Tooltip>
+        </CardAction>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <dl className="grid gap-2 sm:grid-cols-[9rem_minmax(0,1fr)]">
-          <dt className="font-medium">ID</dt>
-          <dd className="break-all font-mono">{provider.id}</dd>
-          <dt className="font-medium">Official website</dt>
-          <dd>
-            {provider.officialWebsite
-              ? (
-                  <a
-                    className="underline underline-offset-4"
-                    href={provider.officialWebsite}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    {provider.officialWebsite}
-                  </a>
-                )
-              : '—'}
-          </dd>
-          <dt className="font-medium">Remark</dt>
-          <dd className="whitespace-pre-wrap">{provider.remark ?? '—'}</dd>
-          <dt className="font-medium">Created</dt>
-          <dd>{new Date(provider.createdAt).toLocaleString()}</dd>
-          <dt className="font-medium">Updated</dt>
-          <dd>{new Date(provider.updatedAt).toLocaleString()}</dd>
-        </dl>
-
-        <div className="flex flex-col gap-2">
-          <p className="font-medium">API Key</p>
-          <SecretInput aria-label={`${provider.name} API Key`} readOnly value={apiKey ?? ''} />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <p className="font-medium">Configuration</p>
-          <pre className="max-w-full overflow-auto rounded-md bg-muted p-3 font-mono text-xs">
-            {JSON.stringify(visibleConfiguration, null, 2)}
-          </pre>
-        </div>
-      </CardContent>
     </Card>
   );
 }
@@ -169,9 +202,13 @@ export function ProvidersPage() {
 
       {providers.isPending
         ? (
-            <div className="flex flex-col gap-3" aria-label="Loading Providers" role="status">
-              <Skeleton className="h-48 w-full" />
-              <Skeleton className="h-48 w-full" />
+            <div
+              className="flex flex-col gap-4"
+              aria-label="Loading Providers"
+              role="status"
+            >
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
             </div>
           )
         : null}
@@ -206,9 +243,13 @@ export function ProvidersPage() {
           )
         : null}
 
-      {providers.data?.map((provider) => (
-        <ProviderCard key={provider.id} provider={provider} />
-      ))}
+      {providers.data && providers.data.length > 0 && (
+        <div className="flex flex-col gap-4">
+          {providers.data.map((provider) => (
+            <ProviderCard key={provider.id} provider={provider} />
+          ))}
+        </div>
+      )}
     </main>
   );
 }

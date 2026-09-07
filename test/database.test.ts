@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { randomUUIDv7 } from 'node:crypto';
-import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, expect, it } from 'vitest';
@@ -99,6 +99,64 @@ it('generates a unique UUIDv7 for each database installation', async () => {
   }
 });
 
+it('renames stored Provider default model fields', async () => {
+  const databasePath = await createDatabasePath();
+  const database = await openFoundryDatabase({ databasePath, migrationsFolder });
+  const insertProvider = database.client.prepare(`
+    INSERT INTO providers (
+      id, runtime, name, configuration, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, 100, 100)
+  `);
+
+  try {
+    insertProvider.run('codex', 'codex', 'Codex', JSON.stringify({
+      apiKey: null,
+      baseUrl: 'https://codex.example.com/v1',
+      primaryModel: 'codex-default',
+      protocol: 'responses',
+      reviewModel: null,
+    }));
+    insertProvider.run('claude', 'claude-code', 'Claude Code', JSON.stringify({
+      apiKey: 'secret',
+      apiKeyHeader: 'authorization',
+      baseUrl: 'https://claude.example.com',
+      fableModel: null,
+      haikuModel: null,
+      opusModel: null,
+      primaryModel: {
+        description: 'Legacy metadata',
+        displayName: 'Legacy default',
+        model: 'claude-default',
+        supportedCapabilities: ['thinking'],
+      },
+      protocol: 'messages',
+      sonnetModel: null,
+      subagentModel: null,
+      subagentModelForce: false,
+    }));
+
+    const migration = await readFile(
+      path.join(migrationsFolder, '0003_rename_provider_default_model.sql'),
+      'utf8',
+    );
+    database.client.exec(migration);
+
+    const rows = database.client.prepare(`
+      SELECT id, configuration FROM providers ORDER BY id
+    `).all() as Array<{ configuration: string; id: string }>;
+    const configurations = Object.fromEntries(rows.map((row) => [
+      row.id,
+      JSON.parse(row.configuration),
+    ]));
+    expect(configurations.codex).toMatchObject({ defaultModel: 'codex-default' });
+    expect(configurations.codex).not.toHaveProperty('primaryModel');
+    expect(configurations.claude).toMatchObject({ defaultModel: 'claude-default' });
+    expect(configurations.claude).not.toHaveProperty('primaryModel');
+  } finally {
+    database.client.close();
+  }
+});
+
 it('persists updates and refreshes updated_at for repeated values', async () => {
   const databasePath = await createDatabasePath();
   const database = await openFoundryDatabase({ databasePath, migrationsFolder });
@@ -132,12 +190,17 @@ it('persists updates and refreshes updated_at for repeated values', async () => 
   }
 });
 
-it('backs up an existing database once before applying pending migrations', async () => {
+it('backs up an existing database without deleting other backup kinds', async () => {
   const databasePath = await createDatabasePath();
   const existing = new Database(databasePath);
   existing.exec('CREATE TABLE preserved (value TEXT NOT NULL)');
   existing.prepare('INSERT INTO preserved (value) VALUES (?)').run('before migration');
   existing.close();
+
+  const backupsDirectory = path.join(path.dirname(databasePath), 'backups');
+  const runtimeBackupName = 'foundry-runtime-migration-existing.sqlite';
+  await mkdir(backupsDirectory);
+  await writeFile(path.join(backupsDirectory, runtimeBackupName), 'unrelated backup');
 
   const migrated = await openFoundryDatabase({
     databasePath,
@@ -146,11 +209,17 @@ it('backs up an existing database once before applying pending migrations', asyn
   });
   migrated.client.close();
 
-  const backupsDirectory = path.join(path.dirname(databasePath), 'backups');
-  const backupNames = await readdir(backupsDirectory);
-  expect(backupNames).toHaveLength(1);
+  const backupDirectoryEntries = await readdir(backupsDirectory);
+  const backupNames = backupDirectoryEntries.toSorted((left, right) =>
+    left.localeCompare(right));
+  expect(backupNames).toHaveLength(2);
+  expect(backupNames).toContain(runtimeBackupName);
+  const databaseBackupName = backupNames.find((name) => name.startsWith('foundry-before-'));
+  if (!databaseBackupName) {
+    throw new Error('Expected a database migration backup.');
+  }
 
-  const backup = new Database(path.join(backupsDirectory, backupNames[0]), {
+  const backup = new Database(path.join(backupsDirectory, databaseBackupName), {
     readonly: true,
   });
   expect(backup.prepare('SELECT value FROM preserved').pluck().get())
@@ -159,7 +228,9 @@ it('backs up an existing database once before applying pending migrations', asyn
 
   const reopened = await openFoundryDatabase({ databasePath, migrationsFolder });
   reopened.client.close();
-  expect(await readdir(backupsDirectory)).toEqual(backupNames);
+  const reopenedBackupNames = await readdir(backupsDirectory);
+  expect(reopenedBackupNames.toSorted((left, right) => left.localeCompare(right)))
+    .toEqual(backupNames);
 });
 
 it('refuses migration history created by a newer CLI', async () => {

@@ -24,7 +24,11 @@ export default defineConfig({
         root: path.resolve(import.meta.dirname, 'app'),
         plugins: [react(), tailwindcss()],
         optimizeDeps: {
-          include: ['@base-ui/react/select', '@base-ui/react/switch'],
+          include: [
+            '@base-ui/react/checkbox',
+            '@base-ui/react/select',
+            '@base-ui/react/switch',
+          ],
         },
         resolve: {
           alias: {

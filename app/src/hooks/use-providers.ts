@@ -1,8 +1,8 @@
 import type {
   CreateProviderRequest,
-  Provider,
   ProviderResponse,
   ProviderRuntime,
+  ProviderSummary,
   ProvidersResponse,
 } from '@dhzh/foundry-api-contract';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -11,7 +11,7 @@ function providersQueryKey(runtime: ProviderRuntime) {
   return ['providers', runtime] as const;
 }
 
-async function readProvidersResponse(response: Response): Promise<Provider[]> {
+async function readProvidersResponse(response: Response): Promise<ProviderSummary[]> {
   if (!response.ok) {
     throw new Error('The Foundry Server could not load Providers.');
   }
@@ -20,14 +20,14 @@ async function readProvidersResponse(response: Response): Promise<Provider[]> {
   return result.data;
 }
 
-async function listProviders(runtime: ProviderRuntime): Promise<Provider[]> {
+async function listProviders(runtime: ProviderRuntime): Promise<ProviderSummary[]> {
   return readProvidersResponse(await fetch(
     `/api/providers?runtime=${encodeURIComponent(runtime)}`,
     { cache: 'no-store' },
   ));
 }
 
-async function createProvider(input: CreateProviderRequest): Promise<Provider> {
+async function createProvider(input: CreateProviderRequest): Promise<ProviderSummary> {
   const response = await fetch('/api/providers', {
     body: JSON.stringify(input),
     headers: { 'content-type': 'application/json' },
@@ -56,7 +56,7 @@ export function useCreateProvider() {
   return useMutation({
     mutationFn: createProvider,
     onSuccess: (provider) => {
-      queryClient.setQueryData<Provider[]>(
+      queryClient.setQueryData<ProviderSummary[]>(
         providersQueryKey(provider.runtime),
         (providers) => [provider, ...(providers ?? [])],
       );

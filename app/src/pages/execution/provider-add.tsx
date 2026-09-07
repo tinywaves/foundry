@@ -12,6 +12,8 @@ import {
   providerAvatarMimeTypes,
   providerRuntimes,
 } from '@dhzh/foundry-api-contract';
+import { ArrowRight01Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
 import type { SyntheticEvent } from 'react';
 import { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
@@ -38,8 +40,15 @@ import {
   AvatarImage,
 } from '#/components/ui/avatar';
 import { Button } from '#/components/ui/button';
+import { Checkbox } from '#/components/ui/checkbox';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '#/components/ui/collapsible';
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldError,
   FieldGroup,
@@ -86,6 +95,34 @@ const capabilityLabels = {
   xhigh_effort: 'XHigh effort',
 } satisfies Record<ClaudeModelCapability, string>;
 
+const claudeOtherOptions = [
+  {
+    description: 'Remove Claude Code attribution from commits, pull requests, and session links.',
+    key: 'hideAiAttribution',
+    label: 'Hide AI attribution',
+  },
+  {
+    description: 'Enable experimental agent teams for interactive sessions.',
+    key: 'teammatesMode',
+    label: 'Teammates mode',
+  },
+  {
+    description: 'Discover MCP tools on demand. The configured endpoint must support tool references.',
+    key: 'enableToolSearch',
+    label: 'Enable tool search',
+  },
+  {
+    description: 'Force Claude Code sessions to use the maximum available reasoning effort.',
+    key: 'maxEffortThinking',
+    label: 'Max effort thinking',
+  },
+  {
+    description: 'Disable background update checks while keeping manual updates available.',
+    key: 'disableAutoUpdater',
+    label: 'Disable auto-updater',
+  },
+] as const;
+
 interface CommonDraft {
   avatar: ProviderAvatar | null;
   name: string;
@@ -96,7 +133,7 @@ interface CommonDraft {
 interface CodexDraft {
   apiKey: string;
   baseUrl: string;
-  primaryModel: string;
+  defaultModel: string;
   reviewModel: string;
 }
 
@@ -114,9 +151,15 @@ interface ClaudeDraft {
   fableModel: ClaudeModelDraft;
   haikuModel: ClaudeModelDraft;
   opusModel: ClaudeModelDraft;
-  primaryModel: ClaudeModelDraft;
+  defaultModel: string;
   sonnetModel: ClaudeModelDraft;
   subagentModel: string;
+  subagentModelForce: boolean;
+  hideAiAttribution: boolean;
+  teammatesMode: boolean;
+  enableToolSearch: boolean;
+  maxEffortThinking: boolean;
+  disableAutoUpdater: boolean;
 }
 
 function createCommonDraft(): CommonDraft {
@@ -124,7 +167,7 @@ function createCommonDraft(): CommonDraft {
 }
 
 function createCodexDraft(): CodexDraft {
-  return { apiKey: '', baseUrl: '', primaryModel: '', reviewModel: '' };
+  return { apiKey: '', baseUrl: '', defaultModel: '', reviewModel: '' };
 }
 
 function createClaudeModelDraft(): ClaudeModelDraft {
@@ -144,9 +187,15 @@ function createClaudeDraft(): ClaudeDraft {
     fableModel: createClaudeModelDraft(),
     haikuModel: createClaudeModelDraft(),
     opusModel: createClaudeModelDraft(),
-    primaryModel: createClaudeModelDraft(),
+    defaultModel: '',
     sonnetModel: createClaudeModelDraft(),
     subagentModel: '',
+    subagentModelForce: false,
+    hideAiAttribution: false,
+    teammatesMode: false,
+    enableToolSearch: false,
+    maxEffortThinking: false,
+    disableAutoUpdater: false,
   };
 }
 
@@ -196,7 +245,6 @@ function readAvatar(file: File): Promise<ProviderAvatar> {
 interface ClaudeModelFieldsProps {
   id: string;
   label: string;
-  required?: boolean;
   value: ClaudeModelDraft;
   onChange: (value: ClaudeModelDraft) => void;
 }
@@ -204,7 +252,6 @@ interface ClaudeModelFieldsProps {
 function ClaudeModelFields({
   id,
   label,
-  required = false,
   value,
   onChange,
 }: ClaudeModelFieldsProps) {
@@ -216,11 +263,10 @@ function ClaudeModelFields({
       <FieldGroup>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field>
-            <FieldLabel htmlFor={`${id}-model`} required={required}>Model ID</FieldLabel>
+            <FieldLabel htmlFor={`${id}-model`}>Model ID</FieldLabel>
             <Input
               id={`${id}-model`}
               maxLength={200}
-              required={required}
               value={value.model}
               onChange={(event) => onChange({ ...value, model: event.target.value })}
             />
@@ -239,53 +285,73 @@ function ClaudeModelFields({
             />
           </Field>
         </div>
-        <Field>
-          <FieldLabel htmlFor={`${id}-description`}>Description</FieldLabel>
-          <Textarea
-            disabled={!hasModel}
-            id={`${id}-description`}
-            maxLength={2000}
-            value={value.description}
-            onChange={(event) => onChange({
-              ...value,
-              description: event.target.value,
-            })}
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor={`${id}-capabilities`}>Supported capabilities</FieldLabel>
-          <Select
-            disabled={!hasModel}
-            id={`${id}-capabilities`}
-            multiple
-            value={value.supportedCapabilities}
-            onValueChange={(capabilities) => onChange({
-              ...value,
-              supportedCapabilities: claudeModelCapabilities.filter(
-                (capability) => capabilities.includes(capability),
-              ),
-            })}
+        <Collapsible>
+          <CollapsibleTrigger
+            className="group flex w-fit items-center gap-1 rounded-sm py-1 text-xs/relaxed font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50"
           >
-            <SelectTrigger className="w-full">
-              <SelectValue>
-                {() => value.supportedCapabilities.length === 0
-                  ? 'Select capabilities'
-                  : value.supportedCapabilities
-                      .map((capability) => capabilityLabels[capability])
-                      .join(', ')}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent align="start">
-              <SelectGroup>
-                {claudeModelCapabilities.map((capability) => (
-                  <SelectItem key={capability} value={capability}>
-                    {capabilityLabels[capability]}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </Field>
+            <HugeiconsIcon
+              className="size-3 transition-transform group-data-panel-open:rotate-90"
+              icon={ArrowRight01Icon}
+              strokeWidth={2}
+            />
+            <span>Advanced model options</span>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="h-[var(--collapsible-panel-height)] overflow-hidden transition-[height] duration-150 data-ending-style:h-0 data-starting-style:h-0">
+            <div className="ms-3 min-w-0 border-s border-border py-2 ps-4">
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor={`${id}-description`}>Description</FieldLabel>
+                  <Textarea
+                    disabled={!hasModel}
+                    id={`${id}-description`}
+                    maxLength={2000}
+                    value={value.description}
+                    onChange={(event) => onChange({
+                      ...value,
+                      description: event.target.value,
+                    })}
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor={`${id}-capabilities`}>
+                    Supported capabilities
+                  </FieldLabel>
+                  <Select
+                    disabled={!hasModel}
+                    id={`${id}-capabilities`}
+                    multiple
+                    value={value.supportedCapabilities}
+                    onValueChange={(capabilities) => onChange({
+                      ...value,
+                      supportedCapabilities: claudeModelCapabilities.filter(
+                        (capability) => capabilities.includes(capability),
+                      ),
+                    })}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue>
+                        {() => value.supportedCapabilities.length === 0
+                          ? 'Select capabilities'
+                          : value.supportedCapabilities
+                              .map((capability) => capabilityLabels[capability])
+                              .join(', ')}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent align="start">
+                      <SelectGroup>
+                        {claudeModelCapabilities.map((capability) => (
+                          <SelectItem key={capability} value={capability}>
+                            {capabilityLabels[capability]}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </FieldGroup>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </FieldGroup>
     </FieldSet>
   );
@@ -306,6 +372,7 @@ export function ProviderAddPage() {
     && claude.apiKeyHeader === 'authorization'
     ? 'Auth Token'
     : 'API Key';
+  const hasSubagentModel = claude.subagentModel.trim() !== '';
   const returnTo = typeof location.state?.returnTo === 'string'
     ? location.state.returnTo
     : '/providers?runtime=codex';
@@ -386,7 +453,7 @@ export function ProviderAddPage() {
         configuration: {
           apiKey: codex.apiKey || null,
           baseUrl: codex.baseUrl,
-          primaryModel: codex.primaryModel,
+          defaultModel: codex.defaultModel,
           protocol: 'responses',
           reviewModel: nullableText(codex.reviewModel),
         },
@@ -396,8 +463,8 @@ export function ProviderAddPage() {
         runtime,
       };
     } else {
-      const primaryModel = toClaudeModelConfiguration(claude.primaryModel);
-      if (primaryModel === null) {
+      const defaultModel = claude.defaultModel.trim();
+      if (defaultModel === '') {
         return;
       }
       input = {
@@ -409,10 +476,16 @@ export function ProviderAddPage() {
           fableModel: toClaudeModelConfiguration(claude.fableModel),
           haikuModel: toClaudeModelConfiguration(claude.haikuModel),
           opusModel: toClaudeModelConfiguration(claude.opusModel),
-          primaryModel,
+          defaultModel,
           protocol: 'messages',
           sonnetModel: toClaudeModelConfiguration(claude.sonnetModel),
           subagentModel: nullableText(claude.subagentModel),
+          subagentModelForce: claude.subagentModelForce,
+          hideAiAttribution: claude.hideAiAttribution,
+          teammatesMode: claude.teammatesMode,
+          enableToolSearch: claude.enableToolSearch,
+          maxEffortThinking: claude.maxEffortThinking,
+          disableAutoUpdater: claude.disableAutoUpdater,
         },
         name: common.name,
         officialWebsite: nullableText(common.officialWebsite),
@@ -660,17 +733,17 @@ export function ProviderAddPage() {
                         <>
                           <FieldSeparator>Models</FieldSeparator>
                           <Field>
-                            <FieldLabel htmlFor="codex-primary-model" required>
-                              Primary model
+                            <FieldLabel htmlFor="codex-default-model" required>
+                              Default model
                             </FieldLabel>
                             <Input
-                              id="codex-primary-model"
+                              id="codex-default-model"
                               maxLength={200}
                               required
-                              value={codex.primaryModel}
+                              value={codex.defaultModel}
                               onChange={(event) => setCodex({
                                 ...codex,
-                                primaryModel: event.target.value,
+                                defaultModel: event.target.value,
                               })}
                             />
                           </Field>
@@ -691,16 +764,21 @@ export function ProviderAddPage() {
                     : (
                         <>
                           <FieldSeparator>Models</FieldSeparator>
-                          <ClaudeModelFields
-                            id="claude-primary"
-                            label="Primary model"
-                            required
-                            value={claude.primaryModel}
-                            onChange={(primaryModel) => setClaude({
-                              ...claude,
-                              primaryModel,
-                            })}
-                          />
+                          <Field>
+                            <FieldLabel htmlFor="claude-default-model" required>
+                              Default model
+                            </FieldLabel>
+                            <Input
+                              id="claude-default-model"
+                              maxLength={200}
+                              required
+                              value={claude.defaultModel}
+                              onChange={(event) => setClaude({
+                                ...claude,
+                                defaultModel: event.target.value,
+                              })}
+                            />
+                          </Field>
                           {([
                             ['opusModel', 'Opus model'],
                             ['sonnetModel', 'Sonnet model'],
@@ -724,12 +802,64 @@ export function ProviderAddPage() {
                               id="claude-subagent-model"
                               maxLength={200}
                               value={claude.subagentModel}
-                              onChange={(event) => setClaude({
-                                ...claude,
-                                subagentModel: event.target.value,
-                              })}
+                              onChange={(event) => {
+                                const subagentModel = event.target.value;
+                                setClaude({
+                                  ...claude,
+                                  subagentModel,
+                                  subagentModelForce: subagentModel.trim() === ''
+                                    ? false
+                                    : claude.subagentModelForce,
+                                });
+                              }}
                             />
                           </Field>
+                          <Field data-disabled={!hasSubagentModel} orientation="horizontal">
+                            <Checkbox
+                              checked={claude.subagentModelForce}
+                              disabled={!hasSubagentModel}
+                              id="claude-subagent-model-force"
+                              onCheckedChange={(subagentModelForce) => setClaude({
+                                ...claude,
+                                subagentModelForce,
+                              })}
+                            />
+                            <FieldContent>
+                              <FieldLabel htmlFor="claude-subagent-model-force">
+                                Force subagent model
+                              </FieldLabel>
+                              <FieldDescription>
+                                Force Claude Code to use the configured subagent model.
+                              </FieldDescription>
+                            </FieldContent>
+                          </Field>
+                          <FieldSeparator>Others</FieldSeparator>
+                          <FieldSet>
+                            <FieldLegend className="sr-only">
+                              Other Claude Code options
+                            </FieldLegend>
+                            <FieldGroup className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                              {claudeOtherOptions.map((option) => {
+                                const id = `claude-${option.key}`;
+                                return (
+                                  <Field className="min-w-0" key={option.key} orientation="horizontal">
+                                    <Checkbox
+                                      checked={claude[option.key]}
+                                      id={id}
+                                      onCheckedChange={(checked) => setClaude({
+                                        ...claude,
+                                        [option.key]: checked,
+                                      })}
+                                    />
+                                    <FieldContent className="min-w-0">
+                                      <FieldLabel htmlFor={id}>{option.label}</FieldLabel>
+                                      <FieldDescription>{option.description}</FieldDescription>
+                                    </FieldContent>
+                                  </Field>
+                                );
+                              })}
+                            </FieldGroup>
+                          </FieldSet>
                         </>
                       )}
 

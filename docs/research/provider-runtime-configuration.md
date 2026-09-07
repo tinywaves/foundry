@@ -44,7 +44,7 @@ The following requirements distinguish what Codex accepts from what Foundry shou
 | Field | Foundry requirement | Runtime behavior and source |
 | --- | --- | --- |
 | `baseUrl` | Required | Codex technically defaults an omitted URL to an OpenAI endpoint. Foundry should require it for a custom Provider to prevent accidental traffic to OpenAI. The URL is the OpenAI-compatible API base, normally ending in `/v1`. [Source](https://github.com/openai/codex/blob/47b0f7d540e9abf932e9b518ab306e389744998e/codex-rs/model-provider-info/src/lib.rs#L101-L104) [Default behavior](https://github.com/openai/codex/blob/47b0f7d540e9abf932e9b518ab306e389744998e/codex-rs/model-provider-info/src/lib.rs#L293-L311) |
-| `primaryModel` | Required | Serialized as top-level `model`; model selection is separate from the provider table. [Source](https://github.com/openai/codex/blob/47b0f7d540e9abf932e9b518ab306e389744998e/codex-rs/config/src/config_toml.rs#L152-L162) |
+| `defaultModel` | Required | Serialized as top-level `model`; model selection is separate from the provider table. [Source](https://github.com/openai/codex/blob/47b0f7d540e9abf932e9b518ab306e389744998e/codex-rs/config/src/config_toml.rs#L152-L162) |
 | `reviewModel` | Optional | Serialized as top-level `review_model` for `/review`. [Source](https://github.com/openai/codex/blob/47b0f7d540e9abf932e9b518ab306e389744998e/codex-rs/config/src/config_toml.rs#L156-L162) |
 | `auth` | Required choice | Require the user to choose `none`, environment-backed bearer token, command-backed bearer token, OpenAI account auth, or AWS SigV4. The last two are conditional specialist modes. Codex rejects conflicting auth mechanisms. [Fields](https://github.com/openai/codex/blob/47b0f7d540e9abf932e9b518ab306e389744998e/codex-rs/model-provider-info/src/lib.rs#L103-L116) [Conflicts](https://github.com/openai/codex/blob/47b0f7d540e9abf932e9b518ab306e389744998e/codex-rs/model-provider-info/src/lib.rs#L193-L261) |
 | `headers` | Optional | Static request headers. Header values may contain credentials and must be treated as sensitive. [Source](https://github.com/openai/codex/blob/47b0f7d540e9abf932e9b518ab306e389744998e/codex-rs/model-provider-info/src/lib.rs#L120-L129) |
@@ -88,7 +88,7 @@ Use this route for a custom service or gateway that implements the Anthropic Mes
 | --- | --- | --- |
 | `baseUrl` | Required | Maps to `ANTHROPIC_BASE_URL`. The gateway must expose the Messages API below it, including `/v1/messages`. [Source](https://code.claude.com/docs/en/llm-gateway-connect#set-the-base-url-and-credential) [Verification request](https://code.claude.com/docs/en/llm-gateway-connect#verify-the-connection) |
 | `auth` | Required choice | Choose bearer token, API key, or credential helper. Anthropic calls the base URL and credential the two required pieces of a gateway connection. [Source](https://code.claude.com/docs/en/llm-gateway-connect#set-the-credential-variable) |
-| `primaryModel` | Required | Any string is accepted for a custom `ANTHROPIC_BASE_URL`; Claude Code passes provider-defined model names through. Serialize deterministically as the `model` setting or `ANTHROPIC_MODEL`, not both. [Source](https://code.claude.com/docs/en/model-config#how-model-selection-works) [Custom endpoint behavior](https://code.claude.com/docs/en/model-config#model-availability) |
+| `defaultModel` | Required | Any string is accepted for a custom `ANTHROPIC_BASE_URL`; Claude Code passes provider-defined model names through. Serialize deterministically as the `model` setting or `ANTHROPIC_MODEL`, not both. [Source](https://code.claude.com/docs/en/model-config#how-model-selection-works) [Custom endpoint behavior](https://code.claude.com/docs/en/model-config#model-availability) |
 | `customHeaders` | Optional | Maps to `ANTHROPIC_CUSTOM_HEADERS` using newline-separated `Name: Value` entries. Header values may be sensitive. Requires Claude Code `2.1.227+`. [Source](https://code.claude.com/docs/en/env-vars#variables) |
 | `models` role mappings | Optional | Pin aliases and background roles when the gateway uses custom names; see the model mapping table below. [Source](https://code.claude.com/docs/en/model-config#pin-models-for-third-party-deployments) |
 | `modelOverrides` | Optional advanced | Maps Anthropic model IDs to provider-specific IDs for multiple versions within the same family. [Source](https://code.claude.com/docs/en/settings-reference#modeloverrides) |
@@ -123,18 +123,32 @@ Avoid making long-lived AWS access keys, AWS session tokens, GCP service-account
 
 | Field | Requirement | Maps to |
 | --- | --- | --- |
-| `primaryModel` | Required | Prefer settings key `model`; it is the deterministic model for new sessions and outranks `ANTHROPIC_DEFAULT_MODEL`. [Source](https://code.claude.com/docs/en/settings-reference#model) |
-| `defaultModel` | Optional advanced | `ANTHROPIC_DEFAULT_MODEL`; used only when no higher-priority source selects a model. [Source](https://code.claude.com/docs/en/model-config#set-a-default-model-for-new-sessions) |
+| `defaultModel` | Required | Serialize the model ID as `ANTHROPIC_MODEL`. [Source](https://code.claude.com/docs/en/model-config#select-a-model) |
 | `opusModel` | Optional | `ANTHROPIC_DEFAULT_OPUS_MODEL`. |
 | `sonnetModel` | Optional | `ANTHROPIC_DEFAULT_SONNET_MODEL`. |
 | `haikuModel` | Optional | `ANTHROPIC_DEFAULT_HAIKU_MODEL`; also controls the usual small/background model role. |
 | `fableModel` | Optional | `ANTHROPIC_DEFAULT_FABLE_MODEL`. |
 | `subagentModel` | Optional | `CLAUDE_CODE_SUBAGENT_MODEL`. |
+| `subagentModelForce` | Optional | Writes `CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1` when enabled. |
 | `modelOverrides` | Optional advanced | Settings key `modelOverrides`, mapping Anthropic model IDs to backend-native IDs or deployment names. |
 
 The family mappings and backend-native IDs are especially important for third-party deployments because aliases may resolve to built-in defaults that are unavailable in the user's account. Anthropic recommends pinning model versions for Bedrock, Vertex, and Microsoft Foundry. [Source](https://code.claude.com/docs/en/model-config#pin-models-for-third-party-deployments)
 
 Model display names, descriptions, and declared capability lists are available through companion variables such as `ANTHROPIC_DEFAULT_OPUS_MODEL_NAME`, `_DESCRIPTION`, and `_SUPPORTED_CAPABILITIES`. They are optional advanced model metadata; they may be added later without changing the core Provider connection model. [Source](https://code.claude.com/docs/en/model-config#customize-pinned-model-display-and-capabilities)
+
+Those suffixes apply to the Opus, Sonnet, Haiku, and Fable family pins. They do not apply to `ANTHROPIC_MODEL`. Foundry does not manage `ANTHROPIC_DEFAULT_MODEL`, its companion suffixes, or `ANTHROPIC_CUSTOM_MODEL_OPTION`.
+
+### Claude Code Other Options
+
+| Field | Maps to |
+| --- | --- |
+| `hideAiAttribution` | Empty `attribution.commit` and `attribution.pr`, plus `attribution.sessionUrl=false`. |
+| `teammatesMode` | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. |
+| `enableToolSearch` | `ENABLE_TOOL_SEARCH=true`. |
+| `maxEffortThinking` | `CLAUDE_CODE_EFFORT_LEVEL=max`. |
+| `disableAutoUpdater` | `DISABLE_AUTOUPDATER=1`. |
+
+When an option is disabled, Foundry removes only the corresponding managed fields and preserves unrelated `env` and `attribution` entries.
 
 Do not include `modelPicker`, `availableModels`, or organization model policy in the initial Provider record. They control picker presentation or administrative allowlists rather than whether the saved endpoint can make requests. `modelOverrides`, by contrast, belongs to the Provider because it translates canonical model IDs into endpoint-specific IDs. [Sources](https://code.claude.com/docs/en/settings-reference#modelpicker) [Source](https://code.claude.com/docs/en/settings-reference#availablemodels) [Source](https://code.claude.com/docs/en/settings-reference#modeloverrides)
 
@@ -149,7 +163,7 @@ Do not include `modelPicker`, `availableModels`, or organization model policy in
 | Dynamic credentials | Structured executable, args, cwd, timeout, and refresh interval | Shell command string through `apiKeyHelper`, with cache TTL |
 | Additional headers | Static map or header-to-environment-variable map | One newline-separated `ANTHROPIC_CUSTOM_HEADERS` string |
 | Query parameters | Supported directly | No equivalent generic Provider field documented |
-| Model roles | Primary and review | Primary/default, Opus, Sonnet, Haiku/background, Fable, subagent, and per-version overrides |
+| Model roles | Default and review | Default, Opus, Sonnet, Haiku/background, Fable, subagent, and per-version overrides |
 
 ## Recommended TypeScript Discriminated Union
 
@@ -197,7 +211,7 @@ type CodexAuth =
 type CodexProvider = ProviderBase & {
   runtime: 'codex'
   baseUrl: string
-  primaryModel: string
+  defaultModel: string
   reviewModel?: string
   auth: CodexAuth
   headers?: Record<string, SensitiveString>
@@ -219,6 +233,12 @@ type ClaudeModelMappings = {
   haikuModel?: string
   fableModel?: string
   subagentModel?: string
+  subagentModelForce?: boolean
+  hideAiAttribution?: boolean
+  teammatesMode?: boolean
+  enableToolSearch?: boolean
+  maxEffortThinking?: boolean
+  disableAutoUpdater?: boolean
   overrides?: Record<string, string>
 }
 
@@ -264,7 +284,7 @@ type ClaudeBackend =
 
 type ClaudeCodeProvider = ProviderBase & {
   runtime: 'claude-code'
-  primaryModel: string
+  defaultModel: string
   backend: ClaudeBackend
   models?: ClaudeModelMappings
 }
@@ -274,7 +294,7 @@ type Provider = CodexProvider | ClaudeCodeProvider
 
 ## Validation Rules for the Add Flow
 
-- Require non-empty `name`, `baseUrl` where applicable, and `primaryModel`.
+- Require non-empty `name`, `baseUrl` where applicable, and `defaultModel`.
 - Generate Provider IDs and Codex provider configuration keys independently from names.
 - Validate URLs but do not bind them to known vendors or domains.
 - Enforce exactly one authentication variant.
@@ -285,4 +305,3 @@ type Provider = CodexProvider | ClaudeCodeProvider
 - Require a usable region and credential path for Bedrock after considering the AWS default chain.
 - Treat secrets, static header values, query values, and potentially secret command arguments as sensitive in API responses and logs.
 - For Codex environment-backed secrets, do not claim the Provider is applicable until Foundry has a defined way to expose the stored secret to the Codex process.
-

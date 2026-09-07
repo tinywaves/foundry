@@ -7,6 +7,7 @@ import { afterEach, expect, it } from 'vitest';
 
 import { openFoundryDatabase } from '../src/server/database';
 import { DrizzleProviderStore } from '../src/server/providers/store';
+import { parseClaudeCodeProviderConfiguration } from '../src/server/providers/validation';
 
 const migrationsFolder = path.resolve(import.meta.dirname, '../drizzle');
 const temporaryRoots: string[] = [];
@@ -29,7 +30,7 @@ function createCodexProvider(
     configuration: {
       apiKey: 'codex-secret',
       baseUrl: 'https://codex.example.com/v1',
-      primaryModel: 'codex-model',
+      defaultModel: 'codex-model',
       protocol: 'responses',
       reviewModel: 'codex-review',
     },
@@ -52,15 +53,16 @@ function createClaudeProvider(
       fableModel: null,
       haikuModel: null,
       opusModel: null,
-      primaryModel: {
-        description: null,
-        displayName: 'Claude Primary',
-        model: 'claude-model',
-        supportedCapabilities: ['thinking'],
-      },
+      defaultModel: 'claude-model',
       protocol: 'messages',
       sonnetModel: null,
       subagentModel: 'claude-subagent',
+      subagentModelForce: true,
+      hideAiAttribution: true,
+      teammatesMode: true,
+      enableToolSearch: true,
+      maxEffortThinking: true,
+      disableAutoUpdater: true,
     },
     name,
     officialWebsite: null,
@@ -72,6 +74,34 @@ function createClaudeProvider(
 afterEach(async () => {
   await Promise.all(temporaryRoots.splice(0).map((root) =>
     rm(root, { recursive: true, force: true })));
+});
+
+it('normalizes legacy Claude Provider model configuration', () => {
+  expect(parseClaudeCodeProviderConfiguration({
+    apiKey: 'legacy-secret',
+    apiKeyHeader: 'authorization',
+    baseUrl: 'https://legacy.example.com',
+    fableModel: null,
+    haikuModel: null,
+    opusModel: null,
+    defaultModel: {
+      description: 'Legacy metadata',
+      displayName: 'Legacy default',
+      model: 'legacy-default',
+      supportedCapabilities: ['thinking'],
+    },
+    protocol: 'messages',
+    sonnetModel: null,
+    subagentModel: null,
+  })).toMatchObject({
+    defaultModel: 'legacy-default',
+    subagentModelForce: false,
+    hideAiAttribution: false,
+    teammatesMode: false,
+    enableToolSearch: false,
+    maxEffortThinking: false,
+    disableAutoUpdater: false,
+  });
 });
 
 it('persists duplicate Provider names and lists the newest matching Runtime first', async () => {

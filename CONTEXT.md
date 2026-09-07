@@ -40,6 +40,10 @@ _Avoid_: Infrastructure, environments
 A user-defined model-service connection configuration scoped to exactly one Runtime type. It has no built-in vendor identity, and its display name need not be unique.
 _Avoid_: Model, backend, vendor
 
+**Provider Summary**:
+A non-secret overview of a Provider containing the identifying information needed to distinguish it from other Providers, but not its complete connection configuration or credentials.
+_Avoid_: Provider record, sanitized Provider
+
 **Runtime**:
 A supported local agent application whose provider configuration Foundry can manage.
 _Avoid_: Provider, model

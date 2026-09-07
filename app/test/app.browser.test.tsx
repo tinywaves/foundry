@@ -12,7 +12,11 @@ import {
 import { render } from 'vitest-browser-react';
 import { createMemoryRouter } from 'react-router';
 import type { InitialEntry } from 'react-router';
-import type { Provider, RuntimeSummary } from '@dhzh/foundry-api-contract';
+import type {
+  CreateProviderRequest,
+  ProviderSummary,
+  RuntimeSummary,
+} from '@dhzh/foundry-api-contract';
 import { RouterProvider } from 'react-router/dom';
 
 import { ThemeProvider } from '#/components/theme-provider';
@@ -35,7 +39,7 @@ function createSettingsResponse(
   });
 }
 
-function createProvidersResponse(providers: Provider[] = [], status = 200) {
+function createProvidersResponse(providers: ProviderSummary[] = [], status = 200) {
   return Response.json({
     status: 'SUCCESS',
     data: providers,
@@ -44,7 +48,7 @@ function createProvidersResponse(providers: Provider[] = [], status = 200) {
   });
 }
 
-function createProviderResponse(provider: Provider, status = 201) {
+function createProviderResponse(provider: ProviderSummary, status = 201) {
   return Response.json({
     status: 'SUCCESS',
     data: provider,
@@ -93,25 +97,19 @@ function createRuntimeSummaries(): RuntimeSummary[] {
   ];
 }
 
-function createCodexProvider(overrides: Partial<Provider> = {}): Provider {
+function createCodexProvider(
+  overrides: Partial<ProviderSummary> = {},
+): ProviderSummary {
   return {
     avatar: null,
-    configuration: {
-      apiKey: 'local-secret',
-      baseUrl: 'https://example.com/v1',
-      primaryModel: 'example-model',
-      protocol: 'responses',
-      reviewModel: null,
-    },
-    createdAt: Date.UTC(2026, 8, 4),
+    baseUrl: 'https://api.example.com/v1',
     id: 'provider-1',
     name: 'Example Provider',
     officialWebsite: 'https://example.com',
     remark: 'Example remark',
     runtime: 'codex',
-    updatedAt: Date.UTC(2026, 8, 4),
     ...overrides,
-  } as Provider;
+  };
 }
 
 function getRequestPath(input: RequestInfo | URL): string {
@@ -409,7 +407,7 @@ describe('application routing and layouts', () => {
     await expect.element(screen.getByText('Runtime saved')).toBeVisible();
   });
 
-  test('filters and renders the complete Provider list', async () => {
+  test('filters and renders Provider summaries', async () => {
     const provider = createCodexProvider();
     vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
       const requestPath = getRequestPath(input);
@@ -431,11 +429,23 @@ describe('application routing and layouts', () => {
     ))
       .toBeVisible();
     await expect.element(screen.getByText('Example Provider')).toBeVisible();
-    await expect.element(screen.getByText(/example-model/)).toBeVisible();
-    const apiKey = screen.getByLabelText('Example Provider API Key');
-    await expect.element(apiKey).toHaveAttribute('type', 'password');
-    await screen.getByRole('button', { name: 'Show API Key' }).click();
-    await expect.element(apiKey).toHaveAttribute('type', 'text');
+    await expect.element(screen.getByText('https://api.example.com/v1')).toBeVisible();
+    await expect.element(screen.getByText('Example remark')).not.toBeInTheDocument();
+    const providerActions = [
+      'Enable Example Provider',
+      'Edit Example Provider',
+      'Copy Example Provider',
+      'Test Example Provider connection',
+      'Delete Example Provider',
+    ];
+    for (const action of providerActions) {
+      await expect
+        .element(screen.getByRole('button', { name: action }))
+        .not
+        .toBeDisabled();
+    }
+    await expect.element(screen.getByText('Configuration')).not.toBeInTheDocument();
+    await expect.element(screen.getByText('API Key')).not.toBeInTheDocument();
   });
 
   test('confirms before clearing a dirty Provider form for another Runtime', async () => {
@@ -475,43 +485,149 @@ describe('application routing and layouts', () => {
     await apiKeyOption.click();
     await expect.element(screen.getByLabelText('API Key', { exact: true }))
       .toBeVisible();
+    await screen.getByRole('group', { name: 'Opus model' })
+      .getByRole('button', { name: 'Advanced model options' })
+      .click();
 
     expect(document.documentElement.scrollWidth)
       .toBeLessThanOrEqual(document.documentElement.clientWidth);
   });
 
-  test('enables Claude model capabilities after entering a Model ID', async () => {
+  test('reveals lower-priority Claude model fields after entering a family Model ID', async () => {
     const screen = await renderApp('/providers/new');
 
     await screen.getByRole('button', { name: 'Claude Code' }).click();
 
-    const primaryModel = screen.getByRole('group', { name: 'Primary model' });
-    const capabilities = primaryModel.getByRole('combobox', {
-      name: 'Supported capabilities',
+    await expect.element(screen.getByLabelText('Default model')).toBeVisible();
+    await expect.element(screen.getByLabelText('Default model'))
+      .toHaveAttribute('required');
+
+    const opusModel = screen.getByRole('group', { name: 'Opus model' });
+    const advancedOptions = opusModel.getByRole('button', {
+      name: 'Advanced model options',
     });
 
-    await expect.element(capabilities).toBeDisabled();
-    await primaryModel.getByLabelText('Model ID').fill('claude-example');
-    await expect.element(capabilities).not.toBeDisabled();
+    await expect.element(opusModel.getByLabelText('Description')).not.toBeInTheDocument();
+    await expect.element(advancedOptions).not.toBeDisabled();
+    await advancedOptions.click();
 
+    const capabilities = opusModel.getByRole('combobox', {
+      name: 'Supported capabilities',
+    });
+    const description = opusModel.getByLabelText('Description');
+    await expect.element(description).toBeVisible();
+    await expect.element(description).toBeDisabled();
+    await expect.element(capabilities).toBeDisabled();
+    await opusModel.getByLabelText('Model ID').fill('claude-example');
+    await expect.element(description).not.toBeDisabled();
+    await expect.element(capabilities).not.toBeDisabled();
     await capabilities.click();
     await screen.getByRole('option', { name: 'Effort', exact: true }).click();
     await screen.getByRole('option', { name: 'Thinking', exact: true }).click();
     await expect.element(capabilities).toHaveTextContent('Effort, Thinking');
   });
 
-  test('creates a Codex Provider and returns to its filtered list', async () => {
-    let createdProvider: Provider | undefined;
+  test('enables forcing Claude subagents only with a model override', async () => {
+    const screen = await renderApp('/providers/new');
+
+    await screen.getByRole('button', { name: 'Claude Code' }).click();
+
+    const subagentModel = screen.getByRole('textbox', { name: 'Subagent model' });
+    const forceSubagentModel = screen.getByRole('checkbox', {
+      name: 'Force subagent model',
+    });
+
+    await expect.element(forceSubagentModel).not.toBeChecked();
+    await expect.element(forceSubagentModel).toBeDisabled();
+    await subagentModel.fill('claude-subagent');
+    await expect.element(forceSubagentModel).not.toBeDisabled();
+    await forceSubagentModel.click();
+    await expect.element(forceSubagentModel).toBeChecked();
+    await subagentModel.clear();
+    await expect.element(forceSubagentModel).not.toBeChecked();
+    await expect.element(forceSubagentModel).toBeDisabled();
+  });
+
+  test('creates a Claude Provider with its subagent force policy', async () => {
+    let createdRequest: Extract<CreateProviderRequest, { runtime: 'claude-code' }>
+      | undefined;
+    let createdProvider: ProviderSummary | undefined;
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const requestPath = getRequestPath(input);
       if (requestPath === '/api/settings') {
         return Promise.resolve(createSettingsResponse());
       }
       if (requestPath === '/api/providers' && init?.method === 'POST') {
-        const request = JSON.parse(init.body as string) as Provider;
-        createdProvider = createCodexProvider({
-          ...request,
+        createdRequest = JSON.parse(init.body as string) as Extract<
+          CreateProviderRequest,
+          { runtime: 'claude-code' }
+        >;
+        createdProvider = {
+          avatar: createdRequest.avatar,
+          baseUrl: createdRequest.configuration.baseUrl,
           id: 'created-provider',
+          name: createdRequest.name,
+          officialWebsite: createdRequest.officialWebsite,
+          remark: createdRequest.remark,
+          runtime: createdRequest.runtime,
+        };
+        return Promise.resolve(createProviderResponse(createdProvider));
+      }
+      if (requestPath === '/api/providers') {
+        return Promise.resolve(createProvidersResponse(
+          createdProvider ? [createdProvider] : [],
+        ));
+      }
+      return Promise.resolve(createHealthResponse());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const screen = await renderApp('/providers/new');
+
+    await screen.getByRole('button', { name: 'Claude Code' }).click();
+    await screen.getByLabelText('Name', { exact: true }).fill('Claude Gateway');
+    await screen.getByLabelText('Base URL').fill('https://claude.example.com');
+    await screen.getByLabelText('Auth Token', { exact: true }).fill('secret');
+    await screen.getByLabelText('Default model').fill('default-model');
+    await screen.getByRole('textbox', { name: 'Subagent model' })
+      .fill('subagent-model');
+    await screen.getByRole('checkbox', { name: 'Force subagent model' }).click();
+    await screen.getByRole('checkbox', { name: 'Hide AI attribution' }).click();
+    await screen.getByRole('checkbox', { name: 'Teammates mode' }).click();
+    await screen.getByRole('checkbox', { name: 'Enable tool search' }).click();
+    await screen.getByRole('checkbox', { name: 'Max effort thinking' }).click();
+    await screen.getByRole('checkbox', { name: 'Disable auto-updater' }).click();
+    await screen.getByRole('button', { name: 'Add Provider' }).click();
+
+    await expect.element(screen.getByText('Claude Gateway')).toBeVisible();
+    expect(createdRequest?.configuration).toMatchObject({
+      defaultModel: 'default-model',
+      subagentModel: 'subagent-model',
+      subagentModelForce: true,
+      hideAiAttribution: true,
+      teammatesMode: true,
+      enableToolSearch: true,
+      maxEffortThinking: true,
+      disableAutoUpdater: true,
+    });
+  });
+
+  test('creates a Codex Provider and returns to its filtered list', async () => {
+    let createdProvider: ProviderSummary | undefined;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const requestPath = getRequestPath(input);
+      if (requestPath === '/api/settings') {
+        return Promise.resolve(createSettingsResponse());
+      }
+      if (requestPath === '/api/providers' && init?.method === 'POST') {
+        const request = JSON.parse(init.body as string) as CreateProviderRequest;
+        createdProvider = createCodexProvider({
+          avatar: request.avatar,
+          baseUrl: request.configuration.baseUrl,
+          id: 'created-provider',
+          name: request.name,
+          officialWebsite: request.officialWebsite,
+          remark: request.remark,
+          runtime: request.runtime,
         });
         return Promise.resolve(createProviderResponse(createdProvider));
       }
@@ -530,7 +646,7 @@ describe('application routing and layouts', () => {
     await screen.getByLabelText('Base URL').fill('https://created.example.com/v1');
     await screen.getByRole('textbox', { name: 'API Key', exact: true })
       .fill('created-secret');
-    await screen.getByLabelText('Primary model').fill('created-model');
+    await screen.getByLabelText('Default model').fill('created-model');
     await screen.getByRole('button', { name: 'Add Provider' }).click();
 
     await expect.element(screen.getByText('Created Provider')).toBeVisible();

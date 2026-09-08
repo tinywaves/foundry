@@ -8,6 +8,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 
 import type { ProviderStore } from './providers/store';
+import type { ProviderConnectionTester } from './providers/connection-tester';
 import { registerProviderRoutes } from './providers/routes';
 import { registerRuntimeRoutes } from './runtimes/routes';
 import type { RuntimeService } from './runtimes/service';
@@ -17,6 +18,7 @@ import type { SettingsStore } from './settings/store';
 const healthQuerySchema = z.strictObject({});
 
 export interface CreateFoundryAppOptions {
+  providerConnectionTester: ProviderConnectionTester;
   providerStore: ProviderStore;
   runtimeService: RuntimeService;
   settingsStore: SettingsStore;
@@ -47,7 +49,7 @@ export function createFoundryApp(options: CreateFoundryAppOptions): Hono {
   );
 
   registerSettingsRoutes(app, options.settingsStore);
-  registerProviderRoutes(app, options.providerStore);
+  registerProviderRoutes(app, options.providerStore, options.providerConnectionTester);
   registerRuntimeRoutes(app, options.runtimeService);
 
   const webRoot = options.webRoot ?? findDefaultWebRoot();

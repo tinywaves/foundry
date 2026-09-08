@@ -2,6 +2,7 @@ import type {
   CreateProviderRequest,
   Provider,
   ProviderCopyResponse,
+  ProviderConnectionTestResponse,
   ProviderDeleteResponse,
   ProviderDetailResponse,
   ProviderResponse,
@@ -123,6 +124,21 @@ async function deleteProvider(providerId: string): Promise<void> {
   }
 }
 
+async function testProviderConnection(providerId: string): Promise<void> {
+  const response = await fetch(
+    `/api/providers/${encodeURIComponent(providerId)}/test-connection`,
+    { method: 'POST' },
+  );
+  if (!response.ok) {
+    throw new Error('The Foundry Server could not test the Provider connection.');
+  }
+
+  const result = await response.json() as ProviderConnectionTestResponse;
+  if (result.status !== 'SUCCESS' || !result.data) {
+    throw new Error(result.message ?? 'The Provider connection test failed.');
+  }
+}
+
 export function useProviders(runtime: ProviderRuntime) {
   return useQuery({
     queryKey: providersQueryKey(runtime),
@@ -184,6 +200,12 @@ export function useDeleteProvider(provider: ProviderSummary) {
         (providers) => providers?.filter((summary) => summary.id !== provider.id),
       );
     },
+  });
+}
+
+export function useTestProviderConnection(providerId: string) {
+  return useMutation({
+    mutationFn: () => testProviderConnection(providerId),
   });
 }
 

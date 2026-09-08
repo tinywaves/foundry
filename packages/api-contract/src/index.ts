@@ -1,4 +1,5 @@
 export const apiStatusCodes = {
+  providerConnectionFailed: 'PROVIDER_CONNECTION_FAILED',
   providerInUse: 'PROVIDER_IN_USE',
   providerNotFound: 'PROVIDER_NOT_FOUND',
   runtimeApplyFailed: 'RUNTIME_APPLY_FAILED',
@@ -153,6 +154,8 @@ export type ProviderDetailResponse = ApiResponse<Provider | null>;
 export type ProviderCopyResponse = ApiResponse<ProviderSummary | null>;
 
 export type ProviderDeleteResponse = ApiResponse<boolean>;
+
+export type ProviderConnectionTestResponse = ApiResponse<boolean>;
 
 export type ProviderUpdateResponse = ApiResponse<ProviderSummary | null>;
 

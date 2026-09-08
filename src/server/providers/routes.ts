@@ -3,6 +3,7 @@ import { apiStatusCodes } from '@dhzh/foundry-api-contract';
 import type {
   Provider,
   ProviderCopyResponse,
+  ProviderConnectionTestResponse,
   ProviderDeleteResponse,
   ProviderDetailResponse,
   ProviderResponse,
@@ -13,6 +14,7 @@ import type {
 import type { Hono } from 'hono';
 
 import type { ProviderStore } from './store';
+import type { ProviderConnectionTester } from './connection-tester';
 import {
   providerCreationSchema,
   providerPathSchema,
@@ -34,6 +36,7 @@ function toProviderSummary(provider: Provider): ProviderSummary {
 export function registerProviderRoutes(
   app: Hono,
   providerStore: ProviderStore,
+  providerConnectionTester: ProviderConnectionTester,
 ): void {
   app.get(
     '/api/providers',
@@ -71,6 +74,35 @@ export function registerProviderRoutes(
         status: apiStatusCodes.success,
         data: true,
       } satisfies ProviderDeleteResponse);
+    },
+  );
+
+  app.post(
+    '/api/providers/:providerId/test-connection',
+    zValidator('param', providerPathSchema),
+    async (context) => {
+      const provider = providerStore.getProvider(
+        context.req.valid('param').providerId,
+      );
+      if (provider === null) {
+        return context.json({
+          status: apiStatusCodes.providerNotFound,
+          data: false,
+          message: 'The selected Provider is unavailable.',
+        } satisfies ProviderConnectionTestResponse);
+      }
+
+      const result = await providerConnectionTester.testProvider(provider);
+      return result.successful
+        ? context.json({
+          status: apiStatusCodes.success,
+          data: true,
+        } satisfies ProviderConnectionTestResponse)
+        : context.json({
+          status: apiStatusCodes.providerConnectionFailed,
+          data: false,
+          message: result.message,
+        } satisfies ProviderConnectionTestResponse);
     },
   );
 

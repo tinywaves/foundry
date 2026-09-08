@@ -57,7 +57,11 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from '#/components/ui/toggle-group';
-import { useDeleteProvider, useProviders } from '#/hooks/use-providers';
+import {
+  useDeleteProvider,
+  useProviders,
+  useTestProviderConnection,
+} from '#/hooks/use-providers';
 import { useRuntimes } from '#/hooks/use-runtimes';
 import { RuntimePreviewDialog } from '#/pages/execution/runtimes';
 
@@ -81,8 +85,10 @@ function ProviderCard({
   returnTo: string;
 }) {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const providerDeletion = useDeleteProvider(provider);
+  const providerConnectionTest = useTestProviderConnection(provider.id);
   const target = useMemo(() => ({
     kind: 'provider' as const,
     providerId: provider.id,
@@ -168,21 +174,65 @@ function ProviderCard({
             </TooltipTrigger>
             <TooltipContent>Copy</TooltipContent>
           </Tooltip>
-          <Tooltip>
-            <TooltipTrigger
-              render={(
+          <Popover
+            open={connectionError !== null}
+            onOpenChange={(open) => {
+              if (!open) {
+                setConnectionError(null);
+              }
+            }}
+          >
+            <Tooltip>
+              <PopoverTrigger
+                render={(
+                  <TooltipTrigger
+                    render={(
+                      <Button
+                        aria-label={`Test ${provider.name} connection`}
+                        disabled={providerConnectionTest.isPending}
+                        size="icon"
+                        type="button"
+                        variant="ghost"
+                        onClick={() => {
+                          setConnectionError(null);
+                          providerConnectionTest.mutate(undefined, {
+                            onError: (error) => {
+                              setConnectionError(error.message);
+                            },
+                            onSuccess: () => {
+                              toast.add({ title: 'Connection successful', type: 'success' });
+                            },
+                          });
+                        }}
+                      />
+                    )}
+                  />
+                )}
+              >
+                {providerConnectionTest.isPending
+                  ? <Spinner />
+                  : <HugeiconsIcon icon={Activity03Icon} strokeWidth={2} />}
+              </PopoverTrigger>
+              <TooltipContent>Test connection</TooltipContent>
+            </Tooltip>
+            <PopoverContent align="end">
+              <PopoverHeader>
+                <PopoverTitle>Connection failed</PopoverTitle>
+                <PopoverDescription className="wrap-break-word">
+                  {connectionError}
+                </PopoverDescription>
+              </PopoverHeader>
+              <div className="flex justify-end">
                 <Button
-                  aria-label={`Test ${provider.name} connection`}
-                  size="icon"
                   type="button"
-                  variant="ghost"
-                />
-              )}
-            >
-              <HugeiconsIcon icon={Activity03Icon} strokeWidth={2} />
-            </TooltipTrigger>
-            <TooltipContent>Test connection</TooltipContent>
-          </Tooltip>
+                  variant="outline"
+                  onClick={() => setConnectionError(null)}
+                >
+                  Close
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
           {isEnabled
             ? (
                 <Tooltip>

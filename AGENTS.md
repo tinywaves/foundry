@@ -14,9 +14,10 @@ Keep local web interface changes within these modules. The frontend consumes ser
 
 - Run workspace commands from the repository root.
 - Use `pnpm dev:server` to start the Hono server at `http://127.0.0.1:54321`.
-- Use `pnpm dev:app` to start the React app at `http://localhost:3000`; Rsbuild proxies `/api` to the Hono server.
+- Use `pnpm dev:app` to start the React app at `http://localhost:12345`; Rsbuild proxies `/api` to the Hono server.
 - Use `pnpm build` to build the server package followed by the React app in `dist/app`.
 - Verify changes with `pnpm test`, `pnpm --filter @dhzh/foundry-app typecheck`, and `pnpm build` as relevant to the modified modules.
+- After every code change, check whether `README.md` must also change. Update it in the same work when user-facing behavior, CLI commands or options, Local Web UI routes, HTTP APIs, data behavior, requirements, development commands, release steps, or repository structure changed; otherwise leave it unchanged only after explicitly making that assessment.
 
 ## Database Migrations
 

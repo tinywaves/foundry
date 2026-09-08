@@ -44,6 +44,10 @@ _Avoid_: Model, backend, vendor
 A non-secret overview of a Provider containing the identifying information needed to distinguish it from other Providers, but not its complete connection configuration or credentials.
 _Avoid_: Provider record, sanitized Provider
 
+**Provider Connection Test**:
+An ephemeral reachability check against a saved Provider's connection configuration. It is independent of Runtime Assignment and its result is not persisted.
+_Avoid_: Runtime health check, Service Health, Provider status
+
 **Runtime**:
 A supported local agent application whose provider configuration Foundry can manage.
 _Avoid_: Provider, model

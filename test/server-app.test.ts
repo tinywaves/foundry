@@ -9,13 +9,20 @@ import type {
   RuntimeConfigurationPreview,
 } from '@dhzh/foundry-api-contract';
 import { createFoundryApp } from '../src/server/app';
+import type {
+  ProviderConnectionTester,
+  ProviderConnectionTestResult,
+} from '../src/server/providers/connection-tester';
 import type { ProviderStore } from '../src/server/providers/store';
 import type { RuntimeService } from '../src/server/runtimes/service';
 import type { SettingsStore } from '../src/server/settings/store';
 
 const fixture = { webRoot: '' };
 
-function createTestApp(options: { inUseProviderId?: string } = {}) {
+function createTestApp(options: {
+  connectionTestResult?: ProviderConnectionTestResult;
+  inUseProviderId?: string;
+} = {}) {
   let colorMode: 'dark' | 'light' | 'system' = 'system';
   let providerSequence = 0;
   const providers: Provider[] = [];
@@ -142,8 +149,14 @@ function createTestApp(options: { inUseProviderId?: string } = {}) {
       return { colorMode };
     },
   };
+  const providerConnectionTester: ProviderConnectionTester = {
+    testProvider: () => Promise.resolve(
+      options.connectionTestResult ?? { successful: true },
+    ),
+  };
 
   return createFoundryApp({
+    providerConnectionTester,
     providerStore,
     runtimeService,
     settingsStore,
@@ -470,6 +483,65 @@ it('returns complete Provider details for local editing', async () => {
       runtime: 'codex',
       updatedAt: 1,
     },
+  });
+});
+
+it('tests a saved Provider connection', async () => {
+  const app = createTestApp();
+  await app.request('/api/providers', {
+    body: JSON.stringify(codexProviderRequest),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+
+  const response = await app.request(
+    '/api/providers/provider-1/test-connection',
+    { method: 'POST' },
+  );
+
+  expect(response.status).toBe(200);
+  await expect(response.json()).resolves.toEqual({
+    status: 'SUCCESS',
+    data: true,
+  });
+});
+
+it('returns a business failure when a Provider connection test fails', async () => {
+  const app = createTestApp({
+    connectionTestResult: {
+      message: 'Authentication failed.',
+      successful: false,
+    },
+  });
+  await app.request('/api/providers', {
+    body: JSON.stringify(codexProviderRequest),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+
+  const response = await app.request(
+    '/api/providers/provider-1/test-connection',
+    { method: 'POST' },
+  );
+
+  expect(response.status).toBe(200);
+  await expect(response.json()).resolves.toEqual({
+    status: 'PROVIDER_CONNECTION_FAILED',
+    data: false,
+    message: 'Authentication failed.',
+  });
+});
+
+it('does not test a missing Provider connection', async () => {
+  const response = await createTestApp().request(
+    '/api/providers/missing/test-connection',
+    { method: 'POST' },
+  );
+
+  expect(response.status).toBe(200);
+  await expect(response.json()).resolves.toMatchObject({
+    status: 'PROVIDER_NOT_FOUND',
+    data: false,
   });
 });
 

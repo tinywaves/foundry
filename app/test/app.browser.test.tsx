@@ -67,6 +67,17 @@ function createProviderDetailResponse(provider: Provider, status = 200) {
   });
 }
 
+function createProviderConnectionResponse(
+  isSuccessful: boolean,
+  message?: string,
+) {
+  return Response.json({
+    status: isSuccessful ? 'SUCCESS' : 'PROVIDER_CONNECTION_FAILED',
+    data: isSuccessful,
+    ...(message && { message }),
+  });
+}
+
 function createRuntimesResponse(runtimes: RuntimeSummary[], status = 200) {
   return Response.json({
     status: 'SUCCESS',
@@ -472,6 +483,80 @@ describe('application routing and layouts', () => {
     );
     await expect.element(screen.getByText('Configuration')).not.toBeInTheDocument();
     await expect.element(screen.getByText('API Key')).not.toBeInTheDocument();
+  });
+
+  test('shows pending and successful Provider connection feedback', async () => {
+    const provider = createCodexProvider();
+    const {
+      promise: testResponse,
+      resolve: resolveTestResponse,
+    } = createDeferred<Response>();
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const requestPath = getRequestPath(input);
+      if (requestPath === `/api/providers/${provider.id}/test-connection`
+        && init?.method === 'POST') {
+        return testResponse;
+      }
+      if (requestPath === '/api/providers') {
+        return Promise.resolve(createProvidersResponse([provider]));
+      }
+      if (requestPath === '/api/runtimes') {
+        return Promise.resolve(createRuntimesResponse(createRuntimeSummaries()));
+      }
+      if (requestPath === '/api/settings') {
+        return Promise.resolve(createSettingsResponse());
+      }
+      return Promise.resolve(createHealthResponse());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const screen = await renderApp('/providers?runtime=codex');
+    const testButton = screen.getByRole('button', {
+      name: 'Test Example Provider connection',
+    });
+
+    await testButton.click();
+    await expect.element(testButton).toBeDisabled();
+    await expect.element(screen.getByRole('status')).toBeVisible();
+
+    resolveTestResponse(createProviderConnectionResponse(true));
+
+    await expect.element(screen.getByText('Connection successful')).toBeVisible();
+    await expect.element(testButton).not.toBeDisabled();
+  });
+
+  test('shows Provider connection failures in an anchored Popover', async () => {
+    const provider = createCodexProvider();
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const requestPath = getRequestPath(input);
+      if (requestPath === `/api/providers/${provider.id}/test-connection`
+        && init?.method === 'POST') {
+        return Promise.resolve(createProviderConnectionResponse(
+          false,
+          'Authentication failed. Check the API key.',
+        ));
+      }
+      if (requestPath === '/api/providers') {
+        return Promise.resolve(createProvidersResponse([provider]));
+      }
+      if (requestPath === '/api/runtimes') {
+        return Promise.resolve(createRuntimesResponse(createRuntimeSummaries()));
+      }
+      if (requestPath === '/api/settings') {
+        return Promise.resolve(createSettingsResponse());
+      }
+      return Promise.resolve(createHealthResponse());
+    }));
+    const screen = await renderApp('/providers?runtime=codex');
+
+    await screen.getByRole('button', {
+      name: 'Test Example Provider connection',
+    }).click();
+
+    await expect.element(screen.getByText('Connection failed')).toBeVisible();
+    await expect.element(screen.getByText('Authentication failed. Check the API key.'))
+      .toBeVisible();
+    await screen.getByRole('button', { name: 'Close' }).click();
+    await expect.element(screen.getByText('Connection failed')).not.toBeInTheDocument();
   });
 
   test('shows the enabled Provider as in use and allows reapplying it', async () => {

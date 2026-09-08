@@ -85,6 +85,12 @@ pnpm --filter @dhzh/foundry-app typecheck
 pnpm build
 ```
 
+## Open Source Inspiration
+
+Foundry is inspired by open-source projects that explore better ways to manage local AI development tools:
+
+- [CC Switch](https://github.com/farion1231/cc-switch) - Inspiration for Provider management and local agent Runtime configuration workflows.
+
 ## License
 
 Foundry is licensed under the [Apache License 2.0](./LICENSE).

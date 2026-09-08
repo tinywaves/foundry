@@ -3,6 +3,7 @@ import type { ServerType } from '@hono/node-server';
 import { createFoundryApp } from './app';
 import { openFoundryDatabase } from './database';
 import { DrizzleProviderStore } from './providers/store';
+import { HttpProviderConnectionTester } from './providers/connection-tester';
 import { RuntimeConfigurationManager } from './runtimes/configuration/manager';
 import { LocalRuntimeDetector } from './runtimes/detection';
 import { LocalRuntimeService } from './runtimes/service';
@@ -48,6 +49,7 @@ export async function startFoundryServer(
   });
   const providerStore = new DrizzleProviderStore(database.db);
   const app = createFoundryApp({
+    providerConnectionTester: new HttpProviderConnectionTester(),
     providerStore,
     runtimeService: new LocalRuntimeService(
       new DrizzleRuntimeStore(database.db),

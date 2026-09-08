@@ -431,6 +431,9 @@ describe('application routing and layouts', () => {
 
     const screen = await renderApp('/runtimes');
 
+    await expect.element(screen.getByText(
+      'Detection status and Provider assignments for each Runtime.',
+    )).toBeVisible();
     await expect.element(screen.getByText(longVersion)).toBeVisible();
     await expect.element(screen.getByText('claude was not found in PATH.')).toBeVisible();
     const saveButtons = screen.getByRole('button', { name: 'Save' });

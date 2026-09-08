@@ -45,6 +45,7 @@ export const sidebarNavigationSections = [
         title: 'Runtimes',
         href: '/runtimes',
         icon: BotIcon,
+        description: 'Detection status and Provider assignments for each Runtime.',
       },
       {
         title: 'Providers',

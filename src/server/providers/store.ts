@@ -21,6 +21,7 @@ import {
 export interface ProviderStore {
   copyProvider: (id: string, input: CreateProviderRequest) => Provider | null;
   createProvider: (input: CreateProviderRequest) => Provider;
+  createProviders: (inputs: CreateProviderRequest[]) => Provider[];
   deleteProvider: (id: string) => 'deleted' | 'in-use' | 'not-found';
   getProvider: (id: string) => Provider | null;
   listProviders: (runtime: ProviderRuntime) => Provider[];
@@ -119,6 +120,11 @@ export class DrizzleProviderStore implements ProviderStore {
       runtime: input.runtime,
       updatedAt: timestamp,
     });
+  }
+
+  createProviders(inputs: CreateProviderRequest[]): Provider[] {
+    return this.database.transaction(() =>
+      inputs.map((input) => this.createProvider(input)));
   }
 
   copyProvider(id: string, rawInput: CreateProviderRequest): Provider | null {

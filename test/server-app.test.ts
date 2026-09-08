@@ -48,6 +48,8 @@ function createTestApp(options: {
       providers.unshift(provider);
       return provider;
     },
+    createProviders: (inputs) => inputs.map((input) =>
+      providerStore.createProvider(input)),
     deleteProvider: (id: string) => {
       const index = providers.findIndex((provider) => provider.id === id);
       if (index === -1) {
@@ -235,6 +237,94 @@ it('returns the health response envelope', async () => {
     data: true,
     message: 'Service is healthy.',
   });
+});
+
+it('downloads the complete Foundry Export as a no-store attachment', async () => {
+  const app = createTestApp();
+  await app.request('/api/providers', {
+    body: JSON.stringify(codexProviderRequest),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+  await app.request('/api/providers', {
+    body: JSON.stringify(claudeProviderRequest),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+
+  const response = await app.request('/api/data/export');
+  const content = new Uint8Array(await response.arrayBuffer());
+
+  expect(response.status).toBe(200);
+  expect(response.headers.get('cache-control')).toBe('no-store');
+  expect(response.headers.get('content-disposition'))
+    .toMatch(/^attachment; filename="foundry-export-\d{4}-\d{2}-\d{2}T\d{6}\.foundry"$/u);
+  expect(response.headers.get('content-type')).toBe('application/octet-stream');
+  expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+  expect(Number(response.headers.get('content-length'))).toBe(content.byteLength);
+  expect(content.slice(0, 2)).toEqual(new Uint8Array([0x50, 0x4B]));
+});
+
+it('rejects unexpected Foundry Export query parameters', async () => {
+  const response = await createTestApp().request('/api/data/export?unexpected=true');
+
+  expect(response.status).toBe(400);
+});
+
+it('imports a Foundry Export and returns each module result', async () => {
+  const app = createTestApp();
+  await app.request('/api/providers', {
+    body: JSON.stringify(codexProviderRequest),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+  const exportResponse = await app.request('/api/data/export');
+  const exported = await exportResponse.arrayBuffer();
+  await app.request('/api/settings', {
+    body: JSON.stringify({ colorMode: 'dark' }),
+    headers: { 'content-type': 'application/json' },
+    method: 'PATCH',
+  });
+
+  const response = await app.request('/api/data/import', {
+    body: exported,
+    headers: { 'content-type': 'application/octet-stream' },
+    method: 'POST',
+  });
+
+  expect(response.status).toBe(200);
+  await expect(response.json()).resolves.toEqual({
+    status: 'SUCCESS',
+    data: {
+      modules: [
+        { id: 'settings', importedItems: 1, status: 'imported' },
+        { id: 'providers', importedItems: 1, status: 'imported' },
+      ],
+    },
+  });
+  const settingsResponse = await app.request('/api/settings');
+  const providersResponse = await app.request('/api/providers?runtime=codex');
+  await expect(settingsResponse.json()).resolves.toMatchObject({
+    data: { colorMode: 'system' },
+  });
+  await expect(providersResponse.json())
+    .resolves
+    .toMatchObject({ data: [{ name: 'Example' }, { name: 'Example' }] });
+});
+
+it('rejects invalid Foundry Import files and unexpected query parameters', async () => {
+  const app = createTestApp();
+  const invalidFileResponse = await app.request('/api/data/import', {
+    body: new Uint8Array([1, 2, 3]),
+    method: 'POST',
+  });
+  const invalidQueryResponse = await app.request('/api/data/import?unexpected=true', {
+    body: new Uint8Array([1, 2, 3]),
+    method: 'POST',
+  });
+
+  expect(invalidFileResponse.status).toBe(400);
+  expect(invalidQueryResponse.status).toBe(400);
 });
 
 it('returns 400 before the health handler for unexpected parameters', async () => {

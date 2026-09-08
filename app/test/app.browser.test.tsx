@@ -1095,6 +1095,151 @@ describe('application routing and layouts', () => {
       .toBeVisible();
   });
 
+  test('confirms and downloads the Foundry Export from Settings', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const requestPath = getRequestPath(input);
+      if (requestPath === '/api/settings') {
+        return Promise.resolve(createSettingsResponse());
+      }
+      if (requestPath === '/api/data/export') {
+        return Promise.resolve(new Response('foundry export', {
+          headers: {
+            'content-disposition': 'attachment; filename="foundry-export-2026-09-08T123456.foundry"',
+            'content-type': 'application/octet-stream',
+          },
+        }));
+      }
+      return Promise.resolve(createHealthResponse());
+    });
+    const createObjectUrl = vi.spyOn(URL, 'createObjectURL')
+      .mockReturnValue('blob:foundry-export');
+    const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    let downloadedFile: { filename: string; url: string } | undefined;
+    const clickLink = vi.spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(function captureDownload(this: HTMLAnchorElement) {
+        downloadedFile = { filename: this.download, url: this.href };
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    try {
+      const screen = await renderApp('/settings');
+
+      await screen.getByRole('button', { name: 'Export Data' }).click();
+      await expect.element(screen.getByRole('heading', { name: 'Export Foundry data?' }))
+        .toBeVisible();
+      await expect.element(screen.getByText(
+        'The exported file includes Provider API keys. Keep it private and store it securely.',
+      )).toBeVisible();
+      expect(fetchMock).not.toHaveBeenCalledWith('/api/data/export', expect.anything());
+
+      await screen.getByRole('button', { name: 'Export', exact: true }).click();
+
+      await expect.element(screen.getByText('Data exported')).toBeVisible();
+      expect(fetchMock).toHaveBeenCalledWith('/api/data/export', { cache: 'no-store' });
+      expect(createObjectUrl).toHaveBeenCalledWith(expect.any(Blob));
+      expect(downloadedFile).toEqual({
+        filename: 'foundry-export-2026-09-08T123456.foundry',
+        url: 'blob:foundry-export',
+      });
+      expect(revokeObjectUrl).toHaveBeenCalledWith('blob:foundry-export');
+    } finally {
+      clickLink.mockRestore();
+      createObjectUrl.mockRestore();
+      revokeObjectUrl.mockRestore();
+    }
+  });
+
+  test('reports a Foundry Export failure without starting a download', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const requestPath = getRequestPath(input);
+      if (requestPath === '/api/settings') {
+        return Promise.resolve(createSettingsResponse());
+      }
+      if (requestPath === '/api/data/export') {
+        return Promise.resolve(new Response(null, { status: 500 }));
+      }
+      return Promise.resolve(createHealthResponse());
+    });
+    const createObjectUrl = vi.spyOn(URL, 'createObjectURL');
+    vi.stubGlobal('fetch', fetchMock);
+
+    try {
+      const screen = await renderApp('/settings');
+      await screen.getByRole('button', { name: 'Export Data' }).click();
+      await screen.getByRole('button', { name: 'Export', exact: true }).click();
+
+      await expect.element(screen.getByText('Data could not be exported')).toBeVisible();
+      expect(createObjectUrl).not.toHaveBeenCalled();
+    } finally {
+      createObjectUrl.mockRestore();
+    }
+  });
+
+  test('confirms a Foundry Import and reports module results', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const requestPath = getRequestPath(input);
+      if (requestPath === '/api/settings') {
+        return Promise.resolve(createSettingsResponse());
+      }
+      if (requestPath === '/api/data/import' && init?.method === 'POST') {
+        return Promise.resolve(Response.json({
+          status: 'SUCCESS',
+          data: {
+            modules: [
+              { id: 'settings', importedItems: 1, status: 'imported' },
+              {
+                id: 'providers',
+                importedItems: 0,
+                message: 'Providers could not be imported.',
+                status: 'failed',
+              },
+            ],
+          },
+        }));
+      }
+      return Promise.resolve(createHealthResponse());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const file = new File(['foundry import'], 'backup.foundry', {
+      type: 'application/octet-stream',
+    });
+    const openFilePicker = vi.spyOn(HTMLInputElement.prototype, 'click')
+      .mockImplementation(() => {});
+
+    try {
+      const screen = await renderApp('/settings');
+      const importButton = screen.getByRole('button', { name: 'Import Data' });
+
+      await importButton.click();
+      expect(openFilePicker).toHaveBeenCalledOnce();
+      const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+      if (!input) {
+        throw new Error('Foundry Import input is unavailable.');
+      }
+      Object.defineProperty(input, 'files', { configurable: true, value: [file] });
+
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+
+      await expect.element(screen.getByRole('heading', { name: 'Import Foundry data?' }))
+        .toBeVisible();
+      await expect.element(screen.getByText(
+        'Application Settings will be replaced. Providers will be added, including duplicates.',
+      )).toBeVisible();
+
+      await screen.getByRole('button', { name: 'Import', exact: true }).click();
+
+      await expect.element(screen.getByText('Data imported with issues')).toBeVisible();
+      await expect.element(screen.getByText('Settings imported. Providers failed')).toBeVisible();
+      expect(fetchMock).toHaveBeenCalledWith('/api/data/import', {
+        body: file,
+        headers: { 'content-type': 'application/octet-stream' },
+        method: 'POST',
+      });
+    } finally {
+      openFilePicker.mockRestore();
+    }
+  });
+
   test('persists Color Mode before applying it to the application', async () => {
     const {
       promise: updateResponse,

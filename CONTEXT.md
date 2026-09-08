@@ -84,6 +84,22 @@ _Avoid_: CLI server, Web UI server
 User-controlled preferences that shape Foundry's presentation and behavior across Local Web UI sessions and clients. Appearance is the first supported setting category; Application Settings are shared rather than browser-specific.
 _Avoid_: Preferences, configuration
 
+**Exportable Data**:
+User-owned Foundry data intended to move between Foundry installations. It currently includes Application Settings and active Providers, but excludes Runtime Assignment, deleted Providers, and other machine-specific operational state.
+_Avoid_: Valuable data, database backup
+
+**Foundry Export**:
+A `.foundry` file containing all Exportable Data organized into independently importable Export Modules. It may include secrets and is intended to be read by Foundry rather than edited by users.
+_Avoid_: Backup, database dump
+
+**Foundry Import**:
+The operation that validates a Foundry Export and applies each supported Export Module independently according to its overwrite policy.
+_Avoid_: Restore, database import
+
+**Export Module**:
+A product-owned section of a Foundry Export whose import succeeds or fails as one unit without rolling back other Export Modules.
+_Avoid_: Archive entry, database table
+
 **Color Mode**:
 The Application Setting that selects Foundry's light, dark, or system-matched appearance.
 _Avoid_: Theme, dark mode

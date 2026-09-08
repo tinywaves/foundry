@@ -32,6 +32,8 @@ Keep local web interface changes within these modules. The frontend consumes ser
 - Prefer the direct implementation when a wrapper only forwards arguments or returns one expression. Introduce a helper, factory, hook, class, or other abstraction only when it centralizes reusable behavior, enforces a policy, creates a meaningful test seam, or hides substantial complexity.
 - Keep module APIs minimal. Export a symbol only when another module imports it; keep module-local implementation details unexported.
 - Before adding or retaining an export, search its call sites. Remove the export when no external consumer exists, and remove the symbol entirely when it adds no local value.
+- Before introducing a constant or lookup, search the repository for existing definitions and extend the owning module's interface when the value is shared.
+- Keep shared Runtime identifiers and display labels in `packages/api-contract/`; keep UI-only assets and composition in `app/`.
 
 ## Local Web UI
 

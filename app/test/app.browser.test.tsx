@@ -355,8 +355,19 @@ describe('application routing and layouts', () => {
   });
 
   test('previews and applies a Provider from the Runtime card', async () => {
-    const provider = createCodexProvider();
+    const provider = createCodexProvider({
+      avatar: {
+        data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        mimeType: 'image/png',
+      },
+    });
     const runtimes = createRuntimeSummaries();
+    const longVersion = 'codex-cli 1.0.0 (build 2026.09.09-development-preview)';
+    const longConfigurationPath = '/Users/test/.codex/environments/development/config.toml';
+    runtimes[0].detection.version = longVersion;
+    runtimes[0].detection.configurationPath = longConfigurationPath;
+    runtimes[0].managed = true;
+    runtimes[0].providerId = provider.id;
     const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === 'string'
         ? new URL(input, 'http://localhost')
@@ -420,14 +431,105 @@ describe('application routing and layouts', () => {
 
     const screen = await renderApp('/runtimes');
 
-    await expect.element(screen.getByText('codex-cli 1.0.0')).toBeVisible();
+    await expect.element(screen.getByText(longVersion)).toBeVisible();
     await expect.element(screen.getByText('claude was not found in PATH.')).toBeVisible();
     const saveButtons = screen.getByRole('button', { name: 'Save' });
-    await expect.element(saveButtons.nth(1)).toBeDisabled();
+    await expect.element(saveButtons.nth(1)).not.toBeDisabled();
+
+    const runtimeCards = [
+      ...document.querySelectorAll<HTMLElement>(
+        '[data-testid="runtime-grid"] > [data-slot="card"]',
+      ),
+    ];
+    expect(runtimeCards).toHaveLength(2);
+    const [codexCard, claudeCard] = runtimeCards;
+    const codexBounds = codexCard.getBoundingClientRect();
+    const claudeBounds = claudeCard.getBoundingClientRect();
+    expect(codexBounds.top).toBe(claudeBounds.top);
+    expect(Math.abs(codexBounds.width - claudeBounds.width)).toBeLessThan(1);
+    expect(codexCard.querySelector('img[data-runtime-icon="codex"]')).not.toBeNull();
+    expect(claudeCard.querySelector('img[data-runtime-icon="claude-code"]')).not.toBeNull();
+    expect(codexCard.querySelector('[data-slot="badge"]')).toHaveTextContent('Detected');
+    expect(claudeCard.querySelector('[data-slot="badge"]')).toHaveTextContent('Not detected');
+    const metadataValues = codexCard.querySelectorAll<HTMLElement>(':scope dd > span');
+    expect(metadataValues).toHaveLength(2);
+    for (const value of metadataValues) {
+      expect(getComputedStyle(value).textOverflow).toBe('ellipsis');
+      expect(getComputedStyle(value).whiteSpace).toBe('nowrap');
+      expect(value.scrollWidth).toBeGreaterThan(value.clientWidth);
+      await expect.poll(() => value.tabIndex).toBe(0);
+    }
+    for (const value of [longVersion, longConfigurationPath]) {
+      await page.getByText(value, { exact: true }).hover();
+      await expect.poll(
+        () => document.querySelector('[data-slot="tooltip-content"]')?.textContent,
+      ).toContain(value);
+      expect(document.querySelector('[data-slot="tooltip-content"] code'))
+        .toHaveTextContent(value);
+    }
+    const managedFieldsButtons = screen.getByRole('button', {
+      name: 'Managed fields',
+    });
+    await managedFieldsButtons.first().click();
+    await expect.element(screen.getByRole('heading', {
+      name: 'Codex fields managed by Foundry',
+    })).toBeVisible();
+    let managedFieldsDialog = document.querySelector<HTMLElement>('[data-slot="dialog-content"]');
+    if (!managedFieldsDialog) {
+      throw new Error('Expected the managed fields Dialog to be rendered.');
+    }
+    expect(managedFieldsDialog.querySelectorAll(':scope ul code')).toHaveLength(7);
+    expect(managedFieldsDialog).toHaveTextContent('[model_providers.<key>].wire_api');
+    await screen.getByRole('button', { name: 'Close' }).last().click();
+
+    await managedFieldsButtons.nth(1).click();
+    await expect.element(screen.getByRole('heading', {
+      name: 'Claude Code fields managed by Foundry',
+    })).toBeVisible();
+    managedFieldsDialog = document.querySelector<HTMLElement>('[data-slot="dialog-content"]');
+    if (!managedFieldsDialog) {
+      throw new Error('Expected the managed fields Dialog to be rendered.');
+    }
+    expect(managedFieldsDialog.querySelectorAll(':scope ul code')).toHaveLength(29);
+    expect(managedFieldsDialog).toHaveTextContent('env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS');
+    expect(managedFieldsDialog).toHaveTextContent('env.ENABLE_TOOL_SEARCH');
+    expect(managedFieldsDialog).toHaveTextContent('env.CLAUDE_CODE_EFFORT_LEVEL');
+    expect(managedFieldsDialog).toHaveTextContent('env.DISABLE_AUTOUPDATER');
+    expect(managedFieldsDialog).toHaveTextContent('attribution.commit');
+    expect(managedFieldsDialog).toHaveTextContent('attribution.pr');
+    expect(managedFieldsDialog).toHaveTextContent('attribution.sessionUrl');
+    await screen.getByRole('button', { name: 'Close' }).last().click();
+
+    for (const card of runtimeCards) {
+      const buttons = card.querySelectorAll('button');
+      const lastButton = buttons.item(buttons.length - 1);
+      expect(card.getBoundingClientRect().bottom - lastButton.getBoundingClientRect().bottom)
+        .toBeLessThan(32);
+    }
 
     const providerSelect = screen.getByRole('combobox', { name: 'Provider' }).first();
+    await expect.element(providerSelect).toHaveTextContent(provider.name);
+    await expect.element(providerSelect).not.toHaveTextContent(provider.id);
+    expect(codexCard.querySelector(
+      ':scope [data-slot="select-value"] [data-slot="avatar-image"]',
+    )).not.toBeNull();
+    expect(claudeCard.querySelector(
+      ':scope [data-slot="select-value"] img[data-runtime-icon="claude-code"]',
+    )).not.toBeNull();
     await providerSelect.click();
-    await screen.getByRole('option', { name: 'Example Provider' }).click();
+    const providerOption = screen.getByRole('option', { name: 'Example Provider' });
+    await expect.element(providerOption).toBeVisible();
+    const selectItems = [...document.querySelectorAll<HTMLElement>('[data-slot="select-item"]')];
+    const officialItem = selectItems.find((item) => item.textContent.includes('Official Default'));
+    const providerItem = selectItems.find((item) => item.textContent.includes(provider.name));
+    expect(officialItem?.querySelector('img[data-runtime-icon="codex"]')).not.toBeNull();
+    expect(providerItem?.querySelector('[data-slot="avatar-image"]')).not.toBeNull();
+    const providerItemText = providerItem?.querySelector<HTMLElement>(
+      '[data-slot="select-item-text"]',
+    );
+    expect(providerItemText).not.toBeNull();
+    expect(getComputedStyle(providerItemText!)).toHaveProperty('alignItems', 'center');
+    await providerOption.click();
     await saveButtons.first().click();
 
     await expect.element(screen.getByRole('heading', { name: 'Preview Changes' }))

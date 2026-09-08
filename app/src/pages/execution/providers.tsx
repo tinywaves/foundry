@@ -1,5 +1,8 @@
 import type { ProviderRuntime, ProviderSummary } from '@dhzh/foundry-api-contract';
-import { providerRuntimes } from '@dhzh/foundry-api-contract';
+import {
+  providerRuntimeLabels,
+  providerRuntimes,
+} from '@dhzh/foundry-api-contract';
 import {
   Activity03Icon,
   Add01Icon,
@@ -12,17 +15,13 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
+import { ProviderAvatar } from '#/components/provider-avatar';
 import { RuntimeOption } from '#/components/runtime-option';
 import {
   Alert,
   AlertDescription,
   AlertTitle,
 } from '#/components/ui/alert';
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '#/components/ui/avatar';
 import { Badge } from '#/components/ui/badge';
 import { Button, buttonVariants } from '#/components/ui/button';
 import {
@@ -66,11 +65,6 @@ import {
 import { useRuntimes } from '#/hooks/use-runtimes';
 import { RuntimePreviewDialog } from '#/pages/execution/runtimes';
 
-const runtimeLabels = {
-  'claude-code': 'Claude Code',
-  'codex': 'Codex',
-} satisfies Record<ProviderRuntime, string>;
-
 function isProviderRuntime(value: string | null): value is ProviderRuntime {
   return value !== null
     && providerRuntimes.includes(value as ProviderRuntime);
@@ -99,17 +93,7 @@ function ProviderCard({
     <Card data-testid={`provider-${provider.id}`} size="sm">
       <CardHeader className="has-data-[slot=card-action]:grid-cols-1 @sm/card-header:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
         <div className="flex min-w-0 items-center gap-3 @sm/card-header:row-span-2">
-          <Avatar size="lg">
-            {provider.avatar
-              ? (
-                  <AvatarImage
-                    alt=""
-                    src={`data:${provider.avatar.mimeType};base64,${provider.avatar.data}`}
-                  />
-                )
-              : null}
-            <AvatarFallback>{provider.name.charAt(0) || 'P'}</AvatarFallback>
-          </Avatar>
+          <ProviderAvatar avatar={provider.avatar} name={provider.name} size="lg" />
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
               <CardTitle className="truncate">{provider.name}</CardTitle>
@@ -403,7 +387,7 @@ export function ProvidersPage() {
                 <EmptyTitle>
                   No
                   {' '}
-                  {runtimeLabels[runtime]}
+                  {providerRuntimeLabels[runtime]}
                   {' '}
                   Providers
                 </EmptyTitle>

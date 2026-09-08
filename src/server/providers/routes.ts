@@ -2,8 +2,12 @@ import { zValidator } from '@hono/zod-validator';
 import { apiStatusCodes } from '@dhzh/foundry-api-contract';
 import type {
   Provider,
+  ProviderCopyResponse,
+  ProviderDeleteResponse,
+  ProviderDetailResponse,
   ProviderResponse,
   ProviderSummary,
+  ProviderUpdateResponse,
   ProvidersResponse,
 } from '@dhzh/foundry-api-contract';
 import type { Hono } from 'hono';
@@ -11,6 +15,7 @@ import type { Hono } from 'hono';
 import type { ProviderStore } from './store';
 import {
   providerCreationSchema,
+  providerPathSchema,
   providersQuerySchema,
 } from './validation';
 
@@ -41,6 +46,34 @@ export function registerProviderRoutes(
     } satisfies ProvidersResponse),
   );
 
+  app.delete(
+    '/api/providers/:providerId',
+    zValidator('param', providerPathSchema),
+    (context) => {
+      const result = providerStore.deleteProvider(
+        context.req.valid('param').providerId,
+      );
+      if (result === 'in-use') {
+        return context.json({
+          status: apiStatusCodes.providerInUse,
+          data: false,
+          message: 'A Provider in use cannot be deleted.',
+        } satisfies ProviderDeleteResponse);
+      }
+      if (result === 'not-found') {
+        return context.json({
+          status: apiStatusCodes.providerNotFound,
+          data: false,
+          message: 'The selected Provider is unavailable.',
+        } satisfies ProviderDeleteResponse);
+      }
+      return context.json({
+        status: apiStatusCodes.success,
+        data: true,
+      } satisfies ProviderDeleteResponse);
+    },
+  );
+
   app.post(
     '/api/providers',
     zValidator('json', providerCreationSchema),
@@ -53,6 +86,90 @@ export function registerProviderRoutes(
         status: apiStatusCodes.success,
         data: summary,
       } satisfies ProviderResponse, 201);
+    },
+  );
+
+  app.get(
+    '/api/providers/:providerId',
+    zValidator('param', providerPathSchema),
+    (context) => {
+      const provider = providerStore.getProvider(
+        context.req.valid('param').providerId,
+      );
+
+      return provider === null
+        ? context.json({
+          status: apiStatusCodes.providerNotFound,
+          data: null,
+          message: 'The selected Provider is unavailable.',
+        } satisfies ProviderDetailResponse)
+        : context.json({
+          status: apiStatusCodes.success,
+          data: provider,
+        } satisfies ProviderDetailResponse);
+    },
+  );
+
+  app.post(
+    '/api/providers/:providerId/copy',
+    zValidator('param', providerPathSchema),
+    zValidator('json', providerCreationSchema),
+    (context) => {
+      const providerId = context.req.valid('param').providerId;
+      const existing = providerStore.getProvider(providerId);
+      if (existing === null) {
+        return context.json({
+          status: apiStatusCodes.providerNotFound,
+          data: null,
+          message: 'The selected Provider is unavailable.',
+        } satisfies ProviderCopyResponse);
+      }
+      const input = context.req.valid('json');
+      if (input.runtime !== existing.runtime) {
+        return context.json({ message: 'A Provider Runtime cannot be changed.' }, 400);
+      }
+      const provider = providerStore.copyProvider(
+        providerId,
+        input,
+      );
+
+      return provider === null
+        ? context.json({
+          status: apiStatusCodes.providerNotFound,
+          data: null,
+          message: 'The selected Provider is unavailable.',
+        } satisfies ProviderCopyResponse)
+        : context.json({
+          status: apiStatusCodes.success,
+          data: toProviderSummary(provider),
+        } satisfies ProviderCopyResponse, 201);
+    },
+  );
+
+  app.put(
+    '/api/providers/:providerId',
+    zValidator('param', providerPathSchema),
+    zValidator('json', providerCreationSchema),
+    (context) => {
+      const providerId = context.req.valid('param').providerId;
+      const existing = providerStore.getProvider(providerId);
+      if (existing === null) {
+        return context.json({
+          status: apiStatusCodes.providerNotFound,
+          data: null,
+          message: 'The selected Provider is unavailable.',
+        } satisfies ProviderUpdateResponse);
+      }
+      const input = context.req.valid('json');
+      if (input.runtime !== existing.runtime) {
+        return context.json({ message: 'A Provider Runtime cannot be changed.' }, 400);
+      }
+
+      const provider = providerStore.updateProvider(providerId, input);
+      return context.json({
+        status: apiStatusCodes.success,
+        data: provider === null ? null : toProviderSummary(provider),
+      } satisfies ProviderUpdateResponse);
     },
   );
 }

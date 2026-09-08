@@ -205,6 +205,10 @@ export const providerCreationSchema = z.discriminatedUnion('runtime', [
   }),
 ]);
 
+export const providerPathSchema = z.strictObject({
+  providerId: z.string().min(1),
+});
+
 export const providersQuerySchema = z.strictObject({
   runtime: z.enum(providerRuntimes),
 });

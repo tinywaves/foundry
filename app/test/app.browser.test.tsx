@@ -14,6 +14,7 @@ import { createMemoryRouter } from 'react-router';
 import type { InitialEntry } from 'react-router';
 import type {
   CreateProviderRequest,
+  Provider,
   ProviderSummary,
   RuntimeSummary,
 } from '@dhzh/foundry-api-contract';
@@ -49,6 +50,15 @@ function createProvidersResponse(providers: ProviderSummary[] = [], status = 200
 }
 
 function createProviderResponse(provider: ProviderSummary, status = 201) {
+  return Response.json({
+    status: 'SUCCESS',
+    data: provider,
+  }, {
+    status,
+  });
+}
+
+function createProviderDetailResponse(provider: Provider, status = 200) {
   return Response.json({
     status: 'SUCCESS',
     data: provider,
@@ -441,8 +451,6 @@ describe('application routing and layouts', () => {
     await expect.element(screen.getByText('Example remark')).not.toBeInTheDocument();
     const providerActions = [
       'Apply Example Provider',
-      'Edit Example Provider',
-      'Copy Example Provider',
       'Test Example Provider connection',
       'Delete Example Provider',
     ];
@@ -452,6 +460,16 @@ describe('application routing and layouts', () => {
         .not
         .toBeDisabled();
     }
+    const editLink = screen.getByRole('link', { name: 'Edit Example Provider' });
+    await expect.element(editLink).toHaveAttribute(
+      'href',
+      '/providers/provider-1/edit',
+    );
+    const copyLink = screen.getByRole('link', { name: 'Copy Example Provider' });
+    await expect.element(copyLink).toHaveAttribute(
+      'href',
+      '/providers/provider-1/copy',
+    );
     await expect.element(screen.getByText('Configuration')).not.toBeInTheDocument();
     await expect.element(screen.getByText('API Key')).not.toBeInTheDocument();
   });
@@ -485,6 +503,56 @@ describe('application routing and layouts', () => {
     const reapplyButton = screen.getByRole('button', { name: 'Reapply Example Provider' });
     await expect.element(reapplyButton).toHaveTextContent('Reapply');
     await expect.element(reapplyButton).not.toBeDisabled();
+    await expect
+      .element(screen.getByRole('button', { name: 'Delete Example Provider' }))
+      .toBeDisabled();
+    await expect.element(screen.getByText('Delete Provider?')).not.toBeInTheDocument();
+  });
+
+  test('confirms before deleting an available Provider', async () => {
+    const provider = createCodexProvider();
+    let isDeleted = false;
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const requestPath = getRequestPath(input);
+      if (requestPath === '/api/settings') {
+        return Promise.resolve(createSettingsResponse());
+      }
+      if (requestPath === '/api/providers/provider-1' && init?.method === 'DELETE') {
+        isDeleted = true;
+        return Promise.resolve(Response.json({
+          status: 'SUCCESS',
+          data: true,
+        }));
+      }
+      if (requestPath === '/api/providers') {
+        return Promise.resolve(createProvidersResponse(isDeleted ? [] : [provider]));
+      }
+      if (requestPath === '/api/runtimes') {
+        return Promise.resolve(createRuntimesResponse(createRuntimeSummaries()));
+      }
+      return Promise.resolve(createHealthResponse());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const screen = await renderApp('/providers?runtime=codex');
+    const providerDeleteButton = screen.getByRole('button', { name: 'Delete Example Provider' });
+    await providerDeleteButton.click();
+    await expect.element(screen.getByText('Delete Provider?')).toBeVisible();
+    await screen.getByRole('button', { name: 'Cancel' }).click();
+    await expect.element(screen.getByText('Delete Provider?')).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      '/api/providers/provider-1',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+
+    await providerDeleteButton.click();
+    await screen.getByRole('button', { name: 'Delete', exact: true }).click();
+
+    await expect.element(screen.getByTestId('provider-provider-1')).not.toBeInTheDocument();
+    await expect.element(screen.getByText('Provider deleted')).toBeVisible();
+    expect(fetchMock).toHaveBeenCalledWith('/api/providers/provider-1', {
+      method: 'DELETE',
+    });
   });
 
   test('previews and applies a Provider from its card', async () => {
@@ -768,9 +836,152 @@ describe('application routing and layouts', () => {
     await screen.getByRole('button', { name: 'Add Provider' }).click();
 
     await expect.element(screen.getByText('Created Provider')).toBeVisible();
+    await expect.element(screen.getByText('Provider created')).toBeVisible();
+    const toastViewport = document.querySelector('[data-slot="toast-viewport"]');
+    expect(toastViewport).toHaveClass('top-4');
+    expect(toastViewport).not.toHaveClass('bottom-4');
     expect(fetchMock).toHaveBeenCalledWith('/api/providers', expect.objectContaining({
       method: 'POST',
     }));
+  });
+
+  test('edits a Provider with its complete local configuration', async () => {
+    let provider = createCodexProvider();
+    let updatedRequest: CreateProviderRequest | undefined;
+    const detail: Provider = {
+      avatar: provider.avatar,
+      configuration: {
+        apiKey: 'saved-secret',
+        baseUrl: provider.baseUrl,
+        defaultModel: 'example-model',
+        protocol: 'responses',
+        reviewModel: 'review-model',
+      },
+      createdAt: 1,
+      id: provider.id,
+      name: provider.name,
+      officialWebsite: provider.officialWebsite,
+      remark: provider.remark,
+      runtime: 'codex',
+      updatedAt: 1,
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const requestPath = getRequestPath(input);
+      if (requestPath === '/api/settings') {
+        return Promise.resolve(createSettingsResponse());
+      }
+      if (requestPath === `/api/providers/${provider.id}` && init?.method === 'PUT') {
+        updatedRequest = JSON.parse(init.body as string) as CreateProviderRequest;
+        provider = createCodexProvider({
+          baseUrl: updatedRequest.configuration.baseUrl,
+          name: updatedRequest.name,
+          officialWebsite: updatedRequest.officialWebsite,
+          remark: updatedRequest.remark,
+        });
+        return Promise.resolve(createProviderResponse(provider, 200));
+      }
+      if (requestPath === `/api/providers/${provider.id}`) {
+        return Promise.resolve(createProviderDetailResponse(detail));
+      }
+      if (requestPath === '/api/providers') {
+        return Promise.resolve(createProvidersResponse([provider]));
+      }
+      if (requestPath === '/api/runtimes') {
+        return Promise.resolve(createRuntimesResponse(createRuntimeSummaries()));
+      }
+      return Promise.resolve(createHealthResponse());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const screen = await renderApp('/providers?runtime=codex');
+
+    await screen.getByRole('link', { name: 'Edit Example Provider' }).click();
+
+    await expect.element(screen.getByRole('heading', { name: 'Edit Provider' }))
+      .toBeVisible();
+    await expect.element(screen.getByRole('button', { name: 'Codex' })).toBeDisabled();
+    await expect.element(screen.getByLabelText('Name', { exact: true }))
+      .toHaveValue('Example Provider');
+    await expect.element(screen.getByLabelText('Base URL'))
+      .toHaveValue('https://api.example.com/v1');
+    await expect.element(screen.getByRole('textbox', { name: 'API Key', exact: true }))
+      .toHaveValue('saved-secret');
+
+    await screen.getByLabelText('Name', { exact: true }).fill('Updated Provider');
+    await screen.getByRole('button', { name: 'Save Changes' }).click();
+
+    await expect.element(screen.getByText('Updated Provider')).toBeVisible();
+    await expect.element(screen.getByText('Provider updated')).toBeVisible();
+    expect(updatedRequest).toBeDefined();
+    expect(updatedRequest?.configuration).toHaveProperty('apiKey', 'saved-secret');
+  });
+
+  test('creates a Provider from a complete copied configuration', async () => {
+    const provider = createCodexProvider();
+    let copiedProvider: ProviderSummary | undefined;
+    let copiedRequest: CreateProviderRequest | undefined;
+    const detail: Provider = {
+      avatar: provider.avatar,
+      configuration: {
+        apiKey: 'saved-secret',
+        baseUrl: provider.baseUrl,
+        defaultModel: 'example-model',
+        protocol: 'responses',
+        reviewModel: 'review-model',
+      },
+      createdAt: 1,
+      id: provider.id,
+      name: provider.name,
+      officialWebsite: provider.officialWebsite,
+      remark: provider.remark,
+      runtime: 'codex',
+      updatedAt: 1,
+    };
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const requestPath = getRequestPath(input);
+      if (requestPath === '/api/settings') {
+        return Promise.resolve(createSettingsResponse());
+      }
+      if (requestPath === `/api/providers/${provider.id}/copy`) {
+        copiedRequest = JSON.parse(init?.body as string) as CreateProviderRequest;
+        copiedProvider = createCodexProvider({
+          id: 'provider-copy',
+          name: copiedRequest.name,
+        });
+        return Promise.resolve(createProviderResponse(copiedProvider, 201));
+      }
+      if (requestPath === `/api/providers/${provider.id}`) {
+        return Promise.resolve(createProviderDetailResponse(detail));
+      }
+      if (requestPath === '/api/providers') {
+        return Promise.resolve(createProvidersResponse(
+          copiedProvider ? [copiedProvider, provider] : [provider],
+        ));
+      }
+      if (requestPath === '/api/runtimes') {
+        return Promise.resolve(createRuntimesResponse(createRuntimeSummaries()));
+      }
+      return Promise.resolve(createHealthResponse());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const screen = await renderApp('/providers?runtime=codex');
+
+    await screen.getByRole('link', { name: 'Copy Example Provider' }).click();
+
+    await expect.element(screen.getByRole('heading', { name: 'Create from Provider' }))
+      .toBeVisible();
+    await expect.element(screen.getByRole('button', { name: 'Codex' })).toBeDisabled();
+    await expect.element(screen.getByLabelText('Name', { exact: true }))
+      .toHaveValue('Example Provider Copy');
+    await expect.element(screen.getByLabelText('Base URL'))
+      .toHaveValue('https://api.example.com/v1');
+    await expect.element(screen.getByRole('textbox', { name: 'API Key', exact: true }))
+      .toHaveValue('saved-secret');
+
+    await screen.getByRole('button', { name: 'Create Provider' }).click();
+
+    await expect.element(screen.getByText('Example Provider Copy')).toBeVisible();
+    await expect.element(screen.getByText('Provider created')).toBeVisible();
+    expect(copiedRequest?.configuration).toHaveProperty('apiKey', 'saved-secret');
   });
 
   test('renders settings with standalone navigation', async () => {

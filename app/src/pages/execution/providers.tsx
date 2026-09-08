@@ -23,7 +23,7 @@ import {
   AvatarImage,
 } from '#/components/ui/avatar';
 import { Badge } from '#/components/ui/badge';
-import { Button } from '#/components/ui/button';
+import { Button, buttonVariants } from '#/components/ui/button';
 import {
   Card,
   CardAction,
@@ -37,7 +37,17 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from '#/components/ui/empty';
+import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from '#/components/ui/popover';
 import { Skeleton } from '#/components/ui/skeleton';
+import { Spinner } from '#/components/ui/spinner';
+import { toast } from '#/components/ui/toast';
 import {
   Tooltip,
   TooltipContent,
@@ -47,7 +57,7 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from '#/components/ui/toggle-group';
-import { useProviders } from '#/hooks/use-providers';
+import { useDeleteProvider, useProviders } from '#/hooks/use-providers';
 import { useRuntimes } from '#/hooks/use-runtimes';
 import { RuntimePreviewDialog } from '#/pages/execution/runtimes';
 
@@ -64,11 +74,15 @@ function isProviderRuntime(value: string | null): value is ProviderRuntime {
 function ProviderCard({
   isEnabled,
   provider,
+  returnTo,
 }: {
   isEnabled: boolean;
   provider: ProviderSummary;
+  returnTo: string;
 }) {
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const providerDeletion = useDeleteProvider(provider);
   const target = useMemo(() => ({
     kind: 'provider' as const,
     providerId: provider.id,
@@ -127,11 +141,11 @@ function ProviderCard({
           <Tooltip>
             <TooltipTrigger
               render={(
-                <Button
+                <Link
                   aria-label={`Edit ${provider.name}`}
-                  size="icon"
-                  type="button"
-                  variant="ghost"
+                  className={buttonVariants({ size: 'icon', variant: 'ghost' })}
+                  to={`/providers/${provider.id}/edit`}
+                  state={{ returnTo }}
                 />
               )}
             >
@@ -142,11 +156,11 @@ function ProviderCard({
           <Tooltip>
             <TooltipTrigger
               render={(
-                <Button
+                <Link
                   aria-label={`Copy ${provider.name}`}
-                  size="icon"
-                  type="button"
-                  variant="ghost"
+                  className={buttonVariants({ size: 'icon', variant: 'ghost' })}
+                  to={`/providers/${provider.id}/copy`}
+                  state={{ returnTo }}
                 />
               )}
             >
@@ -169,21 +183,76 @@ function ProviderCard({
             </TooltipTrigger>
             <TooltipContent>Test connection</TooltipContent>
           </Tooltip>
-          <Tooltip>
-            <TooltipTrigger
-              render={(
-                <Button
-                  aria-label={`Delete ${provider.name}`}
-                  size="icon"
-                  type="button"
-                  variant="destructive"
-                />
+          {isEnabled
+            ? (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={(
+                      <Button
+                        aria-label={`Delete ${provider.name}`}
+                        disabled
+                        size="icon"
+                        type="button"
+                        variant="destructive"
+                      />
+                    )}
+                  >
+                    <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+                  </TooltipTrigger>
+                  <TooltipContent>Provider is in use</TooltipContent>
+                </Tooltip>
+              )
+            : (
+                <Popover open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+                  <PopoverTrigger
+                    render={(
+                      <Button
+                        aria-label={`Delete ${provider.name}`}
+                        size="icon"
+                        type="button"
+                        variant="destructive"
+                      />
+                    )}
+                  >
+                    <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+                  </PopoverTrigger>
+                  <PopoverContent align="end">
+                    <PopoverHeader>
+                      <PopoverTitle>Delete Provider?</PopoverTitle>
+                      <PopoverDescription>
+                        This action cannot be undone.
+                      </PopoverDescription>
+                    </PopoverHeader>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        disabled={providerDeletion.isPending}
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsDeleteOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        disabled={providerDeletion.isPending}
+                        type="button"
+                        variant="destructive"
+                        onClick={() => providerDeletion.mutate(undefined, {
+                          onError: () => {
+                            toast.add({ title: 'Provider could not be deleted', type: 'error' });
+                          },
+                          onSuccess: () => {
+                            setIsDeleteOpen(false);
+                            toast.add({ title: 'Provider deleted', type: 'success' });
+                          },
+                        })}
+                      >
+                        {providerDeletion.isPending && <Spinner data-icon="inline-start" />}
+                        <span>Delete</span>
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               )}
-            >
-              <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
-            </TooltipTrigger>
-            <TooltipContent>Delete</TooltipContent>
-          </Tooltip>
         </CardAction>
       </CardHeader>
       {previewOpen && (
@@ -302,6 +371,7 @@ export function ProvidersPage() {
               isEnabled={provider.id === enabledProviderId}
               key={provider.id}
               provider={provider}
+              returnTo={returnTo}
             />
           ))}
         </div>

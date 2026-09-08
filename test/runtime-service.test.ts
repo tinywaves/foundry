@@ -60,9 +60,12 @@ function createService(options: {
     })),
   };
   const providerStore: ProviderStore = {
+    copyProvider: () => provider,
     createProvider: () => provider,
+    deleteProvider: () => 'deleted',
     getProvider: options.getProvider ?? (() => provider),
     listProviders: () => [provider],
+    updateProvider: () => provider,
   };
   const detector: RuntimeDetector = {
     detect: options.detect ?? ((runtime) => Promise.resolve({

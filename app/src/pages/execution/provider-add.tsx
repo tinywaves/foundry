@@ -3,9 +3,11 @@ import type {
   ClaudeModelCapability,
   ClaudeModelConfiguration,
   CreateProviderRequest,
+  Provider,
   ProviderAvatar,
   ProviderAvatarMimeType,
   ProviderRuntime,
+  ProviderSummary,
 } from '@dhzh/foundry-api-contract';
 import {
   claudeModelCapabilities,
@@ -16,7 +18,7 @@ import { ArrowRight01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import type { SyntheticEvent } from 'react';
 import { useRef, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 
 import { SecretInput } from '#/components/secret-input';
 import {
@@ -67,6 +69,8 @@ import {
   SelectValue,
 } from '#/components/ui/select';
 import { Spinner } from '#/components/ui/spinner';
+import { Skeleton } from '#/components/ui/skeleton';
+import { toast } from '#/components/ui/toast';
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -77,7 +81,12 @@ import {
   TooltipTrigger,
 } from '#/components/ui/tooltip';
 import { Textarea } from '#/components/ui/textarea';
-import { useCreateProvider } from '#/hooks/use-providers';
+import {
+  useCopyProvider,
+  useCreateProvider,
+  useProvider,
+  useUpdateProvider,
+} from '#/hooks/use-providers';
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 
@@ -162,40 +171,57 @@ interface ClaudeDraft {
   disableAutoUpdater: boolean;
 }
 
-function createCommonDraft(): CommonDraft {
-  return { avatar: null, name: '', officialWebsite: '', remark: '' };
-}
-
-function createCodexDraft(): CodexDraft {
-  return { apiKey: '', baseUrl: '', defaultModel: '', reviewModel: '' };
-}
-
-function createClaudeModelDraft(): ClaudeModelDraft {
+function createCommonDraft(provider?: Provider, isCopy = false): CommonDraft {
   return {
-    description: '',
-    displayName: '',
-    model: '',
-    supportedCapabilities: [],
+    avatar: provider?.avatar ?? null,
+    name: provider ? `${provider.name}${isCopy ? ' Copy' : ''}` : '',
+    officialWebsite: provider?.officialWebsite ?? '',
+    remark: provider?.remark ?? '',
   };
 }
 
-function createClaudeDraft(): ClaudeDraft {
+function createCodexDraft(
+  provider?: Extract<Provider, { runtime: 'codex' }>,
+): CodexDraft {
   return {
-    apiKey: '',
-    apiKeyHeader: 'authorization',
-    baseUrl: '',
-    fableModel: createClaudeModelDraft(),
-    haikuModel: createClaudeModelDraft(),
-    opusModel: createClaudeModelDraft(),
-    defaultModel: '',
-    sonnetModel: createClaudeModelDraft(),
-    subagentModel: '',
-    subagentModelForce: false,
-    hideAiAttribution: false,
-    teammatesMode: false,
-    enableToolSearch: false,
-    maxEffortThinking: false,
-    disableAutoUpdater: false,
+    apiKey: provider?.configuration.apiKey ?? '',
+    baseUrl: provider?.configuration.baseUrl ?? '',
+    defaultModel: provider?.configuration.defaultModel ?? '',
+    reviewModel: provider?.configuration.reviewModel ?? '',
+  };
+}
+
+function createClaudeModelDraft(
+  configuration?: ClaudeModelConfiguration | null,
+): ClaudeModelDraft {
+  return {
+    description: configuration?.description ?? '',
+    displayName: configuration?.displayName ?? '',
+    model: configuration?.model ?? '',
+    supportedCapabilities: configuration?.supportedCapabilities ?? [],
+  };
+}
+
+function createClaudeDraft(
+  provider?: Extract<Provider, { runtime: 'claude-code' }>,
+): ClaudeDraft {
+  const configuration = provider?.configuration;
+  return {
+    apiKey: configuration?.apiKey ?? '',
+    apiKeyHeader: configuration?.apiKeyHeader ?? 'authorization',
+    baseUrl: configuration?.baseUrl ?? '',
+    fableModel: createClaudeModelDraft(configuration?.fableModel),
+    haikuModel: createClaudeModelDraft(configuration?.haikuModel),
+    opusModel: createClaudeModelDraft(configuration?.opusModel),
+    defaultModel: configuration?.defaultModel ?? '',
+    sonnetModel: createClaudeModelDraft(configuration?.sonnetModel),
+    subagentModel: configuration?.subagentModel ?? '',
+    subagentModelForce: configuration?.subagentModelForce ?? false,
+    hideAiAttribution: configuration?.hideAiAttribution ?? false,
+    teammatesMode: configuration?.teammatesMode ?? false,
+    enableToolSearch: configuration?.enableToolSearch ?? false,
+    maxEffortThinking: configuration?.maxEffortThinking ?? false,
+    disableAutoUpdater: configuration?.disableAutoUpdater ?? false,
   };
 }
 
@@ -296,7 +322,7 @@ function ClaudeModelFields({
             />
             <span>Advanced model options</span>
           </CollapsibleTrigger>
-          <CollapsibleContent className="h-[var(--collapsible-panel-height)] overflow-hidden transition-[height] duration-150 data-ending-style:h-0 data-starting-style:h-0">
+          <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-150 data-ending-style:h-0 data-starting-style:h-0">
             <div className="ms-3 min-w-0 border-s border-border py-2 ps-4">
               <FieldGroup>
                 <Field>
@@ -357,15 +383,29 @@ function ClaudeModelFields({
   );
 }
 
-export function ProviderAddPage() {
+type ProviderFormMode = 'add' | 'copy' | 'edit';
+
+function ProviderForm({
+  mode,
+  provider,
+}: {
+  mode: ProviderFormMode;
+  provider?: Provider;
+}) {
   const location = useLocation();
   const navigate = useNavigate();
   const providerCreation = useCreateProvider();
-  const [runtime, setRuntime] = useState<ProviderRuntime | null>(null);
+  const providerCopy = useCopyProvider(provider?.id ?? '');
+  const providerUpdate = useUpdateProvider(provider?.id ?? '');
+  const isCopy = mode === 'copy';
+  const isEditing = mode === 'edit';
+  const codexProvider = provider?.runtime === 'codex' ? provider : undefined;
+  const claudeProvider = provider?.runtime === 'claude-code' ? provider : undefined;
+  const [runtime, setRuntime] = useState<ProviderRuntime | null>(provider?.runtime ?? null);
   const [pendingRuntime, setPendingRuntime] = useState<ProviderRuntime | null>(null);
-  const [common, setCommon] = useState(createCommonDraft);
-  const [codex, setCodex] = useState(createCodexDraft);
-  const [claude, setClaude] = useState(createClaudeDraft);
+  const [common, setCommon] = useState(() => createCommonDraft(provider, isCopy));
+  const [codex, setCodex] = useState(() => createCodexDraft(codexProvider));
+  const [claude, setClaude] = useState(() => createClaudeDraft(claudeProvider));
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const apiKeyLabel = runtime === 'claude-code'
@@ -373,14 +413,33 @@ export function ProviderAddPage() {
     ? 'Auth Token'
     : 'API Key';
   const hasSubagentModel = claude.subagentModel.trim() !== '';
+  const requiresApiKey = runtime === 'claude-code';
   const returnTo = typeof location.state?.returnTo === 'string'
     ? location.state.returnTo
-    : '/providers?runtime=codex';
-  const isDirty = JSON.stringify(common) !== JSON.stringify(createCommonDraft())
+    : `/providers?runtime=${provider?.runtime ?? 'codex'}`;
+  const isDirty = JSON.stringify(common) !== JSON.stringify(createCommonDraft(provider, isCopy))
     || (runtime === 'codex'
-      && JSON.stringify(codex) !== JSON.stringify(createCodexDraft()))
+      && JSON.stringify(codex) !== JSON.stringify(createCodexDraft(codexProvider)))
     || (runtime === 'claude-code'
-      && JSON.stringify(claude) !== JSON.stringify(createClaudeDraft()));
+      && JSON.stringify(claude) !== JSON.stringify(createClaudeDraft(claudeProvider)));
+  const isSaveError = providerCreation.isError
+    || providerCopy.isError
+    || providerUpdate.isError;
+  const isSavePending = providerCreation.isPending
+    || providerCopy.isPending
+    || providerUpdate.isPending;
+  let heading = 'Add Provider';
+  let runtimeDescription = 'Choose the Runtime this Provider can be applied to.';
+  let submitLabel = 'Add Provider';
+  if (isEditing) {
+    heading = 'Edit Provider';
+    runtimeDescription = 'A Provider Runtime cannot be changed after creation.';
+    submitLabel = 'Save Changes';
+  } else if (isCopy) {
+    heading = 'Create from Provider';
+    runtimeDescription = 'A copy keeps the source Provider Runtime.';
+    submitLabel = 'Create Provider';
+  }
 
   const resetFields = () => {
     setCommon(createCommonDraft());
@@ -388,6 +447,8 @@ export function ProviderAddPage() {
     setClaude(createClaudeDraft());
     setAvatarError(null);
     providerCreation.reset();
+    providerCopy.reset();
+    providerUpdate.reset();
   };
 
   const changeRuntime = (nextRuntime: ProviderRuntime) => {
@@ -397,7 +458,7 @@ export function ProviderAddPage() {
   };
 
   const requestRuntimeChange = (nextRuntime: ProviderRuntime) => {
-    if (nextRuntime === runtime) {
+    if (mode !== 'add' || nextRuntime === runtime) {
       return;
     }
     if (runtime !== null && isDirty) {
@@ -494,17 +555,41 @@ export function ProviderAddPage() {
       };
     }
 
-    providerCreation.mutate(input, {
-      onSuccess: (provider) => {
-        void navigate(`/providers?runtime=${provider.runtime}`, { replace: true });
-      },
-    });
+    const onSuccess = (savedProvider: ProviderSummary) => {
+      if (isEditing) {
+        toast.add({
+          title: 'Provider updated',
+          type: 'success',
+        });
+      } else {
+        toast.add({
+          title: 'Provider created',
+          type: 'success',
+        });
+      }
+      void navigate(
+        mode === 'add' ? `/providers?runtime=${savedProvider.runtime}` : returnTo,
+        { replace: true },
+      );
+    };
+    if (mode === 'add') {
+      providerCreation.mutate(input, { onSuccess });
+      return;
+    }
+
+    if (isCopy) {
+      providerCopy.mutate(input, { onSuccess });
+    } else {
+      providerUpdate.mutate(input, { onSuccess });
+    }
   };
 
   return (
     <main className="w-full pb-12">
       <header className="pb-5">
-        <h1 className="text-xl font-semibold">Add Provider</h1>
+        <h1 className="text-xl font-semibold">
+          {heading}
+        </h1>
       </header>
 
       <form key={runtime ?? 'unselected'} onSubmit={handleSubmit}>
@@ -513,6 +598,7 @@ export function ProviderAddPage() {
             <FieldLabel required>Runtime</FieldLabel>
             <ToggleGroup
               aria-label="Runtime"
+              disabled={mode !== 'add'}
               spacing={0}
               value={runtime ? [runtime] : []}
               variant="outline"
@@ -529,9 +615,7 @@ export function ProviderAddPage() {
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
-            <FieldDescription>
-              Choose the Runtime this Provider can be applied to.
-            </FieldDescription>
+            <FieldDescription>{runtimeDescription}</FieldDescription>
           </Field>
 
           {runtime === null
@@ -702,14 +786,17 @@ export function ProviderAddPage() {
                       )
                     : null}
                   <Field>
-                    <FieldLabel htmlFor="provider-api-key" required={runtime === 'claude-code'}>
+                    <FieldLabel
+                      htmlFor="provider-api-key"
+                      required={requiresApiKey}
+                    >
                       {apiKeyLabel}
                     </FieldLabel>
                     <SecretInput
                       autoComplete="off"
                       id="provider-api-key"
                       maxLength={16 * 1024}
-                      required={runtime === 'claude-code'}
+                      required={requiresApiKey}
                       value={runtime === 'codex' ? codex.apiKey : claude.apiKey}
                       onChange={(event) => {
                         if (runtime === 'codex') {
@@ -719,13 +806,11 @@ export function ProviderAddPage() {
                         }
                       }}
                     />
-                    {runtime === 'codex'
-                      ? (
-                          <FieldDescription>
-                            Leave blank only when the endpoint accepts requests without credentials.
-                          </FieldDescription>
-                        )
-                      : null}
+                    {runtime === 'codex' && (
+                      <FieldDescription>
+                        Leave blank only when the endpoint accepts requests without credentials.
+                      </FieldDescription>
+                    )}
                   </Field>
 
                   {runtime === 'codex'
@@ -863,7 +948,7 @@ export function ProviderAddPage() {
                         </>
                       )}
 
-                  {providerCreation.isError
+                  {isSaveError
                     ? (
                         <Alert variant="destructive">
                           <AlertTitle>Provider was not saved</AlertTitle>
@@ -882,11 +967,11 @@ export function ProviderAddPage() {
                     >
                       Cancel
                     </Button>
-                    <Button disabled={providerCreation.isPending || avatarError !== null} type="submit">
-                      {providerCreation.isPending
+                    <Button disabled={isSavePending || avatarError !== null} type="submit">
+                      {isSavePending
                         ? <Spinner data-icon="inline-start" />
                         : null}
-                      <span>Add Provider</span>
+                      <span>{submitLabel}</span>
                     </Button>
                   </div>
                 </>
@@ -925,4 +1010,39 @@ export function ProviderAddPage() {
       </AlertDialog>
     </main>
   );
+}
+
+export function ProviderAddPage() {
+  return <ProviderForm mode="add" />;
+}
+
+function ExistingProviderForm({ mode }: { mode: 'copy' | 'edit' }) {
+  const { providerId = '' } = useParams();
+  const provider = useProvider(providerId);
+
+  if (provider.isPending) {
+    return (
+      <main className="w-full" aria-label="Loading Provider" role="status">
+        <Skeleton className="h-96 w-full" />
+      </main>
+    );
+  }
+  if (provider.isError) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>Provider could not be loaded</AlertTitle>
+        <AlertDescription>{provider.error.message}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  return <ProviderForm mode={mode} provider={provider.data} />;
+}
+
+export function ProviderCopyPage() {
+  return <ExistingProviderForm mode="copy" />;
+}
+
+export function ProviderEditPage() {
+  return <ExistingProviderForm mode="edit" />;
 }

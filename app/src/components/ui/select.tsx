@@ -3,7 +3,7 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { UnfoldMoreIcon, Tick02Icon, ArrowUp01Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons"
 
-import { cn } from "#/lib/utils"
+import { cn } from "cn"
 
 const Select = SelectPrimitive.Root
 

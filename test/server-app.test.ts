@@ -15,11 +15,21 @@ import type { SettingsStore } from '../src/server/settings/store';
 
 const fixture = { webRoot: '' };
 
-function createTestApp() {
+function createTestApp(options: { inUseProviderId?: string } = {}) {
   let colorMode: 'dark' | 'light' | 'system' = 'system';
   let providerSequence = 0;
   const providers: Provider[] = [];
   const providerStore: ProviderStore = {
+    copyProvider: (id: string, input: CreateProviderRequest) => {
+      const existing = providers.find((provider) => provider.id === id);
+      if (!existing) {
+        return null;
+      }
+      if (input.runtime !== existing.runtime) {
+        throw new Error('A Provider Runtime cannot be changed.');
+      }
+      return providerStore.createProvider(input);
+    },
     createProvider: (input: CreateProviderRequest) => {
       providerSequence += 1;
       const provider: Provider = {
@@ -31,9 +41,39 @@ function createTestApp() {
       providers.unshift(provider);
       return provider;
     },
+    deleteProvider: (id: string) => {
+      const index = providers.findIndex((provider) => provider.id === id);
+      if (index === -1) {
+        return 'not-found';
+      }
+      if (options.inUseProviderId === id) {
+        return 'in-use';
+      }
+      providers.splice(index, 1);
+      return 'deleted';
+    },
     getProvider: (id: string) => providers.find((provider) => provider.id === id) ?? null,
     listProviders: (runtime: ProviderRuntime) => providers
       .filter((provider) => provider.runtime === runtime),
+    updateProvider: (id: string, input: CreateProviderRequest) => {
+      const index = providers.findIndex((provider) => provider.id === id);
+      if (index === -1) {
+        return null;
+      }
+      const existing = providers[index];
+      if (input.runtime !== existing.runtime) {
+        throw new Error('A Provider Runtime cannot be changed.');
+      }
+
+      const updated: Provider = {
+        ...input,
+        createdAt: existing.createdAt,
+        id: existing.id,
+        updatedAt: existing.updatedAt + 1,
+      };
+      providers[index] = updated;
+      return updated;
+    },
   };
   const detection = {
     configurationExists: false,
@@ -132,6 +172,32 @@ const codexProviderRequest = {
   officialWebsite: 'https://example.com',
   remark: null,
   runtime: 'codex',
+} satisfies CreateProviderRequest;
+
+const claudeProviderRequest = {
+  avatar: null,
+  configuration: {
+    apiKey: 'claude-secret',
+    apiKeyHeader: 'authorization',
+    baseUrl: 'https://claude.example.com',
+    fableModel: null,
+    haikuModel: null,
+    opusModel: null,
+    defaultModel: 'claude-model',
+    protocol: 'messages',
+    sonnetModel: null,
+    subagentModel: null,
+    subagentModelForce: false,
+    hideAiAttribution: false,
+    teammatesMode: false,
+    enableToolSearch: false,
+    maxEffortThinking: false,
+    disableAutoUpdater: false,
+  },
+  name: 'Claude',
+  officialWebsite: null,
+  remark: null,
+  runtime: 'claude-code',
 } satisfies CreateProviderRequest;
 
 afterAll(async () => {
@@ -270,6 +336,58 @@ it('creates and lists Providers for the selected Runtime', async () => {
   });
 });
 
+it('deletes an available Provider', async () => {
+  const app = createTestApp();
+  await app.request('/api/providers', {
+    body: JSON.stringify(codexProviderRequest),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+
+  const response = await app.request('/api/providers/provider-1', {
+    method: 'DELETE',
+  });
+
+  expect(response.status).toBe(200);
+  await expect(response.json()).resolves.toEqual({
+    status: 'SUCCESS',
+    data: true,
+  });
+  const listResponse = await app.request('/api/providers?runtime=codex');
+  await expect(listResponse.json()).resolves.toMatchObject({ data: [] });
+});
+
+it('returns business errors when a Provider cannot be deleted', async () => {
+  const missingResponse = await createTestApp().request(
+    '/api/providers/missing',
+    { method: 'DELETE' },
+  );
+  expect(missingResponse.status).toBe(200);
+  await expect(missingResponse.json()).resolves.toMatchObject({
+    status: 'PROVIDER_NOT_FOUND',
+    data: false,
+  });
+
+  const app = createTestApp({ inUseProviderId: 'provider-1' });
+  await app.request('/api/providers', {
+    body: JSON.stringify(codexProviderRequest),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+  const inUseResponse = await app.request('/api/providers/provider-1', {
+    method: 'DELETE',
+  });
+  expect(inUseResponse.status).toBe(200);
+  await expect(inUseResponse.json()).resolves.toMatchObject({
+    status: 'PROVIDER_IN_USE',
+    data: false,
+  });
+  const listResponse = await app.request('/api/providers?runtime=codex');
+  await expect(listResponse.json()).resolves.toMatchObject({
+    data: [expect.objectContaining({ id: 'provider-1' })],
+  });
+});
+
 it('does not return Claude Code credentials after creation', async () => {
   const app = createTestApp();
   const request = {
@@ -316,6 +434,185 @@ it('does not return Claude Code credentials after creation', async () => {
       runtime: 'claude-code',
     },
   });
+});
+
+it('returns complete Provider details for local editing', async () => {
+  const app = createTestApp();
+  await app.request('/api/providers', {
+    body: JSON.stringify({
+      ...codexProviderRequest,
+      configuration: { ...codexProviderRequest.configuration, apiKey: 'saved-secret' },
+    }),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+
+  const response = await app.request('/api/providers/provider-1');
+
+  expect(response.status).toBe(200);
+  const result = await response.json();
+  expect(result).toEqual({
+    status: 'SUCCESS',
+    data: {
+      avatar: null,
+      configuration: {
+        apiKey: 'saved-secret',
+        baseUrl: 'https://example.com/v1',
+        defaultModel: 'example-model',
+        protocol: 'responses',
+        reviewModel: null,
+      },
+      createdAt: 1,
+      id: 'provider-1',
+      name: 'Example',
+      officialWebsite: 'https://example.com',
+      remark: null,
+      runtime: 'codex',
+      updatedAt: 1,
+    },
+  });
+});
+
+it('updates a Provider with its complete configuration', async () => {
+  const app = createTestApp();
+  await app.request('/api/providers', {
+    body: JSON.stringify({
+      ...codexProviderRequest,
+      configuration: { ...codexProviderRequest.configuration, apiKey: 'saved-secret' },
+    }),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+  const response = await app.request('/api/providers/provider-1', {
+    body: JSON.stringify({
+      ...codexProviderRequest,
+      configuration: {
+        ...codexProviderRequest.configuration,
+        apiKey: 'saved-secret',
+        baseUrl: 'https://updated.example.com/v1',
+      },
+      name: 'Updated Provider',
+    } satisfies CreateProviderRequest),
+    headers: { 'content-type': 'application/json' },
+    method: 'PUT',
+  });
+
+  expect(response.status).toBe(200);
+  await expect(response.json()).resolves.toMatchObject({
+    status: 'SUCCESS',
+    data: {
+      baseUrl: 'https://updated.example.com/v1',
+      id: 'provider-1',
+      name: 'Updated Provider',
+    },
+  });
+  const detailResponse = await app.request('/api/providers/provider-1');
+  await expect(detailResponse.json()).resolves.toMatchObject({
+    data: { configuration: { apiKey: 'saved-secret' } },
+  });
+});
+
+it('copies a Provider from its complete configuration', async () => {
+  const app = createTestApp();
+  await app.request('/api/providers', {
+    body: JSON.stringify({
+      ...codexProviderRequest,
+      configuration: { ...codexProviderRequest.configuration, apiKey: 'saved-secret' },
+    }),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+  const response = await app.request('/api/providers/provider-1/copy', {
+    body: JSON.stringify({
+      ...codexProviderRequest,
+      configuration: {
+        ...codexProviderRequest.configuration,
+        apiKey: 'saved-secret',
+      },
+      name: 'Example Copy',
+    } satisfies CreateProviderRequest),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+
+  expect(response.status).toBe(201);
+  await expect(response.json()).resolves.toMatchObject({
+    status: 'SUCCESS',
+    data: { id: 'provider-2', name: 'Example Copy' },
+  });
+  const detailResponse = await app.request('/api/providers/provider-2');
+  await expect(detailResponse.json()).resolves.toMatchObject({
+    data: {
+      configuration: { apiKey: 'saved-secret' },
+      name: 'Example Copy',
+    },
+  });
+});
+
+it('returns business errors for missing Providers and rejects Runtime changes', async () => {
+  const app = createTestApp();
+  const missing = await app.request('/api/providers/missing');
+  expect(missing.status).toBe(200);
+  await expect(missing.json()).resolves.toMatchObject({
+    status: 'PROVIDER_NOT_FOUND',
+    data: null,
+  });
+
+  await app.request('/api/providers', {
+    body: JSON.stringify(codexProviderRequest),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+  const runtimeChange = await app.request('/api/providers/provider-1', {
+    body: JSON.stringify(claudeProviderRequest),
+    headers: { 'content-type': 'application/json' },
+    method: 'PUT',
+  });
+  expect(runtimeChange.status).toBe(400);
+  const copyRuntimeChange = await app.request('/api/providers/provider-1/copy', {
+    body: JSON.stringify(claudeProviderRequest),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+  expect(copyRuntimeChange.status).toBe(400);
+
+  const missingUpdate = await app.request('/api/providers/missing', {
+    body: JSON.stringify(codexProviderRequest),
+    headers: { 'content-type': 'application/json' },
+    method: 'PUT',
+  });
+  expect(missingUpdate.status).toBe(200);
+  await expect(missingUpdate.json()).resolves.toMatchObject({
+    status: 'PROVIDER_NOT_FOUND',
+    data: null,
+  });
+
+  const missingCopy = await app.request('/api/providers/missing/copy', {
+    body: JSON.stringify(codexProviderRequest),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+  expect(missingCopy.status).toBe(200);
+  await expect(missingCopy.json()).resolves.toMatchObject({
+    status: 'PROVIDER_NOT_FOUND',
+    data: null,
+  });
+});
+
+it('rejects invalid Provider updates', async () => {
+  const app = createTestApp();
+  await app.request('/api/providers', {
+    body: JSON.stringify(codexProviderRequest),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+  const response = await app.request('/api/providers/provider-1', {
+    body: JSON.stringify({ ...codexProviderRequest, name: '' }),
+    headers: { 'content-type': 'application/json' },
+    method: 'PUT',
+  });
+
+  expect(response.status).toBe(400);
 });
 
 it.each([

@@ -1,4 +1,5 @@
 export const apiStatusCodes = {
+  providerInUse: 'PROVIDER_IN_USE',
   providerNotFound: 'PROVIDER_NOT_FOUND',
   runtimeApplyFailed: 'RUNTIME_APPLY_FAILED',
   runtimeConfigurationChanged: 'RUNTIME_CONFIGURATION_CHANGED',
@@ -146,6 +147,14 @@ export type CreateProviderRequest
   };
 
 export type ProviderResponse = ApiResponse<ProviderSummary>;
+
+export type ProviderDetailResponse = ApiResponse<Provider | null>;
+
+export type ProviderCopyResponse = ApiResponse<ProviderSummary | null>;
+
+export type ProviderDeleteResponse = ApiResponse<boolean>;
+
+export type ProviderUpdateResponse = ApiResponse<ProviderSummary | null>;
 
 export type ProvidersResponse = ApiResponse<ProviderSummary[]>;
 

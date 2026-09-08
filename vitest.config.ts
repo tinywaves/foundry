@@ -26,6 +26,7 @@ export default defineConfig({
         optimizeDeps: {
           include: [
             '@base-ui/react/checkbox',
+            '@base-ui/react/popover',
             '@base-ui/react/select',
             '@base-ui/react/switch',
           ],

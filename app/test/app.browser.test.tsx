@@ -417,6 +417,9 @@ describe('application routing and layouts', () => {
       if (requestPath === '/api/providers') {
         return Promise.resolve(createProvidersResponse([provider]));
       }
+      if (requestPath === '/api/runtimes') {
+        return Promise.resolve(createRuntimesResponse(createRuntimeSummaries()));
+      }
       return Promise.resolve(createHealthResponse());
     }));
 
@@ -429,10 +432,15 @@ describe('application routing and layouts', () => {
     ))
       .toBeVisible();
     await expect.element(screen.getByText('Example Provider')).toBeVisible();
-    await expect.element(screen.getByText('https://api.example.com/v1')).toBeVisible();
+    const baseUrlLink = screen.getByRole('link', { name: 'https://api.example.com/v1' });
+    await expect.element(baseUrlLink).toHaveAttribute(
+      'href',
+      'https://api.example.com/v1',
+    );
+    await expect.element(baseUrlLink).toHaveAttribute('target', '_blank');
     await expect.element(screen.getByText('Example remark')).not.toBeInTheDocument();
     const providerActions = [
-      'Enable Example Provider',
+      'Apply Example Provider',
       'Edit Example Provider',
       'Copy Example Provider',
       'Test Example Provider connection',
@@ -446,6 +454,116 @@ describe('application routing and layouts', () => {
     }
     await expect.element(screen.getByText('Configuration')).not.toBeInTheDocument();
     await expect.element(screen.getByText('API Key')).not.toBeInTheDocument();
+  });
+
+  test('shows the enabled Provider as in use and allows reapplying it', async () => {
+    const provider = createCodexProvider();
+    const runtimes = createRuntimeSummaries();
+    runtimes[0] = {
+      ...runtimes[0],
+      appliedAt: 100,
+      managed: true,
+      providerId: provider.id,
+    };
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const requestPath = getRequestPath(input);
+      if (requestPath === '/api/settings') {
+        return Promise.resolve(createSettingsResponse());
+      }
+      if (requestPath === '/api/providers') {
+        return Promise.resolve(createProvidersResponse([provider]));
+      }
+      if (requestPath === '/api/runtimes') {
+        return Promise.resolve(createRuntimesResponse(runtimes));
+      }
+      return Promise.resolve(createHealthResponse());
+    }));
+
+    const screen = await renderApp('/providers?runtime=codex');
+
+    await expect.element(screen.getByText('In Use', { exact: true })).toBeVisible();
+    const reapplyButton = screen.getByRole('button', { name: 'Reapply Example Provider' });
+    await expect.element(reapplyButton).toHaveTextContent('Reapply');
+    await expect.element(reapplyButton).not.toBeDisabled();
+  });
+
+  test('previews and applies a Provider from its card', async () => {
+    const provider = createCodexProvider();
+    const runtimes = createRuntimeSummaries();
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string'
+        ? new URL(input, 'http://localhost')
+        : (input instanceof URL ? input : new URL(input.url));
+      if (url.pathname === '/api/settings') {
+        return Promise.resolve(createSettingsResponse());
+      }
+      if (url.pathname === '/api/providers') {
+        return Promise.resolve(createProvidersResponse([provider]));
+      }
+      if (url.pathname === '/api/runtimes' && init?.method === undefined) {
+        return Promise.resolve(createRuntimesResponse(runtimes));
+      }
+      if (url.pathname === '/api/runtimes/codex/preview') {
+        return Promise.resolve(Response.json({
+          status: 'SUCCESS',
+          data: {
+            changes: [
+              {
+                current: { kind: 'absent' },
+                key: 'model_provider',
+                operation: 'add',
+                proposed: { kind: 'plain', value: 'foundry' },
+              },
+            ],
+            file: {
+              exists: true,
+              hash: '0'.repeat(64),
+              path: '/Users/test/.codex/config.toml',
+            },
+            kind: 'ready',
+            providerKey: 'foundry',
+            runtime: 'codex',
+            target: { kind: 'provider', providerId: provider.id },
+            unchanged: [],
+          },
+        }));
+      }
+      if (url.pathname === '/api/runtimes/codex/apply') {
+        return Promise.resolve(Response.json({
+          status: 'SUCCESS',
+          data: {
+            ...runtimes[0],
+            appliedAt: 100,
+            managed: true,
+            providerId: provider.id,
+          },
+        }));
+      }
+      return Promise.resolve(createHealthResponse());
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const screen = await renderApp('/providers?runtime=codex');
+
+    await screen.getByRole('button', { name: 'Apply Example Provider' }).click();
+    await expect.element(screen.getByRole('heading', { name: 'Preview Changes' }))
+      .toBeVisible();
+    await screen.getByRole('button', { name: 'Apply' }).click();
+
+    await expect.element(screen.getByText('In Use', { exact: true })).toBeVisible();
+    const reapplyButton = screen.getByRole('button', { name: 'Reapply Example Provider' });
+    await expect.element(reapplyButton).toHaveTextContent('Reapply');
+    await expect.element(reapplyButton).not.toBeDisabled();
+    await expect.element(screen.getByText('Runtime saved')).toBeVisible();
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/runtimes/codex/preview',
+      expect.objectContaining({
+        body: JSON.stringify({
+          target: { kind: 'provider', providerId: provider.id },
+        }),
+        method: 'POST',
+      }),
+    );
   });
 
   test('confirms before clearing a dirty Provider form for another Runtime', async () => {

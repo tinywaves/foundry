@@ -6,9 +6,10 @@ import {
   Copy01Icon,
   Delete02Icon,
   Edit02Icon,
+  SquareArrowOutUpRightIcon,
 } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
 import {
@@ -21,6 +22,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from '#/components/ui/avatar';
+import { Badge } from '#/components/ui/badge';
 import { Button } from '#/components/ui/button';
 import {
   Card,
@@ -46,6 +48,8 @@ import {
   ToggleGroupItem,
 } from '#/components/ui/toggle-group';
 import { useProviders } from '#/hooks/use-providers';
+import { useRuntimes } from '#/hooks/use-runtimes';
+import { RuntimePreviewDialog } from '#/pages/execution/runtimes';
 
 const runtimeLabels = {
   'claude-code': 'Claude Code',
@@ -57,11 +61,23 @@ function isProviderRuntime(value: string | null): value is ProviderRuntime {
     && providerRuntimes.includes(value as ProviderRuntime);
 }
 
-function ProviderCard({ provider }: { provider: ProviderSummary }) {
+function ProviderCard({
+  isEnabled,
+  provider,
+}: {
+  isEnabled: boolean;
+  provider: ProviderSummary;
+}) {
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const target = useMemo(() => ({
+    kind: 'provider' as const,
+    providerId: provider.id,
+  }), [provider.id]);
+
   return (
     <Card data-testid={`provider-${provider.id}`} size="sm">
       <CardHeader className="has-data-[slot=card-action]:grid-cols-1 @sm/card-header:has-data-[slot=card-action]:grid-cols-[1fr_auto]">
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3 @sm/card-header:row-span-2">
           <Avatar size="lg">
             {provider.avatar
               ? (
@@ -74,15 +90,39 @@ function ProviderCard({ provider }: { provider: ProviderSummary }) {
             <AvatarFallback>{provider.name.charAt(0) || 'P'}</AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <CardTitle className="truncate">{provider.name}</CardTitle>
-            <CardDescription className="truncate">
-              {provider.baseUrl}
+            <div className="flex min-w-0 items-center gap-2">
+              <CardTitle className="truncate">{provider.name}</CardTitle>
+              {isEnabled && (
+                <Badge variant="secondary">In Use</Badge>
+              )}
+            </div>
+            <CardDescription className="min-w-0">
+              <a
+                className="inline-flex max-w-full items-center gap-1 underline-offset-3 hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:outline-none focus-visible:underline"
+                href={provider.baseUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                <span className="truncate">{provider.baseUrl}</span>
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  className="size-3 shrink-0"
+                  icon={SquareArrowOutUpRightIcon}
+                  strokeWidth={2}
+                />
+              </a>
             </CardDescription>
           </div>
         </div>
         <CardAction className="col-start-1 row-start-2 mt-2 flex flex-wrap items-center gap-1 justify-self-start @sm/card-header:col-start-2 @sm/card-header:row-span-2 @sm/card-header:row-start-1 @sm/card-header:mt-0 @sm/card-header:self-center @sm/card-header:justify-self-end">
-          <Button aria-label={`Enable ${provider.name}`} type="button">
-            Enable
+          <Button
+            aria-label={isEnabled
+              ? `Reapply ${provider.name}`
+              : `Apply ${provider.name}`}
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+          >
+            {isEnabled ? 'Reapply' : 'Apply'}
           </Button>
           <Tooltip>
             <TooltipTrigger
@@ -146,6 +186,14 @@ function ProviderCard({ provider }: { provider: ProviderSummary }) {
           </Tooltip>
         </CardAction>
       </CardHeader>
+      {previewOpen && (
+        <RuntimePreviewDialog
+          isOpen
+          runtime={provider.runtime}
+          target={target}
+          onOpenChange={setPreviewOpen}
+        />
+      )}
     </Card>
   );
 }
@@ -157,6 +205,10 @@ export function ProvidersPage() {
     ? requestedRuntime
     : 'codex';
   const providers = useProviders(runtime);
+  const runtimes = useRuntimes();
+  const enabledProviderId = runtimes.data?.find(
+    (summary) => summary.runtime === runtime && summary.managed,
+  )?.providerId;
   const returnTo = `/providers?runtime=${runtime}`;
 
   useEffect(() => {
@@ -246,7 +298,11 @@ export function ProvidersPage() {
       {providers.data && providers.data.length > 0 && (
         <div className="flex flex-col gap-4">
           {providers.data.map((provider) => (
-            <ProviderCard key={provider.id} provider={provider} />
+            <ProviderCard
+              isEnabled={provider.id === enabledProviderId}
+              key={provider.id}
+              provider={provider}
+            />
           ))}
         </div>
       )}

@@ -20,6 +20,7 @@ import type { SyntheticEvent } from 'react';
 import { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 
+import { RuntimeOption } from '#/components/runtime-option';
 import { SecretInput } from '#/components/secret-input';
 import {
   Alert,
@@ -89,11 +90,6 @@ import {
 } from '#/hooks/use-providers';
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
-
-const runtimeLabels = {
-  'claude-code': 'Claude Code',
-  'codex': 'Codex',
-} satisfies Record<ProviderRuntime, string>;
 
 const capabilityLabels = {
   adaptive_thinking: 'Adaptive thinking',
@@ -611,7 +607,7 @@ function ProviderForm({
             >
               {providerRuntimes.map((providerRuntime) => (
                 <ToggleGroupItem key={providerRuntime} value={providerRuntime}>
-                  {runtimeLabels[providerRuntime]}
+                  <RuntimeOption runtime={providerRuntime} />
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>

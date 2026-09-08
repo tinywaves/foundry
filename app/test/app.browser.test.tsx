@@ -118,6 +118,18 @@ function createRuntimeSummaries(): RuntimeSummary[] {
   ];
 }
 
+function expectRuntimeIcons() {
+  for (const runtime of ['claude-code', 'codex']) {
+    const icon = document.querySelector<HTMLImageElement>(
+      `img[data-runtime-icon="${CSS.escape(runtime)}"]`,
+    );
+
+    expect(icon).not.toBeNull();
+    expect(icon?.getAttribute('alt')).toBe('');
+    expect(icon?.getAttribute('src')).toBeTruthy();
+  }
+}
+
 function createCodexProvider(
   overrides: Partial<ProviderSummary> = {},
 ): ProviderSummary {
@@ -452,6 +464,7 @@ describe('application routing and layouts', () => {
       'Saved model-service connections for each Runtime.',
     ))
       .toBeVisible();
+    expectRuntimeIcons();
     await expect.element(screen.getByText('Example Provider')).toBeVisible();
     const baseUrlLink = screen.getByRole('link', { name: 'https://api.example.com/v1' });
     await expect.element(baseUrlLink).toHaveAttribute(
@@ -722,6 +735,8 @@ describe('application routing and layouts', () => {
   test('confirms before clearing a dirty Provider form for another Runtime', async () => {
     const screen = await renderApp('/providers/new');
 
+    await expect.element(screen.getByRole('button', { name: 'Codex' })).toBeVisible();
+    expectRuntimeIcons();
     await screen.getByRole('button', { name: 'Codex' }).click();
     await screen.getByLabelText('Name', { exact: true }).fill('Draft Provider');
     await screen.getByRole('button', { name: 'Claude Code' }).click();

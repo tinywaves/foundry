@@ -12,6 +12,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 
+import { RuntimeOption } from '#/components/runtime-option';
 import {
   Alert,
   AlertDescription,
@@ -352,7 +353,7 @@ export function ProvidersPage() {
               render={<Link to={`/providers?runtime=${providerRuntime}`} />}
               value={providerRuntime}
             >
-              {runtimeLabels[providerRuntime]}
+              <RuntimeOption runtime={providerRuntime} />
             </ToggleGroupItem>
           ))}
         </ToggleGroup>

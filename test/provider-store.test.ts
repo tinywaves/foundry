@@ -134,6 +134,43 @@ it('persists duplicate Provider names and lists the newest matching Runtime firs
   }
 });
 
+it('creates an imported Provider batch atomically', async () => {
+  const database = await openFoundryDatabase({
+    databasePath: await createDatabasePath(),
+    migrationsFolder,
+  });
+  let idSequence = 0;
+  const store = new DrizzleProviderStore(
+    database.db,
+    () => 100,
+    () => `provider-${++idSequence}`,
+  );
+  const invalidProvider = {
+    ...createCodexProvider('Invalid'),
+    configuration: {
+      ...createCodexProvider('Invalid').configuration,
+      baseUrl: 'not-a-url',
+    },
+  };
+
+  try {
+    expect(() => store.createProviders([
+      createCodexProvider('Rolled back'),
+      invalidProvider,
+    ])).toThrow();
+    expect(store.listProviders('codex')).toEqual([]);
+
+    const imported = store.createProviders([
+      createCodexProvider('First'),
+      createCodexProvider('Second'),
+    ]);
+    expect(imported).toHaveLength(2);
+    expect(store.listProviders('codex')).toHaveLength(2);
+  } finally {
+    database.client.close();
+  }
+});
+
 it('does not list soft-deleted Providers', async () => {
   const database = await openFoundryDatabase({
     databasePath: await createDatabasePath(),

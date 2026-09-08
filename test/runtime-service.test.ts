@@ -62,6 +62,7 @@ function createService(options: {
   const providerStore: ProviderStore = {
     copyProvider: () => provider,
     createProvider: () => provider,
+    createProviders: () => [provider],
     deleteProvider: () => 'deleted',
     getProvider: options.getProvider ?? (() => provider),
     listProviders: () => [provider],

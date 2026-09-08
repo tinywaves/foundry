@@ -228,6 +228,9 @@ importers:
       '@hono/zod-validator':
         specifier: ^0.9.0
         version: 0.9.1(hono@4.13.5)(zod@4.5.4)
+      '@zip.js/zip.js':
+        specifier: ^2.12.0
+        version: 2.12.0
       better-sqlite3:
         specifier: ^13.0.3
         version: 13.0.3
@@ -2459,6 +2462,10 @@ packages:
 
   '@yuku-toolchain/types@0.8.7':
     resolution: {integrity: sha512-2Z53dNxAJL6UvFoIrDZvYf3zlO8s4VJK4O2hhaB4mXVwwpX/7ajtss3cmfqKvamlNLWyt9FSWs4eoYdlbxpnHA==}
+
+  '@zip.js/zip.js@2.12.0':
+    resolution: {integrity: sha512-ceDzrSN6tYXLJa5KSWnptaKVJRFKMC+MROTlLYHj0WId2cNWhVt+5Y4dzEN1jXckRw3ZqtPlWBkwnLfHSgMQ5A==}
+    engines: {bun: '>=0.7.0', deno: '>=1.0.0', node: '>=18.0.0'}
 
   accepts@2.0.0:
     resolution: {integrity: sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng==}
@@ -7214,6 +7221,8 @@ snapshots:
     optional: true
 
   '@yuku-toolchain/types@0.8.7': {}
+
+  '@zip.js/zip.js@2.12.0': {}
 
   accepts@2.0.0:
     dependencies:

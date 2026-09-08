@@ -7,6 +7,10 @@ import path from 'node:path';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
+import { registerDataExportRoutes } from './data-export/routes';
+import { FoundryExportService } from './data-export/service';
+import { registerDataImportRoutes } from './data-import/routes';
+import { FoundryImportService } from './data-import/service';
 import type { ProviderStore } from './providers/store';
 import type { ProviderConnectionTester } from './providers/connection-tester';
 import { registerProviderRoutes } from './providers/routes';
@@ -48,6 +52,14 @@ export function createFoundryApp(options: CreateFoundryAppOptions): Hono {
     } satisfies HealthResponse),
   );
 
+  registerDataExportRoutes(
+    app,
+    new FoundryExportService(options.providerStore, options.settingsStore),
+  );
+  registerDataImportRoutes(
+    app,
+    new FoundryImportService(options.providerStore, options.settingsStore),
+  );
   registerSettingsRoutes(app, options.settingsStore);
   registerProviderRoutes(app, options.providerStore, options.providerConnectionTester);
   registerRuntimeRoutes(app, options.runtimeService);

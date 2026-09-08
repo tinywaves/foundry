@@ -33,6 +33,45 @@ export interface UpdateApplicationSettingsRequest {
 
 export type SettingsResponse = ApiResponse<ApplicationSettings>;
 
+export const foundryExportFormat = 'foundry-export-v1' as const;
+
+export const foundryExportMediaType = 'application/octet-stream' as const;
+
+export const foundryExportModuleIds = ['settings', 'providers'] as const;
+
+export type FoundryExportModuleId = typeof foundryExportModuleIds[number];
+
+export interface FoundryExportModuleManifest {
+  id: FoundryExportModuleId;
+  mediaType: 'application/json';
+  overwrite: boolean;
+  path: string;
+  sha256: string;
+  size: number;
+}
+
+export interface FoundryExportManifest {
+  createdAt: string;
+  format: typeof foundryExportFormat;
+  foundryVersion: string;
+  modules: FoundryExportModuleManifest[];
+}
+
+export type FoundryImportModuleStatus = 'failed' | 'imported' | 'unsupported';
+
+export interface FoundryImportModuleResult {
+  id: string;
+  importedItems: number;
+  message?: string;
+  status: FoundryImportModuleStatus;
+}
+
+export interface FoundryImportResult {
+  modules: FoundryImportModuleResult[];
+}
+
+export type FoundryImportResponse = ApiResponse<FoundryImportResult>;
+
 export const providerRuntimes = ['codex', 'claude-code'] as const;
 
 export type ProviderRuntime = typeof providerRuntimes[number];
@@ -146,6 +185,10 @@ export type CreateProviderRequest
     configuration: ClaudeCodeProviderConfiguration;
     runtime: 'claude-code';
   };
+
+export type FoundrySettingsExport = ApplicationSettings;
+
+export type FoundryProvidersExport = CreateProviderRequest[];
 
 export type ProviderResponse = ApiResponse<ProviderSummary>;
 

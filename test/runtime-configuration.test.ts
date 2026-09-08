@@ -1,4 +1,5 @@
 import type { Provider } from '@dhzh/foundry-api-contract';
+import { runtimeManagedFieldReferences } from '@dhzh/foundry-api-contract';
 import { parse as parseToml } from '@decimalturn/toml-patch';
 import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -92,6 +93,13 @@ it('uses foundry when Codex has no nested Provider table and preserves formattin
   if (preview.kind !== 'ready') {
     throw new Error('Expected a ready Preview.');
   }
+  expect(new Set([
+    ...preview.changes,
+    ...preview.unchanged,
+  ].map((field) => field.key.replace(
+    '[model_providers.foundry]',
+    '[model_providers.<key>]',
+  )))).toEqual(new Set(runtimeManagedFieldReferences.codex));
   expect(preview.changes.map((field) => field.key)).toContain(
     '[model_providers.foundry].base_url',
   );
@@ -243,6 +251,12 @@ it('writes Claude managed env fields and removes only those fields for Official 
   if (providerPreview.kind !== 'ready') {
     throw new Error('Expected a ready Preview.');
   }
+  expect(new Set([
+    ...providerPreview.changes,
+    ...providerPreview.unchanged,
+  ].map((field) => field.key))).toEqual(
+    new Set(runtimeManagedFieldReferences['claude-code']),
+  );
   expect(providerPreview.changes).toContainEqual(expect.objectContaining({
     key: 'env.ANTHROPIC_API_KEY',
     proposed: { kind: 'secret', value: 'claude-secret' },

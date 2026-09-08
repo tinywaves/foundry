@@ -1,21 +1,28 @@
 import type {
   ProviderRuntime,
+  ProviderSummary,
   RuntimeConfigurationPreviewField,
   RuntimeConfigurationPreviewValue,
   RuntimeConfigurationTarget,
   RuntimeSummary,
 } from '@dhzh/foundry-api-contract';
+import {
+  providerRuntimeLabels,
+  runtimeManagedFieldReferences,
+} from '@dhzh/foundry-api-contract';
 import { EyeIcon, ViewOffSlashIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { ProviderAvatar } from '#/components/provider-avatar';
+import { RuntimeIcon, RuntimeOption } from '#/components/runtime-option';
 import { Alert, AlertDescription, AlertTitle } from '#/components/ui/alert';
+import { Badge } from '#/components/ui/badge';
 import { Button } from '#/components/ui/button';
 import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -44,6 +51,11 @@ import {
 import { Skeleton } from '#/components/ui/skeleton';
 import { Spinner } from '#/components/ui/spinner';
 import { toast } from '#/components/ui/toast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '#/components/ui/tooltip';
 import { useProviders } from '#/hooks/use-providers';
 import {
   RuntimeRequestError,
@@ -53,45 +65,89 @@ import {
 } from '#/hooks/use-runtimes';
 
 const officialDefaultValue = 'official-default';
-const runtimeLabels: Record<ProviderRuntime, string> = {
-  'claude-code': 'Claude Code',
-  'codex': 'Codex',
-};
-const managedFieldReferences: Record<ProviderRuntime, string[]> = {
-  'claude-code': [
-    'env.ANTHROPIC_BASE_URL',
-    'env.ANTHROPIC_AUTH_TOKEN',
-    'env.ANTHROPIC_API_KEY',
-    'env.ANTHROPIC_MODEL',
-    'env.ANTHROPIC_DEFAULT_OPUS_MODEL',
-    'env.ANTHROPIC_DEFAULT_OPUS_MODEL_NAME',
-    'env.ANTHROPIC_DEFAULT_OPUS_MODEL_DESCRIPTION',
-    'env.ANTHROPIC_DEFAULT_OPUS_MODEL_SUPPORTED_CAPABILITIES',
-    'env.ANTHROPIC_DEFAULT_SONNET_MODEL',
-    'env.ANTHROPIC_DEFAULT_SONNET_MODEL_NAME',
-    'env.ANTHROPIC_DEFAULT_SONNET_MODEL_DESCRIPTION',
-    'env.ANTHROPIC_DEFAULT_SONNET_MODEL_SUPPORTED_CAPABILITIES',
-    'env.ANTHROPIC_DEFAULT_HAIKU_MODEL',
-    'env.ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME',
-    'env.ANTHROPIC_DEFAULT_HAIKU_MODEL_DESCRIPTION',
-    'env.ANTHROPIC_DEFAULT_HAIKU_MODEL_SUPPORTED_CAPABILITIES',
-    'env.ANTHROPIC_DEFAULT_FABLE_MODEL',
-    'env.ANTHROPIC_DEFAULT_FABLE_MODEL_NAME',
-    'env.ANTHROPIC_DEFAULT_FABLE_MODEL_DESCRIPTION',
-    'env.ANTHROPIC_DEFAULT_FABLE_MODEL_SUPPORTED_CAPABILITIES',
-    'env.CLAUDE_CODE_SUBAGENT_MODEL',
-    'env.CLAUDE_CODE_SUBAGENT_MODEL_FORCE',
-  ],
-  'codex': [
-    'model',
-    'review_model',
-    'model_provider',
-    '[model_providers.<key>].name',
-    '[model_providers.<key>].base_url',
-    '[model_providers.<key>].wire_api',
-    '[model_providers.<key>].experimental_bearer_token',
-  ],
-};
+
+function RuntimeMetadataValue({ value }: { value: string }) {
+  const valueRef = useRef<HTMLSpanElement>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  useEffect(() => {
+    const element = valueRef.current;
+    if (!element) {
+      return;
+    }
+
+    const updateTruncation = () => {
+      setIsTruncated(element.scrollWidth > element.clientWidth);
+    };
+
+    const frame = requestAnimationFrame(updateTruncation);
+    const observer = new ResizeObserver(updateTruncation);
+    observer.observe(element);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [value]);
+
+  return (
+    <dd className="min-w-0">
+      <Tooltip disabled={!isTruncated}>
+        <TooltipTrigger
+          render={(
+            <span
+              ref={valueRef}
+              className="block truncate font-mono text-foreground"
+              tabIndex={isTruncated ? 0 : undefined}
+            />
+          )}
+        >
+          {value}
+        </TooltipTrigger>
+        <TooltipContent className="max-w-sm break-all">
+          <code className="font-mono">{value}</code>
+        </TooltipContent>
+      </Tooltip>
+    </dd>
+  );
+}
+
+function OfficialDefaultOption({ runtime }: { runtime: ProviderRuntime }) {
+  return (
+    <>
+      <RuntimeIcon runtime={runtime} size={24} />
+      <span className="truncate">Official Default</span>
+    </>
+  );
+}
+
+function ProviderSelectOption({ provider }: { provider: ProviderSummary }) {
+  return (
+    <>
+      <ProviderAvatar avatar={provider.avatar} name={provider.name} size="sm" />
+      <span className="truncate">{provider.name}</span>
+    </>
+  );
+}
+
+function SelectedProviderValue({
+  isPending,
+  provider,
+  runtime,
+  selection,
+}: {
+  isPending: boolean;
+  provider: ProviderSummary | undefined;
+  runtime: ProviderRuntime;
+  selection: string;
+}) {
+  if (selection === officialDefaultValue) {
+    return <OfficialDefaultOption runtime={runtime} />;
+  }
+  if (provider) {
+    return <ProviderSelectOption provider={provider} />;
+  }
+  return isPending ? 'Loading Providers...' : 'Provider unavailable';
+}
 
 function selectedTarget(value: string): RuntimeConfigurationTarget {
   return value === officialDefaultValue
@@ -169,37 +225,46 @@ function PreviewFields({ fields }: { fields: RuntimeConfigurationPreviewField[] 
   );
 }
 
-function ManagedFieldReference({ runtime }: { runtime: ProviderRuntime }) {
-  const fields = managedFieldReferences[runtime];
+function ManagedFieldsDialog({
+  isOpen,
+  runtime,
+  onOpenChange,
+}: {
+  isOpen: boolean;
+  runtime: ProviderRuntime;
+  onOpenChange: (isOpen: boolean) => void;
+}) {
+  const fields = runtimeManagedFieldReferences[runtime];
 
   return (
-    <Collapsible>
-      <div className="rounded-md border bg-muted/20">
-        <CollapsibleTrigger
-          render={<Button className="h-auto w-full justify-between px-3 py-2" variant="ghost" />}
-        >
-          <span className="text-start">
-            <span className="block font-medium">Foundry managed fields</span>
-            <span className="block font-normal text-muted-foreground">
-              Static display reference only
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <RuntimeIcon runtime={runtime} />
+            <span>
+              {providerRuntimeLabels[runtime]}
+              {' fields managed by Foundry'}
             </span>
-          </span>
-          <span className="text-muted-foreground">{fields.length}</span>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="border-t px-3 py-3">
-          <div className="flex max-h-64 flex-col gap-1 overflow-y-auto">
-            {fields.map((field) => (
-              <code
-                className="break-all rounded bg-muted px-2 py-1 text-[0.6875rem]"
-                key={field}
-              >
+          </DialogTitle>
+          <DialogDescription>
+            {fields.length}
+            {' '}
+            configuration fields
+          </DialogDescription>
+        </DialogHeader>
+        <ul className="flex max-h-80 flex-col gap-1 overflow-y-auto">
+          {fields.map((field) => (
+            <li key={field}>
+              <code className="block break-all rounded bg-muted px-2 py-1 text-[0.6875rem]">
                 {field}
               </code>
-            ))}
-          </div>
-        </CollapsibleContent>
-      </div>
-    </Collapsible>
+            </li>
+          ))}
+        </ul>
+        <DialogFooter showCloseButton />
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -355,7 +420,7 @@ export function RuntimePreviewDialog({
                 onError: (error) => displayError(error, 'Apply failed'),
                 onSuccess: () => {
                   toast.add({
-                    description: `${runtimeLabels[runtime]} now uses the selected configuration.`,
+                    description: `${providerRuntimeLabels[runtime]} now uses the selected configuration.`,
                     title: 'Runtime saved',
                     type: 'success',
                   });
@@ -385,37 +450,34 @@ function RuntimeCard({
     ? summary.providerId
     : officialDefaultValue;
   const [selection, setSelection] = useState(initialSelection);
+  const [managedFieldsOpen, setManagedFieldsOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const target = useMemo(() => selectedTarget(selection), [selection]);
   const detection = summary.detection;
-  const canApply = detection.status === 'detected';
+  const isDetected = detection.status === 'detected';
+  const selectedProvider = providers.data?.find((provider) => provider.id === selection);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{runtimeLabels[summary.runtime]}</CardTitle>
-        <CardDescription>
-          {summary.managed
-            ? (summary.providerId === null
-                ? 'Managed by Foundry · Official Default'
-                : 'Managed by Foundry')
-            : 'Not managed by Foundry'}
-        </CardDescription>
+        <CardTitle className="flex items-center gap-2">
+          <RuntimeOption runtime={summary.runtime} />
+        </CardTitle>
         <CardAction>
-          <span className={canApply ? 'text-emerald-600' : 'text-destructive'}>
-            {canApply ? 'Detected' : 'Not detected'}
-          </span>
+          <Badge variant={isDetected ? 'secondary' : 'destructive'}>
+            {isDetected ? 'Detected' : 'Not detected'}
+          </Badge>
         </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <dl className="grid gap-2 text-muted-foreground sm:grid-cols-2">
-          <div>
+        <dl className="grid min-w-0 gap-2 text-muted-foreground sm:grid-cols-2">
+          <div className="min-w-0">
             <dt>Version</dt>
-            <dd className="font-mono text-foreground">{detection.version ?? 'Unavailable'}</dd>
+            <RuntimeMetadataValue value={detection.version ?? 'Unavailable'} />
           </div>
-          <div>
+          <div className="min-w-0">
             <dt>Configuration</dt>
-            <dd className="break-all font-mono text-foreground">{detection.configurationPath}</dd>
+            <RuntimeMetadataValue value={detection.configurationPath} />
           </div>
         </dl>
         {detection.message && (
@@ -434,29 +496,51 @@ function RuntimeCard({
             onValueChange={(value) => value && setSelection(value)}
           >
             <SelectTrigger className="w-full">
-              <SelectValue />
+              <SelectValue>
+                <SelectedProviderValue
+                  isPending={providers.isPending}
+                  provider={selectedProvider}
+                  runtime={summary.runtime}
+                  selection={selection}
+                />
+              </SelectValue>
             </SelectTrigger>
             <SelectContent align="start">
               <SelectGroup>
-                <SelectItem value={officialDefaultValue}>Official Default</SelectItem>
+                <SelectItem value={officialDefaultValue}>
+                  <OfficialDefaultOption runtime={summary.runtime} />
+                </SelectItem>
                 {providers.data?.map((provider) => (
                   <SelectItem key={provider.id} value={provider.id}>
-                    {provider.name}
+                    <ProviderSelectOption provider={provider} />
                   </SelectItem>
                 ))}
               </SelectGroup>
             </SelectContent>
           </Select>
         </div>
-        <ManagedFieldReference runtime={summary.runtime} />
       </CardContent>
       <CardFooter className="justify-end gap-2">
-        <Button variant="outline" onClick={onDetect}>Detect Again</Button>
-        <Button disabled={!canApply || providers.isPending} onClick={() => setPreviewOpen(true)}>
+        <Button size="sm" variant="outline" onClick={() => setManagedFieldsOpen(true)}>
+          Managed fields
+        </Button>
+        <Button size="sm" variant="outline" onClick={onDetect}>Detect Again</Button>
+        <Button
+          disabled={providers.isPending}
+          size="sm"
+          onClick={() => setPreviewOpen(true)}
+        >
           Save
         </Button>
       </CardFooter>
 
+      {managedFieldsOpen && (
+        <ManagedFieldsDialog
+          isOpen
+          runtime={summary.runtime}
+          onOpenChange={setManagedFieldsOpen}
+        />
+      )}
       {previewOpen && (
         <RuntimePreviewDialog
           isOpen
@@ -474,7 +558,7 @@ export function RuntimesPage() {
 
   if (runtimes.isPending) {
     return (
-      <main className="grid gap-4 md:grid-cols-2" aria-label="Loading Runtimes" role="status">
+      <main className="grid w-full self-start gap-4 md:grid-cols-2" aria-label="Loading Runtimes" role="status">
         <Skeleton className="h-80" />
         <Skeleton className="h-80" />
       </main>
@@ -490,7 +574,10 @@ export function RuntimesPage() {
   }
 
   return (
-    <main className="grid gap-4 pb-12 md:grid-cols-2">
+    <main
+      className="grid w-full self-start items-start gap-4 pb-12 md:grid-cols-2"
+      data-testid="runtime-grid"
+    >
       {runtimes.data.map((summary) => (
         <RuntimeCard
           key={summary.runtime}

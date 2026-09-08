@@ -76,6 +76,54 @@ export const providerRuntimes = ['codex', 'claude-code'] as const;
 
 export type ProviderRuntime = typeof providerRuntimes[number];
 
+export const providerRuntimeLabels = {
+  'claude-code': 'Claude Code',
+  'codex': 'Codex',
+} as const satisfies Record<ProviderRuntime, string>;
+
+export const runtimeManagedFieldReferences = {
+  'claude-code': [
+    'env.ANTHROPIC_BASE_URL',
+    'env.ANTHROPIC_AUTH_TOKEN',
+    'env.ANTHROPIC_API_KEY',
+    'env.ANTHROPIC_MODEL',
+    'env.ANTHROPIC_DEFAULT_OPUS_MODEL',
+    'env.ANTHROPIC_DEFAULT_OPUS_MODEL_NAME',
+    'env.ANTHROPIC_DEFAULT_OPUS_MODEL_DESCRIPTION',
+    'env.ANTHROPIC_DEFAULT_OPUS_MODEL_SUPPORTED_CAPABILITIES',
+    'env.ANTHROPIC_DEFAULT_SONNET_MODEL',
+    'env.ANTHROPIC_DEFAULT_SONNET_MODEL_NAME',
+    'env.ANTHROPIC_DEFAULT_SONNET_MODEL_DESCRIPTION',
+    'env.ANTHROPIC_DEFAULT_SONNET_MODEL_SUPPORTED_CAPABILITIES',
+    'env.ANTHROPIC_DEFAULT_HAIKU_MODEL',
+    'env.ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME',
+    'env.ANTHROPIC_DEFAULT_HAIKU_MODEL_DESCRIPTION',
+    'env.ANTHROPIC_DEFAULT_HAIKU_MODEL_SUPPORTED_CAPABILITIES',
+    'env.ANTHROPIC_DEFAULT_FABLE_MODEL',
+    'env.ANTHROPIC_DEFAULT_FABLE_MODEL_NAME',
+    'env.ANTHROPIC_DEFAULT_FABLE_MODEL_DESCRIPTION',
+    'env.ANTHROPIC_DEFAULT_FABLE_MODEL_SUPPORTED_CAPABILITIES',
+    'env.CLAUDE_CODE_SUBAGENT_MODEL',
+    'env.CLAUDE_CODE_SUBAGENT_MODEL_FORCE',
+    'env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS',
+    'env.ENABLE_TOOL_SEARCH',
+    'env.CLAUDE_CODE_EFFORT_LEVEL',
+    'env.DISABLE_AUTOUPDATER',
+    'attribution.commit',
+    'attribution.pr',
+    'attribution.sessionUrl',
+  ],
+  'codex': [
+    'model',
+    'review_model',
+    'model_provider',
+    '[model_providers.<key>].name',
+    '[model_providers.<key>].base_url',
+    '[model_providers.<key>].wire_api',
+    '[model_providers.<key>].experimental_bearer_token',
+  ],
+} as const satisfies Record<ProviderRuntime, readonly string[]>;
+
 export const providerAvatarMimeTypes = [
   'image/png',
   'image/jpeg',

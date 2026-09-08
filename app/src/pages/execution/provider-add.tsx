@@ -4,7 +4,7 @@ import type {
   ClaudeModelConfiguration,
   CreateProviderRequest,
   Provider,
-  ProviderAvatar,
+  ProviderAvatar as ProviderAvatarData,
   ProviderAvatarMimeType,
   ProviderRuntime,
   ProviderSummary,
@@ -20,6 +20,8 @@ import type { SyntheticEvent } from 'react';
 import { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 
+import { ProviderAvatar } from '#/components/provider-avatar';
+import { RuntimeOption } from '#/components/runtime-option';
 import { SecretInput } from '#/components/secret-input';
 import {
   Alert,
@@ -36,11 +38,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '#/components/ui/alert-dialog';
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '#/components/ui/avatar';
 import { Button } from '#/components/ui/button';
 import { Checkbox } from '#/components/ui/checkbox';
 import {
@@ -90,11 +87,6 @@ import {
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 
-const runtimeLabels = {
-  'claude-code': 'Claude Code',
-  'codex': 'Codex',
-} satisfies Record<ProviderRuntime, string>;
-
 const capabilityLabels = {
   adaptive_thinking: 'Adaptive thinking',
   effort: 'Effort',
@@ -133,7 +125,7 @@ const claudeOtherOptions = [
 ] as const;
 
 interface CommonDraft {
-  avatar: ProviderAvatar | null;
+  avatar: ProviderAvatarData | null;
   name: string;
   officialWebsite: string;
   remark: string;
@@ -243,7 +235,7 @@ function toClaudeModelConfiguration(
       };
 }
 
-function readAvatar(file: File): Promise<ProviderAvatar> {
+function readAvatar(file: File): Promise<ProviderAvatarData> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.addEventListener('error', () => reject(new Error('Avatar could not be read.')));
@@ -611,7 +603,7 @@ function ProviderForm({
             >
               {providerRuntimes.map((providerRuntime) => (
                 <ToggleGroupItem key={providerRuntime} value={providerRuntime}>
-                  {runtimeLabels[providerRuntime]}
+                  <RuntimeOption runtime={providerRuntime} />
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
@@ -652,17 +644,12 @@ function ProviderForm({
                         type="button"
                         onClick={() => avatarInputRef.current?.click()}
                       >
-                        <Avatar size="lg">
-                          {common.avatar
-                            ? (
-                                <AvatarImage
-                                  alt="Provider avatar preview"
-                                  src={`data:${common.avatar.mimeType};base64,${common.avatar.data}`}
-                                />
-                              )
-                            : null}
-                          <AvatarFallback>{common.name.trim().charAt(0) || 'P'}</AvatarFallback>
-                        </Avatar>
+                        <ProviderAvatar
+                          alt="Provider avatar preview"
+                          avatar={common.avatar}
+                          name={common.name}
+                          size="lg"
+                        />
                       </button>
                       <Button
                         disabled={common.avatar === null}

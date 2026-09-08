@@ -203,7 +203,7 @@ function ManagedFieldReference({ runtime }: { runtime: ProviderRuntime }) {
   );
 }
 
-function RuntimePreviewDialog({
+export function RuntimePreviewDialog({
   isOpen,
   runtime,
   target,

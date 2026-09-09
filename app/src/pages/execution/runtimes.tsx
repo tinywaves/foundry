@@ -12,8 +12,10 @@ import {
 } from '@dhzh/foundry-api-contract';
 import { EyeIcon, ViewOffSlashIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
+import { cn } from 'cn';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { CollapsibleSection } from '#/components/collapsible-section';
 import { ProviderAvatar } from '#/components/provider-avatar';
 import { RuntimeIcon, RuntimeOption } from '#/components/runtime-option';
 import { Alert, AlertDescription, AlertTitle } from '#/components/ui/alert';
@@ -27,11 +29,6 @@ import {
   CardHeader,
   CardTitle,
 } from '#/components/ui/card';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '#/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
@@ -66,7 +63,15 @@ import {
 
 const officialDefaultValue = 'official-default';
 
-function RuntimeMetadataValue({ value }: { value: string }) {
+function TruncatedMetadataValue({
+  className,
+  testId,
+  value,
+}: {
+  className?: string;
+  testId?: string;
+  value: string;
+}) {
   const valueRef = useRef<HTMLSpanElement>(null);
   const [isTruncated, setIsTruncated] = useState(false);
 
@@ -90,23 +95,30 @@ function RuntimeMetadataValue({ value }: { value: string }) {
   }, [value]);
 
   return (
+    <Tooltip disabled={!isTruncated}>
+      <TooltipTrigger
+        render={(
+          <span
+            ref={valueRef}
+            className={cn('block w-full max-w-full truncate font-mono', className)}
+            data-testid={testId}
+            tabIndex={isTruncated ? 0 : undefined}
+          />
+        )}
+      >
+        {value}
+      </TooltipTrigger>
+      <TooltipContent className="max-w-sm break-all">
+        <code className="font-mono">{value}</code>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function RuntimeMetadataValue({ value }: { value: string }) {
+  return (
     <dd className="min-w-0">
-      <Tooltip disabled={!isTruncated}>
-        <TooltipTrigger
-          render={(
-            <span
-              ref={valueRef}
-              className="block truncate font-mono text-foreground"
-              tabIndex={isTruncated ? 0 : undefined}
-            />
-          )}
-        >
-          {value}
-        </TooltipTrigger>
-        <TooltipContent className="max-w-sm break-all">
-          <code className="font-mono">{value}</code>
-        </TooltipContent>
-      </Tooltip>
+      <TruncatedMetadataValue className="text-foreground" value={value} />
     </dd>
   );
 }
@@ -166,21 +178,42 @@ function displayError(error: unknown, title: string): void {
   });
 }
 
-function PreviewValue({ value }: { value: RuntimeConfigurationPreviewValue }) {
+function PreviewValue({
+  testId,
+  value,
+}: {
+  testId: string;
+  value: RuntimeConfigurationPreviewValue;
+}) {
   const [revealed, setRevealed] = useState(false);
   if (value.kind === 'absent') {
-    return <code className="text-muted-foreground">null</code>;
+    return (
+      <TruncatedMetadataValue
+        className="text-muted-foreground"
+        testId={testId}
+        value="null"
+      />
+    );
   }
   if (value.kind === 'plain') {
-    return <code className="break-all">{JSON.stringify(value.value)}</code>;
+    return (
+      <TruncatedMetadataValue
+        testId={testId}
+        value={JSON.stringify(value.value)}
+      />
+    );
   }
   return (
-    <span className="inline-flex min-w-0 items-center gap-1">
-      <code className="break-all">
-        {revealed ? JSON.stringify(value.value) : '••••••••'}
-      </code>
+    <span className="inline-flex w-full min-w-0 items-center gap-1">
+      <span className="min-w-0 flex-1">
+        <TruncatedMetadataValue
+          testId={testId}
+          value={revealed ? JSON.stringify(value.value) : '••••••••'}
+        />
+      </span>
       <Button
         aria-label={revealed ? 'Hide API Key' : 'Show API Key'}
+        className="shrink-0"
         size="icon-xs"
         variant="ghost"
         onClick={() => setRevealed((visible) => !visible)}
@@ -196,19 +229,30 @@ function PreviewValue({ value }: { value: RuntimeConfigurationPreviewValue }) {
 
 function PreviewField({ field }: { field: RuntimeConfigurationPreviewField }) {
   return (
-    <div className="grid gap-2 rounded-md border bg-muted/30 p-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center">
-      <div className="min-w-0">
-        <code className="mb-1 block break-all text-[0.6875rem] text-muted-foreground">
-          {field.key}
-        </code>
-        <PreviewValue value={field.current} />
+    <div
+      className="grid min-w-0 gap-2 overflow-hidden rounded-md border bg-muted/30 p-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center"
+      data-slot="preview-field"
+    >
+      <div className="min-w-0 overflow-hidden">
+        <TruncatedMetadataValue
+          className="mb-1 text-[0.6875rem] text-muted-foreground"
+          testId={`preview-field-${field.key}-key`}
+          value={field.key}
+        />
+        <PreviewValue
+          testId={`preview-field-${field.key}-current`}
+          value={field.current}
+        />
       </div>
       <span aria-hidden="true" className="text-muted-foreground">→</span>
-      <div className="min-w-0">
+      <div className="min-w-0 overflow-hidden">
         <span className="mb-1 block text-[0.6875rem] uppercase tracking-wide text-muted-foreground">
           {field.operation}
         </span>
-        <PreviewValue value={field.proposed} />
+        <PreviewValue
+          testId={`preview-field-${field.key}-proposed`}
+          value={field.proposed}
+        />
       </div>
     </div>
   );
@@ -219,7 +263,7 @@ function PreviewFields({ fields }: { fields: RuntimeConfigurationPreviewField[] 
     return <p className="text-muted-foreground">No fields in this section.</p>;
   }
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex min-w-0 flex-col gap-2" data-slot="preview-fields">
       {fields.map((field) => <PreviewField field={field} key={field.key} />)}
     </div>
   );
@@ -323,7 +367,7 @@ export function RuntimePreviewDialog({
     >
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Preview Changes</DialogTitle>
+          <DialogTitle>Review Changes</DialogTitle>
           <DialogDescription>
             Review every field Foundry manages before applying this Runtime configuration.
           </DialogDescription>
@@ -337,10 +381,14 @@ export function RuntimePreviewDialog({
         )}
 
         {preview && (
-          <div className="flex flex-col gap-4">
-            <div className="rounded-md border bg-muted/30 p-3">
+          <div className="flex w-full min-w-0 max-w-[calc(100vw-4rem)] flex-col gap-4 sm:max-w-184">
+            <div className="w-full min-w-0 max-w-full overflow-hidden rounded-md border bg-muted/30 p-3">
               <span className="block text-muted-foreground">Configuration file</span>
-              <code className="break-all">{preview.file.path}</code>
+              <TruncatedMetadataValue
+                className="text-foreground"
+                testId="runtime-configuration-file-path"
+                value={preview.file.path}
+              />
             </div>
 
             {providerKeys.length > 1 && (
@@ -377,23 +425,23 @@ export function RuntimePreviewDialog({
             )}
 
             {readyPreview && (
-              <>
+              <div className="flex min-w-0 flex-col gap-2">
                 <section className="flex flex-col gap-2">
-                  <h3 className="font-medium">Changes</h3>
+                  <h3 className="flex items-center gap-1 font-medium">
+                    <span>Changes</span>
+                    <span className="tabular-nums text-muted-foreground/80">
+                      {readyPreview.changes.length}
+                    </span>
+                  </h3>
                   <PreviewFields fields={readyPreview.changes} />
                 </section>
-                <Collapsible>
-                  <CollapsibleTrigger
-                    render={<Button className="w-full justify-between" variant="outline" />}
-                  >
-                    Unchanged managed fields
-                    <span>{readyPreview.unchanged.length}</span>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-2">
-                    <PreviewFields fields={readyPreview.unchanged} />
-                  </CollapsibleContent>
-                </Collapsible>
-              </>
+                <CollapsibleSection
+                  label="Unchanged managed fields"
+                  summary={readyPreview.unchanged.length}
+                >
+                  <PreviewFields fields={readyPreview.unchanged} />
+                </CollapsibleSection>
+              </div>
             )}
           </div>
         )}

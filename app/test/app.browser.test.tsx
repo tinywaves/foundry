@@ -364,6 +364,16 @@ describe('application routing and layouts', () => {
     const runtimes = createRuntimeSummaries();
     const longVersion = 'codex-cli 1.0.0 (build 2026.09.09-development-preview)';
     const longConfigurationPath = '/Users/test/.codex/environments/development/config.toml';
+    const longPreviewConfigurationPath = [
+      '/Users/test/.codex/environments/development/',
+      'nested-workspace-with-an-especially-long-name/'.repeat(3),
+      'configuration/config.toml',
+    ].join('');
+    const longChangedFieldKey = 'model_providers.foundry.an_especially_long_configuration_field_name';
+    const longCurrentFieldValue = 'current-value-'.repeat(12);
+    const longProposedFieldValue = 'proposed-value-'.repeat(12);
+    const longUnchangedFieldKey = 'model_providers.foundry.an_especially_long_unchanged_field_name';
+    const longUnchangedFieldValue = 'unchanged-value-'.repeat(12);
     runtimes[0].detection.version = longVersion;
     runtimes[0].detection.configurationPath = longConfigurationPath;
     runtimes[0].managed = true;
@@ -389,6 +399,12 @@ describe('application routing and layouts', () => {
           data: {
             changes: [
               {
+                current: { kind: 'plain', value: longCurrentFieldValue },
+                key: longChangedFieldKey,
+                operation: 'update',
+                proposed: { kind: 'plain', value: longProposedFieldValue },
+              },
+              {
                 current: { kind: 'absent' },
                 key: 'model_provider',
                 operation: 'add',
@@ -404,13 +420,20 @@ describe('application routing and layouts', () => {
             file: {
               exists: true,
               hash: '0'.repeat(64),
-              path: '/Users/test/.codex/config.toml',
+              path: longPreviewConfigurationPath,
             },
             kind: 'ready',
             providerKey: 'foundry',
             runtime: 'codex',
             target: { kind: 'provider', providerId: provider.id },
-            unchanged: [],
+            unchanged: [
+              {
+                current: { kind: 'plain', value: longUnchangedFieldValue },
+                key: longUnchangedFieldKey,
+                operation: 'unchanged',
+                proposed: { kind: 'plain', value: longUnchangedFieldValue },
+              },
+            ],
           },
         }));
       }
@@ -535,8 +558,92 @@ describe('application routing and layouts', () => {
     await providerOption.click();
     await saveButtons.first().click();
 
-    await expect.element(screen.getByRole('heading', { name: 'Preview Changes' }))
+    await expect.element(screen.getByRole('heading', { name: 'Review Changes' }))
       .toBeVisible();
+    await expect.element(screen.getByRole('heading', { name: 'Changes 3' }))
+      .toBeVisible();
+    const previewConfigurationPath = screen.getByTestId('runtime-configuration-file-path');
+    await expect.element(previewConfigurationPath).toHaveTextContent(longPreviewConfigurationPath);
+    expect(getComputedStyle(previewConfigurationPath.element()).textOverflow).toBe('ellipsis');
+    expect(getComputedStyle(previewConfigurationPath.element()).whiteSpace).toBe('nowrap');
+    expect(previewConfigurationPath.element().scrollWidth)
+      .toBeGreaterThan(previewConfigurationPath.element().clientWidth);
+    await expect.poll(() => previewConfigurationPath.element().tabIndex).toBe(0);
+    await previewConfigurationPath.hover();
+    await expect.poll(
+      () => document.querySelector('[data-slot="tooltip-content"]')?.textContent,
+    ).toContain(longPreviewConfigurationPath);
+    const expectTruncatedPreviewContent = async (testId: string, value: string) => {
+      const content = screen.getByTestId(testId);
+      await expect.element(content).toHaveTextContent(value);
+      expect(getComputedStyle(content.element()).textOverflow).toBe('ellipsis');
+      expect(getComputedStyle(content.element()).whiteSpace).toBe('nowrap');
+      expect(content.element().scrollWidth).toBeGreaterThan(content.element().clientWidth);
+      await expect.poll(() => content.element().tabIndex).toBe(0);
+      await content.hover();
+      await expect.poll(
+        () => document.querySelector('[data-slot="tooltip-content"][data-open]')?.textContent,
+      ).toContain(value);
+    };
+    await expectTruncatedPreviewContent(
+      `preview-field-${longChangedFieldKey}-key`,
+      longChangedFieldKey,
+    );
+    await expectTruncatedPreviewContent(
+      `preview-field-${longChangedFieldKey}-current`,
+      JSON.stringify(longCurrentFieldValue),
+    );
+    await expectTruncatedPreviewContent(
+      `preview-field-${longChangedFieldKey}-proposed`,
+      JSON.stringify(longProposedFieldValue),
+    );
+    const unchangedFieldsTrigger = screen.getByRole('button', {
+      name: 'Unchanged managed fields 1',
+    });
+    const disclosure = unchangedFieldsTrigger.element().closest<HTMLElement>(
+      '[data-slot="collapsible"]',
+    );
+    const changedFields = document.querySelector<HTMLElement>('[data-slot="preview-fields"]');
+    const lastChangedField = changedFields?.lastElementChild as HTMLElement | null;
+    expect(disclosure).not.toBeNull();
+    expect(changedFields).not.toBeNull();
+    expect(lastChangedField).not.toBeNull();
+    const disclosureTop = disclosure!.getBoundingClientRect().top;
+    const lastChangedFieldBottom = lastChangedField!.getBoundingClientRect().bottom;
+    const disclosureGap = Math.round(disclosureTop - lastChangedFieldBottom);
+    const previewFieldGap = getComputedStyle(changedFields!).rowGap;
+    expect(`${disclosureGap}px`).toBe(previewFieldGap);
+    await expect.element(unchangedFieldsTrigger).toHaveAttribute('aria-expanded', 'false');
+    const disclosureIcon = unchangedFieldsTrigger.element().querySelector<HTMLElement>(
+      '[data-slot="collapsible-section-icon"]',
+    );
+    expect(disclosureIcon).not.toBeNull();
+    expect(getComputedStyle(disclosureIcon!).rotate).toBe('none');
+    await unchangedFieldsTrigger.click();
+    await expect.element(unchangedFieldsTrigger).toHaveAttribute('aria-expanded', 'true');
+    await expect.poll(() => getComputedStyle(disclosureIcon!).rotate).toBe('90deg');
+    await expectTruncatedPreviewContent(
+      `preview-field-${longUnchangedFieldKey}-key`,
+      longUnchangedFieldKey,
+    );
+    await expectTruncatedPreviewContent(
+      `preview-field-${longUnchangedFieldKey}-current`,
+      JSON.stringify(longUnchangedFieldValue),
+    );
+    await expectTruncatedPreviewContent(
+      `preview-field-${longUnchangedFieldKey}-proposed`,
+      JSON.stringify(longUnchangedFieldValue),
+    );
+    const disclosureBody = disclosure!.querySelector<HTMLElement>(
+      '[data-slot="collapsible-section-body"]',
+    );
+    const unchangedFields = disclosureBody!.querySelector<HTMLElement>(
+      '[data-slot="preview-fields"]',
+    );
+    expect(disclosureBody).not.toBeNull();
+    expect(unchangedFields).not.toBeNull();
+    expect(getComputedStyle(disclosureBody!).paddingTop)
+      .toBe(getComputedStyle(unchangedFields!).rowGap);
     await expect.element(screen.getByText('model_provider', { exact: true })).toBeVisible();
     await expect.element(screen.getByText('••••••••')).toBeVisible();
     await screen.getByRole('button', { name: 'Show API Key' }).click();
@@ -817,7 +924,7 @@ describe('application routing and layouts', () => {
     const screen = await renderApp('/providers?runtime=codex');
 
     await screen.getByRole('button', { name: 'Apply Example Provider' }).click();
-    await expect.element(screen.getByRole('heading', { name: 'Preview Changes' }))
+    await expect.element(screen.getByRole('heading', { name: 'Review Changes' }))
       .toBeVisible();
     await screen.getByRole('button', { name: 'Apply' }).click();
 
@@ -900,7 +1007,15 @@ describe('application routing and layouts', () => {
 
     await expect.element(opusModel.getByLabelText('Description')).not.toBeInTheDocument();
     await expect.element(advancedOptions).not.toBeDisabled();
+    await expect.element(advancedOptions).toHaveAttribute('aria-expanded', 'false');
+    const advancedOptionsIcon = advancedOptions.element().querySelector<HTMLElement>(
+      '[data-slot="collapsible-section-icon"]',
+    );
+    expect(advancedOptionsIcon).not.toBeNull();
+    expect(getComputedStyle(advancedOptionsIcon!).rotate).toBe('none');
     await advancedOptions.click();
+    await expect.element(advancedOptions).toHaveAttribute('aria-expanded', 'true');
+    await expect.poll(() => getComputedStyle(advancedOptionsIcon!).rotate).toBe('90deg');
 
     const capabilities = opusModel.getByRole('combobox', {
       name: 'Supported capabilities',

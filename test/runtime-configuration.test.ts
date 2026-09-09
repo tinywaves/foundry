@@ -210,6 +210,15 @@ it('restores Codex Official Default without deleting Provider tables', async () 
   if (preview.kind !== 'ready') {
     throw new Error('Expected a ready Preview.');
   }
+  expect(new Set([
+    ...preview.changes,
+    ...preview.unchanged,
+  ].map((field) => field.key.replace(
+    '[model_providers.existing]',
+    '[model_providers.<key>]',
+  )))).toEqual(new Set(runtimeManagedFieldReferences.codex));
+  expect(preview.changes).toHaveLength(3);
+  expect(preview.unchanged).toHaveLength(4);
   await manager.apply('codex', filename, target, null, preview.file.hash);
 
   expect(parseToml(await readFile(filename, 'utf8'))).toEqual({
@@ -218,6 +227,28 @@ it('restores Codex Official Default without deleting Provider tables', async () 
       existing: { base_url: 'https://example.com' },
     },
   });
+});
+
+it('previews every Codex managed field for Official Default without a Provider key', async () => {
+  const root = await createRoot();
+  const filename = path.join(root, 'config.toml');
+  await writeFile(filename, 'approval_policy = "on-request"\n');
+  const manager = new RuntimeConfigurationManager();
+
+  const preview = await manager.preview(
+    'codex',
+    filename,
+    { kind: 'official-default' },
+    null,
+  );
+  if (preview.kind !== 'ready') {
+    throw new Error('Expected a ready Preview.');
+  }
+
+  expect(preview.changes).toEqual([]);
+  expect(new Set(preview.unchanged.map((field) => field.key))).toEqual(
+    new Set(runtimeManagedFieldReferences.codex),
+  );
 });
 
 it('writes Claude managed env fields and removes only those fields for Official Default', async () => {
@@ -260,6 +291,10 @@ it('writes Claude managed env fields and removes only those fields for Official 
   expect(providerPreview.changes).toContainEqual(expect.objectContaining({
     key: 'env.ANTHROPIC_API_KEY',
     proposed: { kind: 'secret', value: 'claude-secret' },
+  }));
+  expect(providerPreview.changes).toContainEqual(expect.objectContaining({
+    key: 'env.ANTHROPIC_AUTH_TOKEN',
+    operation: 'remove',
   }));
   expect([
     ...providerPreview.changes,
@@ -317,7 +352,7 @@ it('writes Claude managed env fields and removes only those fields for Official 
     throw new Error('Expected a ready Preview.');
   }
   expect(settledProviderPreview.changes).toEqual([]);
-  expect(settledProviderPreview.unchanged).toHaveLength(28);
+  expect(settledProviderPreview.unchanged).toHaveLength(29);
 
   const officialTarget = { kind: 'official-default' } as const;
   const officialPreview = await manager.preview(
@@ -329,6 +364,12 @@ it('writes Claude managed env fields and removes only those fields for Official 
   if (officialPreview.kind !== 'ready') {
     throw new Error('Expected a ready Preview.');
   }
+  expect(new Set([
+    ...officialPreview.changes,
+    ...officialPreview.unchanged,
+  ].map((field) => field.key))).toEqual(
+    new Set(runtimeManagedFieldReferences['claude-code']),
+  );
   expect([
     ...officialPreview.changes,
     ...officialPreview.unchanged,
@@ -356,6 +397,43 @@ it('writes Claude managed env fields and removes only those fields for Official 
     },
     permissions: { allow: ['Read'] },
   });
+});
+
+it('compares both Claude authentication fields when switching authentication strategy', async () => {
+  const root = await createRoot();
+  const filename = path.join(root, 'settings.json');
+  await writeFile(filename, `${JSON.stringify({
+    env: { ANTHROPIC_API_KEY: 'old-api-key' },
+  }, null, 2)}\n`);
+  const manager = new RuntimeConfigurationManager();
+  const provider = {
+    ...claudeProvider,
+    configuration: {
+      ...claudeProvider.configuration,
+      apiKeyHeader: 'authorization',
+    },
+  } as const;
+
+  const preview = await manager.preview(
+    'claude-code',
+    filename,
+    { kind: 'provider', providerId: provider.id },
+    provider,
+  );
+  if (preview.kind !== 'ready') {
+    throw new Error('Expected a ready Preview.');
+  }
+
+  expect([...preview.changes, ...preview.unchanged]).toHaveLength(29);
+  expect(preview.changes).toContainEqual(expect.objectContaining({
+    key: 'env.ANTHROPIC_API_KEY',
+    operation: 'remove',
+  }));
+  expect(preview.changes).toContainEqual(expect.objectContaining({
+    key: 'env.ANTHROPIC_AUTH_TOKEN',
+    operation: 'add',
+    proposed: { kind: 'secret', value: 'claude-secret' },
+  }));
 });
 
 it('rejects a changed file and supports rollback with a latest backup', async () => {

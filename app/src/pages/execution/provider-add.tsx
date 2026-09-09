@@ -14,12 +14,11 @@ import {
   providerAvatarMimeTypes,
   providerRuntimes,
 } from '@dhzh/foundry-api-contract';
-import { ArrowRight01Icon } from '@hugeicons/core-free-icons';
-import { HugeiconsIcon } from '@hugeicons/react';
 import type { SyntheticEvent } from 'react';
 import { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 
+import { CollapsibleSection } from '#/components/collapsible-section';
 import { ProviderAvatar } from '#/components/provider-avatar';
 import { RuntimeOption } from '#/components/runtime-option';
 import { SecretInput } from '#/components/secret-input';
@@ -40,11 +39,6 @@ import {
 } from '#/components/ui/alert-dialog';
 import { Button } from '#/components/ui/button';
 import { Checkbox } from '#/components/ui/checkbox';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '#/components/ui/collapsible';
 import {
   Field,
   FieldContent,
@@ -303,73 +297,59 @@ function ClaudeModelFields({
             />
           </Field>
         </div>
-        <Collapsible>
-          <CollapsibleTrigger
-            className="group flex w-fit items-center gap-1 rounded-sm py-1 text-xs/relaxed font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50"
-          >
-            <HugeiconsIcon
-              className="size-3 transition-transform group-data-panel-open:rotate-90"
-              icon={ArrowRight01Icon}
-              strokeWidth={2}
-            />
-            <span>Advanced model options</span>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-150 data-ending-style:h-0 data-starting-style:h-0">
-            <div className="ms-3 min-w-0 border-s border-border py-2 ps-4">
-              <FieldGroup>
-                <Field>
-                  <FieldLabel htmlFor={`${id}-description`}>Description</FieldLabel>
-                  <Textarea
-                    disabled={!hasModel}
-                    id={`${id}-description`}
-                    maxLength={2000}
-                    value={value.description}
-                    onChange={(event) => onChange({
-                      ...value,
-                      description: event.target.value,
-                    })}
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor={`${id}-capabilities`}>
-                    Supported capabilities
-                  </FieldLabel>
-                  <Select
-                    disabled={!hasModel}
-                    id={`${id}-capabilities`}
-                    multiple
-                    value={value.supportedCapabilities}
-                    onValueChange={(capabilities) => onChange({
-                      ...value,
-                      supportedCapabilities: claudeModelCapabilities.filter(
-                        (capability) => capabilities.includes(capability),
-                      ),
-                    })}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue>
-                        {() => value.supportedCapabilities.length === 0
-                          ? 'Select capabilities'
-                          : value.supportedCapabilities
-                              .map((capability) => capabilityLabels[capability])
-                              .join(', ')}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent align="start">
-                      <SelectGroup>
-                        {claudeModelCapabilities.map((capability) => (
-                          <SelectItem key={capability} value={capability}>
-                            {capabilityLabels[capability]}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </Field>
-              </FieldGroup>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+        <CollapsibleSection label="Advanced model options">
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor={`${id}-description`}>Description</FieldLabel>
+              <Textarea
+                disabled={!hasModel}
+                id={`${id}-description`}
+                maxLength={2000}
+                value={value.description}
+                onChange={(event) => onChange({
+                  ...value,
+                  description: event.target.value,
+                })}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor={`${id}-capabilities`}>
+                Supported capabilities
+              </FieldLabel>
+              <Select
+                disabled={!hasModel}
+                id={`${id}-capabilities`}
+                multiple
+                value={value.supportedCapabilities}
+                onValueChange={(capabilities) => onChange({
+                  ...value,
+                  supportedCapabilities: claudeModelCapabilities.filter(
+                    (capability) => capabilities.includes(capability),
+                  ),
+                })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    {() => value.supportedCapabilities.length === 0
+                      ? 'Select capabilities'
+                      : value.supportedCapabilities
+                          .map((capability) => capabilityLabels[capability])
+                          .join(', ')}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent align="start">
+                  <SelectGroup>
+                    {claudeModelCapabilities.map((capability) => (
+                      <SelectItem key={capability} value={capability}>
+                        {capabilityLabels[capability]}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+          </FieldGroup>
+        </CollapsibleSection>
       </FieldGroup>
     </FieldSet>
   );

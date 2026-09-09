@@ -62,7 +62,7 @@ Foundry detects the `codex` and `claude` executables from `PATH`, reads their ve
 | Codex | `~/.codex/config.toml` |
 | Claude Code | `~/.claude/settings.json` |
 
-Before applying a saved Provider or Official Default, Foundry shows the proposed field-level changes. Applying a preview:
+Before applying a saved Provider or Official Default, Foundry compares every managed field and separates proposed changes from unchanged fields. Long configuration paths, field names, and field values remain on one line and reveal the full value on hover when truncated. Applying a preview:
 
 - preserves fields outside Foundry's managed field set;
 - rejects the apply if the file changed after the preview was created;

@@ -51,33 +51,6 @@ const managedEnvironmentKeys = [
   ...otherEnvironmentKeys,
 ] as const;
 
-function previewEnvironmentKeys(
-  environment: Record<string, unknown>,
-  configuration: ClaudeCodeProviderConfiguration | null,
-): string[] {
-  if (configuration === null) {
-    return managedEnvironmentKeys.filter((key) => environment[key] !== undefined);
-  }
-
-  const authenticationKey = configuration.apiKeyHeader === 'authorization'
-    ? 'ANTHROPIC_AUTH_TOKEN'
-    : 'ANTHROPIC_API_KEY';
-  const configuredKeys = [
-    'ANTHROPIC_BASE_URL',
-    authenticationKey,
-    'ANTHROPIC_MODEL',
-    ...roleModelEnvironmentKeys,
-    ...subagentEnvironmentKeys,
-    ...otherEnvironmentKeys,
-  ];
-  const configuredKeySet = new Set<string>(configuredKeys);
-  return [
-    ...configuredKeys,
-    ...managedEnvironmentKeys.filter((key) =>
-      !configuredKeySet.has(key) && environment[key] !== undefined),
-  ];
-}
-
 function modelValues(
   configuration: ClaudeModelConfiguration | null,
 ): [string | undefined, string | undefined, string | undefined, string | undefined] {
@@ -176,10 +149,7 @@ export function createClaudeCodePlan(
   const attribution = attributionValue ?? {};
   const proposedAttribution = createProposedAttribution(provider?.configuration ?? null);
   const fields = [
-    ...previewEnvironmentKeys(
-      environment,
-      provider?.configuration ?? null,
-    ).map((key) => createPreviewField(
+    ...managedEnvironmentKeys.map((key) => createPreviewField(
       `env.${key}`,
       environment[key],
       proposed[key],

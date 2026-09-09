@@ -27,14 +27,18 @@ persistent Foundry database.
 
 - The card selects a compatible saved Provider or Official Default.
 - The card action is named `Save` and remains available when the selected option has not changed, allowing the assignment to be applied again.
-- Clicking `Save` opens the Preview Dialog; no file or database state changes before final confirmation.
+- Clicking `Save` opens the Review Dialog; no file or database state changes before final confirmation.
 - The Dialog's final action is named `Apply`.
 
-## Preview Dialog
+## Review Dialog
 
 - Show the target configuration file path.
+- Keep configuration paths, field names, and field values on one line and show their full value in a Tooltip only when they are truncated.
+- Compare every managed field for the selected Runtime and Provider Option.
 - Show changed managed fields in the expanded upper section.
-- Show unchanged managed fields in a collapsed lower section.
+- Show unchanged managed fields in a collapsed lower section using the same compact, chevron-led disclosure pattern as advanced Provider options.
+- Show each section's field count next to its label.
+- Keep the disclosure directly grouped with the changed fields, using the same vertical gap as the field items.
 - Render configuration keys and values in a code-oriented style.
 - Render API keys as hidden SecretInput-style values with explicit Reveal controls for current and proposed values.
 - Keep a permanent `Refresh` action that rereads the file and replaces the Preview and file hash.
@@ -48,14 +52,14 @@ persistent Foundry database.
 - Scan every `[model_providers.<key>]` table without using the top-level `model_provider` to choose a key.
 - Use `foundry` when no Provider table exists.
 - Automatically use the sole key when exactly one Provider table exists.
-- When multiple keys exist, show a key selector in the Preview Dialog and update the Preview for the selected key.
+- When multiple keys exist, show a key selector in the Review Dialog and update the Preview for the selected key.
 - Propose the selected key as the top-level `model_provider` value.
 - Ignore direct values under `[model_providers]`; only nested `[model_providers.<key>]` tables are candidates.
 - Overwrite invalid value types in Foundry-managed candidate fields and show their current serialized values in the Diff instead of rejecting the Preview.
 - Reject only configuration content that cannot be parsed or safely preserved as a whole.
 - Preserve all Provider tables and all fields outside Foundry's managed field set.
 - Switching saved Providers modifies the managed fields under the chosen key rather than creating another key.
-- Official Default removes the top-level active selection but retains all Provider tables.
+- Official Default removes the top-level active selection, retains all Provider tables, and previews the retained fields under the active or sole Provider key as unchanged.
 
 ## File Safety
 

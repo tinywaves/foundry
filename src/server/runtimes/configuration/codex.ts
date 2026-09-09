@@ -97,6 +97,27 @@ function getProviderTable(
   return value;
 }
 
+function getOfficialPreviewProvider(
+  values: Record<string, unknown>,
+): { key: string; table: Record<string, unknown> } {
+  const modelProviders = isRecord(values.model_providers)
+    ? values.model_providers
+    : {};
+  if (typeof values.model_provider === 'string') {
+    const providerTable = modelProviders[values.model_provider];
+    return {
+      key: values.model_provider,
+      table: isRecord(providerTable) ? providerTable : {},
+    };
+  }
+
+  const providerTables = Object.entries(modelProviders)
+    .filter((entry): entry is [string, Record<string, unknown>] => isRecord(entry[1]));
+  return providerTables.length === 1
+    ? { key: providerTables[0][0], table: providerTables[0][1] }
+    : { key: '<key>', table: {} };
+}
+
 export function createCodexPlan(
   source: ConfigurationSource,
   filename: string,
@@ -105,8 +126,17 @@ export function createCodexPlan(
   requestedProviderKey: string | undefined,
 ): ConfigurationPlan | Extract<RuntimeConfigurationPreview, { kind: 'provider-key-selection' }> {
   if (target.kind === 'official-default') {
-    const fields = topLevelFields.map((key) =>
-      createPreviewField(key, source.values[key], undefined));
+    const previewProvider = getOfficialPreviewProvider(source.values);
+    const fields = [
+      ...topLevelFields.map((key) =>
+        createPreviewField(key, source.values[key], undefined)),
+      ...providerFields.map((key) => createPreviewField(
+        `[model_providers.${previewProvider.key}].${key}`,
+        previewProvider.table[key],
+        previewProvider.table[key],
+        key === 'experimental_bearer_token',
+      )),
+    ];
     const updated = cloneValues(source.values);
     for (const key of topLevelFields) {
       delete updated[key];

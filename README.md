@@ -55,12 +55,12 @@ Codex Providers use the Responses protocol and support a default model, optional
 
 ### Runtimes
 
-Foundry detects the `codex` and `claude` executables from `PATH`, reads their version, and manages these user-level configuration files:
+Foundry detects the `codex` and `claude` executables from `PATH`, reads their version, and manages these user-level configuration files. It honors each Runtime's configuration-directory environment variable and otherwise uses the standard home-directory location:
 
-| Runtime | Configuration file |
-| --- | --- |
-| Codex | `~/.codex/config.toml` |
-| Claude Code | `~/.claude/settings.json` |
+| Runtime | Environment override | Default configuration file |
+| --- | --- | --- |
+| Codex | `$CODEX_HOME/config.toml` | `~/.codex/config.toml` |
+| Claude Code | `$CLAUDE_CONFIG_DIR/settings.json` | `~/.claude/settings.json` |
 
 Before applying a saved Provider or Official Default, Foundry compares every managed field and separates proposed changes from unchanged fields. Long configuration paths, field names, and field values remain on one line and reveal the full value on hover when truncated. Applying a preview:
 

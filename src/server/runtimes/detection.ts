@@ -16,15 +16,21 @@ const VERSION_TIMEOUT_MS = 3000;
 const runtimeDefinitions = {
   'claude-code': {
     command: 'claude',
-    configurationPath: path.join('.claude', 'settings.json'),
+    configurationDirectory: '.claude',
+    configurationDirectoryEnvironmentVariable: 'CLAUDE_CONFIG_DIR',
+    configurationFilename: 'settings.json',
   },
   'codex': {
     command: 'codex',
-    configurationPath: path.join('.codex', 'config.toml'),
+    configurationDirectory: '.codex',
+    configurationDirectoryEnvironmentVariable: 'CODEX_HOME',
+    configurationFilename: 'config.toml',
   },
 } satisfies Record<ProviderRuntime, {
   command: string;
-  configurationPath: string;
+  configurationDirectory: string;
+  configurationDirectoryEnvironmentVariable: 'CLAUDE_CONFIG_DIR' | 'CODEX_HOME';
+  configurationFilename: string;
 }>;
 
 type RunVersion = (executablePath: string) => Promise<string>;
@@ -82,13 +88,20 @@ export class LocalRuntimeDetector implements RuntimeDetector {
       });
       return (result.stdout || result.stderr).trim();
     },
+    private readonly environment: Readonly<Record<string, string | undefined>> = process.env,
   ) {}
 
   async detect(runtime: ProviderRuntime): Promise<RuntimeDetection> {
     const definition = runtimeDefinitions[runtime];
+    const configuredDirectory = this.environment[
+      definition.configurationDirectoryEnvironmentVariable
+    ]?.trim();
+    const configurationDirectory = configuredDirectory
+      ? path.resolve(configuredDirectory)
+      : path.join(this.homeDirectory, definition.configurationDirectory);
     const configurationPath = path.join(
-      this.homeDirectory,
-      definition.configurationPath,
+      configurationDirectory,
+      definition.configurationFilename,
     );
     const hasConfigurationFile = await hasPath(configurationPath);
     const executablePath = await findExecutable(

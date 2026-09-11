@@ -1,4 +1,5 @@
 export const apiStatusCodes = {
+  promptNotFound: 'PROMPT_NOT_FOUND',
   providerConnectionFailed: 'PROVIDER_CONNECTION_FAILED',
   providerInUse: 'PROVIDER_IN_USE',
   providerNotFound: 'PROVIDER_NOT_FOUND',
@@ -37,7 +38,7 @@ export const foundryExportFormat = 'foundry-export-v1' as const;
 
 export const foundryExportMediaType = 'application/octet-stream' as const;
 
-export const foundryExportModuleIds = ['settings', 'providers'] as const;
+export const foundryExportModuleIds = ['settings', 'providers', 'prompts'] as const;
 
 export type FoundryExportModuleId = typeof foundryExportModuleIds[number];
 
@@ -71,6 +72,25 @@ export interface FoundryImportResult {
 }
 
 export type FoundryImportResponse = ApiResponse<FoundryImportResult>;
+
+export type FoundryImportModuleInspectionStatus
+  = 'available' | 'invalid' | 'unsupported';
+
+export interface FoundryImportModuleInspection {
+  id: string;
+  itemCount: number | null;
+  message?: string;
+  overwrite: boolean;
+  status: FoundryImportModuleInspectionStatus;
+}
+
+export interface FoundryImportInspection {
+  createdAt: string;
+  foundryVersion: string;
+  modules: FoundryImportModuleInspection[];
+}
+
+export type FoundryImportInspectionResponse = ApiResponse<FoundryImportInspection>;
 
 export const providerRuntimes = ['codex', 'claude-code'] as const;
 
@@ -237,6 +257,43 @@ export type CreateProviderRequest
 export type FoundrySettingsExport = ApplicationSettings;
 
 export type FoundryProvidersExport = CreateProviderRequest[];
+
+export interface CreatePromptRequest {
+  content: string;
+  description: string | null;
+  title: string;
+}
+
+export interface Prompt extends CreatePromptRequest {
+  createdAt: number;
+  id: string;
+  updatedAt: number;
+}
+
+export interface PromptSummary {
+  createdAt: number;
+  description: string | null;
+  excerpt: string;
+  id: string;
+  title: string;
+  updatedAt: number;
+}
+
+export interface PromptList {
+  items: PromptSummary[];
+}
+
+export type FoundryPromptsExport = CreatePromptRequest[];
+
+export type PromptResponse = ApiResponse<PromptSummary>;
+
+export type PromptDetailResponse = ApiResponse<Prompt | null>;
+
+export type PromptDeleteResponse = ApiResponse<boolean>;
+
+export type PromptUpdateResponse = ApiResponse<PromptSummary | null>;
+
+export type PromptsResponse = ApiResponse<PromptList>;
 
 export type ProviderResponse = ApiResponse<ProviderSummary>;
 

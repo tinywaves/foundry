@@ -1,5 +1,6 @@
 import type {
   CreateProviderRequest,
+  Prompt,
   Provider,
   ProviderRuntime,
 } from '@dhzh/foundry-api-contract';
@@ -8,6 +9,7 @@ import { createHash } from 'node:crypto';
 import { expect, it, vi } from 'vitest';
 
 import { FoundryExportService } from '../src/server/data-export/service';
+import type { PromptStore } from '../src/server/prompts/store';
 import type { ProviderStore } from '../src/server/providers/store';
 import type { SettingsStore } from '../src/server/settings/store';
 
@@ -58,6 +60,27 @@ const claudeProvider: Provider = {
   updatedAt: 400,
 };
 
+const prompt: Prompt = {
+  content: '# Review\n\nCheck the current diff.',
+  createdAt: 500,
+  description: 'A review checklist',
+  id: 'prompt-id',
+  title: 'Review changes',
+  updatedAt: 600,
+};
+
+function createPromptStore(): PromptStore {
+  return {
+    createPrompt: vi.fn(),
+    createPrompts: vi.fn(),
+    deletePrompt: vi.fn(),
+    getPrompt: vi.fn(),
+    listAllPrompts: () => [prompt],
+    listPrompts: vi.fn(),
+    updatePrompt: vi.fn(),
+  };
+}
+
 function createProviderStore(): ProviderStore {
   const providers = [codexProvider, claudeProvider];
 
@@ -102,9 +125,10 @@ function sha256(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
 
-it('creates a versioned Foundry Export with Settings and portable Providers', async () => {
+it('creates a versioned Foundry Export with portable Providers and Prompts', async () => {
   const createdAt = new Date(2026, 8, 8, 12, 34, 56);
   const exported = await new FoundryExportService(
+    createPromptStore(),
     createProviderStore(),
     createSettingsStore(),
     () => createdAt,
@@ -128,6 +152,13 @@ it('creates a versioned Foundry Export with Settings and portable Providers', as
       remark: claudeProvider.remark,
       configuration: claudeProvider.configuration,
       runtime: claudeProvider.runtime,
+    },
+  ];
+  const prompts = [
+    {
+      content: prompt.content,
+      description: prompt.description,
+      title: prompt.title,
     },
   ];
 
@@ -155,8 +186,17 @@ it('creates a versioned Foundry Export with Settings and portable Providers', as
           sha256: sha256(providers),
           size: JSON.stringify(providers).length,
         },
+        {
+          id: 'prompts',
+          mediaType: 'application/json',
+          overwrite: false,
+          path: 'modules/prompts.json',
+          sha256: sha256(prompts),
+          size: JSON.stringify(prompts).length,
+        },
       ],
     },
+    'modules/prompts.json': prompts,
     'modules/providers.json': providers,
     'modules/settings.json': settings,
   });
@@ -165,6 +205,7 @@ it('creates a versioned Foundry Export with Settings and portable Providers', as
   expect(JSON.stringify(archive['modules/providers.json'])).not.toContain('updatedAt');
   expect(JSON.stringify(archive['modules/providers.json'])).toContain('codex-secret');
   expect(JSON.stringify(archive['modules/providers.json'])).toContain('claude-secret');
+  expect(JSON.stringify(archive['modules/prompts.json'])).not.toContain('prompt-id');
 });
 
 it('fails the complete export when an Export Module cannot be read', async () => {
@@ -174,6 +215,7 @@ it('fails the complete export when an Export Module cannot be read', async () =>
   };
 
   await expect(new FoundryExportService(
+    createPromptStore(),
     createProviderStore(),
     settingsStore,
   ).createExport()).rejects.toThrow('Settings unavailable');

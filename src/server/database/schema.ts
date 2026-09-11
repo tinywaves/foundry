@@ -86,6 +86,44 @@ export const providers = sqliteTable(
   ],
 );
 
+export const prompts = sqliteTable(
+  'prompts',
+  {
+    id: text('id').primaryKey(),
+    title: text('title').notNull(),
+    description: text('description'),
+    content: text('content').notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+    deletedAt: integer('deleted_at'),
+  },
+  (table) => [
+    index('prompts_updated_at_index').on(table.updatedAt),
+    check('prompts_id_not_empty', sql`length(${table.id}) > 0`),
+    check(
+      'prompts_title_valid',
+      sql`length(trim(${table.title})) BETWEEN 1 AND 100`,
+    ),
+    check(
+      'prompts_description_valid',
+      sql`${table.description} IS NULL OR length(${table.description}) <= 2000`,
+    ),
+    check(
+      'prompts_content_valid',
+      sql`length(trim(${table.content})) > 0 AND length(CAST(${table.content} AS BLOB)) <= 1048576`,
+    ),
+    check('prompts_created_at_nonnegative', sql`${table.createdAt} >= 0`),
+    check(
+      'prompts_updated_at_valid',
+      sql`${table.updatedAt} >= ${table.createdAt}`,
+    ),
+    check(
+      'prompts_deleted_at_valid',
+      sql`${table.deletedAt} IS NULL OR ${table.deletedAt} >= ${table.createdAt}`,
+    ),
+  ],
+);
+
 export const runtimes = sqliteTable(
   'runtimes',
   {

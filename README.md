@@ -1,8 +1,8 @@
 # Foundry
 
-Foundry is a local control plane for AI development tools. It provides a CLI-managed web interface for saving model Providers, applying them to installed agent Runtimes, and moving user-owned configuration between Foundry installations.
+Foundry is a local control plane for AI development tools. It provides a CLI-managed web interface for saving model Providers, applying them to installed agent Runtimes, managing reusable Prompt fragments, and moving user-owned configuration between Foundry installations.
 
-Foundry currently supports [OpenAI Codex](https://github.com/openai/codex) and [Claude Code](https://docs.anthropic.com/en/docs/claude-code). The Dashboard, Skills, MCPs, and Prompts screens are present as placeholders; their management workflows are not connected to the Local Web UI yet.
+Foundry currently supports [OpenAI Codex](https://github.com/openai/codex) and [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Prompt management is available in the Local Web UI. The Dashboard, Skills, and MCPs screens remain placeholders.
 
 ## Requirements
 
@@ -72,13 +72,28 @@ Before applying a saved Provider or Official Default, Foundry compares every man
 
 Official Default removes Foundry-managed active selection fields while preserving unrelated configuration, saved Provider tables, and official account credentials. Foundry does not infer Runtime Assignments from configuration files changed outside the application.
 
+### Prompts
+
+A Prompt is a reusable text fragment stored in Foundry. Prompt management can:
+
+- create, search, view, copy, edit, and soft-delete Prompts in a shallow list workflow;
+- keep a title and optional description alongside the original content;
+- preserve the exact source without variables, template evaluation, or version history;
+- expose explicit View, Edit, Copy, and Delete actions on each list item, with View and Edit
+  sharing a Markdown source editor that does not render a preview; and
+- warn before discarding unsaved dialog changes and save explicitly using last-writer-wins behavior.
+
+Prompt content is limited to 1 MiB of UTF-8 data.
+Deleted Prompts are hidden from the UI and exports but retained in the local
+database. The Prompt workflow does not provide a Trash view or restore action.
+
 ### Settings
 
 Application Settings currently contain a persisted Color Mode: System, Light, or Dark. The Settings page also owns Foundry data import and export.
 
 ## Local Web Routes
 
-The Local Web UI uses hash routing, so browser navigation does not require server-side route fallbacks.
+The Local Web UI uses hash routing, so browser navigation does not require server-side route fallbacks. Prompt management stays within the sidebar layout, and the header remains visible while page content scrolls. Settings and Provider forms use a focused standalone layout.
 
 | Route | Status | Purpose |
 | --- | --- | --- |
@@ -86,7 +101,7 @@ The Local Web UI uses hash routing, so browser navigation does not require serve
 | `/#/dashboard` | Placeholder | Application entry point. |
 | `/#/skills` | Placeholder | Future Skill management. |
 | `/#/mcps` | Placeholder | Future MCP Server management. |
-| `/#/prompts` | Placeholder | Future Prompt management. |
+| `/#/prompts` | Available | Displays a searchable Prompt list and opens create/edit dialogs. |
 | `/#/providers` | Available | Lists Providers by Runtime; accepts `?runtime=codex` or `?runtime=claude-code`. |
 | `/#/providers/new` | Available | Creates a Provider. |
 | `/#/providers/:providerId/edit` | Available | Edits an existing Provider. |
@@ -105,16 +120,17 @@ The Settings page exports all current Exportable Data as one timestamped `.found
 | --- | --- | --- | --- |
 | `settings` | JSON | Application Settings | Overwrites current settings. |
 | `providers` | JSON | All active Providers, including API keys and avatars | Appends new Providers, including duplicates. |
+| `prompts` | JSON | All active Prompts | Appends new Prompts, including duplicates. |
 
-Provider database IDs, timestamps, and deletion metadata are omitted so the destination database can generate them. Deleted Providers, Runtime Assignments, and other machine-specific operational state are not exported.
+Provider and Prompt database IDs and timestamps are omitted so the destination database can generate them. Deleted Providers, deleted Prompts, deletion metadata, Runtime Assignments, and other machine-specific operational state are not exported.
 
-Each package contains a manifest with its format, creation time, Foundry version, and per-module path, media type, overwrite policy, byte size, and SHA-256 checksum. Import validates the container and manifest before processing modules. Supported modules are atomic but independent: one module can fail or be unsupported without rolling back another module that imported successfully.
+Each package contains a manifest with its format, creation time, Foundry version, and per-module path, media type, overwrite policy, byte size, and SHA-256 checksum. After a file is selected, Foundry validates the container, manifest, checksums, import policies, and supported module data without changing stored data. The Import dialog then lists every module and defaults valid, supported modules to selected; only the modules still selected when Import is confirmed are written. Selected modules are atomic but independent, so one module can fail without rolling back another module that imported successfully. Unknown and invalid modules remain visible but cannot be selected.
 
 Because Provider API keys are stored in the export, keep `.foundry` files private and store them securely.
 
 ## Local Data and Safety
 
-Foundry stores Provider records, Runtime Assignments, and Application Settings in one `foundry.sqlite` database in the operating system's application-data directory. The directory is resolved with [`env-paths`](https://github.com/sindresorhus/env-paths); on macOS the default database location is `~/Library/Application Support/foundry/foundry.sqlite`.
+Foundry stores Provider records, Prompt records, Runtime Assignments, and Application Settings in one `foundry.sqlite` database in the operating system's application-data directory. The directory is resolved with [`env-paths`](https://github.com/sindresorhus/env-paths); on macOS the default database location is `~/Library/Application Support/foundry/foundry.sqlite`.
 
 Provider API keys are stored in this local database. Access to the machine and its user account should therefore be treated as access to those credentials.
 
@@ -138,11 +154,17 @@ The Local Web UI uses relative `/api` requests. The server currently exposes:
 | `DELETE` | `/api/providers/:providerId` | Soft-deletes an unassigned Provider. |
 | `POST` | `/api/providers/:providerId/copy` | Creates a Provider copy from submitted data. |
 | `POST` | `/api/providers/:providerId/test-connection` | Runs a non-persistent Provider connection test. |
+| `GET` | `/api/prompts?query=:query` | Lists Prompt summaries in most-recently-updated order, with optional text search. |
+| `POST` | `/api/prompts` | Creates a Prompt. |
+| `GET` | `/api/prompts/:promptId` | Reads a Prompt and its exact content. |
+| `PUT` | `/api/prompts/:promptId` | Updates a Prompt. |
+| `DELETE` | `/api/prompts/:promptId` | Soft-deletes a Prompt. |
 | `GET` | `/api/runtimes` | Detects supported Runtimes and returns their assignments. |
 | `POST` | `/api/runtimes/:runtime/preview` | Previews configuration changes for a Provider or Official Default. |
 | `POST` | `/api/runtimes/:runtime/apply` | Applies an unchanged preview and records the Runtime Assignment. |
 | `GET` | `/api/data/export` | Downloads the current `.foundry` export. |
-| `POST` | `/api/data/import` | Imports a `.foundry` file from the raw request body. |
+| `POST` | `/api/data/import/inspect` | Validates a `.foundry` file from the raw request body and lists its modules without writing data. |
+| `POST` | `/api/data/import?modules=:moduleIds` | Imports the selected comma-separated module IDs from a `.foundry` file in the raw request body. |
 
 JSON success and business-result responses use a shared envelope:
 
@@ -154,7 +176,7 @@ JSON success and business-result responses use a shared envelope:
 }
 ```
 
-`message` is optional. Request validation failures use HTTP `400`; domain outcomes also carry a machine-readable `status` such as `PROVIDER_NOT_FOUND` or `RUNTIME_CONFIGURATION_CHANGED`. The export endpoint instead returns `application/octet-stream` with an attachment filename. Import requests are limited to 256 MiB.
+`message` is optional. Request validation failures use HTTP `400`; domain outcomes also carry a machine-readable `status` such as `PROMPT_NOT_FOUND`, `PROVIDER_NOT_FOUND`, or `RUNTIME_CONFIGURATION_CHANGED`. The export endpoint instead returns `application/octet-stream` with an attachment filename. Import requests are limited to 256 MiB.
 
 The API is an internal local contract shared by the server and Local Web UI. It is not currently documented as a stable remote integration API.
 
@@ -217,7 +239,7 @@ Pushing a `v*` tag triggers separate GitHub Actions workflows that create the Gi
 - `app/test/` - Vitest Browser Mode coverage using Playwright and Chromium.
 - `docs/adr/` - Architecture decision records for routing, server state, persistence, credentials, Runtime management, and export format.
 - `docs/design/` and `docs/research/` - Detailed feature behavior and supporting technical research.
-- `src/main/` - Earlier Skill and Prompt subsystem code that is not wired into the current CLI, server, or Local Web UI entrypoints.
+- `src/main/` - Earlier Skill subsystem code that is not wired into the current CLI, server, or Local Web UI entrypoints.
 
 The published package contains the CLI, the minimal library entrypoint, bundled migrations, and the built Local Web UI. The private app and API-contract workspaces are not published as separate packages.
 

@@ -13,7 +13,10 @@ import { render } from 'vitest-browser-react';
 import { createMemoryRouter } from 'react-router';
 import type { InitialEntry } from 'react-router';
 import type {
+  CreatePromptRequest,
   CreateProviderRequest,
+  Prompt,
+  PromptList,
   Provider,
   ProviderSummary,
   RuntimeSummary,
@@ -65,6 +68,45 @@ function createProviderDetailResponse(provider: Provider, status = 200) {
   }, {
     status,
   });
+}
+
+function createPrompt(overrides: Partial<Prompt> = {}): Prompt {
+  return {
+    content: '# Review changes\n\nCheck **tests** before merging.',
+    createdAt: 100,
+    description: 'A reusable review fragment',
+    id: 'prompt-1',
+    title: 'Review changes',
+    updatedAt: 200,
+    ...overrides,
+  };
+}
+
+function createPromptsResponse(
+  prompts: Prompt[] = [],
+  status = 200,
+) {
+  const data: PromptList = {
+    items: prompts.map((prompt) => createPromptSummary(prompt)),
+  };
+  return Response.json({ data, status: 'SUCCESS' }, { status });
+}
+
+function createPromptSummary(prompt: Prompt) {
+  return {
+    createdAt: prompt.createdAt,
+    description: prompt.description,
+    // The app's current TypeScript lib predates String#replaceAll.
+    // eslint-disable-next-line unicorn/prefer-string-replace-all
+    excerpt: prompt.content.replace(/\s+/gu, ' ').trim().slice(0, 240),
+    id: prompt.id,
+    title: prompt.title,
+    updatedAt: prompt.updatedAt,
+  };
+}
+
+function createPromptDetailResponse(prompt: Prompt, status = 200) {
+  return Response.json({ data: prompt, status: 'SUCCESS' }, { status });
 }
 
 function createProviderConnectionResponse(
@@ -153,6 +195,13 @@ function getRequestPath(input: RequestInfo | URL): string {
   return input instanceof URL ? input.pathname : new URL(input.url).pathname;
 }
 
+function parseRequestBody(body: BodyInit | null | undefined): unknown {
+  if (typeof body !== 'string') {
+    throw new TypeError('Expected a JSON request body.');
+  }
+  return JSON.parse(body) as unknown;
+}
+
 function createDefaultFetchMock() {
   return vi.fn((input: RequestInfo | URL) => {
     const requestPath = getRequestPath(input);
@@ -162,11 +211,88 @@ function createDefaultFetchMock() {
     if (requestPath === '/api/providers') {
       return Promise.resolve(createProvidersResponse());
     }
+    if (requestPath === '/api/prompts') {
+      return Promise.resolve(createPromptsResponse());
+    }
     if (requestPath === '/api/runtimes') {
       return Promise.resolve(createRuntimesResponse(createRuntimeSummaries()));
     }
     return Promise.resolve(createHealthResponse());
   });
+}
+
+function createPromptFetchMock(initialPrompts: Prompt[] = []) {
+  const prompts = initialPrompts.map((prompt) => ({ ...prompt }));
+  let sequence = prompts.length;
+
+  const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === 'string'
+      ? new URL(input, 'http://localhost')
+      : (input instanceof URL ? input : new URL(input.url));
+    if (url.pathname === '/api/settings') {
+      return Promise.resolve(createSettingsResponse());
+    }
+    if (url.pathname === '/api/health') {
+      return Promise.resolve(createHealthResponse());
+    }
+    const method = init?.method ?? 'GET';
+    if (method === 'GET' && url.pathname === '/api/prompts') {
+      const query = (url.searchParams.get('query') ?? '').toLocaleLowerCase('en-US');
+      const filtered = prompts.filter((prompt) => [
+        prompt.title,
+        prompt.description ?? '',
+        prompt.content,
+      ].some((value) => value.toLocaleLowerCase('en-US').includes(query)));
+      return Promise.resolve(createPromptsResponse(filtered));
+    }
+    if (method === 'POST' && url.pathname === '/api/prompts') {
+      const input = parseRequestBody(init?.body) as CreatePromptRequest;
+      sequence += 1;
+      const prompt = createPrompt({
+        ...input,
+        createdAt: sequence,
+        id: `prompt-${sequence}`,
+        updatedAt: sequence,
+      });
+      prompts.push(prompt);
+      return Promise.resolve(Response.json({
+        data: createPromptSummary(prompt),
+        status: 'SUCCESS',
+      }, { status: 201 }));
+    }
+
+    const detailRouteMatch = (/^\/api\/prompts\/([^/]+)$/u).exec(url.pathname);
+    if (detailRouteMatch) {
+      const promptIndex = prompts.findIndex(
+        (candidate) => candidate.id === detailRouteMatch[1],
+      );
+      if (method === 'DELETE') {
+        if (promptIndex !== -1) {
+          prompts.splice(promptIndex, 1);
+        }
+        return Promise.resolve(Response.json({
+          data: promptIndex !== -1,
+          status: promptIndex === -1 ? 'PROMPT_NOT_FOUND' : 'SUCCESS',
+        }));
+      }
+      const prompt = promptIndex === -1 ? undefined : prompts[promptIndex];
+      if (method === 'PUT' && prompt) {
+        Object.assign(prompt, parseRequestBody(init?.body) as CreatePromptRequest, {
+          updatedAt: prompt.updatedAt + 1,
+        });
+        return Promise.resolve(Response.json({
+          data: createPromptSummary(prompt),
+          status: 'SUCCESS',
+        }));
+      }
+      return Promise.resolve(prompt
+        ? createPromptDetailResponse(prompt)
+        : Response.json({ data: null, status: 'PROMPT_NOT_FOUND' }));
+    }
+    return Promise.resolve(createHealthResponse());
+  });
+
+  return { fetchMock, prompts };
 }
 
 function throwDeferredNotInitialized(): never {
@@ -302,7 +428,7 @@ describe('application routing and layouts', () => {
     await screen.getByRole('link', { name: 'Prompts' }).click();
 
     await expect
-      .element(screen.getByText('Prompt management will be added here.'))
+      .element(screen.getByRole('heading', { name: 'No Prompts' }))
       .toBeVisible();
     await expect
       .element(screen.getByRole('link', { name: 'Prompts' }))
@@ -311,7 +437,7 @@ describe('application routing and layouts', () => {
 
   test('opens settings from the header and returns to the previous page', async () => {
     const screen = await renderApp('/prompts');
-    await expect.element(screen.getByText('Prompt management will be added here.'))
+    await expect.element(screen.getByRole('heading', { name: 'No Prompts' }))
       .toBeVisible();
     const settingsButton = document.querySelector(
       '[data-testid="settings-button"]',
@@ -331,8 +457,29 @@ describe('application routing and layouts', () => {
     expect(backLink).toBeInstanceOf(HTMLAnchorElement);
     (backLink as HTMLAnchorElement).click();
     await expect
-      .element(screen.getByText('Prompt management will be added here.'))
+      .element(screen.getByRole('heading', { name: 'No Prompts' }))
       .toBeVisible();
+  });
+
+  test('keeps the app header fixed while the page scrolls', async () => {
+    await page.viewport(390, 300);
+    const screen = await renderApp('/runtimes');
+    await expect.element(screen.getByText(
+      'Detection status and Provider assignments for each Runtime.',
+    )).toBeVisible();
+    const header = page.getByTestId('app-header').element();
+    const headerStyles = getComputedStyle(header);
+
+    expect(headerStyles.position).toBe('sticky');
+    expect(headerStyles.top).toBe('0px');
+    expect(headerStyles.zIndex).toBe('20');
+    expect(document.documentElement.scrollHeight).toBeGreaterThan(window.innerHeight);
+
+    window.scrollTo(0, document.documentElement.scrollHeight);
+
+    await expect.poll(() => window.scrollY).toBeGreaterThan(0);
+    expect(header.getBoundingClientRect().top).toBe(0);
+    window.scrollTo(0, 0);
   });
 
   test('renders capability and execution navigation groups', async () => {
@@ -1326,7 +1473,7 @@ describe('application routing and layouts', () => {
     expect(backLink).toBeInstanceOf(HTMLAnchorElement);
     (backLink as HTMLAnchorElement).click();
     await expect
-      .element(screen.getByText('Prompt management will be added here.'))
+      .element(screen.getByRole('heading', { name: 'No Prompts' }))
       .toBeVisible();
   });
 
@@ -1416,6 +1563,35 @@ describe('application routing and layouts', () => {
       if (requestPath === '/api/settings') {
         return Promise.resolve(createSettingsResponse());
       }
+      if (requestPath === '/api/data/import/inspect' && init?.method === 'POST') {
+        return Promise.resolve(Response.json({
+          status: 'SUCCESS',
+          data: {
+            createdAt: '2026-09-08T12:34:56.000Z',
+            foundryVersion: '9.9.9',
+            modules: [
+              {
+                id: 'settings',
+                itemCount: 1,
+                overwrite: true,
+                status: 'available',
+              },
+              {
+                id: 'providers',
+                itemCount: 1,
+                overwrite: false,
+                status: 'available',
+              },
+              {
+                id: 'prompts',
+                itemCount: 2,
+                overwrite: false,
+                status: 'available',
+              },
+            ],
+          },
+        }));
+      }
       if (requestPath === '/api/data/import' && init?.method === 'POST') {
         return Promise.resolve(Response.json({
           status: 'SUCCESS',
@@ -1455,17 +1631,31 @@ describe('application routing and layouts', () => {
 
       input.dispatchEvent(new Event('change', { bubbles: true }));
 
-      await expect.element(screen.getByRole('heading', { name: 'Import Foundry data?' }))
+      await expect.element(screen.getByRole('heading', { name: 'Import Foundry data' }))
         .toBeVisible();
       await expect.element(screen.getByText(
-        'Application Settings will be replaced. Providers will be added, including duplicates.',
+        'Choose the modules to import from backup.foundry.',
       )).toBeVisible();
+      await expect.element(screen.getByText('Replaces the current application settings.'))
+        .toBeVisible();
+      await expect.element(screen.getByText('1 Provider will be added.')).toBeVisible();
+      await expect.element(screen.getByText('2 Prompts will be added.')).toBeVisible();
+
+      const promptModule = screen.getByRole('checkbox', { name: /Prompts/u });
+      await expect.element(promptModule).toBeChecked();
+      await promptModule.click();
+      await expect.element(promptModule).not.toBeChecked();
 
       await screen.getByRole('button', { name: 'Import', exact: true }).click();
 
       await expect.element(screen.getByText('Data imported with issues')).toBeVisible();
       await expect.element(screen.getByText('Settings imported. Providers failed')).toBeVisible();
-      expect(fetchMock).toHaveBeenCalledWith('/api/data/import', {
+      expect(fetchMock).toHaveBeenCalledWith('/api/data/import/inspect', {
+        body: file,
+        headers: { 'content-type': 'application/octet-stream' },
+        method: 'POST',
+      });
+      expect(fetchMock).toHaveBeenCalledWith('/api/data/import?modules=settings,providers', {
         body: file,
         headers: { 'content-type': 'application/octet-stream' },
         method: 'POST',
@@ -1578,6 +1768,268 @@ describe('application routing and layouts', () => {
   });
 });
 
+describe('Prompt management', () => {
+  test('opens the new Prompt form without an intermediate loading dialog', async () => {
+    const { fetchMock } = createPromptFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    const screen = await renderApp('/prompts');
+    let hasShownLoadingDialog = false;
+    const observer = new MutationObserver(() => {
+      hasShownLoadingDialog ||= document.querySelector(
+        '[aria-label="Opening Prompt editor"]',
+      ) !== null;
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    await screen.getByRole('button', { name: 'Add Prompt' }).click();
+    await expect.element(screen.getByRole('heading', { name: 'New Prompt' }))
+      .toBeVisible();
+    observer.disconnect();
+
+    expect(hasShownLoadingDialog).toBe(false);
+  });
+
+  test('searches Prompt cards and edits raw content in a dialog', async () => {
+    const longTitle = [
+      'Review changes for the complete multi-package release workflow',
+      'including migration safety, runtime compatibility, user documentation,',
+      'cross-platform validation, and final deployment verification before publishing',
+    ].join(' ');
+    const prompt = createPrompt({
+      content: [
+        '# Review changes',
+        '',
+        'Check **tests** before merging.',
+        '',
+        '| Area | Result |',
+        '| --- | --- |',
+        '| Tests | Required |',
+        '',
+        '<script>window.promptPreviewExecuted = true</script>',
+        '',
+        '![Tracking image](https://example.com/tracker.png)',
+      ].join('\n'),
+      title: longTitle,
+    });
+    const shortTitlePrompt = createPrompt({
+      description: null,
+      id: 'prompt-2',
+      title: 'Short title',
+    });
+    const { fetchMock } = createPromptFetchMock([prompt, shortTitlePrompt]);
+    vi.stubGlobal('fetch', fetchMock);
+    const screen = await renderApp('/prompts');
+
+    await expect.element(screen.getByTestId('page-title')).toHaveTextContent('Prompts');
+    expect(document.querySelector('[aria-label="Filter by tag"]')).toBeNull();
+    expect(document.querySelector('[aria-label="Sort Prompts"]')).toBeNull();
+    await expect.element(screen.getByText(
+      'Reusable text fragments for agent conversations.',
+    )).toBeVisible();
+    const promptCard = screen.getByTestId('prompt-prompt-1');
+    const promptTitle = screen.getByTestId('prompt-title-prompt-1');
+    const promptContent = screen.getByTestId('prompt-content-prompt-1');
+    const promptSummary = `${longTitle} · ${prompt.description}`;
+    await expect.element(promptTitle).toHaveTextContent(promptSummary);
+    expect(promptCard.element()).toHaveTextContent(prompt.description!);
+    expect(promptCard.element()).not.toHaveTextContent('Jan 1, 1970');
+    expect(getComputedStyle(promptTitle.element()).textOverflow).toBe('ellipsis');
+    expect(getComputedStyle(promptTitle.element()).whiteSpace).toBe('nowrap');
+    expect(promptTitle.element().scrollWidth).toBeGreaterThan(promptTitle.element().clientWidth);
+    expect(getComputedStyle(promptContent.element()).textOverflow).toBe('ellipsis');
+    expect(getComputedStyle(promptContent.element()).whiteSpace).toBe('nowrap');
+    expect(getComputedStyle(promptContent.element()).fontFamily).toContain('monospace');
+    expect(promptCard.element().getBoundingClientRect().height).toBeLessThan(80);
+    expect(promptCard.element().tagName).toBe('DIV');
+
+    const shortPromptTitle = screen.getByTestId('prompt-title-prompt-2');
+    expect(shortPromptTitle.element().scrollWidth)
+      .toBeLessThanOrEqual(shortPromptTitle.element().clientWidth);
+    await shortPromptTitle.hover();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(document.querySelector('[data-slot="tooltip-content"][data-open]')).toBeNull();
+
+    await promptTitle.hover();
+    await expect.poll(
+      () => document.querySelector('[data-slot="tooltip-content"][data-open]')?.textContent,
+    ).toContain(promptSummary);
+    expect(document.querySelector('[data-testid="prompt-description-prompt-1"]')).toBeNull();
+    expect(document.querySelector(
+      '[data-testid="prompt-prompt-1"] [data-slot="badge"]',
+    )).toBeNull();
+
+    expect(document.querySelector('input[aria-label="Search Prompts"]')).toBeNull();
+    await screen.getByRole('button', { name: 'Search Prompts' }).click();
+    const searchInput = screen.getByRole('textbox', { name: 'Search Prompts' });
+    await expect.element(searchInput).toHaveFocus();
+    await searchInput.fill('missing');
+    await expect.element(screen.getByRole('heading', { name: 'No matching Prompts' }))
+      .toBeVisible();
+    await searchInput.fill('tests');
+    await expect.element(promptTitle).toBeVisible();
+    await searchInput.fill('');
+    await promptContent.click();
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    await screen.getByRole('button', { name: `Edit ${longTitle}` }).click();
+    expect(document.querySelector('input[aria-label="Search Prompts"]')).toBeNull();
+
+    await expect.element(screen.getByRole('dialog', { name: 'Edit Prompt' }))
+      .toBeVisible();
+    expect(document.querySelector('[data-slot="dialog-header"]')).toBeNull();
+    const contentEditor = screen.getByRole('textbox', { name: 'Prompt content' });
+    await expect.element(contentEditor).toHaveTextContent('# Review changes');
+    await expect.element(contentEditor).toHaveTextContent('Check **tests** before merging.');
+    await expect.element(contentEditor).toHaveTextContent(
+      '<script>window.promptPreviewExecuted = true</script>',
+    );
+    expect(document.querySelector('[data-testid="prompt-preview"]')).toBeNull();
+    expect(document.querySelector('img[src="https://example.com/tracker.png"]')).toBeNull();
+  });
+
+  test('keeps the edit Dialog stable while loading Prompt details', async () => {
+    const prompt = createPrompt();
+    const promptDetail = createDeferred<Response>();
+    const { fetchMock: promptFetchMock } = createPromptFetchMock([prompt]);
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (getRequestPath(input) === `/api/prompts/${prompt.id}` && !init?.method) {
+        return promptDetail.promise;
+      }
+      return promptFetchMock(input, init);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const screen = await renderApp('/prompts');
+
+    await screen.getByRole('button', { name: `Edit ${prompt.title}` }).click();
+    await expect.element(screen.getByRole('status', { name: 'Loading Prompt' }))
+      .toBeVisible();
+    const openingDialog = document.querySelector<HTMLElement>('[data-slot="dialog-content"]');
+    expect(openingDialog).not.toBeNull();
+    const openingSize = {
+      height: openingDialog!.offsetHeight,
+      width: openingDialog!.offsetWidth,
+    };
+    expect(openingSize.width).toBeGreaterThan(800);
+    expect(openingSize.height).toBeGreaterThan(700);
+
+    promptDetail.resolve(createPromptDetailResponse(prompt));
+    await expect.element(screen.getByRole('textbox', { name: 'Prompt content' }))
+      .toBeVisible();
+    const editorDialog = document.querySelector<HTMLElement>('[data-slot="dialog-content"]');
+    const editorSize = {
+      height: editorDialog!.offsetHeight,
+      width: editorDialog!.offsetWidth,
+    };
+
+    expect(editorDialog).toBe(openingDialog);
+    expect(editorSize).toEqual(openingSize);
+  });
+
+  test('opens the same editor from View and Edit and copies exact content from the card', async () => {
+    const prompt = createPrompt({
+      content: '# Exact source\n\nKeep **all** Markdown.',
+    });
+    const { fetchMock } = createPromptFetchMock([prompt]);
+    const writeText = vi.fn((_content: string): Promise<void> => Promise.resolve());
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('navigator', {
+      clipboard: { writeText },
+      userAgent: navigator.userAgent,
+    });
+    const screen = await renderApp('/prompts');
+
+    await screen.getByRole('button', { name: `Copy ${prompt.title}` }).click();
+    await expect.poll(() => writeText.mock.calls[0]?.[0]).toBe(prompt.content);
+    await expect.element(screen.getByText('Prompt copied')).toBeVisible();
+    expect(document.querySelector('[data-slot="dialog-content"]')).toBeNull();
+
+    await screen.getByRole('button', { name: `View ${prompt.title}` }).click();
+    await expect.element(screen.getByRole('dialog', { name: 'Edit Prompt' })).toBeVisible();
+    expect(document.querySelector('[data-slot="dialog-header"]')).toBeNull();
+    const viewedContent = screen.getByRole('textbox', { name: 'Prompt content' });
+    await expect.element(viewedContent).toHaveTextContent('# Exact source');
+    await expect.element(viewedContent).toHaveTextContent('Keep **all** Markdown.');
+    await screen.getByRole('button', { name: 'Copy', exact: true }).click();
+    await expect.element(screen.getByText('Prompt copied')).toBeVisible();
+    const toastViewport = document.querySelector<HTMLElement>('[data-slot="toast-viewport"]');
+    const dialogOverlay = document.querySelector<HTMLElement>('[data-slot="dialog-overlay"]');
+    expect(Number(getComputedStyle(toastViewport!).zIndex))
+      .toBeGreaterThan(Number(getComputedStyle(dialogOverlay!).zIndex));
+    await screen.getByRole('button', { name: 'Close Prompt editor' }).click();
+    await expect.poll(
+      () => document.querySelector('[data-slot="dialog-content"]'),
+    ).toBeNull();
+
+    await screen.getByRole('button', { name: `Edit ${prompt.title}` }).click();
+    await expect.element(screen.getByRole('dialog', { name: 'Edit Prompt' })).toBeVisible();
+    expect(document.querySelector('[data-slot="dialog-header"]')).toBeNull();
+    const editedContent = screen.getByRole('textbox', { name: 'Prompt content' });
+    await expect.element(editedContent).toHaveTextContent('# Exact source');
+    await expect.element(editedContent).toHaveTextContent('Keep **all** Markdown.');
+  });
+
+  test('creates a Prompt from exact Markdown source', async () => {
+    const { fetchMock, prompts } = createPromptFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    const screen = await renderApp('/prompts');
+    const markdown = '# Draft\n\nKeep  \nexact `$1` source.';
+
+    await screen.getByRole('button', { name: 'Add Prompt' }).click();
+    await expect.element(screen.getByRole('heading', { name: 'New Prompt' }))
+      .toBeVisible();
+    expect(document.body).not.toHaveTextContent('Optional');
+    await expect.element(screen.getByTestId('page-title')).toHaveTextContent('Prompts');
+    await expect.element(screen.getByTestId('app-sidebar')).toBeVisible();
+    await screen.getByRole('textbox', { name: 'Title' }).fill('Draft helper');
+    await screen.getByRole('textbox', { name: 'Description' }).fill('Draft description');
+    await screen.getByRole('textbox', { name: 'Prompt content' }).fill(markdown);
+    await screen.getByRole('button', { name: 'Save' }).click();
+
+    await expect.element(screen.getByRole('button', { name: 'Edit Draft helper' }))
+      .toBeVisible();
+    expect(prompts).toHaveLength(1);
+    expect(prompts[0]).toMatchObject({
+      content: markdown,
+      description: 'Draft description',
+      title: 'Draft helper',
+    });
+    await expect.element(screen.getByText('Prompt created')).toBeVisible();
+  });
+
+  test('deletes a Prompt from its card after confirmation', async () => {
+    const { fetchMock, prompts } = createPromptFetchMock([createPrompt()]);
+    vi.stubGlobal('fetch', fetchMock);
+    const screen = await renderApp('/prompts');
+
+    await screen.getByRole('button', { name: 'Delete Review changes' }).click();
+    await expect.element(screen.getByRole('heading', { name: 'Delete Prompt?' }))
+      .toBeVisible();
+    expect(document.querySelector('[data-slot="dialog-content"]')).toBeNull();
+    await screen.getByRole('button', { name: 'Delete', exact: true }).click();
+
+    await expect.element(screen.getByText('Prompt deleted')).toBeVisible();
+    await expect.element(screen.getByRole('heading', { name: 'No Prompts' }))
+      .toBeVisible();
+    expect(prompts).toEqual([]);
+  });
+
+  test('warns before leaving an edited Prompt with unsaved changes', async () => {
+    const { fetchMock } = createPromptFetchMock([createPrompt()]);
+    vi.stubGlobal('fetch', fetchMock);
+    const screen = await renderApp('/prompts');
+
+    await screen.getByRole('button', { name: 'Edit Review changes' }).click();
+    await expect.element(screen.getByRole('dialog', { name: 'Edit Prompt' }))
+      .toBeVisible();
+    await screen.getByRole('textbox', { name: 'Title' }).fill('Uncommitted title');
+    await screen.getByRole('button', { name: 'Close Prompt editor' }).click();
+    await expect.element(screen.getByRole('heading', { name: 'Discard unsaved changes?' }))
+      .toBeVisible();
+    await screen.getByRole('button', { name: 'Keep editing' }).click();
+    await expect.element(screen.getByRole('textbox', { name: 'Title' }))
+      .toHaveValue('Uncommitted title');
+  });
+});
+
 describe('responsive sidebar', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', createDefaultFetchMock());
@@ -1624,7 +2076,7 @@ describe('responsive sidebar', () => {
     await expect.element(screen.getByRole('dialog')).toBeVisible();
     await screen.getByRole('link', { name: 'Prompts' }).click();
     await expect
-      .element(screen.getByText('Prompt management will be added here.'))
+      .element(screen.getByRole('heading', { name: 'No Prompts' }))
       .toBeVisible();
     await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
   });

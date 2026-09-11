@@ -11,6 +11,8 @@ import { registerDataExportRoutes } from './data-export/routes';
 import { FoundryExportService } from './data-export/service';
 import { registerDataImportRoutes } from './data-import/routes';
 import { FoundryImportService } from './data-import/service';
+import type { PromptStore } from './prompts/store';
+import { registerPromptRoutes } from './prompts/routes';
 import type { ProviderStore } from './providers/store';
 import type { ProviderConnectionTester } from './providers/connection-tester';
 import { registerProviderRoutes } from './providers/routes';
@@ -22,6 +24,7 @@ import type { SettingsStore } from './settings/store';
 const healthQuerySchema = z.strictObject({});
 
 export interface CreateFoundryAppOptions {
+  promptStore: PromptStore;
   providerConnectionTester: ProviderConnectionTester;
   providerStore: ProviderStore;
   runtimeService: RuntimeService;
@@ -54,13 +57,22 @@ export function createFoundryApp(options: CreateFoundryAppOptions): Hono {
 
   registerDataExportRoutes(
     app,
-    new FoundryExportService(options.providerStore, options.settingsStore),
+    new FoundryExportService(
+      options.promptStore,
+      options.providerStore,
+      options.settingsStore,
+    ),
   );
   registerDataImportRoutes(
     app,
-    new FoundryImportService(options.providerStore, options.settingsStore),
+    new FoundryImportService(
+      options.promptStore,
+      options.providerStore,
+      options.settingsStore,
+    ),
   );
   registerSettingsRoutes(app, options.settingsStore);
+  registerPromptRoutes(app, options.promptStore);
   registerProviderRoutes(app, options.providerStore, options.providerConnectionTester);
   registerRuntimeRoutes(app, options.runtimeService);
 

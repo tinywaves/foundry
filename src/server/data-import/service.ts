@@ -1,5 +1,7 @@
 import type {
   FoundryExportModuleId,
+  FoundryImportInspection,
+  FoundryImportModuleInspection,
   FoundryImportModuleResult,
   FoundryImportResult,
 } from '@dhzh/foundry-api-contract';
@@ -20,6 +22,8 @@ import { z } from 'zod';
 
 import type { ProviderStore } from '../providers/store';
 import { providerCreationSchema } from '../providers/validation';
+import type { PromptStore } from '../prompts/store';
+import { promptCreationSchema } from '../prompts/validation';
 import type { SettingsStore } from '../settings/store';
 
 const MAX_ARCHIVE_ENTRIES = 256;
@@ -74,6 +78,32 @@ const settingsImportSchema = z.strictObject({
   colorMode: z.enum(applicationColorModes),
 });
 const providersImportSchema = z.array(providerCreationSchema);
+const promptImportSchema = promptCreationSchema.extend({
+  tags: z.array(z.string()).optional(),
+}).transform((prompt) => ({
+  content: prompt.content,
+  description: prompt.description,
+  title: prompt.title,
+}));
+const promptsImportSchema = z.array(promptImportSchema);
+const requiredExportModuleIds = ['settings', 'providers'] as const;
+
+type ParsedImportModule
+  = | {
+    data: z.infer<typeof settingsImportSchema>;
+    id: 'settings';
+    itemCount: 1;
+  }
+  | {
+    data: z.infer<typeof providersImportSchema>;
+    id: 'providers';
+    itemCount: number;
+  }
+  | {
+    data: z.infer<typeof promptsImportSchema>;
+    id: 'prompts';
+    itemCount: number;
+  };
 
 export class FoundryImportFileError extends Error {
   constructor(cause?: unknown) {
@@ -127,7 +157,7 @@ async function readManifest(entries: Entry[]) {
 
     if (
       hasUndeclaredFiles
-      || foundryExportModuleIds.some((id) => !moduleIds.has(id))
+      || requiredExportModuleIds.some((id) => !moduleIds.has(id))
     ) {
       throw new Error('The Foundry Export package is incomplete.');
     }
@@ -160,88 +190,192 @@ async function readModuleJson(
   return JSON.parse(jsonDecoder.decode(content)) as unknown;
 }
 
+async function parseKnownModule(
+  id: FoundryExportModuleId,
+  module: ImportModuleManifest,
+  entries: Entry[],
+): Promise<ParsedImportModule> {
+  const moduleData = await readModuleJson(module, entries);
+
+  if (id === 'settings') {
+    if (!module.overwrite) {
+      throw new Error('Application Settings must use overwrite import behavior.');
+    }
+    return {
+      data: settingsImportSchema.parse(moduleData),
+      id,
+      itemCount: 1,
+    };
+  }
+  if (id === 'providers') {
+    if (module.overwrite) {
+      throw new Error('Providers must use append import behavior.');
+    }
+    const data = providersImportSchema.parse(moduleData);
+    return { data, id, itemCount: data.length };
+  }
+  if (module.overwrite) {
+    throw new Error('Prompts must use append import behavior.');
+  }
+  const data = promptsImportSchema.parse(moduleData);
+  return { data, id, itemCount: data.length };
+}
+
+function unsupportedModule(
+  module: ImportModuleManifest,
+): FoundryImportModuleInspection {
+  return {
+    id: module.id,
+    itemCount: null,
+    message: 'This Export Module is not supported by this Foundry version.',
+    overwrite: module.overwrite,
+    status: 'unsupported',
+  };
+}
+
+function invalidModule(
+  module: ImportModuleManifest,
+): FoundryImportModuleInspection {
+  return {
+    id: module.id,
+    itemCount: null,
+    message: 'This Export Module is invalid and cannot be imported.',
+    overwrite: module.overwrite,
+    status: 'invalid',
+  };
+}
+
 function failedModule(id: string): FoundryImportModuleResult {
+  const moduleLabel = {
+    prompts: 'Prompts',
+    providers: 'Providers',
+    settings: 'Application Settings',
+  }[id] ?? id;
   return {
     id,
     importedItems: 0,
-    message: `${id === 'settings' ? 'Application Settings' : 'Providers'} could not be imported.`,
+    message: `${moduleLabel} could not be imported.`,
     status: 'failed',
   };
 }
 
+async function readArchive<TResult>(
+  content: Uint8Array<ArrayBuffer>,
+  read: (
+    manifest: z.infer<typeof importManifestSchema>,
+    entries: Entry[],
+  ) => Promise<TResult>,
+): Promise<TResult> {
+  if (content.byteLength === 0) {
+    throw new FoundryImportFileError();
+  }
+
+  const reader = new ZipReader(new Uint8ArrayReader(content), {
+    checkCrc32: true,
+    filenameValidation: 'strict',
+    maxAppendedDataSize: 0,
+    strictness: 'strict',
+  });
+
+  try {
+    let entries: Entry[];
+    try {
+      entries = await reader.getEntries();
+    } catch (error) {
+      throw new FoundryImportFileError(error);
+    }
+    if (entries.length > MAX_ARCHIVE_ENTRIES) {
+      throw new FoundryImportFileError();
+    }
+
+    const manifest = await readManifest(entries);
+    return await read(manifest, entries);
+  } finally {
+    await reader.close();
+  }
+}
+
 export class FoundryImportService {
   constructor(
+    private readonly promptStore: PromptStore,
     private readonly providerStore: ProviderStore,
     private readonly settingsStore: SettingsStore,
   ) {}
 
-  async importData(content: Uint8Array<ArrayBuffer>): Promise<FoundryImportResult> {
-    if (content.byteLength === 0) {
-      throw new FoundryImportFileError();
-    }
-
-    const reader = new ZipReader(new Uint8ArrayReader(content), {
-      checkCrc32: true,
-      filenameValidation: 'strict',
-      maxAppendedDataSize: 0,
-      strictness: 'strict',
-    });
-
-    try {
-      let entries: Entry[];
-      try {
-        entries = await reader.getEntries();
-      } catch (error) {
-        throw new FoundryImportFileError(error);
-      }
-      if (entries.length > MAX_ARCHIVE_ENTRIES) {
-        throw new FoundryImportFileError();
-      }
-
-      const manifest = await readManifest(entries);
-      const modules: FoundryImportModuleResult[] = [];
+  async inspectData(
+    content: Uint8Array<ArrayBuffer>,
+  ): Promise<FoundryImportInspection> {
+    return readArchive(content, async (manifest, entries) => {
+      const modules: FoundryImportModuleInspection[] = [];
 
       for (const module of manifest.modules) {
         if (!isKnownModuleId(module.id)) {
-          modules.push({
-            id: module.id,
-            importedItems: 0,
-            message: 'This Export Module is not supported by this Foundry version.',
-            status: 'unsupported',
-          });
+          modules.push(unsupportedModule(module));
           continue;
         }
 
         try {
-          const moduleData = await readModuleJson(module, entries);
-          if (module.id === 'settings') {
-            if (!module.overwrite) {
-              throw new Error('Application Settings must use overwrite import behavior.');
-            }
-            this.settingsStore.updateApplicationSettings(
-              settingsImportSchema.parse(moduleData),
-            );
-            modules.push({ id: module.id, importedItems: 1, status: 'imported' });
+          const parsed = await parseKnownModule(module.id, module, entries);
+          modules.push({
+            id: module.id,
+            itemCount: parsed.itemCount,
+            overwrite: module.overwrite,
+            status: 'available',
+          });
+        } catch {
+          modules.push(invalidModule(module));
+        }
+      }
+
+      return {
+        createdAt: manifest.createdAt,
+        foundryVersion: manifest.foundryVersion,
+        modules,
+      };
+    });
+  }
+
+  async importData(
+    content: Uint8Array<ArrayBuffer>,
+    selectedModuleIds: readonly FoundryExportModuleId[],
+  ): Promise<FoundryImportResult> {
+    return readArchive(content, async (manifest, entries) => {
+      const selectedIds = new Set(selectedModuleIds);
+      const manifestModuleIds = new Set(manifest.modules.map((module) => module.id));
+      if (
+        selectedIds.size === 0
+        || [...selectedIds].some((id) => !manifestModuleIds.has(id))
+      ) {
+        throw new FoundryImportFileError();
+      }
+
+      const modules: FoundryImportModuleResult[] = [];
+
+      for (const module of manifest.modules) {
+        if (!isKnownModuleId(module.id) || !selectedIds.has(module.id)) {
+          continue;
+        }
+
+        try {
+          const parsed = await parseKnownModule(module.id, module, entries);
+          if (parsed.id === 'settings') {
+            this.settingsStore.updateApplicationSettings(parsed.data);
+          } else if (parsed.id === 'providers') {
+            this.providerStore.createProviders(parsed.data);
           } else {
-            if (module.overwrite) {
-              throw new Error('Providers must use append import behavior.');
-            }
-            const providers = providersImportSchema.parse(moduleData);
-            this.providerStore.createProviders(providers);
-            modules.push({
-              id: module.id,
-              importedItems: providers.length,
-              status: 'imported',
-            });
+            this.promptStore.createPrompts(parsed.data);
           }
+          modules.push({
+            id: parsed.id,
+            importedItems: parsed.itemCount,
+            status: 'imported',
+          });
         } catch {
           modules.push(failedModule(module.id));
         }
       }
 
       return { modules };
-    } finally {
-      await reader.close();
-    }
+    });
   }
 }

@@ -29,6 +29,13 @@
       "when": 1788800436687,
       "tag": "0003_rename_provider_default_model",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1788964690157,
+      "tag": "0004_neat_vulcan",
+      "breakpoints": true
     }
   ]
 }

@@ -1,10 +1,10 @@
 import {
-  BotIcon,
+  AiContentGenerator01Icon,
   ConnectIcon,
   LanguageSkillIcon,
   LayoutDashboardIcon,
   McpServerIcon,
-  MessageProgrammingIcon,
+  SquareTerminalIcon,
 } from '@hugeicons/core-free-icons';
 
 export const sidebarNavigationSections = [
@@ -34,7 +34,8 @@ export const sidebarNavigationSections = [
       {
         title: 'Prompts',
         href: '/prompts',
-        icon: MessageProgrammingIcon,
+        icon: AiContentGenerator01Icon,
+        description: 'Reusable text fragments for agent conversations.',
       },
     ],
   },
@@ -44,7 +45,7 @@ export const sidebarNavigationSections = [
       {
         title: 'Runtimes',
         href: '/runtimes',
-        icon: BotIcon,
+        icon: SquareTerminalIcon,
         description: 'Detection status and Provider assignments for each Runtime.',
       },
       {
@@ -57,26 +58,21 @@ export const sidebarNavigationSections = [
   },
 ] as const;
 
-export function getPageTitle(pathname: string): string {
+function getNavigationItem(pathname: string) {
   for (const section of sidebarNavigationSections) {
     for (const item of section.items) {
-      if (item.href === pathname) {
-        return item.title;
+      if (item.href === pathname || pathname.startsWith(`${item.href}/`)) {
+        return item;
       }
     }
   }
+}
 
-  return 'Foundry';
+export function getPageTitle(pathname: string): string {
+  return getNavigationItem(pathname)?.title ?? 'Foundry';
 }
 
 export function getPageDescription(pathname: string): string | null {
-  for (const section of sidebarNavigationSections) {
-    for (const item of section.items) {
-      if (item.href === pathname) {
-        return 'description' in item ? item.description : null;
-      }
-    }
-  }
-
-  return null;
+  const item = getNavigationItem(pathname);
+  return item && 'description' in item ? item.description : null;
 }

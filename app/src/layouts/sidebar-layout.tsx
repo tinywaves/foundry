@@ -23,14 +23,17 @@ export function SidebarLayout() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-10 shrink-0 items-center gap-2 px-3">
+        <header
+          className="sticky top-0 z-20 flex h-10 min-w-0 shrink-0 items-center gap-2 border-b bg-background px-3"
+          data-testid="app-header"
+        >
           <SidebarTrigger data-testid="sidebar-trigger" />
           <Separator orientation="vertical" className="h-4" />
           <span className="text-xs font-medium" data-testid="page-title">
             {pageTitle}
           </span>
           {pageDescription && (
-            <span className="text-xs text-muted-foreground">
+            <span className="min-w-0 truncate text-xs text-muted-foreground">
               {pageDescription}
             </span>
           )}
@@ -45,7 +48,6 @@ export function SidebarLayout() {
             <HugeiconsIcon icon={Settings01Icon} strokeWidth={2} />
           </Button>
         </header>
-        <Separator />
         <div className="flex flex-1 p-4">
           <Outlet />
         </div>

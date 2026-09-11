@@ -29,7 +29,7 @@ A configured Model Context Protocol server that exposes tools or context to supp
 _Avoid_: MCP tool, MCP plugin
 
 **Prompt**:
-Reusable instruction text managed by Foundry.
+Reusable instruction text stored in Foundry for later use. Its content is preserved literally rather than evaluated as a template. A Prompt is not installed or distributed to a Runtime; deployable instructions belong to Skills.
 _Avoid_: Prompt template
 
 **Execution**:
@@ -85,7 +85,7 @@ User-controlled preferences that shape Foundry's presentation and behavior acros
 _Avoid_: Preferences, configuration
 
 **Exportable Data**:
-User-owned Foundry data intended to move between Foundry installations. It currently includes Application Settings and active Providers, but excludes Runtime Assignment, deleted Providers, and other machine-specific operational state.
+User-owned Foundry data intended to move between Foundry installations. It currently includes Application Settings, active Providers, and active Prompts, but excludes Runtime Assignment, deleted Providers, deleted Prompts, and other machine-specific operational state.
 _Avoid_: Valuable data, database backup
 
 **Foundry Export**:

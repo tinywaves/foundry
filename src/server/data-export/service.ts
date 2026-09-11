@@ -4,6 +4,7 @@ import type {
   FoundryExportModuleId,
   FoundryExportModuleManifest,
   FoundryProvidersExport,
+  FoundryPromptsExport,
   FoundrySettingsExport,
   Provider,
 } from '@dhzh/foundry-api-contract';
@@ -20,6 +21,7 @@ import { createHash } from 'node:crypto';
 import packageJson from '../../../package.json' with { type: 'json' };
 
 import type { ProviderStore } from '../providers/store';
+import type { PromptStore } from '../prompts/store';
 import type { SettingsStore } from '../settings/store';
 
 const jsonEncoder = new TextEncoder();
@@ -99,6 +101,7 @@ function formatFilename(date: Date): string {
 
 export class FoundryExportService {
   constructor(
+    private readonly promptStore: PromptStore,
     private readonly providerStore: ProviderStore,
     private readonly settingsStore: SettingsStore,
     private readonly now: () => Date = () => new Date(),
@@ -113,9 +116,15 @@ export class FoundryExportService {
         (provider) => toCreateProviderRequest(provider),
       ),
     ) satisfies FoundryProvidersExport;
+    const prompts = this.promptStore.listAllPrompts().map((prompt) => ({
+      content: prompt.content,
+      description: prompt.description,
+      title: prompt.title,
+    })) satisfies FoundryPromptsExport;
     const modules = [
       createJsonModule('settings', 'modules/settings.json', true, settings),
       createJsonModule('providers', 'modules/providers.json', false, providers),
+      createJsonModule('prompts', 'modules/prompts.json', false, prompts),
     ];
     const manifest: FoundryExportManifest = {
       createdAt: createdAt.toISOString(),

@@ -3,7 +3,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import type {
+  CreatePromptRequest,
   CreateProviderRequest,
+  Prompt,
   Provider,
   ProviderRuntime,
   RuntimeConfigurationPreview,
@@ -14,6 +16,8 @@ import type {
   ProviderConnectionTestResult,
 } from '../src/server/providers/connection-tester';
 import type { ProviderStore } from '../src/server/providers/store';
+import type { PromptStore } from '../src/server/prompts/store';
+import { toPromptSummary } from '../src/server/prompts/store';
 import type { RuntimeService } from '../src/server/runtimes/service';
 import type { SettingsStore } from '../src/server/settings/store';
 
@@ -24,6 +28,8 @@ function createTestApp(options: {
   inUseProviderId?: string;
 } = {}) {
   let colorMode: 'dark' | 'light' | 'system' = 'system';
+  let promptSequence = 0;
+  const prompts: Prompt[] = [];
   let providerSequence = 0;
   const providers: Provider[] = [];
   const providerStore: ProviderStore = {
@@ -151,6 +157,52 @@ function createTestApp(options: {
       return { colorMode };
     },
   };
+  const promptStore: PromptStore = {
+    createPrompt: (input: CreatePromptRequest) => {
+      promptSequence += 1;
+      const prompt: Prompt = {
+        ...input,
+        createdAt: promptSequence,
+        id: `prompt-${promptSequence}`,
+        updatedAt: promptSequence,
+      };
+      prompts.push(prompt);
+      return prompt;
+    },
+    createPrompts: (inputs) => inputs.map((input) =>
+      promptStore.createPrompt(input)),
+    deletePrompt: (id) => {
+      const index = prompts.findIndex((prompt) => prompt.id === id);
+      if (index === -1) {
+        return false;
+      }
+      prompts.splice(index, 1);
+      return true;
+    },
+    getPrompt: (id) => prompts.find((prompt) => prompt.id === id) ?? null,
+    listAllPrompts: () => prompts,
+    listPrompts: ({ query }) => {
+      const normalizedQuery = query.toLocaleLowerCase('en-US');
+      const items = prompts
+        .filter((prompt) => [
+          prompt.title,
+          prompt.description ?? '',
+          prompt.content,
+        ].some((value) => value.toLocaleLowerCase('en-US').includes(normalizedQuery)))
+        .toSorted((left, right) => right.updatedAt - left.updatedAt)
+        .map((prompt) => toPromptSummary(prompt));
+      return { items };
+    },
+    updatePrompt: (id, input) => {
+      const prompt = promptStore.getPrompt(id);
+      if (!prompt) {
+        return null;
+      }
+      promptSequence += 1;
+      Object.assign(prompt, input, { updatedAt: promptSequence });
+      return prompt;
+    },
+  };
   const providerConnectionTester: ProviderConnectionTester = {
     testProvider: () => Promise.resolve(
       options.connectionTestResult ?? { successful: true },
@@ -158,6 +210,7 @@ function createTestApp(options: {
   };
 
   return createFoundryApp({
+    promptStore,
     providerConnectionTester,
     providerStore,
     runtimeService,
@@ -215,6 +268,12 @@ const claudeProviderRequest = {
   runtime: 'claude-code',
 } satisfies CreateProviderRequest;
 
+const promptRequest = {
+  content: '# Review\n\nCheck the current diff.',
+  description: 'A reusable review fragment',
+  title: 'Review changes',
+} satisfies CreatePromptRequest;
+
 afterAll(async () => {
   await rm(fixture.webRoot, { recursive: true, force: true });
 });
@@ -271,7 +330,7 @@ it('rejects unexpected Foundry Export query parameters', async () => {
   expect(response.status).toBe(400);
 });
 
-it('imports a Foundry Export and returns each module result', async () => {
+it('inspects a Foundry Export before importing selected modules', async () => {
   const app = createTestApp();
   await app.request('/api/providers', {
     body: JSON.stringify(codexProviderRequest),
@@ -286,11 +345,40 @@ it('imports a Foundry Export and returns each module result', async () => {
     method: 'PATCH',
   });
 
-  const response = await app.request('/api/data/import', {
+  const inspectionResponse = await app.request('/api/data/import/inspect', {
     body: exported,
     headers: { 'content-type': 'application/octet-stream' },
     method: 'POST',
   });
+
+  expect(inspectionResponse.status).toBe(200);
+  await expect(inspectionResponse.json()).resolves.toMatchObject({
+    status: 'SUCCESS',
+    data: {
+      modules: [
+        { id: 'settings', itemCount: 1, status: 'available' },
+        { id: 'providers', itemCount: 1, status: 'available' },
+        { id: 'prompts', itemCount: 0, status: 'available' },
+      ],
+    },
+  });
+  const unchangedSettingsResponse = await app.request('/api/settings');
+  const unchangedProvidersResponse = await app.request('/api/providers?runtime=codex');
+  await expect(unchangedSettingsResponse.json()).resolves.toMatchObject({
+    data: { colorMode: 'dark' },
+  });
+  await expect(unchangedProvidersResponse.json())
+    .resolves
+    .toMatchObject({ data: [{ name: 'Example' }] });
+
+  const response = await app.request(
+    '/api/data/import?modules=settings,providers,prompts',
+    {
+      body: exported,
+      headers: { 'content-type': 'application/octet-stream' },
+      method: 'POST',
+    },
+  );
 
   expect(response.status).toBe(200);
   await expect(response.json()).resolves.toEqual({
@@ -299,6 +387,7 @@ it('imports a Foundry Export and returns each module result', async () => {
       modules: [
         { id: 'settings', importedItems: 1, status: 'imported' },
         { id: 'providers', importedItems: 1, status: 'imported' },
+        { id: 'prompts', importedItems: 0, status: 'imported' },
       ],
     },
   });
@@ -312,9 +401,13 @@ it('imports a Foundry Export and returns each module result', async () => {
     .toMatchObject({ data: [{ name: 'Example' }, { name: 'Example' }] });
 });
 
-it('rejects invalid Foundry Import files and unexpected query parameters', async () => {
+it('rejects invalid Foundry Import files and module selections', async () => {
   const app = createTestApp();
-  const invalidFileResponse = await app.request('/api/data/import', {
+  const invalidFileResponse = await app.request('/api/data/import/inspect', {
+    body: new Uint8Array([1, 2, 3]),
+    method: 'POST',
+  });
+  const missingModulesResponse = await app.request('/api/data/import', {
     body: new Uint8Array([1, 2, 3]),
     method: 'POST',
   });
@@ -322,9 +415,15 @@ it('rejects invalid Foundry Import files and unexpected query parameters', async
     body: new Uint8Array([1, 2, 3]),
     method: 'POST',
   });
+  const unknownModuleResponse = await app.request('/api/data/import?modules=future', {
+    body: new Uint8Array([1, 2, 3]),
+    method: 'POST',
+  });
 
   expect(invalidFileResponse.status).toBe(400);
+  expect(missingModulesResponse.status).toBe(400);
   expect(invalidQueryResponse.status).toBe(400);
+  expect(unknownModuleResponse.status).toBe(400);
 });
 
 it('returns 400 before the health handler for unexpected parameters', async () => {
@@ -392,6 +491,80 @@ it('rejects unexpected Settings query parameters', async () => {
   const response = await createTestApp().request('/api/settings?unexpected=true');
 
   expect(response.status).toBe(400);
+});
+
+it('creates, searches, reads, and updates Prompts', async () => {
+  const app = createTestApp();
+  const createdPromptResponse = await app.request('/api/prompts', {
+    body: JSON.stringify(promptRequest),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+
+  expect(createdPromptResponse.status).toBe(201);
+  await expect(createdPromptResponse.json()).resolves.toMatchObject({
+    data: {
+      id: 'prompt-1',
+      title: 'Review changes',
+    },
+    status: 'SUCCESS',
+  });
+  const listResponse = await app.request('/api/prompts?query=reusable');
+  await expect(listResponse.json()).resolves.toMatchObject({
+    data: {
+      items: [{ id: 'prompt-1', title: 'Review changes' }],
+    },
+  });
+  const detailResponse = await app.request('/api/prompts/prompt-1');
+  await expect(detailResponse.json()).resolves.toMatchObject({
+    data: { content: promptRequest.content },
+  });
+
+  const updateResponse = await app.request('/api/prompts/prompt-1', {
+    body: JSON.stringify({ ...promptRequest, title: 'Updated review' }),
+    headers: { 'content-type': 'application/json' },
+    method: 'PUT',
+  });
+  await expect(updateResponse.json()).resolves.toMatchObject({
+    data: { title: 'Updated review' },
+    status: 'SUCCESS',
+  });
+
+  const promptDeleteResponse = await app.request('/api/prompts/prompt-1', {
+    method: 'DELETE',
+  });
+  await expect(promptDeleteResponse.json()).resolves.toEqual({
+    data: true,
+    status: 'SUCCESS',
+  });
+  const deletedPromptResponse = await app.request('/api/prompts/prompt-1');
+  await expect(deletedPromptResponse.json()).resolves.toMatchObject({
+    data: null,
+    status: 'PROMPT_NOT_FOUND',
+  });
+});
+
+it('rejects unsupported Prompt fields and reports missing Prompts', async () => {
+  const app = createTestApp();
+  const invalidResponse = await app.request('/api/prompts', {
+    body: JSON.stringify({ ...promptRequest, tags: ['Review', 'review'] }),
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+  expect(invalidResponse.status).toBe(400);
+
+  const missingResponse = await app.request('/api/prompts/missing');
+  await expect(missingResponse.json()).resolves.toMatchObject({
+    data: null,
+    status: 'PROMPT_NOT_FOUND',
+  });
+  const missingDeleteResponse = await app.request('/api/prompts/missing', {
+    method: 'DELETE',
+  });
+  await expect(missingDeleteResponse.json()).resolves.toMatchObject({
+    data: false,
+    status: 'PROMPT_NOT_FOUND',
+  });
 });
 
 it('creates and lists Providers for the selected Runtime', async () => {

@@ -1,5 +1,12 @@
-import type { ApplicationColorMode } from '@dhzh/foundry-api-contract';
-import { applicationColorModes } from '@dhzh/foundry-api-contract';
+import type {
+  ApplicationColorMode,
+  FoundryExportModuleId,
+  FoundryImportModuleInspection,
+} from '@dhzh/foundry-api-contract';
+import {
+  applicationColorModes,
+  foundryExportModuleIds,
+} from '@dhzh/foundry-api-contract';
 import {
   ComputerIcon,
   DatabaseExportIcon,
@@ -23,6 +30,15 @@ import {
   AlertDialogTitle,
 } from '#/components/ui/alert-dialog';
 import { Button } from '#/components/ui/button';
+import { Checkbox } from '#/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog';
 import { Spinner } from '#/components/ui/spinner';
 import { toast } from '#/components/ui/toast';
 import {
@@ -30,7 +46,10 @@ import {
   ToggleGroupItem,
 } from '#/components/ui/toggle-group';
 import { useDataExport } from '#/hooks/use-data-export';
-import { useDataImport } from '#/hooks/use-data-import';
+import {
+  useDataImport,
+  useDataImportInspection,
+} from '#/hooks/use-data-import';
 import { useUpdateSettings } from '#/hooks/use-settings';
 
 const colorModeOptions = {
@@ -42,19 +61,58 @@ const colorModeOptions = {
   label: string;
 }>;
 
+const importModuleLabels = {
+  prompts: 'Prompts',
+  providers: 'Providers',
+  settings: 'Application Settings',
+} satisfies Record<FoundryExportModuleId, string>;
+
 function isColorMode(value: string | undefined): value is ApplicationColorMode {
   return value !== undefined && applicationColorModes.includes(value as ApplicationColorMode);
+}
+
+function isFoundryExportModuleId(id: string): id is FoundryExportModuleId {
+  return foundryExportModuleIds.includes(id as FoundryExportModuleId);
+}
+
+function getImportModuleLabel(id: string): string {
+  return isFoundryExportModuleId(id) ? importModuleLabels[id] : id;
+}
+
+function describeImportModule(module: FoundryImportModuleInspection): string {
+  if (module.status !== 'available') {
+    return module.message ?? 'This module cannot be imported.';
+  }
+  if (module.id === 'settings') {
+    return 'Replaces the current application settings.';
+  }
+
+  const itemCount = module.itemCount ?? 0;
+  const singularLabel = module.id === 'providers' ? 'Provider' : 'Prompt';
+  return `${itemCount} ${itemCount === 1 ? singularLabel : `${singularLabel}s`} will be added.`;
 }
 
 function describeImportResult(
   modules: Array<{ id: string; importedItems: number; status: string }>,
 ): string {
   return modules.map((module) => {
-    let label = module.id;
-    if (module.id === 'settings') {
-      label = 'Settings';
-    } else if (module.id === 'providers') {
-      label = 'Providers';
+    let label: string;
+    switch (module.id) {
+      case 'prompts': {
+        label = 'Prompts';
+        break;
+      }
+      case 'providers': {
+        label = 'Providers';
+        break;
+      }
+      case 'settings': {
+        label = 'Settings';
+        break;
+      }
+      default: {
+        label = module.id;
+      }
     }
 
     if (module.status === 'unsupported') {
@@ -63,8 +121,8 @@ function describeImportResult(
     if (module.status === 'failed') {
       return `${label} failed`;
     }
-    return module.id === 'providers'
-      ? `${module.importedItems} Providers added`
+    return module.id === 'providers' || module.id === 'prompts'
+      ? `${module.importedItems} ${label} added`
       : `${label} imported`;
   }).join('. ');
 }
@@ -82,10 +140,13 @@ function getImportToastState(hasImportedModule: boolean, hasIssue: boolean) {
 export function SettingsPage() {
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [selectedImportModules, setSelectedImportModules]
+    = useState<FoundryExportModuleId[]>([]);
   const importInputRef = useRef<HTMLInputElement>(null);
   const { theme } = useTheme();
   const dataExport = useDataExport();
   const dataImport = useDataImport();
+  const dataImportInspection = useDataImportInspection();
   const updateSettings = useUpdateSettings();
 
   const handleValueChange = (values: string[]) => {
@@ -118,11 +179,11 @@ export function SettingsPage() {
   };
 
   const handleImport = () => {
-    if (!importFile) {
+    if (!importFile || selectedImportModules.length === 0) {
       return;
     }
 
-    dataImport.mutate(importFile, {
+    dataImport.mutate({ file: importFile, modules: selectedImportModules }, {
       onError: () => {
         toast.add({ title: 'Data could not be imported', type: 'error' });
       },
@@ -132,10 +193,35 @@ export function SettingsPage() {
         const toastState = getImportToastState(hasImportedModule, hasIssue);
 
         setImportFile(null);
+        setSelectedImportModules([]);
+        dataImportInspection.reset();
         toast.add({
           description: describeImportResult(modules),
           ...toastState,
         });
+      },
+    });
+  };
+
+  const closeImportDialog = () => {
+    setImportFile(null);
+    setSelectedImportModules([]);
+    dataImport.reset();
+    dataImportInspection.reset();
+  };
+
+  const inspectImportFile = (file: File) => {
+    setImportFile(file);
+    setSelectedImportModules([]);
+    dataImport.reset();
+    dataImportInspection.reset();
+    dataImportInspection.mutate(file, {
+      onSuccess: ({ modules }) => {
+        setSelectedImportModules(modules.flatMap((module) => (
+          module.status === 'available' && isFoundryExportModuleId(module.id)
+            ? [module.id]
+            : []
+        )));
       },
     });
   };
@@ -211,7 +297,7 @@ export function SettingsPage() {
             Data
           </h2>
           <p className="text-xs/relaxed text-muted-foreground">
-            Application Settings and all active Providers.
+            Application Settings, active Providers, and active Prompts.
           </p>
         </div>
 
@@ -222,12 +308,19 @@ export function SettingsPage() {
             className="hidden"
             type="file"
             onChange={(event) => {
-              setImportFile(event.currentTarget.files?.[0] ?? null);
+              const file = event.currentTarget.files?.[0];
+              if (file) {
+                inspectImportFile(file);
+              }
               event.currentTarget.value = '';
             }}
           />
           <Button
-            disabled={dataImport.isPending || dataExport.isPending}
+            disabled={
+              dataImport.isPending
+              || dataImportInspection.isPending
+              || dataExport.isPending
+            }
             type="button"
             variant="outline"
             onClick={() => importInputRef.current?.click()}
@@ -240,7 +333,11 @@ export function SettingsPage() {
             Import Data
           </Button>
           <Button
-            disabled={dataImport.isPending || dataExport.isPending}
+            disabled={
+              dataImport.isPending
+              || dataImportInspection.isPending
+              || dataExport.isPending
+            }
             type="button"
             variant="outline"
             onClick={() => setIsExportDialogOpen(true)}
@@ -255,35 +352,111 @@ export function SettingsPage() {
         </div>
       </section>
 
-      <AlertDialog
+      <Dialog
         open={importFile !== null}
         onOpenChange={(open) => {
           if (!open && !dataImport.isPending) {
-            setImportFile(null);
+            closeImportDialog();
           }
         }}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Import Foundry data?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Application Settings will be replaced. Providers will be added, including duplicates.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={dataImport.isPending}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
+        <DialogContent className="sm:max-w-md" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Import Foundry data</DialogTitle>
+            <DialogDescription>
+              {dataImportInspection.data
+                ? `Choose the modules to import from ${importFile?.name ?? 'the selected file'}.`
+                : `Reading ${importFile?.name ?? 'the selected file'}...`}
+            </DialogDescription>
+          </DialogHeader>
+          <div aria-live="polite" className="min-h-24">
+            {dataImportInspection.isPending && (
+              <div className="flex min-h-24 items-center justify-center gap-2 text-xs text-muted-foreground">
+                <Spinner />
+                <span>Checking Foundry export</span>
+              </div>
+            )}
+            {dataImportInspection.isError && (
+              <Alert variant="destructive">
+                <AlertTitle>File could not be read</AlertTitle>
+                <AlertDescription>
+                  The selected file is not a valid Foundry export.
+                </AlertDescription>
+              </Alert>
+            )}
+            {dataImportInspection.data && (
+              <fieldset>
+                <legend className="sr-only">Import modules</legend>
+                <div className="divide-y border-y">
+                  {dataImportInspection.data.modules.map((module) => {
+                    const selectableModuleId = module.status === 'available'
+                      && isFoundryExportModuleId(module.id)
+                      ? module.id
+                      : null;
+                    const checkboxId = `import-module-${module.id}`;
+
+                    return (
+                      <label
+                        className="flex items-start gap-3 py-3"
+                        htmlFor={checkboxId}
+                        key={module.id}
+                      >
+                        <Checkbox
+                          checked={selectableModuleId !== null
+                            && selectedImportModules.includes(selectableModuleId)}
+                          disabled={selectableModuleId === null || dataImport.isPending}
+                          id={checkboxId}
+                          onCheckedChange={(checked) => {
+                            if (selectableModuleId === null) {
+                              return;
+                            }
+                            setSelectedImportModules((current) => {
+                              if (checked) {
+                                return [...current, selectableModuleId];
+                              }
+                              return current.filter((id) => id !== selectableModuleId);
+                            });
+                          }}
+                        />
+                        <span className="min-w-0 space-y-0.5">
+                          <span className="block text-xs font-medium">
+                            {getImportModuleLabel(module.id)}
+                          </span>
+                          <span className="block text-xs/relaxed text-muted-foreground">
+                            {describeImportModule(module)}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
               disabled={dataImport.isPending}
+              type="button"
+              variant="outline"
+              onClick={closeImportDialog}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={
+                dataImport.isPending
+                || !dataImportInspection.isSuccess
+                || selectedImportModules.length === 0
+              }
+              type="button"
               onClick={handleImport}
             >
               {dataImport.isPending && <Spinner data-icon="inline-start" />}
               <span>Import</span>
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog
         open={isExportDialogOpen}

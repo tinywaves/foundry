@@ -2,6 +2,7 @@ import { serve } from '@hono/node-server';
 import type { ServerType } from '@hono/node-server';
 import { createFoundryApp } from './app';
 import { openFoundryDatabase } from './database';
+import { DrizzlePromptStore } from './prompts/store';
 import { DrizzleProviderStore } from './providers/store';
 import { HttpProviderConnectionTester } from './providers/connection-tester';
 import { RuntimeConfigurationManager } from './runtimes/configuration/manager';
@@ -48,7 +49,9 @@ export async function startFoundryServer(
     migrationsFolder: options.migrationsFolder,
   });
   const providerStore = new DrizzleProviderStore(database.db);
+  const promptStore = new DrizzlePromptStore(database.db);
   const app = createFoundryApp({
+    promptStore,
     providerConnectionTester: new HttpProviderConnectionTester(),
     providerStore,
     runtimeService: new LocalRuntimeService(

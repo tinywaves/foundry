@@ -1,24 +1,52 @@
 {
-  "name": "electron-app",
-  "version": "1.0.0",
-  "description": "An Electron application with React and TypeScript",
+  "name": "foundry",
+  "type": "commonjs",
+  "version": "0.0.0",
+  "description": "An AI-native local personal workbench",
   "main": "./out/main/index.js",
-  "author": "example.com",
-  "homepage": "https://electron-vite.org",
+  "author": {
+    "name": "tinywaves",
+    "email": "dhzhme@gmail.com"
+  },
+  "keywords": [
+    "agent",
+    "ai"
+  ],
+  "homepage": "https://github.com/tinywaves/foundry",
+  "repository": {
+    "url": "git+https://github.com/tinywaves/foundry.git",
+    "type": "git"
+  },
+  "sideEffects": false,
+  "license": "Apache-2.0",
+  "private": true,
   "scripts": {
-    "format": "prettier --write .",
-    "lint": "eslint --cache .",
-    "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
-    "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web",
-    "start": "electron-vite preview",
-    "dev": "electron-vite dev",
-    "build": "npm run typecheck && electron-vite build",
-    "postinstall": "electron-builder install-app-deps",
-    "build:unpack": "npm run build && electron-builder --dir",
-    "build:win": "npm run build && electron-builder --win",
+    "build": "pnpm run typecheck && electron-vite build",
+    "build:linux": "electron-vite build && electron-builder --linux",
     "build:mac": "electron-vite build && electron-builder --mac",
-    "build:linux": "electron-vite build && electron-builder --linux"
+    "build:unpack": "pnpm run build && electron-builder --dir",
+    "build:win": "pnpm run build && electron-builder --win",
+    "dev": "electron-vite dev",
+    "postinstall": "electron-builder install-app-deps",
+    "lint": "eslint",
+    "lint-fix": "eslint --fix",
+    "start": "electron-vite preview",
+    "typecheck": "pnpm run typecheck:node && pnpm run typecheck:web",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false"
+  },
+  "packageManager": "pnpm@12.11.2",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^12.11.2",
+      "onFail": "download"
+    },
+    "runtime": {
+      "name": "node",
+      "version": "^24.22.0",
+      "onFail": "download"
+    }
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
@@ -26,8 +54,7 @@
     "electron-updater": "^6.3.9"
   },
   "devDependencies": {
-    "@electron-toolkit/eslint-config-prettier": "^3.0.0",
-    "@electron-toolkit/eslint-config-ts": "^3.1.0",
+    "@dhzh/eslint-config": "^3.1.1",
     "@electron-toolkit/tsconfig": "^2.0.0",
     "@types/node": "^22.19.1",
     "@types/react": "^19.2.7",
@@ -36,20 +63,10 @@
     "electron": "^39.2.6",
     "electron-builder": "^26.0.12",
     "electron-vite": "^5.0.0",
-    "eslint": "^9.39.1",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.24",
-    "prettier": "^3.7.4",
+    "eslint": "^10.12.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "typescript": "^5.9.3",
     "vite": "^7.2.6"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "electron",
-      "esbuild"
-    ]
   }
 }

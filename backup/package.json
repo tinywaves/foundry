@@ -1,0 +1,106 @@
+{
+  "name": "@dhzh/foundry",
+  "type": "module",
+  "version": "1.5.0",
+  "packageManager": "pnpm@11.22.0",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.22.0",
+      "onFail": "download"
+    },
+    "runtime": {
+      "name": "node",
+      "version": "^24.18.0",
+      "onFail": "download"
+    }
+  },
+  "description": "An AI-native local developer runtime for tools, skills, agents, and workflows.",
+  "author": {
+    "name": "tinywaves",
+    "email": "dhzhme@gmail.com"
+  },
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/tinywaves/foundry",
+  "keywords": [
+    "agent",
+    "ai"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "bin": {
+    "foundry": "./dist/cli.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "url": "git+https://github.com/tinywaves/foundry.git",
+    "type": "git"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "pnpm run build:server && pnpm run build:app",
+    "build:app": "pnpm --filter @dhzh/foundry-app build",
+    "build:server": "tsdown",
+    "db:generate": "drizzle-kit generate",
+    "dev:app": "pnpm --filter @dhzh/foundry-app dev",
+    "dev:cli": "tsx src/cli/index.ts ui",
+    "dev:server": "tsx watch --clear-screen=false src/server/dev.ts",
+    "lint": "eslint",
+    "lint-fix": "eslint --fix",
+    "prepack": "pnpm build",
+    "prepare": "husky",
+    "release": "bumpp",
+    "release:publish": "pnpm release && pnpm publish --access public",
+    "test": "vitest run",
+    "test:coverage": "pnpm run test --coverage",
+    "test:dev": "vitest",
+    "typecheck": "tsc --noEmit",
+    "version:update": "taze major",
+    "version:update:w": "taze major -w"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2",
+    "@dhzh/eslint-config": "^2.6.1",
+    "@dhzh/foundry-api-contract": "workspace:*",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "catalog:",
+    "@vitejs/plugin-react": "^6.1.1",
+    "@vitest/browser-playwright": "4.1.11",
+    "@vitest/coverage-v8": "^4.1.11",
+    "bumpp": "^12.2.1",
+    "changelogithub": "^15.0.4",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^10.9.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
+    "playwright": "^1.62.1",
+    "taze": "^21.1.0",
+    "tsdown": "^0.22.14",
+    "tsx": "^4.23.12",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@decimalturn/toml-patch": "^3.0.5",
+    "@hono/node-server": "^2.1.1",
+    "@hono/zod-validator": "^0.9.0",
+    "@zip.js/zip.js": "^2.12.0",
+    "better-sqlite3": "^13.0.3",
+    "citty": "^0.2.2",
+    "drizzle-orm": "^0.45.2",
+    "env-paths": "^4.0.0",
+    "hono": "^4.13.5",
+    "open": "^11.0.2",
+    "zod": "^4.5.4"
+  }
+}

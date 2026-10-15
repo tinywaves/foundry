@@ -49,8 +49,13 @@
     }
   },
   "dependencies": {
+    "@astryxdesign/cli": "^0.7.0",
+    "@astryxdesign/core": "^0.7.0",
+    "@astryxdesign/theme-gothic": "^0.7.0",
+    "@astryxdesign/theme-neutral": "^0.7.0",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@stylexjs/stylex": "^0.19.1",
     "electron-updater": "^6.3.9"
   },
   "devDependencies": {

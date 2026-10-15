@@ -106,7 +106,11 @@
     "editor.defaultFormatter": "dbaeumer.vscode-eslint"
   },
   "cSpell.words": [
+    "astryx",
+    "astryxdesign",
     "esbuild",
+    "stylexjs",
     "unrs"
-  ]
+  ],
+  "js/ts.tsdk.path": "node_modules/typescript/lib"
 }

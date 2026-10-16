@@ -51,16 +51,18 @@
   "dependencies": {
     "@astryxdesign/cli": "^0.7.0",
     "@astryxdesign/core": "^0.7.0",
-    "@astryxdesign/theme-gothic": "^0.7.0",
     "@astryxdesign/theme-neutral": "^0.7.0",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@fontsource/poppins": "^5.3.0",
     "@stylexjs/stylex": "^0.19.1",
-    "electron-updater": "^6.3.9"
+    "electron-updater": "^6.3.9",
+    "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
     "@dhzh/eslint-config": "^3.1.1",
     "@electron-toolkit/tsconfig": "^2.0.0",
+    "@stylexjs/unplugin": "0.19.1",
     "@types/node": "^22.19.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",

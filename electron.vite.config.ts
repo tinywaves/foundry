@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { defineConfig } from 'electron-vite';
 import react from '@vitejs/plugin-react';
+import stylex from '@stylexjs/unplugin';
 
 export default defineConfig({
   main: {},
@@ -11,6 +12,9 @@ export default defineConfig({
         '@renderer': path.resolve('src/renderer/src'),
       },
     },
-    plugins: [react()],
+    plugins: [
+      stylex.vite({ devMode: 'full' }),
+      react(),
+    ],
   },
 });

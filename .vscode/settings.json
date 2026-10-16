@@ -110,7 +110,9 @@
     "astryxdesign",
     "esbuild",
     "stylexjs",
-    "unrs"
+    "unmaximize",
+    "unrs",
+    "xstyle"
   ],
   "js/ts.tsdk.path": "node_modules/typescript/lib"
 }

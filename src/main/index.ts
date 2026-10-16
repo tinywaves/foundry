@@ -3,6 +3,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import icon from '../../resources/icon.png?asset';
+import { openFoundryDatabase } from './database';
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -52,6 +53,11 @@ function createWindow(): void {
 void app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('foundry');
+
+  const database = openFoundryDatabase(path.join(app.getPath('userData'), 'foundry.sqlite'));
+  app.on('will-quit', () => {
+    database.client.close();
+  });
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.

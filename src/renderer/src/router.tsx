@@ -19,15 +19,15 @@ export const router = createHashRouter([
       {
         element: <SidebarLayout />,
         children: [
-          { path: 'overview', element: <OverviewPage /> },
-          { path: 'prompts', element: <PromptsPage /> },
+          { path: 'overview', element: <OverviewPage />, handle: { title: 'Overview' } },
+          { path: 'prompts', element: <PromptsPage />, handle: { title: 'Prompts' } },
         ],
       },
       {
         element: <StandaloneLayout />,
         children: [
-          { path: 'settings', element: <SettingsPage /> },
-          { path: '*', element: <NotFoundPage /> },
+          { path: 'settings', element: <SettingsPage />, handle: { title: 'Settings' } },
+          { path: '*', element: <NotFoundPage />, handle: { title: 'Page not found' } },
         ],
       },
     ],

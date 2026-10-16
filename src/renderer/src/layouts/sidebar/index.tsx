@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { AppShell } from '@astryxdesign/core/AppShell';
 import { Layout, LayoutContent } from '@astryxdesign/core/Layout';
 import { SideNav, SideNavSection } from '@astryxdesign/core/SideNav';
+import { VStack } from '@astryxdesign/core/Stack';
 import WindowTitlebar from '@renderer/components/window-titlebar';
 import { settingsNavigationItem, sidebarNavigation } from '@renderer/navigation';
 import MenuGroup from './menu-group';
@@ -33,18 +34,22 @@ export default function SidebarLayout() {
             </SideNavSection>
           )}
         >
-          {sidebarNavigation.map((node) => (
-            node.kind === 'item'
-              ? <RoutedSideNavItem key={node.id} {...node} />
-              : (
-                  <MenuGroup
-                    key={node.id}
-                    title={node.title}
-                    icon={node.icon}
-                    items={node.items}
-                  />
-                )
-          ))}
+          <SideNavSection title="Main" isHeaderHidden>
+            <VStack gap={0} xstyle={styles.compactNavItems}>
+              {sidebarNavigation.map((node) => (
+                node.kind === 'item'
+                  ? <RoutedSideNavItem key={node.id} {...node} />
+                  : (
+                      <MenuGroup
+                        key={node.id}
+                        title={node.title}
+                        icon={node.icon}
+                        items={node.items}
+                      />
+                    )
+              ))}
+            </VStack>
+          </SideNavSection>
         </SideNav>
       )}
     >

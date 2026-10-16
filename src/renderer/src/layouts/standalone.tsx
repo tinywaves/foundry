@@ -12,7 +12,7 @@ export default function StandaloneLayout() {
       contentPadding={0}
       mobileNav={false}
       xstyle={styles.appShell}
-      topNav={<WindowTitlebar />}
+      topNav={<WindowTitlebar showBackButton />}
     >
       <Layout
         height="fill"

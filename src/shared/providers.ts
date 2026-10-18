@@ -1,0 +1,23 @@
+export type ProviderProtocol
+  = | 'openai-responses'
+    | 'anthropic-messages'
+    | 'openai-compatible-chat-completions';
+
+export type ProviderStatus = 'active' | 'disabled' | 'deleted';
+export type CustomModel = { id: string; displayName: string | null };
+export type RemoteModel = { id: string; displayName?: string };
+export type Provider = {
+  id: string;
+  name: string;
+  protocol: ProviderProtocol;
+  baseURL: string;
+  apiKey: string;
+  customModels: CustomModel[];
+  status: ProviderStatus;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+};
+export type ProviderSummary = Provider & { hasApiKey: boolean };
+export type ProviderListItem = ProviderSummary & { isInUse: boolean };
+export type ProviderInput = Pick<Provider, 'name' | 'protocol' | 'baseURL' | 'apiKey' | 'customModels'>;

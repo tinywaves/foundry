@@ -39,6 +39,13 @@ export const sidebarNavigation: readonly NavigationNode[] = [
       },
     ],
   },
+  {
+    kind: 'item',
+    id: 'providers',
+    label: 'Providers',
+    href: '/providers',
+    icon: 'copy',
+  },
 ];
 
 export const settingsNavigationItem: NavigationItem = {

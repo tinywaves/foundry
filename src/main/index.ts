@@ -4,6 +4,16 @@ import process from 'node:process';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import icon from '../../resources/icon.png?asset';
 import { openFoundryDatabase } from './database';
+import {
+  fetchProviderModels,
+  fetchModelsForInput,
+  getProvider,
+  listProviders,
+  saveProvider,
+  setProviderStatus,
+} from './providers';
+import type { ProviderInput } from '../shared/providers';
+import { getCurrentUsedProviderIds } from './settings';
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -55,6 +65,7 @@ void app.whenReady().then(() => {
   electronApp.setAppUserModelId('foundry');
 
   const database = openFoundryDatabase(path.join(app.getPath('userData'), 'foundry.sqlite'));
+  const settingsPath = path.join(app.getPath('userData'), 'settings.json');
   app.on('will-quit', () => {
     database.client.close();
   });
@@ -80,6 +91,31 @@ void app.whenReady().then(() => {
 
     return window.isMaximized();
   });
+
+  ipcMain.handle('providers:list', () => listProviders(
+    database.db,
+    getCurrentUsedProviderIds(settingsPath),
+  ));
+  ipcMain.handle('providers:get', (_, id: string) => getProvider(database.db, id));
+  ipcMain.handle('providers:save', (_, input: ProviderInput, id?: string) => saveProvider(
+    database.db,
+    input,
+    id,
+  ));
+  ipcMain.handle(
+    'providers:set-status',
+    (_, id: string, status: 'active' | 'disabled' | 'deleted') => setProviderStatus(
+      database.db,
+      id,
+      status,
+      getCurrentUsedProviderIds(settingsPath),
+    ),
+  );
+  ipcMain.handle('providers:fetch-models', (_, id: string) => fetchProviderModels(database.db, id));
+  ipcMain.handle(
+    'providers:fetch-models-input',
+    (_, input: Pick<ProviderInput, 'protocol' | 'baseURL' | 'apiKey'>) => fetchModelsForInput(input),
+  );
 
   createWindow();
 

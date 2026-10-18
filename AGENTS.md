@@ -31,3 +31,8 @@ RULES:
   docs cli           commands, API reference, integration authoring
   upgrade --from <old version> --apply   run after a dependency bump
 <!-- ASTRYX:END -->
+
+## Application conventions
+- Use Astryx components at `size="sm"` by default for application controls (inputs, selectors, buttons, switches, and tokens); use a larger size only when accessibility or layout requires it.
+- Keep server state in a query/mutation layer such as TanStack Query; avoid page-level `useEffect` for server-state fetching and synchronization.
+- Put types and contracts shared by main, preload, and renderer in `src/shared/`; process-specific modules should not be the source of shared renderer contracts.

@@ -6,6 +6,8 @@ import OverviewPage from './pages/overview';
 import PromptsPage from './pages/library/prompts';
 import SettingsPage from './pages/settings';
 import NotFoundPage from './pages/not-found';
+import ProvidersPage from './pages/providers';
+import ProviderFormPage from './pages/providers/form';
 
 export const router = createHashRouter([
   {
@@ -21,12 +23,15 @@ export const router = createHashRouter([
         children: [
           { path: 'overview', element: <OverviewPage />, handle: { title: 'Overview' } },
           { path: 'prompts', element: <PromptsPage />, handle: { title: 'Prompts' } },
+          { path: 'providers', element: <ProvidersPage />, handle: { title: 'Providers' } },
         ],
       },
       {
         element: <StandaloneLayout />,
         children: [
           { path: 'settings', element: <SettingsPage />, handle: { title: 'Settings' } },
+          { path: 'providers/new', element: <ProviderFormPage />, handle: { title: 'New Provider' } },
+          { path: 'providers/:providerId', element: <ProviderFormPage />, handle: { title: 'Edit Provider' } },
           { path: '*', element: <NotFoundPage />, handle: { title: 'Page not found' } },
         ],
       },

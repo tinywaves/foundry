@@ -6,7 +6,7 @@ import type { SideNavCollapseButtonProps } from '@astryxdesign/core/SideNav';
 import { HStack, StackItem } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { commonWebkitAppRegionNoDrag } from '../../styles/common';
-import { titlebarStyle } from './styles';
+import { styles, titlebarStyle } from './styles';
 
 function isRouteHandle(value: unknown): value is { title?: string; description?: string } {
   return typeof value === 'object'
@@ -53,12 +53,12 @@ export default function WindowTitlebar({ collapsible, showBackButton = false }: 
         </SideNavCollapseButton>
       )}
       {isRouteHandle(titleHandle) && (
-        <HStack gap={2} vAlign="center" width="100%">
-          <Text type="large" weight="semibold" maxLines={1} textWrap="nowrap">
+        <HStack gap={2} vAlign="center" width="100%" xstyle={styles.content}>
+          <Text type="large" weight="semibold" maxLines={1} textWrap="nowrap" xstyle={styles.title}>
             {titleHandle.title}
           </Text>
           {titleHandle.description && (
-            <Text type="supporting" maxLines={1} textWrap="nowrap">
+            <Text type="supporting" maxLines={1} textWrap="nowrap" xstyle={styles.description}>
               {titleHandle.description}
             </Text>
           )}
@@ -67,6 +67,7 @@ export default function WindowTitlebar({ collapsible, showBackButton = false }: 
             {...commonWebkitAppRegionNoDrag}
             id="window-titlebar-actions"
             vAlign="center"
+            xstyle={styles.actions}
           />
         </HStack>
       )}

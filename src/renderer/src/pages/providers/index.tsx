@@ -93,12 +93,16 @@ export default function ProvidersPage() {
                     xstyle={styles.providerItem}
                     startContent={<Icon icon={Square3Stack3DIcon} size="lg" color="secondary" />}
                     description={(
-                      <HStack gap={1} wrap="wrap" xstyle={styles.providerDescription}>
-                        <Token size="sm" label={protocolLabels[provider.protocol]} />
-                        <Text type="supporting">·</Text>
-                        <Text type="supporting" maxLines={1} xstyle={styles.providerBaseURL}>{provider.baseURL}</Text>
-                        <Text type="supporting">·</Text>
-                        <Text type="supporting">{`${provider.customModels.length} custom models`}</Text>
+                      <HStack gap={1} wrap="nowrap" xstyle={styles.providerDescription}>
+                        <Token size="sm" label={protocolLabels[provider.protocol]} xstyle={styles.providerProtocol} />
+                        <HStack gap={1} vAlign="center" xstyle={styles.providerBaseURLGroup}>
+                          <Text type="supporting">·</Text>
+                          <Text type="supporting" maxLines={1} xstyle={styles.providerBaseURL}>{provider.baseURL}</Text>
+                        </HStack>
+                        <HStack gap={1} vAlign="center" xstyle={styles.providerCustomModelsGroup}>
+                          <Text type="supporting">·</Text>
+                          <Text type="supporting" maxLines={1}>{`${provider.customModels.length} custom models`}</Text>
+                        </HStack>
                       </HStack>
                     )}
                     endContent={(

@@ -13,6 +13,19 @@ export const styles = stylex.create({
   },
   providerDescription: {
     minWidth: 0,
+    overflow: 'hidden',
+  },
+  providerProtocol: {
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  providerBaseURLGroup: {
+    minWidth: 0,
+    flex: '1 1 auto',
+    flexShrink: 1,
+  },
+  providerCustomModelsGroup: {
+    flexShrink: 0,
   },
   providerBaseURL: {
     maxWidth: 'min(34rem, 42vw)',

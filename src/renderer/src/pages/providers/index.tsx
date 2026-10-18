@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
@@ -26,6 +27,7 @@ const protocolLabels = {
 export default function ProvidersPage() {
   const queryClient = useQueryClient();
   const [providerToDelete, setProviderToDelete] = useState<ProviderListItem | null>(null);
+  const [titlebarActions, setTitlebarActions] = useState<HTMLElement | null>(null);
   const providersQuery = useQuery({
     queryKey: providerKeys.list(),
     queryFn: listProviders,
@@ -46,6 +48,12 @@ export default function ProvidersPage() {
   });
   const providers: ProviderListItem[] = providersQuery.data ?? [];
 
+  useEffect(() => {
+    // The titlebar is committed with the layout, so resolve its portal target after the page mounts.
+    // eslint-disable-next-line react-hooks/set-state-in-effect, @eslint-react/set-state-in-effect
+    setTitlebarActions(document.getElementById('window-titlebar-actions'));
+  }, []);
+
   function setStatus(provider: ProviderListItem, isChecked: boolean) {
     if (provider.status === 'deleted' || provider.isInUse) {
       return;
@@ -61,108 +69,114 @@ export default function ProvidersPage() {
   }
 
   return (
-    <VStack gap={5}>
-      {providers.length === 0
-        ? (
-            <Section variant="muted" padding={5}>
-              <VStack gap={2}>
-                <Text type="supporting">Add a provider to make model services available to the application.</Text>
-                <Button label="Add your first provider" size="sm" href="/providers/new" as={Link} />
-              </VStack>
-            </Section>
-          )
-        : (
-            <List density="balanced" hasDividers={false} xstyle={styles.providerList}>
-              {providers.map((provider) => (
-                <ListItem
-                  key={provider.id}
-                  label={provider.name}
-                  xstyle={styles.providerItem}
-                  startContent={<Icon icon={Square3Stack3DIcon} size="lg" color="secondary" />}
-                  description={(
-                    <HStack gap={1} wrap="wrap" xstyle={styles.providerDescription}>
-                      <Token size="sm" label={protocolLabels[provider.protocol]} />
-                      <Text type="supporting">·</Text>
-                      <Text type="supporting" maxLines={1} xstyle={styles.providerBaseURL}>{provider.baseURL}</Text>
-                      <Text type="supporting">·</Text>
-                      <Text type="supporting">{`${provider.customModels.length} custom models`}</Text>
-                    </HStack>
-                  )}
-                  endContent={(
-                    <HStack gap={2} vAlign="center" xstyle={styles.providerActions}>
-                      <IconButton
-                        label={`Edit ${provider.name}`}
-                        tooltip="Edit provider"
-                        icon={<PencilSquareIcon />}
-                        variant="ghost"
-                        size="sm"
-                        href={`/providers/${provider.id}`}
-                        as={Link}
-                      />
-                      <Popover
-                        label={`Delete ${provider.name}`}
-                        xstyle={styles.providerPopover}
-                        isOpen={providerToDelete?.id === provider.id}
-                        isEnabled={!provider.isInUse}
-                        onOpenChange={(isOpen) => {
-                          setProviderToDelete(isOpen ? provider : null);
-                        }}
-                        content={(
-                          <VStack gap={3}>
-                            <VStack gap={1}>
-                              <Text type="label">Delete provider?</Text>
-                            </VStack>
-                            <HStack gap={2} hAlign="end">
-                              <Button
-                                label="Cancel"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setProviderToDelete(null);
-                                }}
-                              />
-                              <Button
-                                label="Delete"
-                                variant="destructive"
-                                size="sm"
-                                isLoading={providerRemoval.isPending && providerToDelete?.id === provider.id}
-                                onClick={() => {
-                                  providerRemoval.mutate(provider.id);
-                                }}
-                              />
-                            </HStack>
-                          </VStack>
-                        )}
-                      >
+    <>
+      {titlebarActions && createPortal(
+        <Button label="Add provider" size="sm" variant="primary" href="/providers/new" as={Link} />,
+        titlebarActions,
+      )}
+      <VStack gap={5}>
+        {providers.length === 0
+          ? (
+              <Section variant="muted" padding={5}>
+                <VStack gap={2}>
+                  <Text type="supporting">Add a provider to make model services available to the application.</Text>
+                  <Button label="Add your first provider" size="sm" href="/providers/new" as={Link} />
+                </VStack>
+              </Section>
+            )
+          : (
+              <List density="balanced" hasDividers={false} xstyle={styles.providerList}>
+                {providers.map((provider) => (
+                  <ListItem
+                    key={provider.id}
+                    label={provider.name}
+                    xstyle={styles.providerItem}
+                    startContent={<Icon icon={Square3Stack3DIcon} size="lg" color="secondary" />}
+                    description={(
+                      <HStack gap={1} wrap="wrap" xstyle={styles.providerDescription}>
+                        <Token size="sm" label={protocolLabels[provider.protocol]} />
+                        <Text type="supporting">·</Text>
+                        <Text type="supporting" maxLines={1} xstyle={styles.providerBaseURL}>{provider.baseURL}</Text>
+                        <Text type="supporting">·</Text>
+                        <Text type="supporting">{`${provider.customModels.length} custom models`}</Text>
+                      </HStack>
+                    )}
+                    endContent={(
+                      <HStack gap={2} vAlign="center" xstyle={styles.providerActions}>
                         <IconButton
-                          label={`Delete ${provider.name}`}
-                          tooltip="Delete provider"
-                          icon={<TrashIcon />}
+                          label={`Edit ${provider.name}`}
+                          tooltip="Edit provider"
+                          icon={<PencilSquareIcon />}
                           variant="ghost"
                           size="sm"
-                          isDisabled={provider.isInUse}
+                          href={`/providers/${provider.id}`}
+                          as={Link}
                         />
-                      </Popover>
-                      <Tooltip
-                        content={getToggleTooltip(provider)}
-                      >
-                        <Switch
-                          label={`${provider.name} enabled`}
-                          isLabelHidden
-                          value={provider.status === 'active'}
-                          onChange={(isChecked) => {
-                            setStatus(provider, isChecked);
+                        <Popover
+                          label={`Delete ${provider.name}`}
+                          xstyle={styles.providerPopover}
+                          isOpen={providerToDelete?.id === provider.id}
+                          isEnabled={!provider.isInUse}
+                          onOpenChange={(isOpen) => {
+                            setProviderToDelete(isOpen ? provider : null);
                           }}
-                          isDisabled={provider.isInUse}
-                          size="sm"
-                        />
-                      </Tooltip>
-                    </HStack>
-                  )}
-                />
-              ))}
-            </List>
-          )}
-    </VStack>
+                          content={(
+                            <VStack gap={3}>
+                              <VStack gap={1}>
+                                <Text type="label">Delete provider?</Text>
+                              </VStack>
+                              <HStack gap={2} hAlign="end">
+                                <Button
+                                  label="Cancel"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setProviderToDelete(null);
+                                  }}
+                                />
+                                <Button
+                                  label="Delete"
+                                  variant="destructive"
+                                  size="sm"
+                                  isLoading={providerRemoval.isPending && providerToDelete?.id === provider.id}
+                                  onClick={() => {
+                                    providerRemoval.mutate(provider.id);
+                                  }}
+                                />
+                              </HStack>
+                            </VStack>
+                          )}
+                        >
+                          <IconButton
+                            label={`Delete ${provider.name}`}
+                            tooltip="Delete provider"
+                            icon={<TrashIcon />}
+                            variant="ghost"
+                            size="sm"
+                            isDisabled={provider.isInUse}
+                          />
+                        </Popover>
+                        <Tooltip
+                          content={getToggleTooltip(provider)}
+                        >
+                          <Switch
+                            label={`${provider.name} enabled`}
+                            isLabelHidden
+                            value={provider.status === 'active'}
+                            onChange={(isChecked) => {
+                              setStatus(provider, isChecked);
+                            }}
+                            isDisabled={provider.isInUse}
+                            size="sm"
+                          />
+                        </Tooltip>
+                      </HStack>
+                    )}
+                  />
+                ))}
+              </List>
+            )}
+      </VStack>
+    </>
   );
 }

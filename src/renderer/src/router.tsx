@@ -1,4 +1,4 @@
-import { createHashRouter, Link, Navigate } from 'react-router-dom';
+import { createHashRouter, Navigate } from 'react-router-dom';
 import App from './app';
 import SidebarLayout from './layouts/sidebar';
 import StandaloneLayout from './layouts/standalone';
@@ -8,7 +8,6 @@ import SettingsPage from './pages/settings';
 import NotFoundPage from './pages/not-found';
 import ProvidersPage from './pages/providers';
 import ProviderFormPage from './pages/providers/form';
-import { Button } from '@astryxdesign/core/Button';
 
 export const router = createHashRouter([
   {
@@ -30,7 +29,6 @@ export const router = createHashRouter([
             handle: {
               title: 'Providers',
               description: 'Manage the model service connections used by Foundry.',
-              endContent: <Button label="Add provider" size="sm" variant="primary" href="/providers/new" as={Link} />,
             },
           },
         ],
@@ -39,8 +37,22 @@ export const router = createHashRouter([
         element: <StandaloneLayout />,
         children: [
           { path: 'settings', element: <SettingsPage />, handle: { title: 'Settings' } },
-          { path: 'providers/new', element: <ProviderFormPage />, handle: { title: 'New Provider' } },
-          { path: 'providers/:providerId', element: <ProviderFormPage />, handle: { title: 'Edit Provider' } },
+          {
+            path: 'providers/new',
+            element: <ProviderFormPage />,
+            handle: {
+              title: 'New provider',
+              description: 'Connect a model service using one of Foundry\'s supported protocols.',
+            },
+          },
+          {
+            path: 'providers/:providerId',
+            element: <ProviderFormPage />,
+            handle: {
+              title: 'Edit provider',
+              description: 'Connect a model service using one of Foundry\'s supported protocols.',
+            },
+          },
           { path: '*', element: <NotFoundPage />, handle: { title: 'Page not found' } },
         ],
       },

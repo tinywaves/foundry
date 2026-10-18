@@ -1,4 +1,3 @@
-import type { ReactElement } from 'react';
 import { useMatches, useNavigate } from 'react-router-dom';
 import { Icon } from '@astryxdesign/core/Icon';
 import { IconButton } from '@astryxdesign/core/IconButton';
@@ -9,7 +8,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { commonWebkitAppRegionNoDrag } from '../../styles/common';
 import { titlebarStyle } from './styles';
 
-function isRouteHandle(value: unknown): value is { title?: string; description?: string; endContent?: ReactElement } {
+function isRouteHandle(value: unknown): value is { title?: string; description?: string } {
   return typeof value === 'object'
     && value !== null
     && 'title' in value
@@ -64,11 +63,11 @@ export default function WindowTitlebar({ collapsible, showBackButton = false }: 
             </Text>
           )}
           <StackItem size="fill" />
-          {titleHandle.endContent && (
-            <HStack {...commonWebkitAppRegionNoDrag} vAlign="center">
-              {titleHandle.endContent}
-            </HStack>
-          )}
+          <HStack
+            {...commonWebkitAppRegionNoDrag}
+            id="window-titlebar-actions"
+            vAlign="center"
+          />
         </HStack>
       )}
     </header>

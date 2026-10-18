@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
 import { Heading, Text } from '@astryxdesign/core/Text';
@@ -31,6 +32,13 @@ export default function ProviderFormPage() {
   const [modelName, setModelName] = useState('');
   const [isFetching, setIsFetching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [titlebarActions, setTitlebarActions] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    // The titlebar is committed alongside the route outlet, so resolve its portal target after mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect, @eslint-react/set-state-in-effect
+    setTitlebarActions(document.getElementById('window-titlebar-actions'));
+  }, []);
 
   useEffect(() => {
     if (!providerId) {
@@ -65,7 +73,12 @@ export default function ProviderFormPage() {
       ]);
     } catch {
       setModels((current) => current.filter((model) => model.source === 'custom'));
-      toast({ body: 'Failed to fetch models', type: 'error' });
+      toast({
+        body: 'Failed to fetch models',
+        type: 'error',
+        isAutoHide: true,
+        autoHideDuration: 2500,
+      });
     } finally {
       setIsFetching(false);
     }
@@ -91,7 +104,7 @@ export default function ProviderFormPage() {
     setModelName('');
   }
 
-  async function save() {
+  const save = useCallback(async () => {
     if (!canSave) {
       return;
     }
@@ -103,76 +116,82 @@ export default function ProviderFormPage() {
     } finally {
       setIsSaving(false);
     }
-  }
+  }, [apiKey, baseURL, canSave, customModels, navigate, name, providerId, protocol]);
 
+  const cancel = useCallback(() => {
+    void navigate('/providers');
+  }, [navigate]);
+  const submit = useCallback(() => {
+    void save();
+  }, [save]);
   return (
-    <VStack gap={5}>
-      <VStack gap={1}>
-        <Heading level={1}>{providerId ? 'Edit provider' : 'New provider'}</Heading>
-        <Text type="supporting">Connect a model service using one of Foundry's supported protocols.</Text>
-      </VStack>
-      <Section padding={5}>
-        <VStack gap={4}>
-          <TextInput size="sm" label="Name" value={name} onChange={setName} isRequired />
-          <Selector size="sm" label="Protocol" options={protocols} value={protocol} onChange={(value) => setProtocol(value as ProviderProtocol)} isDisabled={Boolean(providerId)} isRequired />
-          <TextInput size="sm" label="Base URL" value={baseURL} onChange={setBaseURL} placeholder="https://api.example.com/v1" isRequired />
-          <TextInput size="sm" label="API key" type="password" value={apiKey} onChange={setApiKey} isRequired={protocol !== 'openai-compatible-chat-completions'} />
-          <HStack vAlign="center">
-            <Button
-              label="Fetch models"
-              variant="secondary"
-              isDisabled={!canFetch}
-              isLoading={isFetching}
-              onClick={() => {
-                void fetchModels();
-              }}
-            />
-            {isFetching && <Text type="supporting">Loading models...</Text>}
-          </HStack>
-        </VStack>
-      </Section>
-      <Section padding={5}>
-        <VStack gap={3}>
-          <VStack gap={1}>
-            <Heading level={2}>Models</Heading>
-            <Text type="supporting">Fetched models are temporary. Add custom models when a service does not expose a model list.</Text>
+    <>
+      {titlebarActions && createPortal(
+        <HStack gap={2}>
+          <Button label="Cancel" variant="ghost" size="sm" onClick={cancel} />
+          <Button
+            label="Save provider"
+            variant="primary"
+            size="sm"
+            isDisabled={!canSave}
+            isLoading={isSaving}
+            onClick={submit}
+          />
+        </HStack>,
+        titlebarActions,
+      )}
+      <VStack gap={5}>
+        <Section padding={5}>
+          <VStack gap={4}>
+            <TextInput size="sm" label="Name" value={name} onChange={setName} isRequired />
+            <Selector size="sm" label="Protocol" options={protocols} value={protocol} onChange={(value) => setProtocol(value as ProviderProtocol)} isDisabled={Boolean(providerId)} isRequired />
+            <TextInput size="sm" label="Base URL" value={baseURL} onChange={setBaseURL} placeholder="https://api.example.com/v1" isRequired />
+            <TextInput size="sm" label="API key" type="password" value={apiKey} onChange={setApiKey} isRequired={protocol !== 'openai-compatible-chat-completions'} />
+            <HStack vAlign="center">
+              <Button
+                label="Fetch models"
+                variant="secondary"
+                isDisabled={!canFetch}
+                isLoading={isFetching}
+                onClick={() => {
+                  void fetchModels();
+                }}
+              />
+              {isFetching && <Text type="supporting">Loading models...</Text>}
+            </HStack>
           </VStack>
-          <HStack gap={1} wrap="wrap">
-            {models.map((model) => (
-              <Token size="sm" key={`${model.source}-${model.id}`} label={model.displayName || model.id} color={model.source === 'custom' ? 'blue' : 'default'} onRemove={model.source === 'custom' ? () => setModels((current) => current.filter((candidate) => candidate !== model)) : undefined} />
-            ))}
-            <Token size="sm" label="Add custom model" color="green" onClick={addCustomModel} />
-          </HStack>
-          <HStack gap={2}>
-            <TextInput
-              label="Model ID"
-              value={modelID}
-              onChange={(value) => {
-                setModelID(value);
-                if (!modelName) {
-                  setModelName(value);
-                }
-              }}
-              isLabelHidden
-              placeholder="Model ID"
-            />
-            <TextInput size="sm" label="Display name" value={modelName} onChange={setModelName} isLabelHidden isOptional placeholder="Display name (optional)" />
-            <Button label="Add" variant="secondary" size="sm" isDisabled={!modelID.trim()} onClick={addCustomModel} />
-          </HStack>
-        </VStack>
-      </Section>
-      <HStack hAlign="end" gap={2}>
-        <Button label="Cancel" variant="ghost" size="sm" onClick={() => navigate('/providers')} />
-        <Button
-          label="Save provider"
-          variant="primary"
-          isDisabled={!canSave}
-          isLoading={isSaving}
-          onClick={() => {
-            void save();
-          }}
-        />
-      </HStack>
-    </VStack>
+        </Section>
+        <Section padding={5}>
+          <VStack gap={3}>
+            <VStack gap={1}>
+              <Heading level={2}>Models</Heading>
+              <Text type="supporting">Fetched models are temporary. Add custom models when a service does not expose a model list.</Text>
+            </VStack>
+            <HStack gap={1} wrap="wrap">
+              {models.map((model) => (
+                <Token size="sm" key={`${model.source}-${model.id}`} label={model.displayName || model.id} color={model.source === 'custom' ? 'blue' : 'default'} onRemove={model.source === 'custom' ? () => setModels((current) => current.filter((candidate) => candidate !== model)) : undefined} />
+              ))}
+              <Token size="sm" label="Add custom model" color="green" onClick={addCustomModel} />
+            </HStack>
+            <HStack gap={2}>
+              <TextInput
+                label="Model ID"
+                value={modelID}
+                onChange={(value) => {
+                  setModelID(value);
+                  if (!modelName) {
+                    setModelName(value);
+                  }
+                }}
+                isLabelHidden
+                placeholder="Model ID"
+              />
+              <TextInput size="sm" label="Display name" value={modelName} onChange={setModelName} isLabelHidden isOptional placeholder="Display name (optional)" />
+              <Button label="Add" variant="secondary" size="sm" isDisabled={!modelID.trim()} onClick={addCustomModel} />
+            </HStack>
+          </VStack>
+        </Section>
+      </VStack>
+    </>
   );
 }

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
@@ -8,6 +9,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { Switch } from '@astryxdesign/core/Switch';
 import { Token } from '@astryxdesign/core/Token';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
+import { Popover } from '@astryxdesign/core/Popover';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Section } from '@astryxdesign/core/Section';
 import { PencilSquareIcon, Square3Stack3DIcon, TrashIcon } from '@heroicons/react/24/outline';
@@ -23,6 +25,7 @@ const protocolLabels = {
 
 export default function ProvidersPage() {
   const queryClient = useQueryClient();
+  const [providerToDelete, setProviderToDelete] = useState<ProviderListItem | null>(null);
   const providersQuery = useQuery({
     queryKey: providerKeys.list(),
     queryFn: listProviders,
@@ -34,6 +37,13 @@ export default function ProvidersPage() {
       void queryClient.invalidateQueries({ queryKey: providerKeys.list() });
     },
   });
+  const providerRemoval = useMutation({
+    mutationFn: (id: string) => globalThis.api.providers.setStatus(id, 'deleted'),
+    onSuccess: () => {
+      setProviderToDelete(null);
+      void queryClient.invalidateQueries({ queryKey: providerKeys.list() });
+    },
+  });
   const providers: ProviderListItem[] = providersQuery.data ?? [];
 
   function setStatus(provider: ProviderListItem, isChecked: boolean) {
@@ -41,13 +51,6 @@ export default function ProvidersPage() {
       return;
     }
     statusMutation.mutate({ id: provider.id, status: isChecked ? 'active' : 'disabled' });
-  }
-
-  function removeProvider(provider: ProviderListItem) {
-    if (provider.status === 'deleted' || provider.isInUse) {
-      return;
-    }
-    statusMutation.mutate({ id: provider.id, status: 'deleted' });
   }
 
   function getToggleTooltip(provider: ProviderListItem) {
@@ -96,17 +99,50 @@ export default function ProvidersPage() {
                         href={`/providers/${provider.id}`}
                         as={Link}
                       />
-                      <IconButton
+                      <Popover
                         label={`Delete ${provider.name}`}
-                        tooltip="Delete provider"
-                        icon={<TrashIcon />}
-                        variant="ghost"
-                        size="sm"
-                        isDisabled={provider.isInUse}
-                        onClick={() => {
-                          removeProvider(provider);
+                        xstyle={styles.providerPopover}
+                        isOpen={providerToDelete?.id === provider.id}
+                        isEnabled={!provider.isInUse}
+                        onOpenChange={(isOpen) => {
+                          setProviderToDelete(isOpen ? provider : null);
                         }}
-                      />
+                        content={(
+                          <VStack gap={3}>
+                            <VStack gap={1}>
+                              <Text type="label">Delete provider?</Text>
+                            </VStack>
+                            <HStack gap={2} hAlign="end">
+                              <Button
+                                label="Cancel"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setProviderToDelete(null);
+                                }}
+                              />
+                              <Button
+                                label="Delete"
+                                variant="destructive"
+                                size="sm"
+                                isLoading={providerRemoval.isPending && providerToDelete?.id === provider.id}
+                                onClick={() => {
+                                  providerRemoval.mutate(provider.id);
+                                }}
+                              />
+                            </HStack>
+                          </VStack>
+                        )}
+                      >
+                        <IconButton
+                          label={`Delete ${provider.name}`}
+                          tooltip="Delete provider"
+                          icon={<TrashIcon />}
+                          variant="ghost"
+                          size="sm"
+                          isDisabled={provider.isInUse}
+                        />
+                      </Popover>
                       <Tooltip
                         content={getToggleTooltip(provider)}
                       >

@@ -20,4 +20,7 @@ export const styles = stylex.create({
   providerActions: {
     flexShrink: 0,
   },
+  providerPopover: {
+    boxShadow: 'inset 0 0 0 var(--border-width) var(--color-border-emphasized), var(--shadow-med)',
+  },
 });

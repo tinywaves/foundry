@@ -1,16 +1,19 @@
+import { appIcons } from './icons';
+import type { AppIconName } from './icons';
+
 export type NavigationItem = {
   kind: 'item';
   id: string;
   label: string;
   href: string;
-  icon: string;
+  icon: (typeof appIcons)[AppIconName];
 };
 
 export type NavigationSection = {
   kind: 'section';
   id: string;
   title: string;
-  icon: string;
+  icon: (typeof appIcons)[AppIconName];
   items: readonly NavigationItem[];
 };
 
@@ -22,20 +25,20 @@ export const sidebarNavigation: readonly NavigationNode[] = [
     id: 'overview',
     label: 'Overview',
     href: '/overview',
-    icon: 'viewColumns',
+    icon: appIcons.overview,
   },
   {
     kind: 'section',
     id: 'library',
     title: 'Library',
-    icon: 'copy',
+    icon: appIcons.library,
     items: [
       {
         kind: 'item',
         id: 'prompts',
         label: 'Prompts',
         href: '/prompts',
-        icon: 'menu',
+        icon: appIcons.prompts,
       },
     ],
   },
@@ -44,7 +47,7 @@ export const sidebarNavigation: readonly NavigationNode[] = [
     id: 'providers',
     label: 'Providers',
     href: '/providers',
-    icon: 'copy',
+    icon: appIcons.providers,
   },
 ];
 
@@ -53,5 +56,5 @@ export const settingsNavigationItem: NavigationItem = {
   id: 'settings',
   label: 'Settings',
   href: '/settings',
-  icon: 'wrench',
+  icon: appIcons.settings,
 };

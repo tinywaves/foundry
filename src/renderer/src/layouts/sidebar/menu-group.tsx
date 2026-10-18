@@ -12,7 +12,7 @@ export default function MenuGroup({
   items,
 }: {
   title: string;
-  icon: string;
+  icon: NavigationItem['icon'];
   items: readonly NavigationItem[];
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);

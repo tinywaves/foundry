@@ -8,6 +8,7 @@ export const styles = stylex.create({
     height: 'calc(var(--spacing-4) * 2.5)',
     minHeight: 'calc(var(--spacing-4) * 2.5)',
     paddingInlineStart: 'calc(var(--spacing-4) * 6)',
+    paddingInlineEnd: 'var(--spacing-4)',
     userSelect: 'none',
     WebkitAppRegion: 'drag',
   },

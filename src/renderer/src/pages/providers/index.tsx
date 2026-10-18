@@ -46,20 +46,13 @@ export default function ProvidersPage() {
 
   return (
     <VStack gap={5}>
-      <HStack vAlign="center">
-        <VStack gap={1}>
-          <Heading level={1}>Providers</Heading>
-          <Text type="supporting">Manage the model service connections used by Foundry.</Text>
-        </VStack>
-        <Button label="Add provider" variant="primary" size="sm" href="/providers/new" as={Link} />
-      </HStack>
       {providers.length === 0
         ? (
             <Section variant="muted" padding={5}>
               <VStack gap={2}>
                 <Heading level={2}>No providers yet</Heading>
                 <Text type="supporting">Add a provider to make model services available to the application.</Text>
-                <Button label="Add your first provider" href="/providers/new" as={Link} />
+                <Button label="Add your first provider" size="sm" href="/providers/new" as={Link} />
               </VStack>
             </Section>
           )

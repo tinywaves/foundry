@@ -1,4 +1,4 @@
-import { createHashRouter, Navigate } from 'react-router-dom';
+import { createHashRouter, Link, Navigate } from 'react-router-dom';
 import App from './app';
 import SidebarLayout from './layouts/sidebar';
 import StandaloneLayout from './layouts/standalone';
@@ -8,6 +8,7 @@ import SettingsPage from './pages/settings';
 import NotFoundPage from './pages/not-found';
 import ProvidersPage from './pages/providers';
 import ProviderFormPage from './pages/providers/form';
+import { Button } from '@astryxdesign/core/Button';
 
 export const router = createHashRouter([
   {
@@ -23,7 +24,15 @@ export const router = createHashRouter([
         children: [
           { path: 'overview', element: <OverviewPage />, handle: { title: 'Overview' } },
           { path: 'prompts', element: <PromptsPage />, handle: { title: 'Prompts' } },
-          { path: 'providers', element: <ProvidersPage />, handle: { title: 'Providers' } },
+          {
+            path: 'providers',
+            element: <ProvidersPage />,
+            handle: {
+              title: 'Providers',
+              description: 'Manage the model service connections used by Foundry.',
+              endContent: <Button label="Add provider" size="sm" variant="primary" href="/providers/new" as={Link} />,
+            },
+          },
         ],
       },
       {

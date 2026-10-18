@@ -11,7 +11,8 @@ export const styles = stylex.create({
     width: 'var(--spacing-12)',
   },
   contentNoVerticalPadding: {
-    paddingBlock: 0,
+    paddingBlockStart: 'calc(var(--spacing-4) * 2.5)',
+    paddingBlockEnd: 0,
   },
   compactNavItems: {
     rowGap: 'calc(var(--spacing-0-5) / 2)',

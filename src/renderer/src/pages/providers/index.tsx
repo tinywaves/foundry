@@ -1,13 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
-import { Heading, Text } from '@astryxdesign/core/Text';
-import { Badge } from '@astryxdesign/core/Badge';
+import { IconButton } from '@astryxdesign/core/IconButton';
+import { Icon } from '@astryxdesign/core/Icon';
+import { List, ListItem } from '@astryxdesign/core/List';
+import { Text } from '@astryxdesign/core/Text';
 import { Switch } from '@astryxdesign/core/Switch';
+import { Token } from '@astryxdesign/core/Token';
+import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Section } from '@astryxdesign/core/Section';
+import { PencilSquareIcon, Square3Stack3DIcon, TrashIcon } from '@heroicons/react/24/outline';
 import type { ProviderListItem } from '../../../../shared/providers';
 import { listProviders, providerKeys } from '@renderer/providers';
+import { styles } from './styles';
 
 const protocolLabels = {
   'openai-responses': 'OpenAI Responses',
@@ -44,61 +50,82 @@ export default function ProvidersPage() {
     statusMutation.mutate({ id: provider.id, status: 'deleted' });
   }
 
+  function getToggleTooltip(provider: ProviderListItem) {
+    if (provider.isInUse) {
+      return 'Provider is currently in use';
+    }
+    return provider.status === 'active' ? 'Disable provider' : 'Enable provider';
+  }
+
   return (
     <VStack gap={5}>
       {providers.length === 0
         ? (
             <Section variant="muted" padding={5}>
               <VStack gap={2}>
-                <Heading level={2}>No providers yet</Heading>
                 <Text type="supporting">Add a provider to make model services available to the application.</Text>
                 <Button label="Add your first provider" size="sm" href="/providers/new" as={Link} />
               </VStack>
             </Section>
           )
         : (
-            <VStack gap={2}>
+            <List density="balanced" hasDividers={false} xstyle={styles.providerList}>
               {providers.map((provider) => (
-                <Section key={provider.id} padding={4}>
-                  <HStack vAlign="center">
-                    <VStack gap={1}>
-                      <Heading level={3}>{provider.name}</Heading>
-                      <Text type="supporting">
-                        {protocolLabels[provider.protocol]}
-                        {' · '}
-                        {provider.baseURL}
-                      </Text>
-                      <HStack gap={1}>
-                        <Badge label={`${provider.customModels.length} custom model${provider.customModels.length === 1 ? '' : 's'}`} variant="neutral" />
-                        {provider.isInUse && <Badge label="In use" variant="info" />}
-                      </HStack>
-                    </VStack>
-                    <HStack gap={2} vAlign="center">
-                      <Switch
-                        label={provider.status === 'active' ? 'Enabled' : 'Disabled'}
-                        value={provider.status === 'active'}
-                        onChange={(isChecked) => {
-                          setStatus(provider, isChecked);
-                        }}
-                        isDisabled={provider.isInUse}
-                        labelSpacing="hug"
+                <ListItem
+                  key={provider.id}
+                  label={provider.name}
+                  xstyle={styles.providerItem}
+                  startContent={<Icon icon={Square3Stack3DIcon} size="lg" color="secondary" />}
+                  description={(
+                    <HStack gap={1} wrap="wrap" xstyle={styles.providerDescription}>
+                      <Token size="sm" label={protocolLabels[provider.protocol]} />
+                      <Text type="supporting">·</Text>
+                      <Text type="supporting" maxLines={1} xstyle={styles.providerBaseURL}>{provider.baseURL}</Text>
+                      <Text type="supporting">·</Text>
+                      <Text type="supporting">{`${provider.customModels.length} custom models`}</Text>
+                    </HStack>
+                  )}
+                  endContent={(
+                    <HStack gap={2} vAlign="center" xstyle={styles.providerActions}>
+                      <IconButton
+                        label={`Edit ${provider.name}`}
+                        tooltip="Edit provider"
+                        icon={<PencilSquareIcon />}
+                        variant="ghost"
                         size="sm"
+                        href={`/providers/${provider.id}`}
+                        as={Link}
                       />
-                      <Button label="Edit" href={`/providers/${provider.id}`} as={Link} variant="secondary" />
-                      <Button
-                        label="Delete"
-                        variant="destructive"
+                      <IconButton
+                        label={`Delete ${provider.name}`}
+                        tooltip="Delete provider"
+                        icon={<TrashIcon />}
+                        variant="ghost"
                         size="sm"
                         isDisabled={provider.isInUse}
                         onClick={() => {
                           removeProvider(provider);
                         }}
                       />
+                      <Tooltip
+                        content={getToggleTooltip(provider)}
+                      >
+                        <Switch
+                          label={`${provider.name} enabled`}
+                          isLabelHidden
+                          value={provider.status === 'active'}
+                          onChange={(isChecked) => {
+                            setStatus(provider, isChecked);
+                          }}
+                          isDisabled={provider.isInUse}
+                          size="sm"
+                        />
+                      </Tooltip>
                     </HStack>
-                  </HStack>
-                </Section>
+                  )}
+                />
               ))}
-            </VStack>
+            </List>
           )}
     </VStack>
   );

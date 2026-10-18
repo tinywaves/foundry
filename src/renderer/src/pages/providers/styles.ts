@@ -23,4 +23,47 @@ export const styles = stylex.create({
   providerPopover: {
     boxShadow: 'inset 0 0 0 var(--border-width) var(--color-border-emphasized), var(--shadow-med)',
   },
+  formFieldRow: {
+    width: '100%',
+  },
+  formNameField: {
+    flex: '1 1 14rem',
+    minWidth: 'min(100%, 14rem)',
+  },
+  formProtocolField: {
+    flex: '1 1 18rem',
+    minWidth: 'min(100%, 18rem)',
+  },
+  formApiKeyField: {
+    width: '100%',
+  },
+  formModelInput: {
+    minWidth: 'min(100%, 18rem)',
+    flex: '1 1 18rem',
+  },
+  formModelNameInput: {
+    minWidth: 'min(100%, 14rem)',
+    flex: '1 1 14rem',
+  },
+  apiKeyVisibilityAddon: {
+    backgroundColor: 'var(--color-background-surface)',
+  },
+  modelHelpTrigger: {
+    'display': 'inline-flex',
+    'alignItems': 'center',
+    'justifyContent': 'center',
+    'padding': 0,
+    'border': 0,
+    'borderRadius': 'var(--radius-full)',
+    'backgroundColor': 'transparent',
+    'color': 'var(--color-icon-secondary)',
+    'cursor': 'pointer',
+    ':hover': {
+      color: 'var(--color-icon-primary)',
+    },
+    ':focus-visible': {
+      outline: '2px solid var(--color-accent)',
+      outlineOffset: '2px',
+    },
+  },
 });

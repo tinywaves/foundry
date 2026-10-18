@@ -1,15 +1,23 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@astryxdesign/core/Button';
-import { Heading, Text } from '@astryxdesign/core/Text';
+import { IconButton } from '@astryxdesign/core/IconButton';
+import { Icon } from '@astryxdesign/core/Icon';
+import { Text } from '@astryxdesign/core/Text';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { Selector } from '@astryxdesign/core/Selector';
 import { Token } from '@astryxdesign/core/Token';
+import { InputGroup, InputGroupText } from '@astryxdesign/core/InputGroup';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
-import { Section } from '@astryxdesign/core/Section';
+import { Popover } from '@astryxdesign/core/Popover';
 import { useToast } from '@astryxdesign/core';
+import { ArrowPathIcon, EyeIcon, EyeSlashIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
+import * as stylex from '@stylexjs/stylex';
 import type { CustomModel, ProviderInput, ProviderProtocol, RemoteModel } from '../../../../shared/providers';
+import { providerKeys } from '@renderer/providers';
+import { styles } from './styles';
 
 type FormModel = (RemoteModel & { source: 'remote' }) | (CustomModel & { source: 'custom' });
 
@@ -22,11 +30,15 @@ const protocols: Array<{ value: ProviderProtocol; label: string }> = [
 export default function ProviderFormPage() {
   const { providerId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const toast = useToast();
   const [name, setName] = useState('');
   const [protocol, setProtocol] = useState<ProviderProtocol>('openai-responses');
   const [baseURL, setBaseURL] = useState('');
   const [apiKey, setApiKey] = useState('');
+  const [isApiKeyVisible, setIsApiKeyVisible] = useState(false);
+  const [isModelHelpOpen, setIsModelHelpOpen] = useState(false);
+  const modelHelpCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [models, setModels] = useState<FormModel[]>([]);
   const [modelID, setModelID] = useState('');
   const [modelName, setModelName] = useState('');
@@ -112,11 +124,12 @@ export default function ProviderFormPage() {
     const input: ProviderInput = { name: name.trim(), protocol, baseURL: baseURL.trim(), apiKey, customModels: customModels.map(({ source: _source, ...model }) => model) };
     try {
       await globalThis.api.providers.save(input, providerId);
+      await queryClient.invalidateQueries({ queryKey: providerKeys.all });
       void navigate('/providers');
     } finally {
       setIsSaving(false);
     }
-  }, [apiKey, baseURL, canSave, customModels, navigate, name, providerId, protocol]);
+  }, [apiKey, baseURL, canSave, customModels, navigate, name, providerId, protocol, queryClient]);
 
   const cancel = useCallback(() => {
     void navigate('/providers');
@@ -124,6 +137,17 @@ export default function ProviderFormPage() {
   const submit = useCallback(() => {
     void save();
   }, [save]);
+  const openModelHelp = useCallback(() => {
+    if (modelHelpCloseTimerRef.current) {
+      clearTimeout(modelHelpCloseTimerRef.current);
+    }
+    setIsModelHelpOpen(true);
+  }, []);
+  const closeModelHelp = useCallback(() => {
+    modelHelpCloseTimerRef.current = setTimeout(() => {
+      setIsModelHelpOpen(false);
+    }, 120);
+  }, []);
   return (
     <>
       {titlebarActions && createPortal(
@@ -141,56 +165,115 @@ export default function ProviderFormPage() {
         titlebarActions,
       )}
       <VStack gap={5}>
-        <Section padding={5}>
-          <VStack gap={4}>
-            <TextInput size="sm" label="Name" value={name} onChange={setName} isRequired />
-            <Selector size="sm" label="Protocol" options={protocols} value={protocol} onChange={(value) => setProtocol(value as ProviderProtocol)} isDisabled={Boolean(providerId)} isRequired />
-            <TextInput size="sm" label="Base URL" value={baseURL} onChange={setBaseURL} placeholder="https://api.example.com/v1" isRequired />
-            <TextInput size="sm" label="API key" type="password" value={apiKey} onChange={setApiKey} isRequired={protocol !== 'openai-compatible-chat-completions'} />
-            <HStack vAlign="center">
-              <Button
-                label="Fetch models"
-                variant="secondary"
-                isDisabled={!canFetch}
-                isLoading={isFetching}
-                onClick={() => {
-                  void fetchModels();
-                }}
+        <VStack gap={4}>
+          <HStack gap={3} wrap="wrap" xstyle={styles.formFieldRow}>
+            <TextInput containerXstyle={styles.formNameField} size="sm" label="Name" value={name} onChange={setName} isRequired />
+            <Selector containerXstyle={styles.formProtocolField} size="sm" label="Protocol" options={protocols} value={protocol} onChange={(value) => setProtocol(value as ProviderProtocol)} isDisabled={Boolean(providerId)} isRequired />
+          </HStack>
+          <TextInput size="sm" label="Base URL" value={baseURL} onChange={setBaseURL} placeholder="https://api.example.com/v1" isRequired />
+          <InputGroup
+            label="API key"
+            size="sm"
+            isRequired={protocol !== 'openai-compatible-chat-completions'}
+            xstyle={styles.formApiKeyField}
+          >
+            <TextInput
+              size="sm"
+              label="API key"
+              isLabelHidden
+              type={isApiKeyVisible ? 'text' : 'password'}
+              value={apiKey}
+              onChange={setApiKey}
+            />
+            <InputGroupText xstyle={styles.apiKeyVisibilityAddon}>
+              <IconButton
+                label={isApiKeyVisible ? 'Hide API key' : 'Show API key'}
+                tooltip={isApiKeyVisible ? 'Hide API key' : 'Show API key'}
+                icon={isApiKeyVisible ? <EyeSlashIcon /> : <EyeIcon />}
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsApiKeyVisible((visible) => !visible)}
               />
-              {isFetching && <Text type="supporting">Loading models...</Text>}
-            </HStack>
-          </VStack>
-        </Section>
-        <Section padding={5}>
-          <VStack gap={3}>
-            <VStack gap={1}>
-              <Heading level={2}>Models</Heading>
-              <Text type="supporting">Fetched models are temporary. Add custom models when a service does not expose a model list.</Text>
-            </VStack>
+            </InputGroupText>
+          </InputGroup>
+        </VStack>
+        <VStack gap={3}>
+          <HStack gap={1} vAlign="center">
+            <Text type="label" color="secondary">Models</Text>
+            <Text type="supporting">· Required</Text>
+            <Popover
+              label="Model sources"
+              placement="below"
+              alignment="start"
+              isOpen={isModelHelpOpen}
+              isEnabled={false}
+              onOpenChange={setIsModelHelpOpen}
+              content={(
+                <VStack gap={1} onMouseEnter={openModelHelp} onMouseLeave={closeModelHelp}>
+                  <Text type="supporting">Fetched models are temporary. Custom models are saved with this provider.</Text>
+                </VStack>
+              )}
+            >
+              <button
+                type="button"
+                aria-label="About model sources"
+                {...stylex.props(styles.modelHelpTrigger)}
+                onMouseEnter={openModelHelp}
+                onMouseLeave={closeModelHelp}
+              >
+                <Icon icon={QuestionMarkCircleIcon} size="sm" />
+              </button>
+            </Popover>
+            <IconButton
+              label="Fetch models"
+              tooltip="Fetch models"
+              icon={<ArrowPathIcon />}
+              variant="ghost"
+              size="sm"
+              isDisabled={!canFetch}
+              isLoading={isFetching}
+              onClick={() => {
+                void fetchModels();
+              }}
+            />
+          </HStack>
+          {models.length > 0 && (
             <HStack gap={1} wrap="wrap">
               {models.map((model) => (
-                <Token size="sm" key={`${model.source}-${model.id}`} label={model.displayName || model.id} color={model.source === 'custom' ? 'blue' : 'default'} onRemove={model.source === 'custom' ? () => setModels((current) => current.filter((candidate) => candidate !== model)) : undefined} />
+                <Token
+                  size="sm"
+                  key={`${model.source}-${model.id}`}
+                  label={model.displayName || model.id}
+                  color={model.source === 'custom' ? 'blue' : 'default'}
+                  onRemove={model.source === 'custom' ? () => setModels((current) => current.filter((candidate) => candidate !== model)) : undefined}
+                />
               ))}
-              <Token size="sm" label="Add custom model" color="green" onClick={addCustomModel} />
             </HStack>
-            <HStack gap={2}>
-              <TextInput
-                label="Model ID"
-                value={modelID}
-                onChange={(value) => {
-                  setModelID(value);
-                  if (!modelName) {
-                    setModelName(value);
-                  }
-                }}
-                isLabelHidden
-                placeholder="Model ID"
-              />
-              <TextInput size="sm" label="Display name" value={modelName} onChange={setModelName} isLabelHidden isOptional placeholder="Display name (optional)" />
-              <Button label="Add" variant="secondary" size="sm" isDisabled={!modelID.trim()} onClick={addCustomModel} />
-            </HStack>
-          </VStack>
-        </Section>
+          )}
+          <HStack gap={2} wrap="wrap">
+            <TextInput
+              size="sm"
+              containerXstyle={styles.formModelInput}
+              label="Model ID"
+              isLabelHidden
+              value={modelID}
+              onChange={setModelID}
+              placeholder="Custom model ID"
+              isRequired
+            />
+            <TextInput
+              size="sm"
+              containerXstyle={styles.formModelNameInput}
+              label="Display name"
+              isLabelHidden
+              value={modelName}
+              onChange={setModelName}
+              isOptional
+              placeholder="Display name (optional)"
+            />
+            <Button label="Add custom model" variant="secondary" size="sm" isDisabled={!modelID.trim()} onClick={addCustomModel} />
+          </HStack>
+        </VStack>
       </VStack>
     </>
   );

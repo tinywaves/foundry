@@ -106,10 +106,19 @@ async function fetchModelsWithSdk(input: Pick<Provider, 'protocol' | 'baseURL' |
   if (input.protocol === 'anthropic-messages') {
     const client = new Anthropic({ apiKey: input.apiKey, baseURL: input.baseURL });
     const page = await client.models.list();
-    return page.data.map((model) => ({ id: model.id }));
+    return page.data.map((model) => ({ id: model.id, displayName: model.display_name }));
   }
 
   const client = new OpenAI({ apiKey: input.apiKey || 'local-provider', baseURL: input.baseURL });
   const page = await client.models.list();
-  return page.data.map((model) => ({ id: model.id }));
+  return page.data.map((model) => {
+    const metadata = model as unknown as { display_name?: unknown; name?: unknown };
+    let displayName: string | undefined;
+    if (typeof metadata.display_name === 'string') {
+      displayName = metadata.display_name;
+    } else if (typeof metadata.name === 'string') {
+      displayName = metadata.name;
+    }
+    return displayName ? { id: model.id, displayName } : { id: model.id };
+  });
 }

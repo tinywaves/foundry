@@ -21,7 +21,7 @@ export default function StandaloneLayout() {
         height="fill"
         content={(
           <LayoutContent
-            padding={0}
+            padding={isSettingsPage ? 0 : 4}
             isScrollable={!isSettingsPage}
             xstyle={isSettingsPage ? undefined : styles.contentNoVerticalPadding}
           >

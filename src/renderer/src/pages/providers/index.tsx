@@ -17,6 +17,7 @@ import { PencilSquareIcon, Square3Stack3DIcon, TrashIcon } from '@heroicons/reac
 import type { ProviderListItem } from '../../../../shared/providers';
 import { listProviders, providerKeys } from '@renderer/providers';
 import { styles } from './styles';
+import { useI18n } from '@renderer/i18n/use-i18n';
 
 const protocolLabels = {
   'openai-responses': 'OpenAI Responses',
@@ -25,6 +26,7 @@ const protocolLabels = {
 } as const;
 
 export default function ProvidersPage() {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [providerToDelete, setProviderToDelete] = useState<ProviderListItem | null>(null);
   const [titlebarActions, setTitlebarActions] = useState<HTMLElement | null>(null);
@@ -63,15 +65,15 @@ export default function ProvidersPage() {
 
   function getToggleTooltip(provider: ProviderListItem) {
     if (provider.isInUse) {
-      return 'Provider is currently in use';
+      return t('providers.inUse');
     }
-    return provider.status === 'active' ? 'Disable provider' : 'Enable provider';
+    return t(provider.status === 'active' ? 'providers.disable' : 'providers.enable');
   }
 
   return (
     <>
       {titlebarActions && createPortal(
-        <Button label="Add provider" size="sm" variant="primary" href="/providers/new" as={Link} />,
+        <Button label={t('providers.add')} size="sm" variant="primary" href="/providers/new" as={Link} />,
         titlebarActions,
       )}
       <VStack gap={5}>
@@ -79,8 +81,8 @@ export default function ProvidersPage() {
           ? (
               <Section variant="muted" padding={5}>
                 <VStack gap={2}>
-                  <Text type="supporting">Add a provider to make model services available to the application.</Text>
-                  <Button label="Add your first provider" size="sm" href="/providers/new" as={Link} />
+                  <Text type="supporting">{t('providers.empty')}</Text>
+                  <Button label={t('providers.addFirst')} size="sm" href="/providers/new" as={Link} />
                 </VStack>
               </Section>
             )
@@ -101,15 +103,15 @@ export default function ProvidersPage() {
                         </HStack>
                         <HStack gap={1} vAlign="center" xstyle={styles.providerCustomModelsGroup}>
                           <Text type="supporting">·</Text>
-                          <Text type="supporting" maxLines={1}>{`${provider.customModels.length} custom models`}</Text>
+                          <Text type="supporting" maxLines={1}>{`${provider.customModels.length} ${t('providers.customModels')}`}</Text>
                         </HStack>
                       </HStack>
                     )}
                     endContent={(
                       <HStack gap={2} vAlign="center" xstyle={styles.providerActions}>
                         <IconButton
-                          label={`Edit ${provider.name}`}
-                          tooltip="Edit provider"
+                          label={`${t('providers.edit')} ${provider.name}`}
+                          tooltip={t('providers.edit')}
                           icon={<PencilSquareIcon />}
                           variant="ghost"
                           size="sm"
@@ -117,7 +119,7 @@ export default function ProvidersPage() {
                           as={Link}
                         />
                         <Popover
-                          label={`Delete ${provider.name}`}
+                          label={`${t('providers.deleteLabel')} ${provider.name}`}
                           xstyle={styles.providerPopover}
                           isOpen={providerToDelete?.id === provider.id}
                           isEnabled={!provider.isInUse}
@@ -127,11 +129,11 @@ export default function ProvidersPage() {
                           content={(
                             <VStack gap={3}>
                               <VStack gap={1}>
-                                <Text type="label">Delete provider?</Text>
+                                <Text type="label">{t('providers.deleteQuestion')}</Text>
                               </VStack>
                               <HStack gap={2} hAlign="end">
                                 <Button
-                                  label="Cancel"
+                                  label={t('providers.cancel')}
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => {
@@ -139,7 +141,7 @@ export default function ProvidersPage() {
                                   }}
                                 />
                                 <Button
-                                  label="Delete"
+                                  label={t('providers.delete')}
                                   variant="destructive"
                                   size="sm"
                                   isLoading={providerRemoval.isPending && providerToDelete?.id === provider.id}
@@ -152,8 +154,8 @@ export default function ProvidersPage() {
                           )}
                         >
                           <IconButton
-                            label={`Delete ${provider.name}`}
-                            tooltip="Delete provider"
+                            label={`${t('providers.deleteLabel')} ${provider.name}`}
+                            tooltip={t('providers.deleteLabel')}
                             icon={<TrashIcon />}
                             variant="ghost"
                             size="sm"
@@ -164,7 +166,7 @@ export default function ProvidersPage() {
                           content={getToggleTooltip(provider)}
                         >
                           <Switch
-                            label={`${provider.name} enabled`}
+                            label={`${provider.name} ${t('providers.enabled')}`}
                             isLabelHidden
                             value={provider.status === 'active'}
                             onChange={(isChecked) => {

@@ -39,3 +39,4 @@ RULES:
 - Use TanStack Query for server-state fetching, caching, and mutations.
 - Split components into focused files instead of placing many components in one file.
 - After writing code, run `pnpm run lint` and `pnpm run lint-fix`.
+- During every implementation, check for unused translation keys and remove any leftover multilingual entries that are no longer referenced.

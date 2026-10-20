@@ -18,6 +18,7 @@ import * as stylex from '@stylexjs/stylex';
 import type { CustomModel, ProviderInput, ProviderProtocol, RemoteModel } from '../../../../shared/providers';
 import { providerKeys } from '@renderer/providers';
 import { styles } from './styles';
+import { useI18n } from '@renderer/i18n/use-i18n';
 
 type FormModel = (RemoteModel & { source: 'remote' }) | (CustomModel & { source: 'custom' });
 
@@ -29,6 +30,7 @@ const protocols: Array<{ value: ProviderProtocol; label: string }> = [
 
 export default function ProviderFormPage() {
   const { providerId } = useParams();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -86,7 +88,7 @@ export default function ProviderFormPage() {
     } catch {
       setModels((current) => current.filter((model) => model.source === 'custom'));
       toast({
-        body: 'Failed to fetch models',
+        body: t('providers.failedFetchModels'),
         type: 'error',
         isAutoHide: true,
         autoHideDuration: 2500,
@@ -94,7 +96,7 @@ export default function ProviderFormPage() {
     } finally {
       setIsFetching(false);
     }
-  }, [apiKey, baseURL, canFetch, protocol, toast]);
+  }, [apiKey, baseURL, canFetch, protocol, t, toast]);
 
   useEffect(() => {
     if (!canFetch) {
@@ -152,9 +154,9 @@ export default function ProviderFormPage() {
     <>
       {titlebarActions && createPortal(
         <HStack gap={2}>
-          <Button label="Cancel" variant="ghost" size="sm" onClick={cancel} />
+          <Button label={t('providers.cancel')} variant="ghost" size="sm" onClick={cancel} />
           <Button
-            label="Save provider"
+            label={t('providers.save')}
             variant="primary"
             size="sm"
             isDisabled={!canSave}
@@ -167,19 +169,19 @@ export default function ProviderFormPage() {
       <VStack gap={5}>
         <VStack gap={4}>
           <HStack gap={3} wrap="wrap" xstyle={styles.formFieldRow}>
-            <TextInput containerXstyle={styles.formNameField} size="sm" label="Name" value={name} onChange={setName} isRequired />
-            <Selector containerXstyle={styles.formProtocolField} size="sm" label="Protocol" options={protocols} value={protocol} onChange={(value) => setProtocol(value as ProviderProtocol)} isDisabled={Boolean(providerId)} isRequired />
+            <TextInput containerXstyle={styles.formNameField} size="sm" label={t('providers.name')} value={name} onChange={setName} isRequired />
+            <Selector containerXstyle={styles.formProtocolField} size="sm" label={t('providers.protocol')} options={protocols} value={protocol} onChange={(value) => setProtocol(value as ProviderProtocol)} isDisabled={Boolean(providerId)} isRequired />
           </HStack>
-          <TextInput size="sm" label="Base URL" value={baseURL} onChange={setBaseURL} placeholder="https://api.example.com/v1" isRequired />
+          <TextInput size="sm" label={t('providers.baseUrl')} value={baseURL} onChange={setBaseURL} placeholder="https://api.example.com/v1" isRequired />
           <InputGroup
-            label="API key"
+            label={t('providers.apiKey')}
             size="sm"
             isRequired={protocol !== 'openai-compatible-chat-completions'}
             xstyle={styles.formApiKeyField}
           >
             <TextInput
               size="sm"
-              label="API key"
+              label={t('providers.apiKey')}
               isLabelHidden
               type={isApiKeyVisible ? 'text' : 'password'}
               value={apiKey}
@@ -187,8 +189,8 @@ export default function ProviderFormPage() {
             />
             <InputGroupText xstyle={styles.apiKeyVisibilityAddon}>
               <IconButton
-                label={isApiKeyVisible ? 'Hide API key' : 'Show API key'}
-                tooltip={isApiKeyVisible ? 'Hide API key' : 'Show API key'}
+                label={t(isApiKeyVisible ? 'providers.hideApiKey' : 'providers.showApiKey')}
+                tooltip={t(isApiKeyVisible ? 'providers.hideApiKey' : 'providers.showApiKey')}
                 icon={isApiKeyVisible ? <EyeSlashIcon /> : <EyeIcon />}
                 variant="ghost"
                 size="sm"
@@ -199,10 +201,13 @@ export default function ProviderFormPage() {
         </VStack>
         <VStack gap={3}>
           <HStack gap={1} vAlign="center">
-            <Text type="label" color="secondary">Models</Text>
-            <Text type="supporting">· Required</Text>
+            <Text type="label" color="secondary">{t('providers.models')}</Text>
+            <Text type="supporting">
+              ·
+              {t('providers.required')}
+            </Text>
             <Popover
-              label="Model sources"
+              label={t('providers.modelSources')}
               placement="below"
               alignment="start"
               isOpen={isModelHelpOpen}
@@ -210,13 +215,13 @@ export default function ProviderFormPage() {
               onOpenChange={setIsModelHelpOpen}
               content={(
                 <VStack gap={1} onMouseEnter={openModelHelp} onMouseLeave={closeModelHelp}>
-                  <Text type="supporting">Fetched models are temporary. Custom models are saved with this provider.</Text>
+                  <Text type="supporting">{t('providers.modelsTemporary')}</Text>
                 </VStack>
               )}
             >
               <button
                 type="button"
-                aria-label="About model sources"
+                aria-label={t('providers.aboutModelSources')}
                 {...stylex.props(styles.modelHelpTrigger)}
                 onMouseEnter={openModelHelp}
                 onMouseLeave={closeModelHelp}
@@ -225,8 +230,8 @@ export default function ProviderFormPage() {
               </button>
             </Popover>
             <IconButton
-              label="Fetch models"
-              tooltip="Fetch models"
+              label={t('providers.fetchModels')}
+              tooltip={t('providers.fetchModels')}
               icon={<ArrowPathIcon />}
               variant="ghost"
               size="sm"
@@ -254,24 +259,24 @@ export default function ProviderFormPage() {
             <TextInput
               size="sm"
               containerXstyle={styles.formModelInput}
-              label="Model ID"
+              label={t('providers.modelId')}
               isLabelHidden
               value={modelID}
               onChange={setModelID}
-              placeholder="Custom model ID"
+              placeholder={t('providers.customModelId')}
               isRequired
             />
             <TextInput
               size="sm"
               containerXstyle={styles.formModelNameInput}
-              label="Display name"
+              label={t('providers.displayName')}
               isLabelHidden
               value={modelName}
               onChange={setModelName}
               isOptional
-              placeholder="Display name (optional)"
+              placeholder={t('providers.displayNameOptional')}
             />
-            <Button label="Add custom model" variant="secondary" size="sm" isDisabled={!modelID.trim()} onClick={addCustomModel} />
+            <Button label={t('providers.addCustomModel')} variant="secondary" size="sm" isDisabled={!modelID.trim()} onClick={addCustomModel} />
           </HStack>
         </VStack>
       </VStack>

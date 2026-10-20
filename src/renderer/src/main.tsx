@@ -5,6 +5,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './query-client';
 import { router } from './router';
 import RendererTheme from './components/renderer-theme';
+import { I18nProvider } from './i18n';
 import '@fontsource/poppins/400.css';
 import './main.css';
 
@@ -12,7 +13,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <RendererTheme>
-        <RouterProvider router={router} />
+        <I18nProvider>
+          <RouterProvider router={router} />
+        </I18nProvider>
       </RendererTheme>
     </QueryClientProvider>
   </StrictMode>,

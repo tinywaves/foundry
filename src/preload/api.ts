@@ -4,6 +4,7 @@ import type {
   ProviderSummary,
   RemoteModel,
 } from '../shared/providers';
+import type { LanguageMode, SettingsSnapshot, ThemeMode } from '../shared/settings';
 
 export type ProviderApi = {
   list: () => Promise<ProviderListItem[]>;
@@ -15,6 +16,7 @@ export type ProviderApi = {
 };
 
 export type SettingsApi = {
-  get: () => Promise<{ appearance: { theme: 'system' | 'light' | 'dark' } }>;
-  setTheme: (theme: 'system' | 'light' | 'dark') => Promise<{ appearance: { theme: 'system' | 'light' | 'dark' } }>;
+  get: () => Promise<SettingsSnapshot>;
+  setTheme: (theme: ThemeMode) => Promise<SettingsSnapshot>;
+  setLanguage: (language: LanguageMode) => Promise<SettingsSnapshot>;
 };

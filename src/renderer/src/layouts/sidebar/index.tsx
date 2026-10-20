@@ -9,9 +9,21 @@ import { settingsNavigationItem, sidebarNavigation } from '@renderer/navigation'
 import MenuGroup from './menu-group';
 import RoutedSideNavItem from './routed-side-nav-item';
 import { styles } from './styles';
+import { useI18n } from '@renderer/i18n/use-i18n';
 
 export default function SidebarLayout() {
   const [isSideNavCollapsed, setIsSideNavCollapsed] = useState(false);
+  const { t } = useI18n();
+  const navigationLabel = (id: string, fallback: string) => {
+    const labels: Record<string, string> = {
+      overview: t('navigation.overview'),
+      prompts: t('navigation.prompts'),
+      providers: t('navigation.providers'),
+      settings: t('navigation.settings'),
+      library: t('navigation.library'),
+    };
+    return labels[id] ?? fallback;
+  };
   const collapsible = {
     isCollapsed: isSideNavCollapsed,
     onCollapsedChange: setIsSideNavCollapsed,
@@ -29,20 +41,20 @@ export default function SidebarLayout() {
           collapsible={{ ...collapsible, hasButton: false }}
           xstyle={isSideNavCollapsed ? styles.sideNavCollapsed : styles.sideNav}
           footer={(
-            <SideNavSection title="Account" isHeaderHidden>
-              <RoutedSideNavItem {...settingsNavigationItem} />
+            <SideNavSection title={t('navigation.account')} isHeaderHidden>
+              <RoutedSideNavItem {...settingsNavigationItem} label={navigationLabel(settingsNavigationItem.id, settingsNavigationItem.label)} />
             </SideNavSection>
           )}
         >
-          <SideNavSection title="Main" isHeaderHidden>
+          <SideNavSection title={t('navigation.main')} isHeaderHidden>
             <VStack gap={0} xstyle={styles.compactNavItems}>
               {sidebarNavigation.map((node) => (
                 node.kind === 'item'
-                  ? <RoutedSideNavItem key={node.id} {...node} />
+                  ? <RoutedSideNavItem key={node.id} {...node} label={navigationLabel(node.id, node.label)} />
                   : (
                       <MenuGroup
                         key={node.id}
-                        title={node.title}
+                        title={navigationLabel(node.id, node.title)}
                         icon={node.icon}
                         items={node.items}
                       />

@@ -1,98 +1,75 @@
 import { GlobeAltIcon, LanguageIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { Selector } from '@astryxdesign/core/Selector';
+import { useI18n } from '@renderer/i18n/use-i18n';
 import { SettingsCard } from '../components/settings-card';
 import { SettingsRow } from '../components/settings-row';
-import type { PanelProps } from '../types';
+import type { PanelProps, SettingsState } from '../types';
 
 export function LanguagePanel({ settings, update }: PanelProps) {
+  const { t } = useI18n();
   return (
-    <SettingsCard title="Language & region">
+    <SettingsCard title={t('settings.languageRegion')}>
       <SettingsRow
-        title="Language"
+        title={t('settings.language')}
         icon={LanguageIcon}
-        description="Used across menus, buttons, and email."
+        description={t('settings.languageDescription')}
         control={(
           <Selector
-            label="Language"
+            label={t('settings.language')}
             isLabelHidden
             size="sm"
             width={192}
             value={settings.language}
-            onChange={(value) => update('language', value)}
+            onChange={(value) => update('language', value as SettingsState['language'])}
             options={[
-              {
-                value: 'en-US',
-                label: 'English (US)',
-              },
-              {
-                value: 'en-GB',
-                label: 'English (UK)',
-              },
-              {
-                value: 'fr',
-                label: 'Français',
-              },
-              {
-                value: 'de',
-                label: 'Deutsch',
-              },
-              {
-                value: 'ja',
-                label: '日本語',
-              },
+              { value: 'system', label: t('settings.system') },
+              { value: 'en-US', label: 'English' },
+              { value: 'zh-CN', label: '简体中文' },
+              { value: 'zh-TW', label: '繁體中文（台灣）' },
+              { value: 'ja-JP', label: '日本語' },
             ]}
           />
         )}
       />
       <SettingsRow
-        title="Region format"
+        title={t('settings.regionFormat')}
         icon={MapPinIcon}
-        description="Dates, numbers, and currency."
+        description={t('settings.regionFormatDescription')}
         control={(
           <Selector
-            label="Region format"
+            label={t('settings.regionFormat')}
             isLabelHidden
             size="sm"
             width={192}
             value={settings.region}
             onChange={(value) => update('region', value)}
-            options={[{ value: 'US', label: 'United States' }, { value: 'GB', label: 'United Kingdom' }, { value: 'DE', label: 'Germany' }, { value: 'JP', label: 'Japan' }]}
+            options={[
+              { value: 'US', label: t('settings.unitedStates') },
+              { value: 'GB', label: t('settings.unitedKingdom') },
+              { value: 'DE', label: t('settings.germany') },
+              { value: 'JP', label: t('settings.japan') },
+            ]}
           />
         )}
       />
       <SettingsRow
-        title="Time zone"
+        title={t('settings.timezone')}
         icon={GlobeAltIcon}
-        description="Used for scheduling and every timestamp you see."
+        description={t('settings.timezoneDescription')}
         control={(
           <Selector
-            label="Time zone"
+            label={t('settings.timezone')}
             isLabelHidden
             size="sm"
             width={192}
             value={settings.timezone}
             onChange={(value) => update('timezone', value)}
             options={[
-              {
-                value: 'PT',
-                label: 'Pacific (GMT-08:00)',
-              },
-              {
-                value: 'MT',
-                label: 'Mountain (GMT-07:00)',
-              },
-              {
-                value: 'CT',
-                label: 'Central (GMT-06:00)',
-              },
-              {
-                value: 'ET',
-                label: 'Eastern (GMT-05:00)',
-              },
-              {
-                value: 'UTC',
-                label: 'UTC (GMT+00:00)',
-              },
+              { value: 'PT', label: t('settings.pacific') },
+              { value: 'MT', label: t('settings.mountain') },
+              { value: 'CT', label: t('settings.central') },
+              { value: 'ET', label: t('settings.eastern') },
+              { value: 'UTC', label: t('settings.utc') },
             ]}
           />
         )}

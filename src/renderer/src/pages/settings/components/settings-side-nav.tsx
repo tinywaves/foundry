@@ -6,6 +6,7 @@ import type { PanelId } from '../types';
 import type { SettingsSearch } from '../search';
 import { SettingsSearchInput } from './settings-search-input';
 import { SettingsSearchResults } from './settings-search-results';
+import { useI18n } from '@renderer/i18n/use-i18n';
 
 const styles = stylex.create({
   sideNav: { flexShrink: 0 },
@@ -21,9 +22,11 @@ export function SettingsSideNav({
   activePanel: PanelId;
   onSelectPanel: (panel: PanelId) => void;
 }) {
+  const { t } = useI18n();
+  const panelLabel = (panel: PanelId) => (t(panel === 'appearance' ? 'settings.appearance' : 'settings.languageRegion'));
   return (
     <SideNav
-      aria-label="Settings sections"
+      aria-label={t('settings.search')}
       xstyle={styles.sideNav}
       topContent={<SettingsSearchInput search={search} />}
     >
@@ -39,13 +42,13 @@ export function SettingsSideNav({
         : PANEL_GROUPS.map((group) => (
             <SideNavSection
               key={group.label}
-              title={group.label}
+              title={group.label === 'Workspace' ? t('settings.workspace') : group.label}
               xstyle={styles.sideNavSection}
             >
               {group.panels.map((panel) => (
                 <SideNavItem
                   key={panel.id}
-                  label={panel.label}
+                  label={panelLabel(panel.id)}
                   icon={<Icon icon={panel.icon} size="sm" color="primary" />}
                   isSelected={panel.id === activePanel}
                   onClick={() => onSelectPanel(panel.id)}

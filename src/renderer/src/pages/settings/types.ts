@@ -1,17 +1,20 @@
 import type { ComponentType, SVGProps } from 'react';
+import type { LanguageMode, ThemeMode } from '@renderer/settings';
+
+export type { LanguageMode, ThemeMode } from '@renderer/settings';
 
 export type PanelId = 'appearance' | 'language';
 export type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 export interface PanelConfig { id: PanelId; label: string; description: string; icon: IconComponent }
 export interface SettingsState {
-  theme: 'system' | 'light' | 'dark';
-  language: string;
+  theme: ThemeMode;
+  language: LanguageMode;
   region: string;
   timezone: string;
 }
 export const INITIAL_SETTINGS: SettingsState = {
   theme: 'system',
-  language: 'en-US',
+  language: 'system',
   region: 'US',
   timezone: 'PT',
 };

@@ -7,6 +7,7 @@ import { HStack, StackItem } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { commonWebkitAppRegionNoDrag } from '../../styles/common';
 import { styles, titlebarStyle } from './styles';
+import { useI18n } from '@renderer/i18n/use-i18n';
 
 function isRouteHandle(value: unknown): value is { title?: string; description?: string } {
   return typeof value === 'object'
@@ -22,22 +23,36 @@ type WindowTitlebarProps = Partial<Pick<SideNavCollapseButtonProps, 'collapsible
 export default function WindowTitlebar({ collapsible, showBackButton = false }: WindowTitlebarProps) {
   const matches = useMatches();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const titleHandle = matches.findLast((match) => isRouteHandle(match.handle))?.handle;
+  const titleTranslations: Record<string, string> = {
+    'Overview': t('navigation.overview'),
+    'Prompts': t('navigation.prompts'),
+    'Providers': t('navigation.providers'),
+    'Settings': t('navigation.settings'),
+    'New provider': t('navigation.newProvider'),
+    'Edit provider': t('navigation.editProvider'),
+    'Page not found': t('navigation.notFound'),
+  };
+  const descriptionTranslations: Record<string, string> = {
+    'Manage the model service connections used by Foundry.': t('navigation.providersDescription'),
+    'Connect a model service using one of Foundry\'s supported protocols.': t('providers.formDescription'),
+  };
 
   return (
     <header
       {...titlebarStyle}
       onDoubleClick={() => globalThis.electron.ipcRenderer.invoke('window:toggle-maximize')}
-      aria-label="Window titlebar"
+      aria-label={t('navigation.windowTitlebar')}
     >
       {showBackButton && (
         <IconButton
           {...commonWebkitAppRegionNoDrag}
-          label="Back"
+          label={t('navigation.back')}
           icon={<Icon icon="chevronLeft" />}
           variant="ghost"
           size="sm"
-          tooltip="Back"
+          tooltip={t('navigation.back')}
           onClick={() => navigate(-1)}
           onDoubleClick={(event) => event.stopPropagation()}
         />
@@ -55,11 +70,11 @@ export default function WindowTitlebar({ collapsible, showBackButton = false }: 
       {isRouteHandle(titleHandle) && (
         <HStack gap={2} vAlign="center" width="100%" xstyle={styles.content}>
           <Text type="large" weight="semibold" maxLines={1} textWrap="nowrap" xstyle={styles.title}>
-            {titleHandle.title}
+            {titleHandle.title && (titleTranslations[titleHandle.title] ?? titleHandle.title)}
           </Text>
           {titleHandle.description && (
             <Text type="supporting" maxLines={1} textWrap="nowrap" xstyle={styles.description}>
-              {titleHandle.description}
+              {descriptionTranslations[titleHandle.description] ?? titleHandle.description}
             </Text>
           )}
           <StackItem size="fill" />

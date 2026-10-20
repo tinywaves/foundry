@@ -7,16 +7,17 @@ import { ComputerDesktopIcon, MoonIcon, SunIcon } from '@heroicons/react/24/outl
 import type { IconComponent } from '../types';
 import { ThemePreviewMock } from './theme-preview-mock';
 import { VStack } from '@astryxdesign/core/VStack';
+import { useI18n } from '@renderer/i18n/use-i18n';
 
 const THEME_CHOICES: Array<{
   value: string;
-  label: string;
+  labelKey: 'settings.light' | 'settings.dark' | 'settings.system';
   scheme: 'light' | 'dark' | 'system';
   icon: IconComponent;
 }> = [
-  { value: 'light', label: 'Light', scheme: 'light', icon: SunIcon },
-  { value: 'dark', label: 'Dark', scheme: 'dark', icon: MoonIcon },
-  { value: 'system', label: 'System', scheme: 'system', icon: ComputerDesktopIcon },
+  { value: 'light', labelKey: 'settings.light', scheme: 'light', icon: SunIcon },
+  { value: 'dark', labelKey: 'settings.dark', scheme: 'dark', icon: MoonIcon },
+  { value: 'system', labelKey: 'settings.system', scheme: 'system', icon: ComputerDesktopIcon },
 ];
 
 export function ThemeChoiceCards({
@@ -26,6 +27,7 @@ export function ThemeChoiceCards({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const { t } = useI18n();
   return (
     <Grid
       role="radiogroup"
@@ -36,10 +38,11 @@ export function ThemeChoiceCards({
     >
       {THEME_CHOICES.map((choice) => {
         const isSelected = choice.value === value;
+        const label = t(choice.labelKey);
         return (
           <SelectableCard
             key={choice.value}
-            label={choice.label}
+            label={label}
             isSelected={isSelected}
             padding={2}
             onChange={() => {
@@ -56,7 +59,7 @@ export function ThemeChoiceCards({
                   type="supporting"
                   weight={isSelected ? 'semibold' : undefined}
                 >
-                  {choice.label}
+                  {label}
                 </Text>
               </HStack>
             </VStack>

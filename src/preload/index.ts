@@ -8,6 +8,7 @@ const api: { providers: ProviderApi; settings: SettingsApi } = {
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
     setTheme: (theme) => ipcRenderer.invoke('settings:set-theme', theme),
+    setLanguage: (language) => ipcRenderer.invoke('settings:set-language', language),
   },
   providers: {
     list: () => ipcRenderer.invoke('providers:list'),

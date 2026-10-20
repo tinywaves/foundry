@@ -3,7 +3,7 @@
 import { Layout } from '@astryxdesign/core/Layout';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { getSettings, setLanguage, setTheme, settingsKeys } from '../settings';
+import { getSettings, setLanguage, setRegion, setTheme, settingsKeys } from '../settings';
 import { SettingsContentPane } from './settings/components/settings-content-pane';
 import { SettingsSideNav } from './settings/components/settings-side-nav';
 import { useSettingsSearch } from './settings/search';
@@ -18,17 +18,30 @@ export default function SettingsPage() {
   const updateSettings = (storedSettings: Awaited<ReturnType<typeof setTheme>>) => queryClient.setQueryData(settingsKeys.current(), storedSettings);
   const themeMutation = useMutation({ mutationFn: setTheme, onSuccess: updateSettings });
   const languageMutation = useMutation({ mutationFn: setLanguage, onSuccess: updateSettings });
-  const settings: SettingsState = { theme: settingsQuery.data?.appearance.theme ?? INITIAL_SETTINGS.theme, language: settingsQuery.data?.language ?? INITIAL_SETTINGS.language, region: INITIAL_SETTINGS.region, timezone: INITIAL_SETTINGS.timezone };
+  const regionMutation = useMutation({ mutationFn: setRegion, onSuccess: updateSettings });
+  const settings: SettingsState = { theme: settingsQuery.data?.appearance.theme ?? INITIAL_SETTINGS.theme, language: settingsQuery.data?.language ?? INITIAL_SETTINGS.language, region: settingsQuery.data?.region ?? INITIAL_SETTINGS.region, timezone: INITIAL_SETTINGS.timezone };
   const search = useSettingsSearch(setActivePanel);
   const selectPanel = (panel: PanelId) => {
     setActivePanel(panel);
     search.setQuery('');
   };
   const update: UpdateSetting = (key, value) => {
-    if (key === 'theme') {
-      themeMutation.mutate(value as SettingsState['theme']);
-    } else if (key === 'language') {
-      languageMutation.mutate(value as SettingsState['language']);
+    switch (key) {
+      case 'theme': {
+        themeMutation.mutate(value as SettingsState['theme']);
+        break;
+      }
+      case 'language': {
+        languageMutation.mutate(value as SettingsState['language']);
+        break;
+      }
+      case 'region': {
+        regionMutation.mutate(value as SettingsState['region']);
+        break;
+      }
+      default: {
+        break;
+      }
     }
   };
   return <Layout height="fill" start={<SettingsSideNav search={search} activePanel={activePanel} onSelectPanel={selectPanel} />} content={<SettingsContentPane panel={activePanel} settings={settings} update={update} />} />;

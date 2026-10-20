@@ -3,7 +3,7 @@ import { Selector } from '@astryxdesign/core/Selector';
 import { useI18n } from '@renderer/i18n/use-i18n';
 import { SettingsCard } from '../components/settings-card';
 import { SettingsRow } from '../components/settings-row';
-import type { PanelProps, SettingsState } from '../types';
+import type { PanelProps, RegionCode, SettingsState } from '../types';
 
 export function LanguagePanel({ settings, update }: PanelProps) {
   const { t } = useI18n();
@@ -42,11 +42,11 @@ export function LanguagePanel({ settings, update }: PanelProps) {
             size="sm"
             width={192}
             value={settings.region}
-            onChange={(value) => update('region', value)}
+            onChange={(value) => update('region', value as RegionCode)}
             options={[
               { value: 'US', label: t('settings.unitedStates') },
-              { value: 'GB', label: t('settings.unitedKingdom') },
-              { value: 'DE', label: t('settings.germany') },
+              { value: 'CN', label: t('settings.china') },
+              { value: 'TW', label: t('settings.taiwan') },
               { value: 'JP', label: t('settings.japan') },
             ]}
           />

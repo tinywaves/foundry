@@ -1,7 +1,7 @@
 import type { ComponentType, SVGProps } from 'react';
-import type { LanguageMode, ThemeMode } from '@renderer/settings';
+import type { LanguageMode, RegionCode, ThemeMode } from '@renderer/settings';
 
-export type { LanguageMode, ThemeMode } from '@renderer/settings';
+export type { LanguageMode, RegionCode, ThemeMode } from '@renderer/settings';
 
 export type PanelId = 'appearance' | 'language';
 export type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
@@ -9,7 +9,7 @@ export interface PanelConfig { id: PanelId; label: string; description: string; 
 export interface SettingsState {
   theme: ThemeMode;
   language: LanguageMode;
-  region: string;
+  region: RegionCode;
   timezone: string;
 }
 export const INITIAL_SETTINGS: SettingsState = {

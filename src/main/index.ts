@@ -16,10 +16,11 @@ import type { ProviderInput } from '../shared/providers';
 import {
   getCurrentUsedProviderIds,
   readSettings,
+  updateRegion,
   updateLanguage,
   updateSettings,
 } from './settings';
-import type { LanguageMode } from './settings';
+import type { LanguageMode, RegionCode } from './settings';
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -101,6 +102,7 @@ void app.whenReady().then(() => {
   ipcMain.handle('settings:get', () => readSettings(settingsPath));
   ipcMain.handle('settings:set-theme', (_, theme: 'system' | 'light' | 'dark') => updateSettings(settingsPath, theme));
   ipcMain.handle('settings:set-language', (_, language: LanguageMode) => updateLanguage(settingsPath, language));
+  ipcMain.handle('settings:set-region', (_, region: RegionCode) => updateRegion(settingsPath, region));
 
   ipcMain.handle('providers:list', () => listProviders(
     database.db,

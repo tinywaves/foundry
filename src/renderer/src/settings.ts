@@ -1,6 +1,6 @@
-import type { LanguageMode, SettingsSnapshot, ThemeMode } from '../../shared/settings';
+import type { LanguageMode, RegionCode, SettingsSnapshot, ThemeMode } from '../../shared/settings';
 
-export type { LanguageMode, SettingsSnapshot, ThemeMode } from '../../shared/settings';
+export type { LanguageMode, RegionCode, SettingsSnapshot, ThemeMode } from '../../shared/settings';
 
 export const settingsKeys = {
   current: () => ['settings', 'current'] as const,
@@ -16,4 +16,8 @@ export function setTheme(theme: ThemeMode): Promise<SettingsSnapshot> {
 
 export function setLanguage(language: LanguageMode): Promise<SettingsSnapshot> {
   return globalThis.api.settings.setLanguage(language) as Promise<SettingsSnapshot>;
+}
+
+export function setRegion(region: RegionCode): Promise<SettingsSnapshot> {
+  return globalThis.api.settings.setRegion(region) as Promise<SettingsSnapshot>;
 }

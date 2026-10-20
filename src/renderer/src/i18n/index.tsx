@@ -60,8 +60,8 @@ export type TranslationKey
     | 'settings.light'
     | 'settings.dark'
     | 'settings.unitedStates'
-    | 'settings.unitedKingdom'
-    | 'settings.germany'
+    | 'settings.china'
+    | 'settings.taiwan'
     | 'settings.japan'
     | 'settings.pacific'
     | 'settings.mountain'
@@ -139,8 +139,8 @@ const english: TranslationTable = {
   'settings.light': 'Light',
   'settings.dark': 'Dark',
   'settings.unitedStates': 'United States',
-  'settings.unitedKingdom': 'United Kingdom',
-  'settings.germany': 'Germany',
+  'settings.china': 'China',
+  'settings.taiwan': 'Taiwan',
   'settings.japan': 'Japan',
   'settings.pacific': 'Pacific (GMT-08:00)',
   'settings.mountain': 'Mountain (GMT-07:00)',
@@ -218,8 +218,8 @@ const simplifiedChinese: TranslationTable = {
   'settings.light': '浅色',
   'settings.dark': '深色',
   'settings.unitedStates': '美国',
-  'settings.unitedKingdom': '英国',
-  'settings.germany': '德国',
+  'settings.china': '中国',
+  'settings.taiwan': '中国台湾',
   'settings.japan': '日本',
   'settings.pacific': '太平洋时间（GMT-08:00）',
   'settings.mountain': '山地时间（GMT-07:00）',
@@ -297,8 +297,8 @@ const traditionalChinese: TranslationTable = {
   'settings.light': '淺色',
   'settings.dark': '深色',
   'settings.unitedStates': '美國',
-  'settings.unitedKingdom': '英國',
-  'settings.germany': '德國',
+  'settings.china': '中國',
+  'settings.taiwan': '台灣',
   'settings.japan': '日本',
   'settings.pacific': '太平洋時間（GMT-08:00）',
   'settings.mountain': '山區時間（GMT-07:00）',
@@ -376,8 +376,8 @@ const japanese: TranslationTable = {
   'settings.light': 'ライト',
   'settings.dark': 'ダーク',
   'settings.unitedStates': 'アメリカ合衆国',
-  'settings.unitedKingdom': 'イギリス',
-  'settings.germany': 'ドイツ',
+  'settings.china': '中国',
+  'settings.taiwan': '台湾',
   'settings.japan': '日本',
   'settings.noResults': '設定が見つかりません',
   'settings.trySearch': 'テーマ、言語、セッションを検索してみてください。',

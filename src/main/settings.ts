@@ -1,8 +1,8 @@
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import path from 'node:path';
-import type { LanguageMode, SettingsSnapshot, ThemeMode } from '../shared/settings';
+import type { LanguageMode, RegionCode, SettingsSnapshot, ThemeMode } from '../shared/settings';
 
-export type { LanguageMode, ThemeMode } from '../shared/settings';
+export type { LanguageMode, RegionCode, ThemeMode } from '../shared/settings';
 
 export type FoundrySettings = SettingsSnapshot & {
   features?: Record<string, { provider?: string | null }>;
@@ -11,6 +11,7 @@ export type FoundrySettings = SettingsSnapshot & {
 export const DEFAULT_SETTINGS: FoundrySettings = {
   appearance: { theme: 'system' },
   language: 'system',
+  region: 'US',
 };
 
 export function readSettings(settingsPath: string): FoundrySettings {
@@ -20,12 +21,14 @@ export function readSettings(settingsPath: string): FoundrySettings {
     const language = parsed.language;
     const supportedThemes: ThemeMode[] = ['light', 'dark', 'system'];
     const supportedLanguages: LanguageMode[] = ['system', 'en-US', 'zh-CN', 'zh-TW', 'ja-JP'];
+    const supportedRegions: RegionCode[] = ['US', 'CN', 'TW', 'JP'];
     return {
       ...DEFAULT_SETTINGS,
       appearance: {
         theme: supportedThemes.includes(theme!) ? theme! : 'system',
       },
       language: supportedLanguages.includes(language!) ? language! : 'system',
+      region: supportedRegions.includes(parsed.region!) ? parsed.region! : 'US',
       ...(parsed.features && { features: parsed.features }),
     };
   } catch {
@@ -47,6 +50,10 @@ export function updateSettings(settingsPath: string, theme: ThemeMode): FoundryS
 
 export function updateLanguage(settingsPath: string, language: LanguageMode): FoundrySettings {
   return writeSettings(settingsPath, { ...readSettings(settingsPath), language });
+}
+
+export function updateRegion(settingsPath: string, region: RegionCode): FoundrySettings {
+  return writeSettings(settingsPath, { ...readSettings(settingsPath), region });
 }
 
 export function getCurrentUsedProviderIds(settingsPath: string): Set<string> {

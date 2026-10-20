@@ -3,7 +3,7 @@ import type { LanguageMode, RegionCode, ThemeMode, TimeZoneCode } from '@rendere
 
 export type { LanguageMode, RegionCode, ThemeMode, TimeZoneCode } from '@renderer/settings';
 
-export type PanelId = 'appearance' | 'language';
+export type PanelId = 'appearance' | 'language' | 'advanced';
 export type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 export interface PanelConfig { id: PanelId; label: string; description: string; icon: IconComponent }
 export interface SettingsState {

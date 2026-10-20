@@ -1,4 +1,4 @@
-import { GlobeAltIcon, PaintBrushIcon } from '@heroicons/react/24/outline';
+import { AdjustmentsHorizontalIcon, GlobeAltIcon, PaintBrushIcon } from '@heroicons/react/24/outline';
 import type { PanelConfig, PanelId, SearchableSetting } from './types';
 
 export const PANEL_GROUPS: Array<{ label: string; panels: PanelConfig[] }> = [
@@ -16,6 +16,12 @@ export const PANEL_GROUPS: Array<{ label: string; panels: PanelConfig[] }> = [
         label: 'Language & region',
         description: 'Language, formats, and time zone.',
         icon: GlobeAltIcon,
+      },
+      {
+        id: 'advanced',
+        label: 'Advanced',
+        description: 'Open the settings file.',
+        icon: AdjustmentsHorizontalIcon,
       },
     ],
   },

@@ -17,8 +17,10 @@ export type ProviderApi = {
 
 export type SettingsApi = {
   get: () => Promise<SettingsSnapshot>;
+  getPath: () => Promise<string>;
   setTheme: (theme: ThemeMode) => Promise<SettingsSnapshot>;
   setLanguage: (language: LanguageMode) => Promise<SettingsSnapshot>;
   setRegion: (region: RegionCode) => Promise<SettingsSnapshot>;
   setTimezone: (timezone: TimeZoneCode) => Promise<SettingsSnapshot>;
+  openSettingsFile: () => Promise<void>;
 };

@@ -20,6 +20,7 @@ import {
   updateLanguage,
   updateSettings,
   updateTimezone,
+  writeSettings,
 } from './settings';
 import type { LanguageMode, RegionCode, TimeZoneCode } from './settings';
 
@@ -101,10 +102,18 @@ void app.whenReady().then(() => {
   });
 
   ipcMain.handle('settings:get', () => readSettings(settingsPath));
+  ipcMain.handle('settings:get-path', () => settingsPath);
   ipcMain.handle('settings:set-theme', (_, theme: 'system' | 'light' | 'dark') => updateSettings(settingsPath, theme));
   ipcMain.handle('settings:set-language', (_, language: LanguageMode) => updateLanguage(settingsPath, language));
   ipcMain.handle('settings:set-region', (_, region: RegionCode) => updateRegion(settingsPath, region));
   ipcMain.handle('settings:set-timezone', (_, timezone: TimeZoneCode) => updateTimezone(settingsPath, timezone));
+  ipcMain.handle('settings:open-file', async () => {
+    writeSettings(settingsPath, readSettings(settingsPath));
+    const error = await shell.openPath(settingsPath);
+    if (error) {
+      throw new Error(error);
+    }
+  });
 
   ipcMain.handle('providers:list', () => listProviders(
     database.db,

@@ -3,7 +3,15 @@
 import { Layout } from '@astryxdesign/core/Layout';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { getSettings, setLanguage, setRegion, setTheme, setTimezone, settingsKeys } from '../settings';
+import {
+  getSettings,
+  getSettingsPath,
+  setLanguage,
+  setRegion,
+  setTheme,
+  setTimezone,
+  settingsKeys,
+} from '../settings';
 import { SettingsContentPane } from './settings/components/settings-content-pane';
 import { SettingsSideNav } from './settings/components/settings-side-nav';
 import { useSettingsSearch } from './settings/search';
@@ -15,7 +23,10 @@ export default function SettingsPage() {
   const [activePanel, setActivePanel] = useState<PanelId>(DEFAULT_PANEL);
   const queryClient = useQueryClient();
   const settingsQuery = useQuery({ queryKey: settingsKeys.current(), queryFn: getSettings });
-  const updateSettings = (storedSettings: Awaited<ReturnType<typeof setTheme>>) => queryClient.setQueryData(settingsKeys.current(), storedSettings);
+  const settingsPathQuery = useQuery({ queryKey: ['settings', 'path'], queryFn: getSettingsPath });
+  const updateSettings = (
+    storedSettings: Awaited<ReturnType<typeof setTheme>>,
+  ) => queryClient.setQueryData(settingsKeys.current(), storedSettings);
   const themeMutation = useMutation({ mutationFn: setTheme, onSuccess: updateSettings });
   const languageMutation = useMutation({ mutationFn: setLanguage, onSuccess: updateSettings });
   const regionMutation = useMutation({ mutationFn: setRegion, onSuccess: updateSettings });
@@ -54,5 +65,24 @@ export default function SettingsPage() {
       }
     }
   };
-  return <Layout height="fill" start={<SettingsSideNav search={search} activePanel={activePanel} onSelectPanel={selectPanel} />} content={<SettingsContentPane panel={activePanel} settings={settings} update={update} />} />;
+  return (
+    <Layout
+      height="fill"
+      start={(
+        <SettingsSideNav
+          search={search}
+          activePanel={activePanel}
+          onSelectPanel={selectPanel}
+        />
+      )}
+      content={(
+        <SettingsContentPane
+          panel={activePanel}
+          settings={settings}
+          update={update}
+          settingsPath={settingsPathQuery.data ?? ''}
+        />
+      )}
+    />
+  );
 }

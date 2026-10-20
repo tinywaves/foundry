@@ -44,6 +44,9 @@ export type TranslationKey
     | 'navigation.editProvider'
     | 'navigation.providersDescription'
     | 'settings.workspace'
+    | 'settings.advanced'
+    | 'settings.openSettingsFile'
+    | 'settings.open'
     | 'settings.appearance'
     | 'settings.languageRegion'
     | 'settings.search'
@@ -124,6 +127,9 @@ const english: TranslationTable = {
   'navigation.editProvider': 'Edit provider',
   'navigation.providersDescription': 'Manage the model service connections used by Foundry.',
   'settings.workspace': 'Workspace',
+  'settings.advanced': 'Advanced',
+  'settings.openSettingsFile': 'Open settings file',
+  'settings.open': 'Open',
   'settings.appearance': 'Appearance',
   'settings.languageRegion': 'Language & region',
   'settings.search': 'Search settings',
@@ -204,6 +210,9 @@ const simplifiedChinese: TranslationTable = {
   'navigation.editProvider': '编辑服务提供商',
   'navigation.providersDescription': '管理 Foundry 使用的模型服务连接。',
   'settings.workspace': '工作区',
+  'settings.advanced': '高级',
+  'settings.openSettingsFile': '打开设置文件',
+  'settings.open': '打开',
   'settings.appearance': '外观',
   'settings.languageRegion': '语言和地区',
   'settings.search': '搜索设置',
@@ -284,6 +293,9 @@ const traditionalChinese: TranslationTable = {
   'navigation.editProvider': '編輯服務提供者',
   'navigation.providersDescription': '管理 Foundry 使用的模型服務連線。',
   'settings.workspace': '工作區',
+  'settings.advanced': '進階',
+  'settings.openSettingsFile': '開啟設定檔',
+  'settings.open': '開啟',
   'settings.appearance': '外觀',
   'settings.languageRegion': '語言與地區',
   'settings.search': '搜尋設定',
@@ -364,6 +376,9 @@ const japanese: TranslationTable = {
   'navigation.editProvider': 'プロバイダーを編集',
   'navigation.providersDescription': 'Foundryで使用するモデルサービス接続を管理します。',
   'settings.workspace': 'ワークスペース',
+  'settings.advanced': '詳細設定',
+  'settings.openSettingsFile': '設定ファイルを開く',
+  'settings.open': '開く',
   'settings.appearance': '外観',
   'settings.languageRegion': '言語と地域',
   'settings.search': '設定を検索',

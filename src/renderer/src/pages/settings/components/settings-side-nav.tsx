@@ -23,7 +23,19 @@ export function SettingsSideNav({
   onSelectPanel: (panel: PanelId) => void;
 }) {
   const { t } = useI18n();
-  const panelLabel = (panel: PanelId) => (t(panel === 'appearance' ? 'settings.appearance' : 'settings.languageRegion'));
+  const panelLabel = (panel: PanelId) => {
+    switch (panel) {
+      case 'appearance': {
+        return t('settings.appearance');
+      }
+      case 'language': {
+        return t('settings.languageRegion');
+      }
+      case 'advanced': {
+        return t('settings.advanced');
+      }
+    }
+  };
   return (
     <SideNav
       aria-label={t('settings.search')}
@@ -42,7 +54,7 @@ export function SettingsSideNav({
         : PANEL_GROUPS.map((group) => (
             <SideNavSection
               key={group.label}
-              title={group.label === 'Workspace' ? t('settings.workspace') : group.label}
+              title={t('settings.workspace')}
               xstyle={styles.sideNavSection}
             >
               {group.panels.map((panel) => (

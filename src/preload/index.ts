@@ -1,10 +1,14 @@
 import process from 'node:process';
 import { contextBridge, ipcRenderer } from 'electron';
 import { electronAPI } from '@electron-toolkit/preload';
-import type { ProviderApi } from './api';
+import type { ProviderApi, SettingsApi } from './api';
 
 // Custom APIs for renderer
-const api: { providers: ProviderApi } = {
+const api: { providers: ProviderApi; settings: SettingsApi } = {
+  settings: {
+    get: () => ipcRenderer.invoke('settings:get'),
+    setTheme: (theme) => ipcRenderer.invoke('settings:set-theme', theme),
+  },
   providers: {
     list: () => ipcRenderer.invoke('providers:list'),
     get: (id) => ipcRenderer.invoke('providers:get', id),

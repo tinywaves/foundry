@@ -36,3 +36,6 @@ RULES:
 - Use Astryx components at `size="sm"` by default for application controls (inputs, selectors, buttons, switches, and tokens); use a larger size only when accessibility or layout requires it.
 - Keep server state in a query/mutation layer such as TanStack Query; avoid page-level `useEffect` for server-state fetching and synchronization.
 - Put types and contracts shared by main, preload, and renderer in `src/shared/`; process-specific modules should not be the source of shared renderer contracts.
+- Use TanStack Query for server-state fetching, caching, and mutations.
+- Split components into focused files instead of placing many components in one file.
+- After writing code, run `pnpm run lint` and `pnpm run lint-fix`.

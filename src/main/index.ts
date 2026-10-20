@@ -13,7 +13,7 @@ import {
   setProviderStatus,
 } from './providers';
 import type { ProviderInput } from '../shared/providers';
-import { getCurrentUsedProviderIds } from './settings';
+import { getCurrentUsedProviderIds, readSettings, updateSettings } from './settings';
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -91,6 +91,9 @@ void app.whenReady().then(() => {
 
     return window.isMaximized();
   });
+
+  ipcMain.handle('settings:get', () => readSettings(settingsPath));
+  ipcMain.handle('settings:set-theme', (_, theme: 'system' | 'light' | 'dark') => updateSettings(settingsPath, theme));
 
   ipcMain.handle('providers:list', () => listProviders(
     database.db,

@@ -13,3 +13,8 @@ export type ProviderApi = {
   fetchModels: (id: string) => Promise<RemoteModel[]>;
   fetchModelsForInput: (input: Pick<ProviderInput, 'protocol' | 'baseURL' | 'apiKey'>) => Promise<RemoteModel[]>;
 };
+
+export type SettingsApi = {
+  get: () => Promise<{ appearance: { theme: 'system' | 'light' | 'dark' } }>;
+  setTheme: (theme: 'system' | 'light' | 'dark') => Promise<{ appearance: { theme: 'system' | 'light' | 'dark' } }>;
+};

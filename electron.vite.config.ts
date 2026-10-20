@@ -13,12 +13,7 @@ export default defineConfig({
       },
     },
     plugins: [
-      stylex.vite({
-        devMode: 'full',
-        useCSSLayers: {
-          after: ['reset', 'astryx-base', 'astryx-theme'],
-        },
-      }),
+      stylex.vite({ devMode: 'full', useCSSLayers: true }),
       react(),
     ],
   },

@@ -1,10 +1,13 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { AppShell } from '@astryxdesign/core/AppShell';
 import { Layout, LayoutContent } from '@astryxdesign/core/Layout';
 import WindowTitlebar from '@renderer/components/window-titlebar';
 import { styles } from './sidebar/styles';
 
 export default function StandaloneLayout() {
+  const { pathname } = useLocation();
+  const isSettingsPage = pathname === '/settings';
+
   return (
     <AppShell
       height="fill"
@@ -17,7 +20,11 @@ export default function StandaloneLayout() {
       <Layout
         height="fill"
         content={(
-          <LayoutContent padding={4} xstyle={styles.contentNoVerticalPadding}>
+          <LayoutContent
+            padding={0}
+            isScrollable={!isSettingsPage}
+            xstyle={isSettingsPage ? undefined : styles.contentNoVerticalPadding}
+          >
             <Outlet />
           </LayoutContent>
         )}

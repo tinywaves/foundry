@@ -4,17 +4,16 @@ import { RouterProvider } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './query-client';
 import { router } from './router';
-import { Theme } from '@astryxdesign/core';
-import { defaultThemeSlug, themes } from './astryx-themes';
+import RendererTheme from './components/renderer-theme';
 import '@fontsource/poppins/400.css';
 import './main.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Theme theme={themes[defaultThemeSlug]}>
-      <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
+      <RendererTheme>
         <RouterProvider router={router} />
-      </QueryClientProvider>
-    </Theme>
+      </RendererTheme>
+    </QueryClientProvider>
   </StrictMode>,
 );

@@ -3,7 +3,7 @@
 import { Layout } from '@astryxdesign/core/Layout';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { getSettings, setLanguage, setRegion, setTheme, settingsKeys } from '../settings';
+import { getSettings, setLanguage, setRegion, setTheme, setTimezone, settingsKeys } from '../settings';
 import { SettingsContentPane } from './settings/components/settings-content-pane';
 import { SettingsSideNav } from './settings/components/settings-side-nav';
 import { useSettingsSearch } from './settings/search';
@@ -19,7 +19,13 @@ export default function SettingsPage() {
   const themeMutation = useMutation({ mutationFn: setTheme, onSuccess: updateSettings });
   const languageMutation = useMutation({ mutationFn: setLanguage, onSuccess: updateSettings });
   const regionMutation = useMutation({ mutationFn: setRegion, onSuccess: updateSettings });
-  const settings: SettingsState = { theme: settingsQuery.data?.appearance.theme ?? INITIAL_SETTINGS.theme, language: settingsQuery.data?.language ?? INITIAL_SETTINGS.language, region: settingsQuery.data?.region ?? INITIAL_SETTINGS.region, timezone: INITIAL_SETTINGS.timezone };
+  const timezoneMutation = useMutation({ mutationFn: setTimezone, onSuccess: updateSettings });
+  const settings: SettingsState = {
+    theme: settingsQuery.data?.workspace.appearance['color-theme'] ?? INITIAL_SETTINGS.theme,
+    language: settingsQuery.data?.workspace['language-region'].language ?? INITIAL_SETTINGS.language,
+    region: settingsQuery.data?.workspace['language-region']['region-format'] ?? INITIAL_SETTINGS.region,
+    timezone: settingsQuery.data?.workspace['language-region']['time-zone'] ?? INITIAL_SETTINGS.timezone,
+  };
   const search = useSettingsSearch(setActivePanel);
   const selectPanel = (panel: PanelId) => {
     setActivePanel(panel);
@@ -37,6 +43,10 @@ export default function SettingsPage() {
       }
       case 'region': {
         regionMutation.mutate(value as SettingsState['region']);
+        break;
+      }
+      case 'timezone': {
+        timezoneMutation.mutate(value as SettingsState['timezone']);
         break;
       }
       default: {

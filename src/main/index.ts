@@ -19,8 +19,9 @@ import {
   updateRegion,
   updateLanguage,
   updateSettings,
+  updateTimezone,
 } from './settings';
-import type { LanguageMode, RegionCode } from './settings';
+import type { LanguageMode, RegionCode, TimeZoneCode } from './settings';
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -103,6 +104,7 @@ void app.whenReady().then(() => {
   ipcMain.handle('settings:set-theme', (_, theme: 'system' | 'light' | 'dark') => updateSettings(settingsPath, theme));
   ipcMain.handle('settings:set-language', (_, language: LanguageMode) => updateLanguage(settingsPath, language));
   ipcMain.handle('settings:set-region', (_, region: RegionCode) => updateRegion(settingsPath, region));
+  ipcMain.handle('settings:set-timezone', (_, timezone: TimeZoneCode) => updateTimezone(settingsPath, timezone));
 
   ipcMain.handle('providers:list', () => listProviders(
     database.db,

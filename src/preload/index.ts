@@ -10,6 +10,7 @@ const api: { providers: ProviderApi; settings: SettingsApi } = {
     setTheme: (theme) => ipcRenderer.invoke('settings:set-theme', theme),
     setLanguage: (language) => ipcRenderer.invoke('settings:set-language', language),
     setRegion: (region) => ipcRenderer.invoke('settings:set-region', region),
+    setTimezone: (timezone) => ipcRenderer.invoke('settings:set-timezone', timezone),
   },
   providers: {
     list: () => ipcRenderer.invoke('providers:list'),

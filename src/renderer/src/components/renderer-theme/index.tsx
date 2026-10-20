@@ -9,7 +9,7 @@ export default function RendererTheme({ children }: { children: ReactNode }) {
     queryKey: settingsKeys.current(),
     queryFn: getSettings,
   });
-  const mode = settingsQuery.data?.appearance.theme ?? 'system';
+  const mode = settingsQuery.data?.workspace.appearance['color-theme'] ?? 'system';
 
   return (
     <Theme theme={themes[defaultThemeSlug]} mode={mode}>

@@ -3,7 +3,7 @@ import { Selector } from '@astryxdesign/core/Selector';
 import { useI18n } from '@renderer/i18n/use-i18n';
 import { SettingsCard } from '../components/settings-card';
 import { SettingsRow } from '../components/settings-row';
-import type { PanelProps, RegionCode, SettingsState } from '../types';
+import type { PanelProps, RegionCode, SettingsState, TimeZoneCode } from '../types';
 
 export function LanguagePanel({ settings, update }: PanelProps) {
   const { t } = useI18n();
@@ -63,12 +63,13 @@ export function LanguagePanel({ settings, update }: PanelProps) {
             size="sm"
             width={192}
             value={settings.timezone}
-            onChange={(value) => update('timezone', value)}
+            onChange={(value) => update('timezone', value as TimeZoneCode)}
             options={[
-              { value: 'PT', label: t('settings.pacific') },
-              { value: 'MT', label: t('settings.mountain') },
-              { value: 'CT', label: t('settings.central') },
-              { value: 'ET', label: t('settings.eastern') },
+              { value: 'America/Los_Angeles', label: t('settings.losAngeles') },
+              { value: 'America/New_York', label: t('settings.newYork') },
+              { value: 'Asia/Shanghai', label: t('settings.shanghai') },
+              { value: 'Asia/Taipei', label: t('settings.taipei') },
+              { value: 'Asia/Tokyo', label: t('settings.tokyo') },
               { value: 'UTC', label: t('settings.utc') },
             ]}
           />

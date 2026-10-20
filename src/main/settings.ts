@@ -1,34 +1,66 @@
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import path from 'node:path';
-import type { LanguageMode, RegionCode, SettingsSnapshot, ThemeMode } from '../shared/settings';
+import type { LanguageMode, RegionCode, SettingsSnapshot, ThemeMode, TimeZoneCode } from '../shared/settings';
 
-export type { LanguageMode, RegionCode, ThemeMode } from '../shared/settings';
+export type { LanguageMode, RegionCode, ThemeMode, TimeZoneCode } from '../shared/settings';
 
 export type FoundrySettings = SettingsSnapshot & {
   features?: Record<string, { provider?: string | null }>;
 };
 
+type StoredSettings = {
+  workspace?: {
+    'appearance'?: { 'color-theme'?: unknown };
+    'language-region'?: {
+      'language'?: unknown;
+      'region-format'?: unknown;
+      'time-zone'?: unknown;
+    };
+  };
+  features?: FoundrySettings['features'];
+};
+
 export const DEFAULT_SETTINGS: FoundrySettings = {
-  appearance: { theme: 'system' },
-  language: 'system',
-  region: 'US',
+  workspace: {
+    'appearance': { 'color-theme': 'system' },
+    'language-region': {
+      'language': 'system',
+      'region-format': 'US',
+      'time-zone': 'America/Los_Angeles',
+    },
+  },
 };
 
 export function readSettings(settingsPath: string): FoundrySettings {
   try {
-    const parsed = JSON.parse(readFileSync(settingsPath, 'utf8')) as Partial<FoundrySettings>;
-    const theme = parsed.appearance?.theme;
-    const language = parsed.language;
+    const parsed = JSON.parse(readFileSync(settingsPath, 'utf8')) as StoredSettings;
+    const theme = parsed.workspace?.appearance?.['color-theme'];
+    const language = parsed.workspace?.['language-region']?.language;
+    const region = parsed.workspace?.['language-region']?.['region-format'];
+    const timezone = parsed.workspace?.['language-region']?.['time-zone'];
     const supportedThemes: ThemeMode[] = ['light', 'dark', 'system'];
     const supportedLanguages: LanguageMode[] = ['system', 'en-US', 'zh-CN', 'zh-TW', 'ja-JP'];
     const supportedRegions: RegionCode[] = ['US', 'CN', 'TW', 'JP'];
+    const supportedTimezones: TimeZoneCode[] = [
+      'America/Los_Angeles',
+      'America/New_York',
+      'Asia/Shanghai',
+      'Asia/Taipei',
+      'Asia/Tokyo',
+      'UTC',
+    ];
     return {
       ...DEFAULT_SETTINGS,
-      appearance: {
-        theme: supportedThemes.includes(theme!) ? theme! : 'system',
+      workspace: {
+        'appearance': {
+          'color-theme': supportedThemes.includes(theme as ThemeMode) ? theme as ThemeMode : 'system',
+        },
+        'language-region': {
+          'language': supportedLanguages.includes(language as LanguageMode) ? language as LanguageMode : 'system',
+          'region-format': supportedRegions.includes(region as RegionCode) ? region as RegionCode : 'US',
+          'time-zone': supportedTimezones.includes(timezone as TimeZoneCode) ? timezone as TimeZoneCode : 'America/Los_Angeles',
+        },
       },
-      language: supportedLanguages.includes(language!) ? language! : 'system',
-      region: supportedRegions.includes(parsed.region!) ? parsed.region! : 'US',
       ...(parsed.features && { features: parsed.features }),
     };
   } catch {
@@ -45,15 +77,56 @@ export function writeSettings(settingsPath: string, settings: FoundrySettings): 
 }
 
 export function updateSettings(settingsPath: string, theme: ThemeMode): FoundrySettings {
-  return writeSettings(settingsPath, { ...readSettings(settingsPath), appearance: { theme } });
+  const settings = readSettings(settingsPath);
+  return writeSettings(settingsPath, {
+    ...settings,
+    workspace: {
+      ...settings.workspace,
+      appearance: { 'color-theme': theme },
+    },
+  });
 }
 
 export function updateLanguage(settingsPath: string, language: LanguageMode): FoundrySettings {
-  return writeSettings(settingsPath, { ...readSettings(settingsPath), language });
+  const settings = readSettings(settingsPath);
+  return writeSettings(settingsPath, {
+    ...settings,
+    workspace: {
+      ...settings.workspace,
+      'language-region': {
+        ...settings.workspace['language-region'],
+        language,
+      },
+    },
+  });
 }
 
 export function updateRegion(settingsPath: string, region: RegionCode): FoundrySettings {
-  return writeSettings(settingsPath, { ...readSettings(settingsPath), region });
+  const settings = readSettings(settingsPath);
+  return writeSettings(settingsPath, {
+    ...settings,
+    workspace: {
+      ...settings.workspace,
+      'language-region': {
+        ...settings.workspace['language-region'],
+        'region-format': region,
+      },
+    },
+  });
+}
+
+export function updateTimezone(settingsPath: string, timezone: TimeZoneCode): FoundrySettings {
+  const settings = readSettings(settingsPath);
+  return writeSettings(settingsPath, {
+    ...settings,
+    workspace: {
+      ...settings.workspace,
+      'language-region': {
+        ...settings.workspace['language-region'],
+        'time-zone': timezone,
+      },
+    },
+  });
 }
 
 export function getCurrentUsedProviderIds(settingsPath: string): Set<string> {

@@ -1,7 +1,7 @@
 import type { ComponentType, SVGProps } from 'react';
-import type { LanguageMode, RegionCode, ThemeMode } from '@renderer/settings';
+import type { LanguageMode, RegionCode, ThemeMode, TimeZoneCode } from '@renderer/settings';
 
-export type { LanguageMode, RegionCode, ThemeMode } from '@renderer/settings';
+export type { LanguageMode, RegionCode, ThemeMode, TimeZoneCode } from '@renderer/settings';
 
 export type PanelId = 'appearance' | 'language';
 export type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
@@ -10,13 +10,13 @@ export interface SettingsState {
   theme: ThemeMode;
   language: LanguageMode;
   region: RegionCode;
-  timezone: string;
+  timezone: TimeZoneCode;
 }
 export const INITIAL_SETTINGS: SettingsState = {
   theme: 'system',
   language: 'system',
   region: 'US',
-  timezone: 'PT',
+  timezone: 'America/Los_Angeles',
 };
 export type UpdateSetting = <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => void;
 export interface PanelProps { settings: SettingsState; update: UpdateSetting }

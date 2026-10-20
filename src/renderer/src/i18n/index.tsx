@@ -63,10 +63,11 @@ export type TranslationKey
     | 'settings.china'
     | 'settings.taiwan'
     | 'settings.japan'
-    | 'settings.pacific'
-    | 'settings.mountain'
-    | 'settings.central'
-    | 'settings.eastern'
+    | 'settings.losAngeles'
+    | 'settings.newYork'
+    | 'settings.shanghai'
+    | 'settings.taipei'
+    | 'settings.tokyo'
     | 'settings.utc'
     | 'settings.noResults'
     | 'settings.trySearch';
@@ -142,10 +143,11 @@ const english: TranslationTable = {
   'settings.china': 'China',
   'settings.taiwan': 'Taiwan',
   'settings.japan': 'Japan',
-  'settings.pacific': 'Pacific (GMT-08:00)',
-  'settings.mountain': 'Mountain (GMT-07:00)',
-  'settings.central': 'Central (GMT-06:00)',
-  'settings.eastern': 'Eastern (GMT-05:00)',
+  'settings.losAngeles': 'Los Angeles (GMT-08:00)',
+  'settings.newYork': 'New York (GMT-05:00)',
+  'settings.shanghai': 'Shanghai (GMT+08:00)',
+  'settings.taipei': 'Taipei (GMT+08:00)',
+  'settings.tokyo': 'Tokyo (GMT+09:00)',
   'settings.utc': 'UTC (GMT+00:00)',
   'settings.noResults': 'No settings found',
   'settings.trySearch': 'Try theme, language, or sessions.',
@@ -221,10 +223,11 @@ const simplifiedChinese: TranslationTable = {
   'settings.china': '中国',
   'settings.taiwan': '中国台湾',
   'settings.japan': '日本',
-  'settings.pacific': '太平洋时间（GMT-08:00）',
-  'settings.mountain': '山地时间（GMT-07:00）',
-  'settings.central': '中部时间（GMT-06:00）',
-  'settings.eastern': '东部时间（GMT-05:00）',
+  'settings.losAngeles': '洛杉矶（GMT-08:00）',
+  'settings.newYork': '纽约（GMT-05:00）',
+  'settings.shanghai': '上海（GMT+08:00）',
+  'settings.taipei': '台北（GMT+08:00）',
+  'settings.tokyo': '东京（GMT+09:00）',
   'settings.utc': 'UTC（GMT+00:00）',
   'settings.noResults': '未找到设置',
   'settings.trySearch': '试试搜索主题、语言或会话。',
@@ -300,10 +303,11 @@ const traditionalChinese: TranslationTable = {
   'settings.china': '中國',
   'settings.taiwan': '台灣',
   'settings.japan': '日本',
-  'settings.pacific': '太平洋時間（GMT-08:00）',
-  'settings.mountain': '山區時間（GMT-07:00）',
-  'settings.central': '中部時間（GMT-06:00）',
-  'settings.eastern': '東部時間（GMT-05:00）',
+  'settings.losAngeles': '洛杉磯（GMT-08:00）',
+  'settings.newYork': '紐約（GMT-05:00）',
+  'settings.shanghai': '上海（GMT+08:00）',
+  'settings.taipei': '台北（GMT+08:00）',
+  'settings.tokyo': '東京（GMT+09:00）',
   'settings.utc': 'UTC（GMT+00:00）',
   'settings.noResults': '找不到設定',
   'settings.trySearch': '試著搜尋主題、語言或工作階段。',
@@ -379,6 +383,12 @@ const japanese: TranslationTable = {
   'settings.china': '中国',
   'settings.taiwan': '台湾',
   'settings.japan': '日本',
+  'settings.losAngeles': 'ロサンゼルス（GMT-08:00）',
+  'settings.newYork': 'ニューヨーク（GMT-05:00）',
+  'settings.shanghai': '上海（GMT+08:00）',
+  'settings.taipei': '台北（GMT+08:00）',
+  'settings.tokyo': '東京（GMT+09:00）',
+  'settings.utc': 'UTC（GMT+00:00）',
   'settings.noResults': '設定が見つかりません',
   'settings.trySearch': 'テーマ、言語、セッションを検索してみてください。',
 };
@@ -420,7 +430,7 @@ if (!i18n.isInitialized) {
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const settingsQuery = useQuery({ queryKey: settingsKeys.current(), queryFn: getSettings });
-  const language = settingsQuery.data?.language ?? 'system';
+  const language = settingsQuery.data?.workspace['language-region'].language ?? 'system';
   const locale = useMemo(() => resolveLocale(language), [language]);
 
   useEffect(() => {

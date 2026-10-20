@@ -10,7 +10,7 @@ export function AppearancePanel({ settings, update }: PanelProps) {
   const { t } = useI18n();
   return (
     <VStack gap={5}>
-      <SettingsCard title={t('settings.color')}>
+      <SettingsCard>
         <SettingsRow
           title={t('settings.colorTheme')}
           icon={PaintBrushIcon}

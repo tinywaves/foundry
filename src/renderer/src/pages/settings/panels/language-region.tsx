@@ -8,7 +8,7 @@ import type { PanelProps, RegionCode, SettingsState, TimeZoneCode } from '../typ
 export function LanguagePanel({ settings, update }: PanelProps) {
   const { t } = useI18n();
   return (
-    <SettingsCard title={t('settings.languageRegion')}>
+    <SettingsCard>
       <SettingsRow
         title={t('settings.language')}
         icon={LanguageIcon}

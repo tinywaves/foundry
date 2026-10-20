@@ -50,7 +50,6 @@ export type TranslationKey
     | 'settings.appearance'
     | 'settings.languageRegion'
     | 'settings.search'
-    | 'settings.color'
     | 'settings.colorTheme'
     | 'settings.colorThemeDescription'
     | 'settings.language'
@@ -133,7 +132,6 @@ const english: TranslationTable = {
   'settings.appearance': 'Appearance',
   'settings.languageRegion': 'Language & region',
   'settings.search': 'Search settings',
-  'settings.color': 'Color',
   'settings.colorTheme': 'Color theme',
   'settings.colorThemeDescription': 'Applies to this browser only.',
   'settings.language': 'Language',
@@ -216,7 +214,6 @@ const simplifiedChinese: TranslationTable = {
   'settings.appearance': '外观',
   'settings.languageRegion': '语言和地区',
   'settings.search': '搜索设置',
-  'settings.color': '颜色',
   'settings.colorTheme': '颜色主题',
   'settings.colorThemeDescription': '仅应用于此应用。',
   'settings.language': '语言',
@@ -299,7 +296,6 @@ const traditionalChinese: TranslationTable = {
   'settings.appearance': '外觀',
   'settings.languageRegion': '語言與地區',
   'settings.search': '搜尋設定',
-  'settings.color': '顏色',
   'settings.colorTheme': '色彩主題',
   'settings.colorThemeDescription': '僅套用於此應用程式。',
   'settings.language': '語言',
@@ -382,7 +378,6 @@ const japanese: TranslationTable = {
   'settings.appearance': '外観',
   'settings.languageRegion': '言語と地域',
   'settings.search': '設定を検索',
-  'settings.color': '色',
   'settings.colorTheme': 'カラーテーマ',
   'settings.colorThemeDescription': 'このアプリにのみ適用されます。',
   'settings.language': '言語',

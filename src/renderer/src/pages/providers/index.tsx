@@ -12,10 +12,10 @@ import { Token } from '@astryxdesign/core/Token';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { Popover } from '@astryxdesign/core/Popover';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
-import { Section } from '@astryxdesign/core/Section';
 import { PencilSquareIcon, Square3Stack3DIcon, TrashIcon } from '@heroicons/react/24/outline';
 import type { ProviderListItem } from '../../../../shared/providers';
 import { listProviders, providerKeys } from '@renderer/providers';
+import { ProviderEmptyState } from './empty-state';
 import { styles } from './styles';
 import { useI18n } from '@renderer/i18n/use-i18n';
 
@@ -78,14 +78,7 @@ export default function ProvidersPage() {
       )}
       <VStack gap={5}>
         {providers.length === 0
-          ? (
-              <Section variant="muted" padding={5}>
-                <VStack gap={2}>
-                  <Text type="supporting">{t('providers.empty')}</Text>
-                  <Button label={t('providers.addFirst')} size="sm" href="/providers/new" as={Link} />
-                </VStack>
-              </Section>
-            )
+          ? <ProviderEmptyState />
           : (
               <List density="balanced" hasDividers={false} xstyle={styles.providerList}>
                 {providers.map((provider) => (

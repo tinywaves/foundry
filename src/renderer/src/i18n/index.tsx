@@ -27,6 +27,7 @@ export type TranslationKey
     | 'providers.add'
     | 'providers.addFirst'
     | 'providers.empty'
+    | 'providers.emptyTitle'
     | 'providers.deleteQuestion'
     | 'providers.cancel'
     | 'providers.delete'
@@ -90,7 +91,8 @@ const english: TranslationTable = {
   'prompts.description': 'Reusable text fragments for agent conversations.',
   'providers.add': 'Add provider',
   'providers.addFirst': 'Add your first provider',
-  'providers.empty': 'Add a provider to make model services available to the application.',
+  'providers.empty': 'Connect a model service to make its models available in Foundry.',
+  'providers.emptyTitle': 'No model providers yet',
   'providers.deleteQuestion': 'Delete provider?',
   'providers.cancel': 'Cancel',
   'providers.delete': 'Delete',
@@ -172,7 +174,8 @@ const simplifiedChinese: TranslationTable = {
   'prompts.description': '可复用于智能体对话的文本片段。',
   'providers.add': '添加服务提供商',
   'providers.addFirst': '添加第一个服务提供商',
-  'providers.empty': '添加服务提供商后，应用即可使用模型服务。',
+  'providers.empty': '连接模型服务，即可在 Foundry 中使用其模型。',
+  'providers.emptyTitle': '还没有模型服务提供商',
   'providers.deleteQuestion': '删除服务提供商？',
   'providers.cancel': '取消',
   'providers.delete': '删除',
@@ -254,7 +257,8 @@ const traditionalChinese: TranslationTable = {
   'prompts.description': '可重複用於代理人對話的文字片段。',
   'providers.add': '新增服務提供者',
   'providers.addFirst': '新增第一個服務提供者',
-  'providers.empty': '新增服務提供者後，應用程式即可使用模型服務。',
+  'providers.empty': '連接模型服務，即可在 Foundry 中使用其模型。',
+  'providers.emptyTitle': '尚無模型服務提供者',
   'providers.deleteQuestion': '刪除服務提供者？',
   'providers.cancel': '取消',
   'providers.delete': '刪除',
@@ -336,7 +340,8 @@ const japanese: TranslationTable = {
   'prompts.description': 'エージェントとの会話で再利用できるテキスト。',
   'providers.add': 'プロバイダーを追加',
   'providers.addFirst': '最初のプロバイダーを追加',
-  'providers.empty': 'プロバイダーを追加するとモデルサービスを利用できます。',
+  'providers.empty': 'モデルサービスを接続すると、そのモデルを Foundry で利用できます。',
+  'providers.emptyTitle': 'モデルプロバイダーがまだありません',
   'providers.deleteQuestion': 'プロバイダーを削除しますか？',
   'providers.cancel': 'キャンセル',
   'providers.delete': '削除',

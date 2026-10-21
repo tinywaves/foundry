@@ -20,7 +20,7 @@ export const PANEL_GROUPS: Array<{ label: string; panels: PanelConfig[] }> = [
       {
         id: 'advanced',
         label: 'Advanced',
-        description: 'Open the settings file.',
+        description: 'Open the folder containing local config and data.',
         icon: AdjustmentsHorizontalIcon,
       },
     ],

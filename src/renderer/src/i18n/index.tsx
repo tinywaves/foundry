@@ -46,8 +46,8 @@ export type TranslationKey
     | 'navigation.providersDescription'
     | 'settings.workspace'
     | 'settings.advanced'
-    | 'settings.openSettingsFile'
-    | 'settings.open'
+    | 'settings.configFolder'
+    | 'settings.openConfigFolder'
     | 'settings.appearance'
     | 'settings.languageRegion'
     | 'settings.search'
@@ -129,8 +129,8 @@ const english: TranslationTable = {
   'navigation.providersDescription': 'Manage the model service connections used by Foundry.',
   'settings.workspace': 'Workspace',
   'settings.advanced': 'Advanced',
-  'settings.openSettingsFile': 'Open settings file',
-  'settings.open': 'Open',
+  'settings.configFolder': 'Config folder',
+  'settings.openConfigFolder': 'Open folder',
   'settings.appearance': 'Appearance',
   'settings.languageRegion': 'Language & region',
   'settings.search': 'Search settings',
@@ -212,8 +212,8 @@ const simplifiedChinese: TranslationTable = {
   'navigation.providersDescription': '管理 Foundry 使用的模型服务连接。',
   'settings.workspace': '工作区',
   'settings.advanced': '高级',
-  'settings.openSettingsFile': '打开设置文件',
-  'settings.open': '打开',
+  'settings.configFolder': '配置文件夹',
+  'settings.openConfigFolder': '打开文件夹',
   'settings.appearance': '外观',
   'settings.languageRegion': '语言和地区',
   'settings.search': '搜索设置',
@@ -295,8 +295,8 @@ const traditionalChinese: TranslationTable = {
   'navigation.providersDescription': '管理 Foundry 使用的模型服務連線。',
   'settings.workspace': '工作區',
   'settings.advanced': '進階',
-  'settings.openSettingsFile': '開啟設定檔',
-  'settings.open': '開啟',
+  'settings.configFolder': '設定資料夾',
+  'settings.openConfigFolder': '開啟資料夾',
   'settings.appearance': '外觀',
   'settings.languageRegion': '語言與地區',
   'settings.search': '搜尋設定',
@@ -378,8 +378,8 @@ const japanese: TranslationTable = {
   'navigation.providersDescription': 'Foundryで使用するモデルサービス接続を管理します。',
   'settings.workspace': 'ワークスペース',
   'settings.advanced': '詳細設定',
-  'settings.openSettingsFile': '設定ファイルを開く',
-  'settings.open': '開く',
+  'settings.configFolder': '設定フォルダー',
+  'settings.openConfigFolder': 'フォルダーを開く',
   'settings.appearance': '外観',
   'settings.languageRegion': '言語と地域',
   'settings.search': '設定を検索',

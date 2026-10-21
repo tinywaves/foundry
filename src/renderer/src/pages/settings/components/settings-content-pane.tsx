@@ -5,11 +5,8 @@ import { AppearancePanel } from '../panels/appearance';
 import { LanguagePanel } from '../panels/language-region';
 import { AdvancedPanel } from '../panels/advanced';
 import { row } from './settings-row-styles';
+import { openConfigFolder } from '@renderer/settings';
 import type { PanelId, PanelProps } from '../types';
-
-function openSettingsFile() {
-  void globalThis.api.settings.openSettingsFile();
-}
 
 const styles = stylex.create({
   contentTopAligned: {
@@ -24,10 +21,10 @@ export function SettingsContentPane({
   panel,
   settings,
   update,
-  settingsPath = '',
+  configFolderPath = '',
 }: {
   panel: PanelId;
-  settingsPath?: string;
+  configFolderPath?: string;
 } & PanelProps) {
   const content = (() => {
     switch (panel) {
@@ -38,7 +35,14 @@ export function SettingsContentPane({
         return <LanguagePanel settings={settings} update={update} />;
       }
       case 'advanced': {
-        return <AdvancedPanel settingsPath={settingsPath} onOpenSettingsFile={openSettingsFile} />;
+        return (
+          <AdvancedPanel
+            configFolderPath={configFolderPath}
+            onOpenConfigFolder={() => {
+              void openConfigFolder();
+            }}
+          />
+        );
       }
     }
   })();

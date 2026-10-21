@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { app } from 'electron';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
-import { mkdirSync } from 'node:fs';
+import { chmodSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
@@ -16,6 +16,9 @@ export interface FoundryDatabase {
 export function openFoundryDatabase(databasePath: string): FoundryDatabase {
   mkdirSync(path.dirname(databasePath), { recursive: true });
   const client = new Database(databasePath, { timeout: DATABASE_BUSY_TIMEOUT_MS });
+  if (process.platform !== 'win32') {
+    chmodSync(databasePath, 0o600);
+  }
   client.pragma('foreign_keys = ON');
   const db = drizzle({ client });
   const migrationsRoot = app.isPackaged

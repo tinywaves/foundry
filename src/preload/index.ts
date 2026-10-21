@@ -7,12 +7,12 @@ import type { ProviderApi, SettingsApi } from './api';
 const api: { providers: ProviderApi; settings: SettingsApi } = {
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
-    getPath: () => ipcRenderer.invoke('settings:get-path'),
+    getConfigFolder: () => ipcRenderer.invoke('settings:get-config-folder'),
     setTheme: (theme) => ipcRenderer.invoke('settings:set-theme', theme),
     setLanguage: (language) => ipcRenderer.invoke('settings:set-language', language),
     setRegion: (region) => ipcRenderer.invoke('settings:set-region', region),
     setTimezone: (timezone) => ipcRenderer.invoke('settings:set-timezone', timezone),
-    openSettingsFile: () => ipcRenderer.invoke('settings:open-file'),
+    openConfigFolder: () => ipcRenderer.invoke('settings:open-config-folder'),
   },
   providers: {
     list: () => ipcRenderer.invoke('providers:list'),

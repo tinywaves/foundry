@@ -5,6 +5,11 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import icon from '../../resources/icon.png?asset';
 import { openFoundryDatabase } from './database';
 import {
+  ensureFoundryHome,
+  getFoundryDatabasePath,
+  getFoundrySettingsPath,
+} from './paths';
+import {
   fetchProviderModels,
   fetchModelsForInput,
   getProvider,
@@ -73,8 +78,9 @@ void app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('foundry');
 
-  const database = openFoundryDatabase(path.join(app.getPath('userData'), 'foundry.sqlite'));
-  const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+  const configFolderPath = ensureFoundryHome();
+  const database = openFoundryDatabase(getFoundryDatabasePath());
+  const settingsPath = getFoundrySettingsPath();
   app.on('will-quit', () => {
     database.client.close();
   });
@@ -102,14 +108,15 @@ void app.whenReady().then(() => {
   });
 
   ipcMain.handle('settings:get', () => readSettings(settingsPath));
-  ipcMain.handle('settings:get-path', () => settingsPath);
+  ipcMain.handle('settings:get-config-folder', () => configFolderPath);
   ipcMain.handle('settings:set-theme', (_, theme: 'system' | 'light' | 'dark') => updateSettings(settingsPath, theme));
   ipcMain.handle('settings:set-language', (_, language: LanguageMode) => updateLanguage(settingsPath, language));
   ipcMain.handle('settings:set-region', (_, region: RegionCode) => updateRegion(settingsPath, region));
   ipcMain.handle('settings:set-timezone', (_, timezone: TimeZoneCode) => updateTimezone(settingsPath, timezone));
-  ipcMain.handle('settings:open-file', async () => {
+  ipcMain.handle('settings:open-config-folder', async () => {
+    const configFolder = ensureFoundryHome();
     writeSettings(settingsPath, readSettings(settingsPath));
-    const error = await shell.openPath(settingsPath);
+    const error = await shell.openPath(configFolder);
     if (error) {
       throw new Error(error);
     }

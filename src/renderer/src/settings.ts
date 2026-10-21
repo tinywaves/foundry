@@ -10,8 +10,12 @@ export function getSettings(): Promise<SettingsSnapshot> {
   return globalThis.api.settings.get() as Promise<SettingsSnapshot>;
 }
 
-export function getSettingsPath(): Promise<string> {
-  return globalThis.api.settings.getPath();
+export function getConfigFolder(): Promise<string> {
+  return globalThis.api.settings.getConfigFolder();
+}
+
+export function openConfigFolder(): Promise<void> {
+  return globalThis.api.settings.openConfigFolder();
 }
 
 export function setTheme(theme: ThemeMode): Promise<SettingsSnapshot> {

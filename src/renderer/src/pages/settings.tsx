@@ -4,8 +4,8 @@ import { Layout } from '@astryxdesign/core/Layout';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import {
+  getConfigFolder,
   getSettings,
-  getSettingsPath,
   setLanguage,
   setRegion,
   setTheme,
@@ -23,7 +23,7 @@ export default function SettingsPage() {
   const [activePanel, setActivePanel] = useState<PanelId>(DEFAULT_PANEL);
   const queryClient = useQueryClient();
   const settingsQuery = useQuery({ queryKey: settingsKeys.current(), queryFn: getSettings });
-  const settingsPathQuery = useQuery({ queryKey: ['settings', 'path'], queryFn: getSettingsPath });
+  const configFolderQuery = useQuery({ queryKey: ['settings', 'config-folder'], queryFn: getConfigFolder });
   const updateSettings = (
     storedSettings: Awaited<ReturnType<typeof setTheme>>,
   ) => queryClient.setQueryData(settingsKeys.current(), storedSettings);
@@ -80,7 +80,7 @@ export default function SettingsPage() {
           panel={activePanel}
           settings={settings}
           update={update}
-          settingsPath={settingsPathQuery.data ?? ''}
+          configFolderPath={configFolderQuery.data ?? ''}
         />
       )}
     />

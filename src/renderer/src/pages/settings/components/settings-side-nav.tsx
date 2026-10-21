@@ -62,6 +62,7 @@ export function SettingsSideNav({
                   key={panel.id}
                   label={panelLabel(panel.id)}
                   icon={<Icon icon={panel.icon} size="sm" color="primary" />}
+                  size="sm"
                   isSelected={panel.id === activePanel}
                   onClick={() => onSelectPanel(panel.id)}
                 />

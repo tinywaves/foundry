@@ -15,8 +15,7 @@ export type Locale = Exclude<LanguageMode, 'system'>;
 export type TranslationKey
   = | 'navigation.overview'
     | 'navigation.base'
-    | 'navigation.captures'
-    | 'navigation.capturesDescription'
+    | 'navigation.baseDescription'
     | 'navigation.jobs'
     | 'navigation.library'
     | 'navigation.prompts'
@@ -140,8 +139,7 @@ type TranslationTable = Record<TranslationKey, string>;
 const english: TranslationTable = {
   'navigation.overview': 'Overview',
   'navigation.base': 'Base',
-  'navigation.captures': 'Captures',
-  'navigation.capturesDescription': 'Collect links first, then organize them later.',
+  'navigation.baseDescription': 'Collect links first, then organize them later.',
   'navigation.jobs': 'Jobs',
   'navigation.library': 'Library',
   'navigation.prompts': 'Prompts',
@@ -361,8 +359,7 @@ const simplifiedChinese: TranslationTable = {
   'settings.noResults': '未找到设置',
   'settings.trySearch': '试试搜索主题、语言或会话。',
   'navigation.base': 'Base',
-  'navigation.captures': '收藏',
-  'navigation.capturesDescription': '先收集链接，之后再整理。',
+  'navigation.baseDescription': '先收集链接，之后再整理。',
   'navigation.jobs': '抓取记录',
   'overview.title': '欢迎回来',
   'settings.features': '功能',
@@ -504,8 +501,7 @@ const traditionalChinese: TranslationTable = {
   'settings.noResults': '找不到設定',
   'settings.trySearch': '試著搜尋主題、語言或工作階段。',
   'navigation.base': 'Base',
-  'navigation.captures': '收藏',
-  'navigation.capturesDescription': '先收集連結，之後再整理。',
+  'navigation.baseDescription': '先收集連結，之後再整理。',
   'navigation.jobs': '抓取紀錄',
   'overview.title': '歡迎回來',
   'settings.features': '功能',
@@ -647,8 +643,7 @@ const japanese: TranslationTable = {
   'settings.noResults': '設定が見つかりません',
   'settings.trySearch': 'テーマ、言語、セッションを検索してみてください。',
   'navigation.base': 'Base',
-  'navigation.captures': 'キャプチャ',
-  'navigation.capturesDescription': 'まずリンクを集め、後から整理します。',
+  'navigation.baseDescription': 'まずリンクを集め、後から整理します。',
   'navigation.jobs': '取得履歴',
   'overview.title': 'おかえりなさい',
   'settings.features': '機能',

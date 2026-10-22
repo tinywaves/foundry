@@ -27,7 +27,7 @@ export default function WindowTitlebar({ collapsible, showBackButton = false }: 
   const titleHandle = matches.findLast((match) => isRouteHandle(match.handle))?.handle;
   const titleTranslations: Record<string, string> = {
     'Overview': t('navigation.overview'),
-    'Captures': t('navigation.captures'),
+    'Base': t('navigation.base'),
     'Jobs': t('navigation.jobs'),
     'Prompts': t('navigation.prompts'),
     'Providers': t('navigation.providers'),
@@ -38,7 +38,7 @@ export default function WindowTitlebar({ collapsible, showBackButton = false }: 
   };
   const descriptionTranslations: Record<string, string> = {
     'Manage the model service connections used by Foundry.': t('navigation.providersDescription'),
-    'Collect links first, then organize them later.': t('navigation.capturesDescription'),
+    'Collect links first, then organize them later.': t('navigation.baseDescription'),
     'Connect a model service using one of Foundry\'s supported protocols.': t('providers.formDescription'),
   };
 

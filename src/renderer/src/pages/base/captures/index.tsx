@@ -5,13 +5,11 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowPathIcon,
   ArrowTopRightOnSquareIcon,
-  PlusIcon,
   QueueListIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline';
 import { Button } from '@astryxdesign/core/Button';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
-import { EmptyState } from '@astryxdesign/core/EmptyState';
 import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
 import { IconButton } from '@astryxdesign/core/IconButton';
 import { Icon } from '@astryxdesign/core/Icon';
@@ -39,6 +37,7 @@ import { CaptureComposer } from '@renderer/components/capture-composer';
 import { baseErrorKey } from '@renderer/base-error-key';
 import { useI18n } from '@renderer/i18n/use-i18n';
 import { useAppToast } from '@renderer/use-app-toast';
+import { CapturesEmptyState } from './empty-state';
 import { NoteCell } from './note-cell';
 import { styles } from './styles';
 
@@ -234,20 +233,10 @@ export default function CapturesPage() {
         </HStack>
         {captures.length === 0
           ? (
-              <EmptyState
-                title={t('base.emptyTitle')}
-                description={t('base.emptyDescription')}
-                actions={(
-                  <Button
-                    label={t('base.addCapture')}
-                    size="sm"
-                    variant="primary"
-                    icon={<PlusIcon />}
-                    onClick={() => {
-                      setIsComposerOpen(true);
-                    }}
-                  />
-                )}
+              <CapturesEmptyState
+                onAdd={() => {
+                  setIsComposerOpen(true);
+                }}
               />
             )
           : (

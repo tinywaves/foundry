@@ -1,28 +1,6 @@
 import * as stylex from '@stylexjs/stylex';
 
 export const styles = stylex.create({
-  emptyStateIllustration: {
-    paddingBlock: 'var(--spacing-1)',
-  },
-  emptyStateSatelliteNode: {
-    width: 'var(--spacing-12)',
-    height: 'var(--spacing-12)',
-    borderRadius: 'var(--radius-full)',
-    backgroundColor: 'var(--color-background-card)',
-    boxShadow: 'inset 0 0 0 var(--border-width) var(--color-border-emphasized)',
-  },
-  emptyStateCoreNode: {
-    width: 'calc(var(--spacing-10) * 2)',
-    height: 'calc(var(--spacing-10) * 2)',
-    borderRadius: 'var(--radius-full)',
-    backgroundColor: 'var(--color-accent-muted)',
-    boxShadow: 'inset 0 0 0 var(--border-width) var(--color-border-emphasized)',
-  },
-  emptyStateConnector: {
-    width: 'var(--spacing-8)',
-    height: 'var(--border-width)',
-    backgroundColor: 'var(--color-border-emphasized)',
-  },
   providerList: {
     gap: 'var(--spacing-2)',
   },

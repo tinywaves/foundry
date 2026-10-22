@@ -33,10 +33,10 @@ import {
   recapture,
   subscribeToScrapeJobFinished,
 } from '@renderer/base';
-import { CaptureComposer } from '@renderer/components/capture-composer';
 import { baseErrorKey } from '@renderer/base-error-key';
 import { useI18n } from '@renderer/i18n/use-i18n';
 import { useAppToast } from '@renderer/use-app-toast';
+import { CaptureDialog } from './capture-dialog';
 import { CapturesEmptyState } from './empty-state';
 import { NoteCell } from './note-cell';
 import { styles } from './styles';
@@ -249,26 +249,13 @@ export default function CapturesPage() {
             )}
       </VStack>
 
-      <Dialog
+      <CaptureDialog
         isOpen={isComposerOpen}
         onOpenChange={setIsComposerOpen}
-        width={560}
-        purpose="form"
-      >
-        <VStack gap={4}>
-          <DialogHeader
-            title={t('base.addCapture')}
-            subtitle={t('base.composerHint')}
-            onOpenChange={setIsComposerOpen}
-          />
-          <CaptureComposer
-            autoFocus
-            onCreated={() => {
-              setIsComposerOpen(false);
-            }}
-          />
-        </VStack>
-      </Dialog>
+        onCreated={() => {
+          setIsComposerOpen(false);
+        }}
+      />
 
       <Dialog
         isOpen={captureToDelete !== null}

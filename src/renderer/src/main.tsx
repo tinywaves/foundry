@@ -7,6 +7,9 @@ import { router } from './router';
 import RendererTheme from './components/renderer-theme';
 import { I18nProvider } from './i18n';
 import '@fontsource/poppins/400.css';
+import '@fontsource/poppins/500.css';
+import '@fontsource/poppins/600.css';
+import '@fontsource/poppins/700.css';
 import './main.css';
 
 createRoot(document.getElementById('root')!).render(

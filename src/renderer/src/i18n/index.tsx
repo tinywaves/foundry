@@ -92,16 +92,15 @@ export type TranslationKey
     | 'settings.baseConcurrencyDescription'
     | 'base.captureAdded'
     | 'base.captureExists'
-    | 'base.link'
-    | 'base.linkPlaceholder'
     | 'base.note'
-    | 'base.notePlaceholder'
-    | 'base.composerHint'
+    | 'base.toPaste'
+    | 'base.pasteLink'
+    | 'base.capturing'
+    | 'base.enterToCapture'
     | 'base.configureFetcherFirst'
     | 'base.activeJobExists'
     | 'base.captureNotFound'
     | 'base.invalidUrl'
-    | 'base.capture'
     | 'base.addCapture'
     | 'base.title'
     | 'base.openLink'
@@ -234,16 +233,15 @@ const english: TranslationTable = {
   'settings.baseConcurrencyDescription': 'Maximum simultaneous scrape jobs, from 1 to 5.',
   'base.captureAdded': 'Capture added',
   'base.captureExists': 'This link is already captured',
-  'base.link': 'Link',
-  'base.linkPlaceholder': 'Paste a link…',
   'base.note': 'Note',
-  'base.notePlaceholder': 'Add a thought, if you want',
-  'base.composerHint': 'Capture first. Organize later.',
+  'base.toPaste': 'to paste',
+  'base.pasteLink': 'Paste a link',
+  'base.capturing': 'Capturing…',
+  'base.enterToCapture': 'to capture',
   'base.configureFetcherFirst': 'Configure a Fetcher in Settings before capturing pages.',
   'base.activeJobExists': 'A scrape job is already running for this capture.',
   'base.captureNotFound': 'Capture not found.',
   'base.invalidUrl': 'Enter a valid HTTP or HTTPS URL.',
-  'base.capture': 'Capture',
   'base.addCapture': 'Add a capture',
   'base.title': 'Title',
   'base.openLink': 'Open link',
@@ -376,16 +374,15 @@ const simplifiedChinese: TranslationTable = {
   'settings.baseConcurrencyDescription': '同时运行的抓取任务上限，1 到 5。',
   'base.captureAdded': '已收藏',
   'base.captureExists': '这个链接已经收藏过了',
-  'base.link': '链接',
-  'base.linkPlaceholder': '粘贴链接…',
   'base.note': '备注',
-  'base.notePlaceholder': '可以写点想法',
-  'base.composerHint': '先收藏，之后再整理。',
+  'base.toPaste': '粘贴',
+  'base.pasteLink': '粘贴链接',
+  'base.capturing': '正在收藏…',
+  'base.enterToCapture': '收藏',
   'base.configureFetcherFirst': '请先在设置中配置抓取服务。',
   'base.activeJobExists': '这条收藏已有正在运行的抓取任务。',
   'base.captureNotFound': '找不到这条收藏。',
   'base.invalidUrl': '请输入有效的 HTTP 或 HTTPS 链接。',
-  'base.capture': '收藏',
   'base.addCapture': '添加收藏',
   'base.title': '标题',
   'base.openLink': '打开链接',
@@ -518,16 +515,15 @@ const traditionalChinese: TranslationTable = {
   'settings.baseConcurrencyDescription': '同時執行的抓取工作上線，1 到 5。',
   'base.captureAdded': '已收藏',
   'base.captureExists': '這個連結已經收藏過了',
-  'base.link': '連結',
-  'base.linkPlaceholder': '貼上連結…',
   'base.note': '備註',
-  'base.notePlaceholder': '可以寫點想法',
-  'base.composerHint': '先收藏，之後再整理。',
+  'base.toPaste': '貼上',
+  'base.pasteLink': '貼上連結',
+  'base.capturing': '正在收藏…',
+  'base.enterToCapture': '收藏',
   'base.configureFetcherFirst': '請先在設定中設定抓取服務。',
   'base.activeJobExists': '這筆收藏已有正在執行的抓取工作。',
   'base.captureNotFound': '找不到這筆收藏。',
   'base.invalidUrl': '請輸入有效的 HTTP 或 HTTPS 連結。',
-  'base.capture': '收藏',
   'base.addCapture': '新增收藏',
   'base.title': '標題',
   'base.openLink': '開啟連結',
@@ -660,16 +656,15 @@ const japanese: TranslationTable = {
   'settings.baseConcurrencyDescription': '同時に実行する取得ジョブの上限（1〜5）。',
   'base.captureAdded': 'キャプチャしました',
   'base.captureExists': 'このリンクはすでにキャプチャ済みです',
-  'base.link': 'リンク',
-  'base.linkPlaceholder': 'リンクを貼り付け…',
   'base.note': 'メモ',
-  'base.notePlaceholder': '思ったことを書く',
-  'base.composerHint': 'まずキャプチャ。整理は後で。',
+  'base.toPaste': '貼り付け',
+  'base.pasteLink': 'リンクを貼り付け',
+  'base.capturing': 'キャプチャ中…',
+  'base.enterToCapture': 'キャプチャする',
   'base.configureFetcherFirst': '先に設定でフェッチャーを構成してください。',
   'base.activeJobExists': 'このキャプチャには実行中の取得ジョブがあります。',
   'base.captureNotFound': 'キャプチャが見つかりません。',
   'base.invalidUrl': '有効な HTTP または HTTPS URL を入力してください。',
-  'base.capture': 'キャプチャ',
   'base.addCapture': 'キャプチャを追加',
   'base.title': 'タイトル',
   'base.openLink': 'リンクを開く',

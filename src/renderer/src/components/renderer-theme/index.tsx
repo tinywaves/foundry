@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Theme } from '@astryxdesign/core';
-import { defaultThemeSlug, themes } from '@renderer/astryx-themes';
+import { foundryTheme } from '@renderer/themes/foundry/foundry-theme';
 import { getSettings, settingsKeys } from '@renderer/settings';
 
 export default function RendererTheme({ children }: { children: ReactNode }) {
@@ -12,7 +12,7 @@ export default function RendererTheme({ children }: { children: ReactNode }) {
   const mode = settingsQuery.data?.workspace.appearance['color-theme'] ?? 'system';
 
   return (
-    <Theme theme={themes[defaultThemeSlug]} mode={mode}>
+    <Theme theme={foundryTheme} mode={mode}>
       {children}
     </Theme>
   );

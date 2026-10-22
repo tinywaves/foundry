@@ -203,7 +203,6 @@ export default function CapturesPage() {
           label={t('base.addCapture')}
           size="sm"
           variant="primary"
-          icon={<PlusIcon />}
           onClick={() => {
             setIsComposerOpen(true);
           }}

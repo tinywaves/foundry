@@ -213,13 +213,14 @@ export default function CapturesPage() {
         <HStack gap={3} vAlign="center" wrap="wrap">
           <SegmentedControl
             label={t('base.captureFilter')}
+            size="sm"
             value={filter}
             onChange={(value) => {
               setFilter(value as CaptureFilter);
             }}
           >
             <SegmentedControlItem value="all" label={t('base.allCaptures')} />
-            <SegmentedControlItem value="no-successful" label={t('base.noSuccessfulCapture')} />
+            <SegmentedControlItem value="no-successful" label={t('base.noCapturedContent')} />
           </SegmentedControl>
           <StackItem size="fill" />
           <IconButton

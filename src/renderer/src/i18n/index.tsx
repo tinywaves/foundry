@@ -111,7 +111,7 @@ export type TranslationKey
     | 'base.delete'
     | 'base.captureFilter'
     | 'base.allCaptures'
-    | 'base.noSuccessfulCapture'
+    | 'base.noCapturedContent'
     | 'base.refresh'
     | 'base.emptyTitle'
     | 'base.emptyDescription'
@@ -254,7 +254,7 @@ const english: TranslationTable = {
   'base.delete': 'Delete',
   'base.captureFilter': 'Filter captures',
   'base.allCaptures': 'All',
-  'base.noSuccessfulCapture': 'No successful capture',
+  'base.noCapturedContent': 'No captured content',
   'base.refresh': 'Refresh',
   'base.emptyTitle': 'No captures yet',
   'base.emptyDescription': 'Paste a link to start collecting.',
@@ -397,7 +397,7 @@ const simplifiedChinese: TranslationTable = {
   'base.delete': '删除',
   'base.captureFilter': '筛选收藏',
   'base.allCaptures': '全部',
-  'base.noSuccessfulCapture': '尚未成功抓取',
+  'base.noCapturedContent': '尚未采集到内容',
   'base.refresh': '刷新',
   'base.emptyTitle': '还没有收藏',
   'base.emptyDescription': '粘贴一个链接开始收集。',
@@ -540,7 +540,7 @@ const traditionalChinese: TranslationTable = {
   'base.delete': '刪除',
   'base.captureFilter': '篩選收藏',
   'base.allCaptures': '全部',
-  'base.noSuccessfulCapture': '尚未成功抓取',
+  'base.noCapturedContent': '尚未取得內容',
   'base.refresh': '重新整理',
   'base.emptyTitle': '還沒有收藏',
   'base.emptyDescription': '貼上一個連結開始收集。',
@@ -683,7 +683,7 @@ const japanese: TranslationTable = {
   'base.delete': '削除',
   'base.captureFilter': 'キャプチャを絞り込む',
   'base.allCaptures': 'すべて',
-  'base.noSuccessfulCapture': '取得未成功',
+  'base.noCapturedContent': '取得内容なし',
   'base.refresh': '更新',
   'base.emptyTitle': 'キャプチャはまだありません',
   'base.emptyDescription': 'リンクを貼り付けて収集を始めましょう。',

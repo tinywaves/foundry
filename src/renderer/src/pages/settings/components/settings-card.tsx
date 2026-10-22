@@ -12,7 +12,8 @@ export function SettingsCard({
   title?: string;
   children: ReactNode;
 }) {
-  const rows = Array.isArray(children) ? children : [children];
+  const rows = (Array.isArray(children) ? children : [children])
+    .filter((row): row is ReactNode => Boolean(row));
 
   return (
     <VStack gap={1.5}>
@@ -26,7 +27,7 @@ export function SettingsCard({
           {rows.map((row, index) => {
             const isNotFirstRow = index > 0;
             return (
-              <VStack key={isValidElement(row) ? row.key : 'settings-row'} as="li" gap={0}>
+              <VStack key={isValidElement(row) ? row.key : undefined} as="li" gap={0}>
                 {isNotFirstRow && <Divider variant="subtle" />}
                 <VStack>{row}</VStack>
               </VStack>

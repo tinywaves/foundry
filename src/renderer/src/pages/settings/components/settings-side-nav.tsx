@@ -31,6 +31,9 @@ export function SettingsSideNav({
       case 'language': {
         return t('settings.languageRegion');
       }
+      case 'base': {
+        return t('settings.base');
+      }
       case 'advanced': {
         return t('settings.advanced');
       }
@@ -54,7 +57,7 @@ export function SettingsSideNav({
         : PANEL_GROUPS.map((group) => (
             <SideNavSection
               key={group.label}
-              title={t('settings.workspace')}
+              title={t(group.label === 'Workspace' ? 'settings.workspace' : 'settings.features')}
               xstyle={styles.sideNavSection}
             >
               {group.panels.map((panel) => (

@@ -4,7 +4,23 @@ import type {
   ProviderSummary,
   RemoteModel,
 } from '../shared/providers';
-import type { LanguageMode, RegionCode, SettingsSnapshot, ThemeMode, TimeZoneCode } from '../shared/settings';
+import type {
+  BaseSettings,
+  LanguageMode,
+  RegionCode,
+  SettingsSnapshot,
+  ThemeMode,
+  TimeZoneCode,
+} from '../shared/settings';
+import type {
+  BaseResult,
+  CaptureFilter,
+  CaptureSummary,
+  CreateCaptureInput,
+  CreateCaptureResult,
+  ScrapeJobFinishedEvent,
+  ScrapeJobSummary,
+} from '../shared/base';
 
 export type ProviderApi = {
   list: () => Promise<ProviderListItem[]>;
@@ -22,5 +38,17 @@ export type SettingsApi = {
   setLanguage: (language: LanguageMode) => Promise<SettingsSnapshot>;
   setRegion: (region: RegionCode) => Promise<SettingsSnapshot>;
   setTimezone: (timezone: TimeZoneCode) => Promise<SettingsSnapshot>;
+  setBase: (patch: Partial<BaseSettings>) => Promise<SettingsSnapshot>;
   openConfigFolder: () => Promise<void>;
+};
+
+export type BaseApi = {
+  listCaptures: (filter?: CaptureFilter) => Promise<CaptureSummary[]>;
+  createCapture: (input: CreateCaptureInput) => Promise<BaseResult<CreateCaptureResult>>;
+  recapture: (captureId: string) => Promise<BaseResult<ScrapeJobSummary>>;
+  deleteCapture: (captureId: string) => Promise<BaseResult<null>>;
+  updateNote: (captureId: string, userNote: string) => Promise<BaseResult<CaptureSummary>>;
+  listJobs: (captureId: string) => Promise<BaseResult<ScrapeJobSummary[]>>;
+  onScrapeJobFinished: (listener: (event: ScrapeJobFinishedEvent) => void) => number;
+  offScrapeJobFinished: (subscriptionId: number) => void;
 };

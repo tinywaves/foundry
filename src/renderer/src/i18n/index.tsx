@@ -14,6 +14,9 @@ export type Locale = Exclude<LanguageMode, 'system'>;
 
 export type TranslationKey
   = | 'navigation.overview'
+    | 'navigation.base'
+    | 'navigation.captures'
+    | 'navigation.jobs'
     | 'navigation.library'
     | 'navigation.prompts'
     | 'navigation.providers'
@@ -22,6 +25,7 @@ export type TranslationKey
     | 'navigation.account'
     | 'navigation.back'
     | 'navigation.windowTitlebar'
+    | 'overview.title'
     | 'overview.description'
     | 'prompts.description'
     | 'providers.add'
@@ -45,6 +49,8 @@ export type TranslationKey
     | 'navigation.editProvider'
     | 'navigation.providersDescription'
     | 'settings.workspace'
+    | 'settings.features'
+    | 'settings.base'
     | 'settings.advanced'
     | 'settings.configFolder'
     | 'settings.openConfigFolder'
@@ -73,12 +79,68 @@ export type TranslationKey
     | 'settings.tokyo'
     | 'settings.utc'
     | 'settings.noResults'
-    | 'settings.trySearch';
+    | 'settings.trySearch'
+    | 'settings.baseFetcher'
+    | 'settings.baseFetcherDescription'
+    | 'settings.baseNotConfigured'
+    | 'settings.baseApiKey'
+    | 'settings.baseApiKeyDescription'
+    | 'settings.baseApiKeyPlaceholder'
+    | 'settings.baseMaxAttempts'
+    | 'settings.baseMaxAttemptsDescription'
+    | 'settings.baseConcurrency'
+    | 'settings.baseConcurrencyDescription'
+    | 'base.captureAdded'
+    | 'base.captureExists'
+    | 'base.link'
+    | 'base.linkPlaceholder'
+    | 'base.note'
+    | 'base.notePlaceholder'
+    | 'base.composerHint'
+    | 'base.configureFetcherFirst'
+    | 'base.activeJobExists'
+    | 'base.captureNotFound'
+    | 'base.invalidUrl'
+    | 'base.capture'
+    | 'base.addCapture'
+    | 'base.title'
+    | 'base.openLink'
+    | 'base.viewJobs'
+    | 'base.recapture'
+    | 'base.delete'
+    | 'base.captureFilter'
+    | 'base.allCaptures'
+    | 'base.noSuccessfulCapture'
+    | 'base.refresh'
+    | 'base.emptyTitle'
+    | 'base.emptyDescription'
+    | 'base.deleteCaptureTitle'
+    | 'base.deleteCaptureDescription'
+    | 'base.cancel'
+    | 'base.recaptureStarted'
+    | 'base.captureDeleted'
+    | 'base.scrapeFailed'
+    | 'base.jobStatus'
+    | 'base.jobStatus.pending'
+    | 'base.jobStatus.running'
+    | 'base.jobStatus.succeeded'
+    | 'base.jobStatus.failed'
+    | 'base.fetcher'
+    | 'base.createdAt'
+    | 'base.updatedAt'
+    | 'base.error'
+    | 'base.backToCaptures'
+    | 'base.noJobsTitle'
+    | 'base.noJobsDescription'
+    | 'base.addNote';
 
 type TranslationTable = Record<TranslationKey, string>;
 
 const english: TranslationTable = {
   'navigation.overview': 'Overview',
+  'navigation.base': 'Base',
+  'navigation.captures': 'Captures',
+  'navigation.jobs': 'Jobs',
   'navigation.library': 'Library',
   'navigation.prompts': 'Prompts',
   'navigation.providers': 'Providers',
@@ -87,6 +149,7 @@ const english: TranslationTable = {
   'navigation.account': 'Account',
   'navigation.back': 'Back',
   'navigation.windowTitlebar': 'Window titlebar',
+  'overview.title': 'Good to see you',
   'overview.description': 'A summary of the local workspace.',
   'prompts.description': 'Reusable text fragments for agent conversations.',
   'providers.add': 'Add provider',
@@ -128,6 +191,8 @@ const english: TranslationTable = {
   'navigation.editProvider': 'Edit provider',
   'navigation.providersDescription': 'Manage the model service connections used by Foundry.',
   'settings.workspace': 'Workspace',
+  'settings.features': 'Features',
+  'settings.base': 'Base',
   'settings.advanced': 'Advanced',
   'settings.configFolder': 'Config folder',
   'settings.openConfigFolder': 'Open folder',
@@ -157,6 +222,59 @@ const english: TranslationTable = {
   'settings.utc': 'UTC (GMT+00:00)',
   'settings.noResults': 'No settings found',
   'settings.trySearch': 'Try theme, language, or sessions.',
+  'settings.baseFetcher': 'Fetcher',
+  'settings.baseFetcherDescription': 'The service used to retrieve page content.',
+  'settings.baseNotConfigured': 'Not configured',
+  'settings.baseApiKey': 'API key',
+  'settings.baseApiKeyDescription': 'Authenticates requests to the selected fetch service.',
+  'settings.baseApiKeyPlaceholder': 'Enter an API key',
+  'settings.baseMaxAttempts': 'Maximum attempts',
+  'settings.baseMaxAttemptsDescription': 'Total requests per scrape job, from 1 to 10.',
+  'settings.baseConcurrency': 'Scrape concurrency',
+  'settings.baseConcurrencyDescription': 'Maximum simultaneous scrape jobs, from 1 to 5.',
+  'base.captureAdded': 'Capture added',
+  'base.captureExists': 'This link is already captured',
+  'base.link': 'Link',
+  'base.linkPlaceholder': 'Paste a link…',
+  'base.note': 'Note',
+  'base.notePlaceholder': 'Add a thought, if you want',
+  'base.composerHint': 'Capture first. Organize later.',
+  'base.configureFetcherFirst': 'Configure a Fetcher in Settings before capturing pages.',
+  'base.activeJobExists': 'A scrape job is already running for this capture.',
+  'base.captureNotFound': 'Capture not found.',
+  'base.invalidUrl': 'Enter a valid HTTP or HTTPS URL.',
+  'base.capture': 'Capture',
+  'base.addCapture': 'Add a capture',
+  'base.title': 'Title',
+  'base.openLink': 'Open link',
+  'base.viewJobs': 'View jobs',
+  'base.recapture': 'Re-capture',
+  'base.delete': 'Delete',
+  'base.captureFilter': 'Filter captures',
+  'base.allCaptures': 'All',
+  'base.noSuccessfulCapture': 'No successful capture',
+  'base.refresh': 'Refresh',
+  'base.emptyTitle': 'No captures yet',
+  'base.emptyDescription': 'Paste a link to start collecting.',
+  'base.deleteCaptureTitle': 'Delete capture?',
+  'base.deleteCaptureDescription': 'The capture and its scrape history will be hidden from Base.',
+  'base.cancel': 'Cancel',
+  'base.recaptureStarted': 'Re-capture started',
+  'base.captureDeleted': 'Capture deleted',
+  'base.scrapeFailed': 'Page fetch failed',
+  'base.jobStatus': 'Status',
+  'base.jobStatus.pending': 'Pending',
+  'base.jobStatus.running': 'Running',
+  'base.jobStatus.succeeded': 'Succeeded',
+  'base.jobStatus.failed': 'Failed',
+  'base.fetcher': 'Fetcher',
+  'base.createdAt': 'Created at',
+  'base.updatedAt': 'Updated at',
+  'base.error': 'Error',
+  'base.backToCaptures': 'Back to captures',
+  'base.noJobsTitle': 'No scrape jobs',
+  'base.noJobsDescription': 'This capture does not have any scrape history.',
+  'base.addNote': 'Add a note',
 };
 
 const simplifiedChinese: TranslationTable = {
@@ -240,6 +358,65 @@ const simplifiedChinese: TranslationTable = {
   'settings.utc': 'UTC（GMT+00:00）',
   'settings.noResults': '未找到设置',
   'settings.trySearch': '试试搜索主题、语言或会话。',
+  'navigation.base': 'Base',
+  'navigation.captures': '收藏',
+  'navigation.jobs': '抓取记录',
+  'overview.title': '欢迎回来',
+  'settings.features': '功能',
+  'settings.base': 'Base',
+  'settings.baseFetcher': '抓取服务',
+  'settings.baseFetcherDescription': '用于获取网页内容的服务。',
+  'settings.baseNotConfigured': '未配置',
+  'settings.baseApiKey': 'API 密钥',
+  'settings.baseApiKeyDescription': '用于向所选抓取服务认证请求。',
+  'settings.baseApiKeyPlaceholder': '输入 API 密钥',
+  'settings.baseMaxAttempts': '最大尝试次数',
+  'settings.baseMaxAttemptsDescription': '每个抓取任务的总请求次数，1 到 10。',
+  'settings.baseConcurrency': '抓取并发数',
+  'settings.baseConcurrencyDescription': '同时运行的抓取任务上限，1 到 5。',
+  'base.captureAdded': '已收藏',
+  'base.captureExists': '这个链接已经收藏过了',
+  'base.link': '链接',
+  'base.linkPlaceholder': '粘贴链接…',
+  'base.note': '备注',
+  'base.notePlaceholder': '可以写点想法',
+  'base.composerHint': '先收藏，之后再整理。',
+  'base.configureFetcherFirst': '请先在设置中配置抓取服务。',
+  'base.activeJobExists': '这条收藏已有正在运行的抓取任务。',
+  'base.captureNotFound': '找不到这条收藏。',
+  'base.invalidUrl': '请输入有效的 HTTP 或 HTTPS 链接。',
+  'base.capture': '收藏',
+  'base.addCapture': '添加收藏',
+  'base.title': '标题',
+  'base.openLink': '打开链接',
+  'base.viewJobs': '查看抓取记录',
+  'base.recapture': '重新抓取',
+  'base.delete': '删除',
+  'base.captureFilter': '筛选收藏',
+  'base.allCaptures': '全部',
+  'base.noSuccessfulCapture': '尚未成功抓取',
+  'base.refresh': '刷新',
+  'base.emptyTitle': '还没有收藏',
+  'base.emptyDescription': '粘贴一个链接开始收集。',
+  'base.deleteCaptureTitle': '删除这条收藏？',
+  'base.deleteCaptureDescription': '该收藏及其抓取历史将从 Base 中隐藏。',
+  'base.cancel': '取消',
+  'base.recaptureStarted': '已开始重新抓取',
+  'base.captureDeleted': '收藏已删除',
+  'base.scrapeFailed': '网页抓取失败',
+  'base.jobStatus': '状态',
+  'base.jobStatus.pending': '等待中',
+  'base.jobStatus.running': '抓取中',
+  'base.jobStatus.succeeded': '已成功',
+  'base.jobStatus.failed': '已失败',
+  'base.fetcher': '抓取服务',
+  'base.createdAt': '创建时间',
+  'base.updatedAt': '更新时间',
+  'base.error': '错误',
+  'base.backToCaptures': '返回收藏',
+  'base.noJobsTitle': '没有抓取记录',
+  'base.noJobsDescription': '这条收藏还没有抓取历史。',
+  'base.addNote': '添加备注',
 };
 
 const traditionalChinese: TranslationTable = {
@@ -323,6 +500,65 @@ const traditionalChinese: TranslationTable = {
   'settings.utc': 'UTC（GMT+00:00）',
   'settings.noResults': '找不到設定',
   'settings.trySearch': '試著搜尋主題、語言或工作階段。',
+  'navigation.base': 'Base',
+  'navigation.captures': '收藏',
+  'navigation.jobs': '抓取紀錄',
+  'overview.title': '歡迎回來',
+  'settings.features': '功能',
+  'settings.base': 'Base',
+  'settings.baseFetcher': '抓取服務',
+  'settings.baseFetcherDescription': '用於取得網頁內容的服務。',
+  'settings.baseNotConfigured': '尚未設定',
+  'settings.baseApiKey': 'API 金鑰',
+  'settings.baseApiKeyDescription': '用於向所選抓取服務驗證請求。',
+  'settings.baseApiKeyPlaceholder': '輸入 API 金鑰',
+  'settings.baseMaxAttempts': '最大嘗試次數',
+  'settings.baseMaxAttemptsDescription': '每個抓取工作的總請求次數，1 到 10。',
+  'settings.baseConcurrency': '抓取並行數',
+  'settings.baseConcurrencyDescription': '同時執行的抓取工作上線，1 到 5。',
+  'base.captureAdded': '已收藏',
+  'base.captureExists': '這個連結已經收藏過了',
+  'base.link': '連結',
+  'base.linkPlaceholder': '貼上連結…',
+  'base.note': '備註',
+  'base.notePlaceholder': '可以寫點想法',
+  'base.composerHint': '先收藏，之後再整理。',
+  'base.configureFetcherFirst': '請先在設定中設定抓取服務。',
+  'base.activeJobExists': '這筆收藏已有正在執行的抓取工作。',
+  'base.captureNotFound': '找不到這筆收藏。',
+  'base.invalidUrl': '請輸入有效的 HTTP 或 HTTPS 連結。',
+  'base.capture': '收藏',
+  'base.addCapture': '新增收藏',
+  'base.title': '標題',
+  'base.openLink': '開啟連結',
+  'base.viewJobs': '查看抓取紀錄',
+  'base.recapture': '重新抓取',
+  'base.delete': '刪除',
+  'base.captureFilter': '篩選收藏',
+  'base.allCaptures': '全部',
+  'base.noSuccessfulCapture': '尚未成功抓取',
+  'base.refresh': '重新整理',
+  'base.emptyTitle': '還沒有收藏',
+  'base.emptyDescription': '貼上一個連結開始收集。',
+  'base.deleteCaptureTitle': '刪除這筆收藏？',
+  'base.deleteCaptureDescription': '這筆收藏及其抓取紀錄將從 Base 中隱藏。',
+  'base.cancel': '取消',
+  'base.recaptureStarted': '已開始重新抓取',
+  'base.captureDeleted': '收藏已刪除',
+  'base.scrapeFailed': '網頁抓取失敗',
+  'base.jobStatus': '狀態',
+  'base.jobStatus.pending': '等待中',
+  'base.jobStatus.running': '抓取中',
+  'base.jobStatus.succeeded': '已成功',
+  'base.jobStatus.failed': '已失敗',
+  'base.fetcher': '抓取服務',
+  'base.createdAt': '建立時間',
+  'base.updatedAt': '更新時間',
+  'base.error': '錯誤',
+  'base.backToCaptures': '返回收藏',
+  'base.noJobsTitle': '沒有抓取紀錄',
+  'base.noJobsDescription': '這筆收藏還沒有抓取紀錄。',
+  'base.addNote': '新增備註',
 };
 
 const japanese: TranslationTable = {
@@ -406,6 +642,65 @@ const japanese: TranslationTable = {
   'settings.utc': 'UTC（GMT+00:00）',
   'settings.noResults': '設定が見つかりません',
   'settings.trySearch': 'テーマ、言語、セッションを検索してみてください。',
+  'navigation.base': 'Base',
+  'navigation.captures': 'キャプチャ',
+  'navigation.jobs': '取得履歴',
+  'overview.title': 'おかえりなさい',
+  'settings.features': '機能',
+  'settings.base': 'Base',
+  'settings.baseFetcher': 'フェッチャー',
+  'settings.baseFetcherDescription': 'ページ内容を取得するサービス。',
+  'settings.baseNotConfigured': '未設定',
+  'settings.baseApiKey': 'API キー',
+  'settings.baseApiKeyDescription': '選択した取得サービスへのリクエストを認証します。',
+  'settings.baseApiKeyPlaceholder': 'API キーを入力',
+  'settings.baseMaxAttempts': '最大試行回数',
+  'settings.baseMaxAttemptsDescription': 'ジョブごとの総リクエスト数（1〜10）。',
+  'settings.baseConcurrency': '取得の同時実行数',
+  'settings.baseConcurrencyDescription': '同時に実行する取得ジョブの上限（1〜5）。',
+  'base.captureAdded': 'キャプチャしました',
+  'base.captureExists': 'このリンクはすでにキャプチャ済みです',
+  'base.link': 'リンク',
+  'base.linkPlaceholder': 'リンクを貼り付け…',
+  'base.note': 'メモ',
+  'base.notePlaceholder': '思ったことを書く',
+  'base.composerHint': 'まずキャプチャ。整理は後で。',
+  'base.configureFetcherFirst': '先に設定でフェッチャーを構成してください。',
+  'base.activeJobExists': 'このキャプチャには実行中の取得ジョブがあります。',
+  'base.captureNotFound': 'キャプチャが見つかりません。',
+  'base.invalidUrl': '有効な HTTP または HTTPS URL を入力してください。',
+  'base.capture': 'キャプチャ',
+  'base.addCapture': 'キャプチャを追加',
+  'base.title': 'タイトル',
+  'base.openLink': 'リンクを開く',
+  'base.viewJobs': '取得履歴を見る',
+  'base.recapture': '再取得',
+  'base.delete': '削除',
+  'base.captureFilter': 'キャプチャを絞り込む',
+  'base.allCaptures': 'すべて',
+  'base.noSuccessfulCapture': '取得未成功',
+  'base.refresh': '更新',
+  'base.emptyTitle': 'キャプチャはまだありません',
+  'base.emptyDescription': 'リンクを貼り付けて収集を始めましょう。',
+  'base.deleteCaptureTitle': 'キャプチャを削除しますか？',
+  'base.deleteCaptureDescription': 'キャプチャと取得履歴は Base から非表示になります。',
+  'base.cancel': 'キャンセル',
+  'base.recaptureStarted': '再取得を開始しました',
+  'base.captureDeleted': 'キャプチャを削除しました',
+  'base.scrapeFailed': 'ページの取得に失敗しました',
+  'base.jobStatus': '状態',
+  'base.jobStatus.pending': '待機中',
+  'base.jobStatus.running': '取得中',
+  'base.jobStatus.succeeded': '成功',
+  'base.jobStatus.failed': '失敗',
+  'base.fetcher': 'フェッチャー',
+  'base.createdAt': '作成日時',
+  'base.updatedAt': '更新日時',
+  'base.error': 'エラー',
+  'base.backToCaptures': 'キャプチャに戻る',
+  'base.noJobsTitle': '取得履歴はありません',
+  'base.noJobsDescription': 'このキャプチャには取得履歴がありません。',
+  'base.addNote': 'メモを追加',
 };
 
 const translations: Record<Locale, TranslationTable> = {

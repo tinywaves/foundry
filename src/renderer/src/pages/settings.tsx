@@ -3,9 +3,11 @@
 import { Layout } from '@astryxdesign/core/Layout';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   getConfigFolder,
   getSettings,
+  setBase,
   setLanguage,
   setRegion,
   setTheme,
@@ -20,7 +22,10 @@ import type { PanelId, SettingsState, UpdateSetting } from './settings/types';
 import { INITIAL_SETTINGS } from './settings/types';
 
 export default function SettingsPage() {
-  const [activePanel, setActivePanel] = useState<PanelId>(DEFAULT_PANEL);
+  const [searchParams] = useSearchParams();
+  const [activePanel, setActivePanel] = useState<PanelId>(
+    searchParams.get('panel') === 'base' ? 'base' : DEFAULT_PANEL,
+  );
   const queryClient = useQueryClient();
   const settingsQuery = useQuery({ queryKey: settingsKeys.current(), queryFn: getSettings });
   const configFolderQuery = useQuery({ queryKey: ['settings', 'config-folder'], queryFn: getConfigFolder });
@@ -28,6 +33,7 @@ export default function SettingsPage() {
     storedSettings: Awaited<ReturnType<typeof setTheme>>,
   ) => queryClient.setQueryData(settingsKeys.current(), storedSettings);
   const themeMutation = useMutation({ mutationFn: setTheme, onSuccess: updateSettings });
+  const baseMutation = useMutation({ mutationFn: setBase, onSuccess: updateSettings });
   const languageMutation = useMutation({ mutationFn: setLanguage, onSuccess: updateSettings });
   const regionMutation = useMutation({ mutationFn: setRegion, onSuccess: updateSettings });
   const timezoneMutation = useMutation({ mutationFn: setTimezone, onSuccess: updateSettings });
@@ -36,6 +42,7 @@ export default function SettingsPage() {
     language: settingsQuery.data?.workspace['language-region'].language ?? INITIAL_SETTINGS.language,
     region: settingsQuery.data?.workspace['language-region']['region-format'] ?? INITIAL_SETTINGS.region,
     timezone: settingsQuery.data?.workspace['language-region']['time-zone'] ?? INITIAL_SETTINGS.timezone,
+    base: settingsQuery.data?.features.base ?? INITIAL_SETTINGS.base,
   };
   const search = useSettingsSearch(setActivePanel);
   const selectPanel = (panel: PanelId) => {
@@ -58,6 +65,10 @@ export default function SettingsPage() {
       }
       case 'timezone': {
         timezoneMutation.mutate(value as SettingsState['timezone']);
+        break;
+      }
+      case 'base': {
+        baseMutation.mutate(value as SettingsState['base']);
         break;
       }
       default: {

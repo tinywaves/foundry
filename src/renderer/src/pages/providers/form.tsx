@@ -12,7 +12,7 @@ import { Token } from '@astryxdesign/core/Token';
 import { InputGroup, InputGroupText } from '@astryxdesign/core/InputGroup';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Popover } from '@astryxdesign/core/Popover';
-import { useToast } from '@astryxdesign/core';
+import { useAppToast } from '@renderer/use-app-toast';
 import { ArrowPathIcon, EyeIcon, EyeSlashIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 import * as stylex from '@stylexjs/stylex';
 import type { CustomModel, ProviderInput, ProviderProtocol, RemoteModel } from '../../../../shared/providers';
@@ -33,7 +33,7 @@ export default function ProviderFormPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const toast = useToast();
+  const toast = useAppToast();
   const [name, setName] = useState('');
   const [protocol, setProtocol] = useState<ProviderProtocol>('openai-responses');
   const [baseURL, setBaseURL] = useState('');
@@ -90,8 +90,6 @@ export default function ProviderFormPage() {
       toast({
         body: t('providers.failedFetchModels'),
         type: 'error',
-        isAutoHide: true,
-        autoHideDuration: 2500,
       });
     } finally {
       setIsFetching(false);

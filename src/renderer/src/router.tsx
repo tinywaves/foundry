@@ -8,6 +8,8 @@ import SettingsPage from './pages/settings';
 import NotFoundPage from './pages/not-found';
 import ProvidersPage from './pages/providers';
 import ProviderFormPage from './pages/providers/form';
+import CapturesPage from './pages/base/captures';
+import JobsPage from './pages/base/jobs';
 
 export const router = createHashRouter([
   {
@@ -22,6 +24,16 @@ export const router = createHashRouter([
         element: <SidebarLayout />,
         children: [
           { path: 'overview', element: <OverviewPage />, handle: { title: 'Overview' } },
+          {
+            path: 'base/captures',
+            element: <CapturesPage />,
+            handle: { title: 'Captures' },
+          },
+          {
+            path: 'base/captures/:captureId/jobs',
+            element: <JobsPage />,
+            handle: { title: 'Jobs' },
+          },
           { path: 'prompts', element: <PromptsPage />, handle: { title: 'Prompts' } },
           {
             path: 'providers',

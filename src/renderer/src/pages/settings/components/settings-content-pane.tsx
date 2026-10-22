@@ -4,6 +4,7 @@ import * as stylex from '@stylexjs/stylex';
 import { AppearancePanel } from '../panels/appearance';
 import { LanguagePanel } from '../panels/language-region';
 import { AdvancedPanel } from '../panels/advanced';
+import { BasePanel } from '../panels/base';
 import { row } from './settings-row-styles';
 import { openConfigFolder } from '@renderer/settings';
 import type { PanelId, PanelProps } from '../types';
@@ -33,6 +34,9 @@ export function SettingsContentPane({
       }
       case 'language': {
         return <LanguagePanel settings={settings} update={update} />;
+      }
+      case 'base': {
+        return <BasePanel settings={settings} update={update} />;
       }
       case 'advanced': {
         return (

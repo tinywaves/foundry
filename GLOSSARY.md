@@ -31,3 +31,31 @@ _Avoid_: inactive Provider
 **Deleted Provider**:
 A logically deleted Provider retained in storage for references and audit history, but excluded from normal Provider listings and new use.
 _Avoid_: permanently deleted Provider
+
+## Collection
+
+**Capture**:
+A user-created saved record for a link in Foundry. A Capture preserves the user's original URL and may later receive fetched page information; it is not yet a curated concept or grouped collection.
+_Avoid_: Item (for an unorganized Capture), Source (when referring to the Foundry record)
+
+**Base**:
+Foundry's configurable workspace for collecting and later organizing personal captures. Base is a product area, not a model-service Provider.
+
+**Fetcher**:
+A configured external service used by a Scrape Job to retrieve page information. A Fetcher is not a model-service Provider.
+
+**Scrape Job**:
+A background operation that retrieves page information for a Capture using the currently configured fetcher. A Capture may have multiple Scrape Jobs over its lifetime.
+
+**Latest Scrape Job**:
+The most recently created Scrape Job for a Capture, regardless of whether it succeeded or failed. It represents the Capture's current fetch activity.
+
+**Latest Successful Scrape Job**:
+The most recent Scrape Job that successfully produced page content for a Capture. Its result is the current captured content for that Capture.
+
+**Successful Capture**:
+A Capture with at least one successful Scrape Job. This is a derived condition rather than a persisted Capture status.
+_Avoid_: capturable, fetched Capture
+
+**Re-capture**:
+A user-triggered request to create a new Scrape Job for an existing Capture. Re-capture refreshes the captured page data regardless of whether the previous job succeeded or failed.

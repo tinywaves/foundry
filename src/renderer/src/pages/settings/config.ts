@@ -1,4 +1,11 @@
-import { AdjustmentsHorizontalIcon, GlobeAltIcon, PaintBrushIcon } from '@heroicons/react/24/outline';
+import {
+  AdjustmentsHorizontalIcon,
+  BarsArrowUpIcon,
+  BugAntIcon,
+  CircleStackIcon,
+  GlobeAltIcon,
+  PaintBrushIcon,
+} from '@heroicons/react/24/outline';
 import type { PanelConfig, PanelId, SearchableSetting } from './types';
 
 export const PANEL_GROUPS: Array<{ label: string; panels: PanelConfig[] }> = [
@@ -25,6 +32,17 @@ export const PANEL_GROUPS: Array<{ label: string; panels: PanelConfig[] }> = [
       },
     ],
   },
+  {
+    label: 'Features',
+    panels: [
+      {
+        id: 'base',
+        label: 'Base',
+        description: 'Page fetching, retries, and concurrency.',
+        icon: CircleStackIcon,
+      },
+    ],
+  },
 ];
 export const PANELS = PANEL_GROUPS.flatMap((group) => group.panels);
 export const DEFAULT_PANEL: PanelId = 'appearance';
@@ -40,6 +58,18 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
     description: 'Used for scheduling and timestamps',
     panel: 'language',
     icon: GlobeAltIcon,
+  },
+  {
+    title: 'Fetcher',
+    description: 'Choose the service used to capture pages',
+    panel: 'base',
+    icon: BugAntIcon,
+  },
+  {
+    title: 'Scrape concurrency',
+    description: 'Limit simultaneous page fetches',
+    panel: 'base',
+    icon: BarsArrowUpIcon,
   },
 ];
 export function panelConfig(id: PanelId): PanelConfig {

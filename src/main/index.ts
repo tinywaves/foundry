@@ -4,6 +4,10 @@ import process from 'node:process';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import icon from '../../resources/icon.png?asset';
 import { openFoundryDatabase } from './database';
+import { CaptureService } from './base/captures';
+import { ScrapeJobRunner } from './base/scrape-job-runner';
+import type { CaptureFilter } from '../shared/base';
+import { initializeLogger, log } from './logger';
 import {
   ensureFoundryHome,
   getFoundryDatabasePath,
@@ -21,6 +25,7 @@ import type { ProviderInput } from '../shared/providers';
 import {
   getCurrentUsedProviderIds,
   readSettings,
+  updateBaseSettings,
   updateRegion,
   updateLanguage,
   updateSettings,
@@ -75,12 +80,23 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 void app.whenReady().then(() => {
+  initializeLogger();
   // Set app user model id for windows
   electronApp.setAppUserModelId('foundry');
 
   const configFolderPath = ensureFoundryHome();
   const database = openFoundryDatabase(getFoundryDatabasePath());
   const settingsPath = getFoundrySettingsPath();
+  const scrapeJobRunner = new ScrapeJobRunner(
+    database.db,
+    settingsPath,
+    (event) => {
+      for (const window of BrowserWindow.getAllWindows()) {
+        window.webContents.send('base:scrape-job-finished', event);
+      }
+    },
+  );
+  const captureService = new CaptureService(database.db, settingsPath, scrapeJobRunner);
   app.on('will-quit', () => {
     database.client.close();
   });
@@ -113,6 +129,12 @@ void app.whenReady().then(() => {
   ipcMain.handle('settings:set-language', (_, language: LanguageMode) => updateLanguage(settingsPath, language));
   ipcMain.handle('settings:set-region', (_, region: RegionCode) => updateRegion(settingsPath, region));
   ipcMain.handle('settings:set-timezone', (_, timezone: TimeZoneCode) => updateTimezone(settingsPath, timezone));
+  ipcMain.handle('settings:set-base', (_, patch: Parameters<typeof updateBaseSettings>[1]) => {
+    log.info('ipc_call', { channel: 'settings:set-base' });
+    const settings = updateBaseSettings(settingsPath, patch);
+    scrapeJobRunner.notifySettingsChanged();
+    return settings;
+  });
   ipcMain.handle('settings:open-config-folder', async () => {
     const configFolder = ensureFoundryHome();
     writeSettings(settingsPath, readSettings(settingsPath));
@@ -147,7 +169,33 @@ void app.whenReady().then(() => {
     (_, input: Pick<ProviderInput, 'protocol' | 'baseURL' | 'apiKey'>) => fetchModelsForInput(input),
   );
 
+  const handleBaseIpc = (
+    channel: string,
+    handler: (...args: unknown[]) => unknown,
+  ) => {
+    ipcMain.handle(channel, (_event, ...args: unknown[]) => {
+      log.info('ipc_call', { channel });
+      return handler(...args);
+    });
+  };
+
+  handleBaseIpc('base:captures:list', (filter) => captureService.list(filter as CaptureFilter | undefined));
+  handleBaseIpc('base:captures:create', (input) => (
+    captureService.create(input as Parameters<typeof captureService.create>[0])
+  ));
+  handleBaseIpc('base:captures:recapture', (captureId) => (
+    captureService.recapture(captureId as string)
+  ));
+  handleBaseIpc('base:captures:delete', (captureId) => (
+    captureService.delete(captureId as string)
+  ));
+  handleBaseIpc('base:captures:update-note', (captureId, userNote) => (
+    captureService.updateNote(captureId as string, userNote as string)
+  ));
+  handleBaseIpc('base:jobs:list', (captureId) => captureService.listJobs(captureId as string));
+
   createWindow();
+  scrapeJobRunner.start();
 
   app.on('activate', () => {
     // On macOS it's common to re-create a window in the app when the

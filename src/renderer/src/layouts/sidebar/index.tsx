@@ -17,6 +17,7 @@ export default function SidebarLayout() {
   const navigationLabel = (id: string, fallback: string) => {
     const labels: Record<string, string> = {
       overview: t('navigation.overview'),
+      base: t('navigation.base'),
       prompts: t('navigation.prompts'),
       providers: t('navigation.providers'),
       settings: t('navigation.settings'),

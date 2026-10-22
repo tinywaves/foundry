@@ -9,6 +9,25 @@ export type TimeZoneCode
     | 'Asia/Tokyo'
     | 'UTC';
 
+export type FetcherType = 'firecrawl' | 'deepseek';
+
+export type BaseSettings = {
+  fetcher: FetcherType | null;
+  maxAttempts: number;
+  scrapeConcurrency: number;
+  firecrawl: {
+    apiKey: string;
+  };
+  deepseek: {
+    apiKey: string;
+  };
+};
+
+export type SettingsFeatures = {
+  base: BaseSettings;
+  [key: string]: unknown;
+};
+
 export type SettingsSnapshot = {
   workspace: {
     'appearance': {
@@ -20,4 +39,5 @@ export type SettingsSnapshot = {
       'time-zone': TimeZoneCode;
     };
   };
+  features: SettingsFeatures;
 };

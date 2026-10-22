@@ -1,10 +1,44 @@
 import process from 'node:process';
+import type { IpcRendererEvent } from 'electron';
 import { contextBridge, ipcRenderer } from 'electron';
 import { electronAPI } from '@electron-toolkit/preload';
-import type { ProviderApi, SettingsApi } from './api';
+import type { BaseApi, ProviderApi, SettingsApi } from './api';
+import type { ScrapeJobFinishedEvent } from '../shared/base';
+
+const baseSubscriptionState = { nextId: 0 };
+const baseSubscriptions = new Map<
+  number,
+  (event: IpcRendererEvent, payload: ScrapeJobFinishedEvent) => void
+>();
 
 // Custom APIs for renderer
-const api: { providers: ProviderApi; settings: SettingsApi } = {
+const api: { base: BaseApi; providers: ProviderApi; settings: SettingsApi } = {
+  base: {
+    listCaptures: (filter) => ipcRenderer.invoke('base:captures:list', filter),
+    createCapture: (input) => ipcRenderer.invoke('base:captures:create', input),
+    recapture: (captureId) => ipcRenderer.invoke('base:captures:recapture', captureId),
+    deleteCapture: (captureId) => ipcRenderer.invoke('base:captures:delete', captureId),
+    updateNote: (captureId, userNote) => ipcRenderer.invoke('base:captures:update-note', captureId, userNote),
+    listJobs: (captureId) => ipcRenderer.invoke('base:jobs:list', captureId),
+    onScrapeJobFinished: (listener) => {
+      const subscriptionId = baseSubscriptionState.nextId;
+      baseSubscriptionState.nextId += 1;
+      const handler = (_event: IpcRendererEvent, payload: ScrapeJobFinishedEvent) => {
+        listener(payload);
+      };
+      baseSubscriptions.set(subscriptionId, handler);
+      ipcRenderer.on('base:scrape-job-finished', handler);
+      return subscriptionId;
+    },
+    offScrapeJobFinished: (subscriptionId) => {
+      const handler = baseSubscriptions.get(subscriptionId);
+      if (!handler) {
+        return;
+      }
+      ipcRenderer.removeListener('base:scrape-job-finished', handler);
+      baseSubscriptions.delete(subscriptionId);
+    },
+  },
   settings: {
     get: () => ipcRenderer.invoke('settings:get'),
     getConfigFolder: () => ipcRenderer.invoke('settings:get-config-folder'),
@@ -12,6 +46,7 @@ const api: { providers: ProviderApi; settings: SettingsApi } = {
     setLanguage: (language) => ipcRenderer.invoke('settings:set-language', language),
     setRegion: (region) => ipcRenderer.invoke('settings:set-region', region),
     setTimezone: (timezone) => ipcRenderer.invoke('settings:set-timezone', timezone),
+    setBase: (patch) => ipcRenderer.invoke('settings:set-base', patch),
     openConfigFolder: () => ipcRenderer.invoke('settings:open-config-folder'),
   },
   providers: {

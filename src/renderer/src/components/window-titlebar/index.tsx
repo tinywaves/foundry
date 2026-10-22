@@ -27,6 +27,8 @@ export default function WindowTitlebar({ collapsible, showBackButton = false }: 
   const titleHandle = matches.findLast((match) => isRouteHandle(match.handle))?.handle;
   const titleTranslations: Record<string, string> = {
     'Overview': t('navigation.overview'),
+    'Captures': t('navigation.captures'),
+    'Jobs': t('navigation.jobs'),
     'Prompts': t('navigation.prompts'),
     'Providers': t('navigation.providers'),
     'Settings': t('navigation.settings'),

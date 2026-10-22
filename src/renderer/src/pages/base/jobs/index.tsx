@@ -20,12 +20,12 @@ import {
   listScrapeJobs,
   recapture,
   subscribeToScrapeJobFinished,
-} from '@renderer/base';
-import { getSettings, settingsKeys } from '@renderer/settings';
-import { baseErrorKey } from '@renderer/base-error-key';
-import { formatTimestamp } from '@renderer/format-timestamp';
+} from '@renderer/apis/base';
+import { getSettings, settingsKeys } from '@renderer/apis/settings';
+import { baseErrorKey } from '@renderer/pages/base/base-error-key';
+import { formatTimestamp } from '@renderer/utils/format-timestamp';
 import { useI18n } from '@renderer/i18n/use-i18n';
-import { useAppToast } from '@renderer/use-app-toast';
+import { useAppToast } from '@renderer/hooks/use-app-toast';
 
 const statusVariant: Record<ScrapeJobStatus, 'neutral' | 'success' | 'error'> = {
   pending: 'neutral',

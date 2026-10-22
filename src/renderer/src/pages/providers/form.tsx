@@ -12,11 +12,11 @@ import { Token } from '@astryxdesign/core/Token';
 import { InputGroup, InputGroupText } from '@astryxdesign/core/InputGroup';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Popover } from '@astryxdesign/core/Popover';
-import { useAppToast } from '@renderer/use-app-toast';
+import { useAppToast } from '@renderer/hooks/use-app-toast';
 import { ArrowPathIcon, EyeIcon, EyeSlashIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 import * as stylex from '@stylexjs/stylex';
 import type { CustomModel, ProviderInput, ProviderProtocol, RemoteModel } from '../../../../shared/providers';
-import { providerKeys } from '@renderer/providers';
+import { providerKeys } from '@renderer/apis/providers';
 import { styles } from './styles';
 import { useI18n } from '@renderer/i18n/use-i18n';
 

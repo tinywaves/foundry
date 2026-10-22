@@ -13,7 +13,7 @@ import {
   setTheme,
   setTimezone,
   settingsKeys,
-} from '../settings';
+} from '../apis/settings';
 import { SettingsContentPane } from './settings/components/settings-content-pane';
 import { SettingsSideNav } from './settings/components/settings-side-nav';
 import { useSettingsSearch } from './settings/search';

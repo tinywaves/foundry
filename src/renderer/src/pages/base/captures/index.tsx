@@ -32,10 +32,10 @@ import {
   listCaptures,
   recapture,
   subscribeToScrapeJobFinished,
-} from '@renderer/base';
-import { baseErrorKey } from '@renderer/base-error-key';
+} from '@renderer/apis/base';
+import { baseErrorKey } from '@renderer/pages/base/base-error-key';
 import { useI18n } from '@renderer/i18n/use-i18n';
-import { useAppToast } from '@renderer/use-app-toast';
+import { useAppToast } from '@renderer/hooks/use-app-toast';
 import { CaptureDialog } from './capture-dialog';
 import { CapturesEmptyState } from './empty-state';
 import { NoteCell } from './note-cell';

@@ -6,7 +6,7 @@ import { LanguagePanel } from '../panels/language-region';
 import { AdvancedPanel } from '../panels/advanced';
 import { BasePanel } from '../panels/base';
 import { row } from './settings-row-styles';
-import { openConfigFolder } from '@renderer/settings';
+import { openConfigFolder } from '@renderer/apis/settings';
 import type { PanelId, PanelProps } from '../types';
 
 const styles = stylex.create({

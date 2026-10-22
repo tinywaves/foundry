@@ -14,7 +14,7 @@ import { Popover } from '@astryxdesign/core/Popover';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { PencilSquareIcon, Square3Stack3DIcon, TrashIcon } from '@heroicons/react/24/outline';
 import type { ProviderListItem } from '../../../../shared/providers';
-import { listProviders, providerKeys } from '@renderer/providers';
+import { listProviders, providerKeys } from '@renderer/apis/providers';
 import { ProviderEmptyState } from './empty-state';
 import { styles } from './styles';
 import { useI18n } from '@renderer/i18n/use-i18n';

@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Theme } from '@astryxdesign/core';
-import { foundryTheme } from '@renderer/themes/foundry/foundry-theme';
-import { getSettings, settingsKeys } from '@renderer/settings';
+import { foundryTheme } from '@renderer/utils/theme';
+import { getSettings, settingsKeys } from '@renderer/apis/settings';
 
 export default function RendererTheme({ children }: { children: ReactNode }) {
   const settingsQuery = useQuery({

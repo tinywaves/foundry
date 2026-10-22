@@ -3,10 +3,10 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@astryxdesign/core/Button';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import type { CaptureSummary } from '../../../../../shared/base';
-import { baseKeys, updateCaptureNote } from '@renderer/base';
-import { baseErrorKey } from '@renderer/base-error-key';
+import { baseKeys, updateCaptureNote } from '@renderer/apis/base';
+import { baseErrorKey } from '@renderer/pages/base/base-error-key';
 import { useI18n } from '@renderer/i18n/use-i18n';
-import { useAppToast } from '@renderer/use-app-toast';
+import { useAppToast } from '@renderer/hooks/use-app-toast';
 import { styles } from './styles';
 
 export function NoteCell({ capture }: { capture: CaptureSummary }) {

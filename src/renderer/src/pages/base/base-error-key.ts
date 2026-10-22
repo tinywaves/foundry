@@ -1,5 +1,5 @@
-import type { BaseErrorCode } from '../../shared/base';
-import type { TranslationKey } from './i18n';
+import type { BaseErrorCode } from '../../../../shared/base';
+import type { TranslationKey } from '@renderer/i18n';
 
 export function baseErrorKey(code: BaseErrorCode): TranslationKey {
   switch (code) {

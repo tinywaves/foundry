@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import i18n from 'i18next';
 import { useTranslation } from 'react-i18next';
-import type { LanguageMode } from '@renderer/settings';
+import type { LanguageMode } from '@renderer/apis/settings';
 import type { Locale, TranslationKey } from './index';
 
 export interface I18nContextValue {

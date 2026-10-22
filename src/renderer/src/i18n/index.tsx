@@ -7,8 +7,8 @@ import zhCNMessages from '@astryxdesign/core/locales/zh-CN.generated.js';
 import zhTWMessages from '@astryxdesign/core/locales/zh-TW.generated.js';
 import jaJPMessages from '@astryxdesign/core/locales/ja-JP.generated.js';
 import { useQuery } from '@tanstack/react-query';
-import { getSettings, settingsKeys } from '@renderer/settings';
-import type { LanguageMode } from '@renderer/settings';
+import { getSettings, settingsKeys } from '@renderer/apis/settings';
+import type { LanguageMode } from '@renderer/apis/settings';
 
 export type Locale = Exclude<LanguageMode, 'system'>;
 

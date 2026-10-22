@@ -1,4 +1,4 @@
-import type { ProviderInput } from '../../shared/providers';
+import type { ProviderInput } from '../../../shared/providers';
 
 export const providerKeys = {
   all: ['providers'] as const,

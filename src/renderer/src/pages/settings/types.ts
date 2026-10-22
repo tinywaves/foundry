@@ -5,7 +5,7 @@ import type {
   RegionCode,
   ThemeMode,
   TimeZoneCode,
-} from '@renderer/settings';
+} from '@renderer/apis/settings';
 
 export type {
   BaseSettings,
@@ -13,7 +13,7 @@ export type {
   RegionCode,
   ThemeMode,
   TimeZoneCode,
-} from '@renderer/settings';
+} from '@renderer/apis/settings';
 
 export type PanelId = 'appearance' | 'language' | 'base' | 'advanced';
 export type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;

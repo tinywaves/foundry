@@ -1,4 +1,4 @@
-import type { LanguageMode, RegionCode, SettingsSnapshot, TimeZoneCode } from '../../shared/settings';
+import type { LanguageMode, RegionCode, SettingsSnapshot, TimeZoneCode } from '../../../shared/settings';
 
 const REGION_LOCALES: Record<RegionCode, string> = {
   US: 'en-US',

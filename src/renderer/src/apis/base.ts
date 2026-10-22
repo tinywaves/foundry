@@ -6,7 +6,7 @@ import type {
   CreateCaptureResult,
   ScrapeJobFinishedEvent,
   ScrapeJobSummary,
-} from '../../shared/base';
+} from '../../../shared/base';
 
 export const baseKeys = {
   all: ['base'] as const,

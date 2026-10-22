@@ -5,7 +5,7 @@ import type {
   SettingsSnapshot,
   ThemeMode,
   TimeZoneCode,
-} from '../../shared/settings';
+} from '../../../shared/settings';
 
 export type {
   BaseSettings,
@@ -15,7 +15,7 @@ export type {
   SettingsSnapshot,
   ThemeMode,
   TimeZoneCode,
-} from '../../shared/settings';
+} from '../../../shared/settings';
 
 export const settingsKeys = {
   current: () => ['settings', 'current'] as const,

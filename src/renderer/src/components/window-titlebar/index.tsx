@@ -38,6 +38,7 @@ export default function WindowTitlebar({ collapsible, showBackButton = false }: 
   };
   const descriptionTranslations: Record<string, string> = {
     'Manage the model service connections used by Foundry.': t('navigation.providersDescription'),
+    'Collect links first, then organize them later.': t('navigation.capturesDescription'),
     'Connect a model service using one of Foundry\'s supported protocols.': t('providers.formDescription'),
   };
 

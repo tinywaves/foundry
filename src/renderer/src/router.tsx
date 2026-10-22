@@ -27,7 +27,10 @@ export const router = createHashRouter([
           {
             path: 'base/captures',
             element: <CapturesPage />,
-            handle: { title: 'Captures' },
+            handle: {
+              title: 'Captures',
+              description: 'Collect links first, then organize them later.',
+            },
           },
           {
             path: 'base/captures/:captureId/jobs',

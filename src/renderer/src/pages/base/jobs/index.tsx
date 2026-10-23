@@ -69,7 +69,11 @@ export default function JobsPage() {
     if (event.captureId !== captureId) {
       return;
     }
-    void queryClient.invalidateQueries({ queryKey: baseKeys.jobs(captureId) });
+    void queryClient.invalidateQueries({
+      queryKey: event.status === 'succeeded'
+        ? baseKeys.all
+        : baseKeys.jobs(captureId),
+    });
     if (event.status === 'failed') {
       toast({
         body: t('base.scrapeFailed'),

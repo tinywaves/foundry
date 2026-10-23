@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowPathIcon,
-  QueueListIcon,
+  ArrowPathRoundedSquareIcon,
+  ClipboardDocumentListIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline';
 import { Button } from '@astryxdesign/core/Button';
@@ -169,7 +170,7 @@ export default function CapturesPage() {
           <IconButton
             label={t('base.viewJobs')}
             tooltip={t('base.viewJobs')}
-            icon={<QueueListIcon />}
+            icon={<ClipboardDocumentListIcon />}
             size="sm"
             variant="ghost"
             onClick={() => {
@@ -179,7 +180,7 @@ export default function CapturesPage() {
           <IconButton
             label={t('base.recapture')}
             tooltip={t('base.recapture')}
-            icon={<ArrowPathIcon />}
+            icon={<ArrowPathRoundedSquareIcon />}
             size="sm"
             variant="ghost"
             onClick={() => {

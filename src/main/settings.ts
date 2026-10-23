@@ -3,18 +3,18 @@ import path from 'node:path';
 import type {
   BaseSettings,
   LanguageMode,
-  RegionCode,
   SettingsFeatures,
   SettingsSnapshot,
   ThemeMode,
+  TimeFormatPattern,
   TimeZoneCode,
 } from '../shared/settings';
 
 export type {
   BaseSettings,
   LanguageMode,
-  RegionCode,
   ThemeMode,
+  TimeFormatPattern,
   TimeZoneCode,
 } from '../shared/settings';
 
@@ -25,7 +25,7 @@ type StoredSettings = {
     'appearance'?: { 'color-theme'?: unknown };
     'language-region'?: {
       'language'?: unknown;
-      'region-format'?: unknown;
+      'time-format'?: unknown;
       'time-zone'?: unknown;
     };
   };
@@ -45,7 +45,7 @@ export const DEFAULT_SETTINGS: FoundrySettings = {
     'appearance': { 'color-theme': 'system' },
     'language-region': {
       'language': 'system',
-      'region-format': 'US',
+      'time-format': 'YYYY-MM-DD HH:mm:ss',
       'time-zone': 'America/Los_Angeles',
     },
   },
@@ -94,16 +94,30 @@ function normalizeFeatures(value: unknown): SettingsFeatures {
   };
 }
 
+const TIME_FORMAT_PATTERNS = new Set<TimeFormatPattern>([
+  'YYYY-MM-DD HH:mm:ss',
+  'YYYY-MM-DD',
+  'YYYY/MM/DD HH:mm:ss',
+  'DD/MM/YYYY HH:mm:ss',
+  'MM/DD/YYYY hh:mm:ss A',
+  'HH:mm:ss',
+]);
+
+function normalizeTimeFormatPattern(value: unknown): TimeFormatPattern {
+  return typeof value === 'string' && TIME_FORMAT_PATTERNS.has(value as TimeFormatPattern)
+    ? value as TimeFormatPattern
+    : 'YYYY-MM-DD HH:mm:ss';
+}
+
 export function readSettings(settingsPath: string): FoundrySettings {
   try {
     const parsed = JSON.parse(readFileSync(settingsPath, 'utf8')) as StoredSettings;
     const theme = parsed.workspace?.appearance?.['color-theme'];
     const language = parsed.workspace?.['language-region']?.language;
-    const region = parsed.workspace?.['language-region']?.['region-format'];
+    const timeFormat = parsed.workspace?.['language-region']?.['time-format'];
     const timezone = parsed.workspace?.['language-region']?.['time-zone'];
     const supportedThemes: ThemeMode[] = ['light', 'dark', 'system'];
     const supportedLanguages: LanguageMode[] = ['system', 'en-US', 'zh-CN', 'zh-TW', 'ja-JP'];
-    const supportedRegions: RegionCode[] = ['US', 'CN', 'TW', 'JP'];
     const supportedTimezones: TimeZoneCode[] = [
       'America/Los_Angeles',
       'America/New_York',
@@ -120,7 +134,7 @@ export function readSettings(settingsPath: string): FoundrySettings {
         },
         'language-region': {
           'language': supportedLanguages.includes(language as LanguageMode) ? language as LanguageMode : 'system',
-          'region-format': supportedRegions.includes(region as RegionCode) ? region as RegionCode : 'US',
+          'time-format': normalizeTimeFormatPattern(timeFormat),
           'time-zone': supportedTimezones.includes(timezone as TimeZoneCode) ? timezone as TimeZoneCode : 'America/Los_Angeles',
         },
       },
@@ -164,7 +178,10 @@ export function updateLanguage(settingsPath: string, language: LanguageMode): Fo
   });
 }
 
-export function updateRegion(settingsPath: string, region: RegionCode): FoundrySettings {
+export function updateTimeFormat(
+  settingsPath: string,
+  timeFormat: TimeFormatPattern,
+): FoundrySettings {
   const settings = readSettings(settingsPath);
   return writeSettings(settingsPath, {
     ...settings,
@@ -172,7 +189,7 @@ export function updateRegion(settingsPath: string, region: RegionCode): FoundryS
       ...settings.workspace,
       'language-region': {
         ...settings.workspace['language-region'],
-        'region-format': region,
+        'time-format': timeFormat,
       },
     },
   });

@@ -1,6 +1,12 @@
 export type ThemeMode = 'system' | 'light' | 'dark';
 export type LanguageMode = 'system' | 'en-US' | 'zh-CN' | 'zh-TW' | 'ja-JP';
-export type RegionCode = 'US' | 'CN' | 'TW' | 'JP';
+export type TimeFormatPattern
+  = | 'YYYY-MM-DD HH:mm:ss'
+    | 'YYYY-MM-DD'
+    | 'YYYY/MM/DD HH:mm:ss'
+    | 'DD/MM/YYYY HH:mm:ss'
+    | 'MM/DD/YYYY hh:mm:ss A'
+    | 'HH:mm:ss';
 export type TimeZoneCode
   = | 'America/Los_Angeles'
     | 'America/New_York'
@@ -35,7 +41,7 @@ export type SettingsSnapshot = {
     };
     'language-region': {
       'language': LanguageMode;
-      'region-format': RegionCode;
+      'time-format': TimeFormatPattern;
       'time-zone': TimeZoneCode;
     };
   };

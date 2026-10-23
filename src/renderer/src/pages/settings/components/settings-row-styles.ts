@@ -1,7 +1,7 @@
 import * as stylex from '@stylexjs/stylex';
 
 export const ROW_PADDING = 4;
-export const CONTROL_WIDTH = 192;
+export const CONTROL_WIDTH = 260;
 const ROW_STACK = '@container settings-panel (max-width: 480px)';
 
 export const row = stylex.create({

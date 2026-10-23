@@ -2,16 +2,16 @@ import type { ComponentType, SVGProps } from 'react';
 import type {
   BaseSettings,
   LanguageMode,
-  RegionCode,
   ThemeMode,
+  TimeFormatPattern,
   TimeZoneCode,
 } from '@renderer/apis/settings';
 
 export type {
   BaseSettings,
   LanguageMode,
-  RegionCode,
   ThemeMode,
+  TimeFormatPattern,
   TimeZoneCode,
 } from '@renderer/apis/settings';
 
@@ -21,14 +21,14 @@ export interface PanelConfig { id: PanelId; label: string; description: string; 
 export interface SettingsState {
   theme: ThemeMode;
   language: LanguageMode;
-  region: RegionCode;
+  timeFormat: TimeFormatPattern;
   timezone: TimeZoneCode;
   base: BaseSettings;
 }
 export const INITIAL_SETTINGS: SettingsState = {
   theme: 'system',
   language: 'system',
-  region: 'US',
+  timeFormat: 'YYYY-MM-DD HH:mm:ss',
   timezone: 'America/Los_Angeles',
   base: {
     fetcher: null,

@@ -3,6 +3,7 @@ import {
   BarsArrowUpIcon,
   BugAntIcon,
   CircleStackIcon,
+  ClockIcon,
   GlobeAltIcon,
   PaintBrushIcon,
 } from '@heroicons/react/24/outline';
@@ -58,6 +59,12 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
     description: 'Used for scheduling and timestamps',
     panel: 'language',
     icon: GlobeAltIcon,
+  },
+  {
+    title: 'Time format',
+    description: 'Date and time structure used across Foundry',
+    panel: 'language',
+    icon: ClockIcon,
   },
   {
     title: 'Fetcher',

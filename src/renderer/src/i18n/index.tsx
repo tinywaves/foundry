@@ -61,17 +61,13 @@ export type TranslationKey
     | 'settings.colorThemeDescription'
     | 'settings.language'
     | 'settings.languageDescription'
-    | 'settings.regionFormat'
-    | 'settings.regionFormatDescription'
+    | 'settings.timeFormat'
+    | 'settings.timeFormatDescription'
     | 'settings.timezone'
     | 'settings.timezoneDescription'
     | 'settings.system'
     | 'settings.light'
     | 'settings.dark'
-    | 'settings.unitedStates'
-    | 'settings.china'
-    | 'settings.taiwan'
-    | 'settings.japan'
     | 'settings.losAngeles'
     | 'settings.newYork'
     | 'settings.shanghai'
@@ -103,6 +99,7 @@ export type TranslationKey
     | 'base.invalidUrl'
     | 'base.addCapture'
     | 'base.title'
+    | 'base.url'
     | 'base.openLink'
     | 'base.viewJobs'
     | 'base.recapture'
@@ -114,7 +111,6 @@ export type TranslationKey
     | 'base.emptyTitle'
     | 'base.emptyDescription'
     | 'base.deleteCaptureTitle'
-    | 'base.deleteCaptureDescription'
     | 'base.cancel'
     | 'base.recaptureStarted'
     | 'base.captureDeleted'
@@ -202,17 +198,13 @@ const english: TranslationTable = {
   'settings.colorThemeDescription': 'Applies to this browser only.',
   'settings.language': 'Language',
   'settings.languageDescription': 'Used across menus, buttons, and email.',
-  'settings.regionFormat': 'Region format',
-  'settings.regionFormatDescription': 'Dates, numbers, and currency.',
+  'settings.timeFormat': 'Time format',
+  'settings.timeFormatDescription': 'Timestamp pattern used across Foundry.',
   'settings.timezone': 'Time zone',
   'settings.timezoneDescription': 'Used for scheduling and every timestamp you see.',
   'settings.system': 'System',
   'settings.light': 'Light',
   'settings.dark': 'Dark',
-  'settings.unitedStates': 'United States',
-  'settings.china': 'China',
-  'settings.taiwan': 'Taiwan',
-  'settings.japan': 'Japan',
   'settings.losAngeles': 'Los Angeles (GMT-08:00)',
   'settings.newYork': 'New York (GMT-05:00)',
   'settings.shanghai': 'Shanghai (GMT+08:00)',
@@ -244,6 +236,7 @@ const english: TranslationTable = {
   'base.invalidUrl': 'Enter a valid HTTP or HTTPS URL.',
   'base.addCapture': 'Add a capture',
   'base.title': 'Title',
+  'base.url': 'URL',
   'base.openLink': 'Open link',
   'base.viewJobs': 'View jobs',
   'base.recapture': 'Re-capture',
@@ -255,7 +248,6 @@ const english: TranslationTable = {
   'base.emptyTitle': 'No captures yet',
   'base.emptyDescription': 'Paste a link to start collecting.',
   'base.deleteCaptureTitle': 'Delete capture?',
-  'base.deleteCaptureDescription': 'The capture and its scrape history will be hidden from Base.',
   'base.cancel': 'Cancel',
   'base.recaptureStarted': 'Re-capture started',
   'base.captureDeleted': 'Capture deleted',
@@ -337,17 +329,13 @@ const simplifiedChinese: TranslationTable = {
   'settings.colorThemeDescription': '仅应用于此应用。',
   'settings.language': '语言',
   'settings.languageDescription': '用于菜单、按钮和邮件。',
-  'settings.regionFormat': '地区格式',
-  'settings.regionFormatDescription': '日期、数字和货币格式。',
+  'settings.timeFormat': '时间格式',
+  'settings.timeFormatDescription': 'Foundry 中所有时间戳使用的格式。',
   'settings.timezone': '时区',
   'settings.timezoneDescription': '用于日程安排和所有时间戳。',
   'settings.system': '跟随系统',
   'settings.light': '浅色',
   'settings.dark': '深色',
-  'settings.unitedStates': '美国',
-  'settings.china': '中国',
-  'settings.taiwan': '中国台湾',
-  'settings.japan': '日本',
   'settings.losAngeles': '洛杉矶（GMT-08:00）',
   'settings.newYork': '纽约（GMT-05:00）',
   'settings.shanghai': '上海（GMT+08:00）',
@@ -385,6 +373,7 @@ const simplifiedChinese: TranslationTable = {
   'base.invalidUrl': '请输入有效的 HTTP 或 HTTPS 链接。',
   'base.addCapture': '添加收藏',
   'base.title': '标题',
+  'base.url': '链接',
   'base.openLink': '打开链接',
   'base.viewJobs': '查看抓取记录',
   'base.recapture': '重新抓取',
@@ -396,7 +385,6 @@ const simplifiedChinese: TranslationTable = {
   'base.emptyTitle': '还没有收藏',
   'base.emptyDescription': '粘贴一个链接开始收集。',
   'base.deleteCaptureTitle': '删除这条收藏？',
-  'base.deleteCaptureDescription': '该收藏及其抓取历史将从 Base 中隐藏。',
   'base.cancel': '取消',
   'base.recaptureStarted': '已开始重新抓取',
   'base.captureDeleted': '收藏已删除',
@@ -478,17 +466,13 @@ const traditionalChinese: TranslationTable = {
   'settings.colorThemeDescription': '僅套用於此應用程式。',
   'settings.language': '語言',
   'settings.languageDescription': '用於選單、按鈕與郵件。',
-  'settings.regionFormat': '地區格式',
-  'settings.regionFormatDescription': '日期、數字與貨幣格式。',
+  'settings.timeFormat': '時間格式',
+  'settings.timeFormatDescription': 'Foundry 中所有時間戳記使用的格式。',
   'settings.timezone': '時區',
   'settings.timezoneDescription': '用於排程與所有時間戳記。',
   'settings.system': '跟隨系統',
   'settings.light': '淺色',
   'settings.dark': '深色',
-  'settings.unitedStates': '美國',
-  'settings.china': '中國',
-  'settings.taiwan': '台灣',
-  'settings.japan': '日本',
   'settings.losAngeles': '洛杉磯（GMT-08:00）',
   'settings.newYork': '紐約（GMT-05:00）',
   'settings.shanghai': '上海（GMT+08:00）',
@@ -526,6 +510,7 @@ const traditionalChinese: TranslationTable = {
   'base.invalidUrl': '請輸入有效的 HTTP 或 HTTPS 連結。',
   'base.addCapture': '新增收藏',
   'base.title': '標題',
+  'base.url': '連結',
   'base.openLink': '開啟連結',
   'base.viewJobs': '查看抓取紀錄',
   'base.recapture': '重新抓取',
@@ -537,7 +522,6 @@ const traditionalChinese: TranslationTable = {
   'base.emptyTitle': '還沒有收藏',
   'base.emptyDescription': '貼上一個連結開始收集。',
   'base.deleteCaptureTitle': '刪除這筆收藏？',
-  'base.deleteCaptureDescription': '這筆收藏及其抓取紀錄將從 Base 中隱藏。',
   'base.cancel': '取消',
   'base.recaptureStarted': '已開始重新抓取',
   'base.captureDeleted': '收藏已刪除',
@@ -619,17 +603,13 @@ const japanese: TranslationTable = {
   'settings.colorThemeDescription': 'このアプリにのみ適用されます。',
   'settings.language': '言語',
   'settings.languageDescription': 'メニュー、ボタン、メールで使用します。',
-  'settings.regionFormat': '地域の形式',
-  'settings.regionFormatDescription': '日付、数値、通貨の形式。',
+  'settings.timeFormat': '時刻形式',
+  'settings.timeFormatDescription': 'Foundry のすべてのタイムスタンプに使用する形式。',
   'settings.timezone': 'タイムゾーン',
   'settings.timezoneDescription': 'スケジュールとすべてのタイムスタンプに使用します。',
   'settings.system': 'システム',
   'settings.light': 'ライト',
   'settings.dark': 'ダーク',
-  'settings.unitedStates': 'アメリカ合衆国',
-  'settings.china': '中国',
-  'settings.taiwan': '台湾',
-  'settings.japan': '日本',
   'settings.losAngeles': 'ロサンゼルス（GMT-08:00）',
   'settings.newYork': 'ニューヨーク（GMT-05:00）',
   'settings.shanghai': '上海（GMT+08:00）',
@@ -667,6 +647,7 @@ const japanese: TranslationTable = {
   'base.invalidUrl': '有効な HTTP または HTTPS URL を入力してください。',
   'base.addCapture': 'キャプチャを追加',
   'base.title': 'タイトル',
+  'base.url': 'URL',
   'base.openLink': 'リンクを開く',
   'base.viewJobs': '取得履歴を見る',
   'base.recapture': '再取得',
@@ -678,7 +659,6 @@ const japanese: TranslationTable = {
   'base.emptyTitle': 'キャプチャはまだありません',
   'base.emptyDescription': 'リンクを貼り付けて収集を始めましょう。',
   'base.deleteCaptureTitle': 'キャプチャを削除しますか？',
-  'base.deleteCaptureDescription': 'キャプチャと取得履歴は Base から非表示になります。',
   'base.cancel': 'キャンセル',
   'base.recaptureStarted': '再取得を開始しました',
   'base.captureDeleted': 'キャプチャを削除しました',

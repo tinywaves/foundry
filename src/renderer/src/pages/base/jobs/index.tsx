@@ -21,9 +21,7 @@ import {
   recapture,
   subscribeToScrapeJobFinished,
 } from '@renderer/apis/base';
-import { getSettings, settingsKeys } from '@renderer/apis/settings';
 import { baseErrorKey } from '@renderer/pages/base/base-error-key';
-import { formatTimestamp } from '@renderer/utils/format-timestamp';
 import { useI18n } from '@renderer/i18n/use-i18n';
 import { useAppToast } from '@renderer/hooks/use-app-toast';
 
@@ -41,7 +39,6 @@ export default function JobsPage() {
   const queryClient = useQueryClient();
   const toast = useAppToast();
   const [titlebarActions, setTitlebarActions] = useState<HTMLElement | null>(null);
-  const settingsQuery = useQuery({ queryKey: settingsKeys.current(), queryFn: getSettings });
   const jobsQuery = useQuery({
     queryKey: baseKeys.jobs(captureId),
     queryFn: () => listScrapeJobs(captureId),
@@ -115,9 +112,7 @@ export default function JobsPage() {
       header: t('base.createdAt'),
       width: pixel(128),
       renderCell: (job) => (
-        <Text color="secondary">
-          {settingsQuery.data ? formatTimestamp(job.createdAt, settingsQuery.data) : '—'}
-        </Text>
+        <Text color="secondary">{job.createdAt}</Text>
       ),
     },
     {
@@ -125,9 +120,7 @@ export default function JobsPage() {
       header: t('base.updatedAt'),
       width: pixel(128),
       renderCell: (job) => (
-        <Text color="secondary">
-          {settingsQuery.data ? formatTimestamp(job.updatedAt, settingsQuery.data) : '—'}
-        </Text>
+        <Text color="secondary">{job.updatedAt}</Text>
       ),
     },
     {
@@ -145,7 +138,7 @@ export default function JobsPage() {
         </Text>
       ),
     },
-  ], [settingsQuery.data, t]);
+  ], [t]);
 
   return (
     <>

@@ -4,16 +4,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowPathIcon,
-  ArrowTopRightOnSquareIcon,
   QueueListIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline';
 import { Button } from '@astryxdesign/core/Button';
-import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
 import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
 import { IconButton } from '@astryxdesign/core/IconButton';
-import { Icon } from '@astryxdesign/core/Icon';
 import { Link } from '@astryxdesign/core/Link';
+import { Popover } from '@astryxdesign/core/Popover';
 import {
   SegmentedControl,
   SegmentedControlItem,
@@ -114,42 +112,52 @@ export default function CapturesPage() {
 
   const columns = useMemo<Array<TableColumn<CaptureSummary>>>(() => [
     {
-      key: 'title',
-      header: t('base.title'),
+      key: 'url',
+      header: t('base.url'),
       width: proportional(3),
       renderCell: (capture) => (
-        <VStack xstyle={styles.titleCell}>
-          {capture.title
-            ? (
-                <Link
-                  href={capture.url}
-                  isExternalLink
-                  isStandalone
-                  maxLines={1}
-                  tooltip={capture.url}
-                >
-                  {capture.title}
-                </Link>
-              )
-            : (
-                <Link
-                  href={capture.url}
-                  isStandalone
-                  label={t('base.openLink')}
-                  tooltip={capture.url}
-                  target="_blank"
-                >
-                  <Icon icon={ArrowTopRightOnSquareIcon} size="sm" />
-                </Link>
-              )}
-        </VStack>
+        <Link
+          href={capture.url}
+          isStandalone
+          display="block"
+          maxLines={1}
+          target="_blank"
+          tooltip={capture.url}
+          xstyle={styles.urlLink}
+        >
+          {capture.url}
+        </Link>
+      ),
+    },
+    {
+      key: 'title',
+      header: t('base.title'),
+      width: proportional(2),
+      renderCell: (capture) => (
+        <Text maxLines={1}>{capture.title ?? ''}</Text>
       ),
     },
     {
       key: 'note',
       header: t('base.note'),
-      width: proportional(3),
+      width: proportional(2),
       renderCell: (capture) => <NoteCell capture={capture} />,
+    },
+    {
+      key: 'updatedAt',
+      header: t('base.updatedAt'),
+      width: pixel(160),
+      renderCell: (capture) => (
+        <Text color="secondary">{capture.updatedAt}</Text>
+      ),
+    },
+    {
+      key: 'createdAt',
+      header: t('base.createdAt'),
+      width: pixel(160),
+      renderCell: (capture) => (
+        <Text color="secondary">{capture.createdAt}</Text>
+      ),
     },
     {
       key: 'actions',
@@ -178,20 +186,49 @@ export default function CapturesPage() {
               recaptureMutation.mutate(capture.id);
             }}
           />
-          <IconButton
-            label={t('base.delete')}
-            tooltip={t('base.delete')}
-            icon={<TrashIcon />}
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              setCaptureToDelete(capture);
+          <Popover
+            label={`${t('base.delete')} ${capture.url}`}
+            isOpen={captureToDelete?.id === capture.id}
+            onOpenChange={(isOpen) => {
+              setCaptureToDelete(isOpen ? capture : null);
             }}
-          />
+            content={(
+              <VStack gap={3}>
+                <Text type="label">{t('base.deleteCaptureTitle')}</Text>
+                <HStack gap={2} hAlign="end">
+                  <Button
+                    label={t('base.cancel')}
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setCaptureToDelete(null);
+                    }}
+                  />
+                  <Button
+                    label={t('base.delete')}
+                    size="sm"
+                    variant="destructive"
+                    isLoading={captureRemoval.isPending && captureToDelete?.id === capture.id}
+                    onClick={() => {
+                      captureRemoval.mutate(capture.id);
+                    }}
+                  />
+                </HStack>
+              </VStack>
+            )}
+          >
+            <IconButton
+              label={t('base.delete')}
+              tooltip={t('base.delete')}
+              icon={<TrashIcon />}
+              size="sm"
+              variant="ghost"
+            />
+          </Popover>
         </HStack>
       ),
     },
-  ], [navigate, recaptureMutation, t]);
+  ], [captureRemoval, captureToDelete, navigate, recaptureMutation, t]);
 
   const captures = capturesQuery.data ?? [];
 
@@ -245,6 +282,7 @@ export default function CapturesPage() {
                 columns={columns}
                 idKey="id"
                 hasHover
+                density="compact"
               />
             )}
       </VStack>
@@ -257,49 +295,6 @@ export default function CapturesPage() {
         }}
       />
 
-      <Dialog
-        isOpen={captureToDelete !== null}
-        onOpenChange={(isOpen) => {
-          if (!isOpen) {
-            setCaptureToDelete(null);
-          }
-        }}
-        width={440}
-        purpose="form"
-      >
-        <VStack gap={4}>
-          <DialogHeader
-            title={t('base.deleteCaptureTitle')}
-            onOpenChange={(isOpen) => {
-              if (!isOpen) {
-                setCaptureToDelete(null);
-              }
-            }}
-          />
-          <Text>{t('base.deleteCaptureDescription')}</Text>
-          <HStack gap={2} hAlign="end">
-            <Button
-              label={t('base.cancel')}
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setCaptureToDelete(null);
-              }}
-            />
-            <Button
-              label={t('base.delete')}
-              size="sm"
-              variant="destructive"
-              isLoading={captureRemoval.isPending}
-              onClick={() => {
-                if (captureToDelete) {
-                  captureRemoval.mutate(captureToDelete.id);
-                }
-              }}
-            />
-          </HStack>
-        </VStack>
-      </Dialog>
     </>
   );
 }

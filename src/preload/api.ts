@@ -7,9 +7,9 @@ import type {
 import type {
   BaseSettings,
   LanguageMode,
-  RegionCode,
   SettingsSnapshot,
   ThemeMode,
+  TimeFormatPattern,
   TimeZoneCode,
 } from '../shared/settings';
 import type {
@@ -36,7 +36,7 @@ export type SettingsApi = {
   getConfigFolder: () => Promise<string>;
   setTheme: (theme: ThemeMode) => Promise<SettingsSnapshot>;
   setLanguage: (language: LanguageMode) => Promise<SettingsSnapshot>;
-  setRegion: (region: RegionCode) => Promise<SettingsSnapshot>;
+  setTimeFormat: (timeFormat: TimeFormatPattern) => Promise<SettingsSnapshot>;
   setTimezone: (timezone: TimeZoneCode) => Promise<SettingsSnapshot>;
   setBase: (patch: Partial<BaseSettings>) => Promise<SettingsSnapshot>;
   openConfigFolder: () => Promise<void>;

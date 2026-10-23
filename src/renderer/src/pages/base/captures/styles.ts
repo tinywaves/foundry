@@ -9,7 +9,7 @@ export const styles = stylex.create({
   noteInput: {
     minWidth: 0,
   },
-  titleCell: {
-    minWidth: 0,
+  urlLink: {
+    width: '100%',
   },
 });

@@ -23,16 +23,22 @@ import {
 } from './providers';
 import type { ProviderInput } from '../shared/providers';
 import {
+  formatCaptureCreationResult,
+  formatRecordListResult,
+  formatRecordResult,
+  formatRecordTimes,
+} from './ipc-format';
+import {
   getCurrentUsedProviderIds,
   readSettings,
   updateBaseSettings,
-  updateRegion,
   updateLanguage,
   updateSettings,
+  updateTimeFormat,
   updateTimezone,
   writeSettings,
 } from './settings';
-import type { LanguageMode, RegionCode, TimeZoneCode } from './settings';
+import type { LanguageMode, TimeFormatPattern, TimeZoneCode } from './settings';
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -127,7 +133,9 @@ void app.whenReady().then(() => {
   ipcMain.handle('settings:get-config-folder', () => configFolderPath);
   ipcMain.handle('settings:set-theme', (_, theme: 'system' | 'light' | 'dark') => updateSettings(settingsPath, theme));
   ipcMain.handle('settings:set-language', (_, language: LanguageMode) => updateLanguage(settingsPath, language));
-  ipcMain.handle('settings:set-region', (_, region: RegionCode) => updateRegion(settingsPath, region));
+  ipcMain.handle('settings:set-time-format', (_, timeFormat: TimeFormatPattern) => (
+    updateTimeFormat(settingsPath, timeFormat)
+  ));
   ipcMain.handle('settings:set-timezone', (_, timezone: TimeZoneCode) => updateTimezone(settingsPath, timezone));
   ipcMain.handle('settings:set-base', (_, patch: Parameters<typeof updateBaseSettings>[1]) => {
     log.info('ipc_call', { channel: 'settings:set-base' });
@@ -144,23 +152,32 @@ void app.whenReady().then(() => {
     }
   });
 
-  ipcMain.handle('providers:list', () => listProviders(
-    database.db,
-    getCurrentUsedProviderIds(settingsPath),
-  ));
-  ipcMain.handle('providers:get', (_, id: string) => getProvider(database.db, id));
-  ipcMain.handle('providers:save', (_, input: ProviderInput, id?: string) => saveProvider(
-    database.db,
-    input,
-    id,
+  ipcMain.handle('providers:list', () => {
+    const settings = readSettings(settingsPath);
+    return listProviders(
+      database.db,
+      getCurrentUsedProviderIds(settingsPath),
+    ).map((provider) => formatRecordTimes(provider, settings));
+  });
+  ipcMain.handle('providers:get', (_, id: string) => {
+    const provider = getProvider(database.db, id);
+    return provider ? formatRecordTimes(provider, readSettings(settingsPath)) : null;
+  });
+  ipcMain.handle('providers:save', (_, input: ProviderInput, id?: string) => (
+    formatRecordTimes(saveProvider(database.db, input, id), readSettings(settingsPath))
   ));
   ipcMain.handle(
     'providers:set-status',
-    (_, id: string, status: 'active' | 'disabled' | 'deleted') => setProviderStatus(
-      database.db,
-      id,
-      status,
-      getCurrentUsedProviderIds(settingsPath),
+    (_, id: string, status: 'active' | 'disabled' | 'deleted') => (
+      formatRecordTimes(
+        setProviderStatus(
+          database.db,
+          id,
+          status,
+          getCurrentUsedProviderIds(settingsPath),
+        ),
+        readSettings(settingsPath),
+      )
     ),
   );
   ipcMain.handle('providers:fetch-models', (_, id: string) => fetchProviderModels(database.db, id));
@@ -179,20 +196,42 @@ void app.whenReady().then(() => {
     });
   };
 
-  handleBaseIpc('base:captures:list', (filter) => captureService.list(filter as CaptureFilter | undefined));
-  handleBaseIpc('base:captures:create', (input) => (
-    captureService.create(input as Parameters<typeof captureService.create>[0])
-  ));
-  handleBaseIpc('base:captures:recapture', (captureId) => (
-    captureService.recapture(captureId as string)
-  ));
+  handleBaseIpc('base:captures:list', (filter) => {
+    const settings = readSettings(settingsPath);
+    return captureService.list(filter as CaptureFilter | undefined)
+      .map((capture) => formatRecordTimes(capture, settings));
+  });
+  handleBaseIpc('base:captures:create', (input) => {
+    const settings = readSettings(settingsPath);
+    return formatCaptureCreationResult(
+      captureService.create(input as Parameters<typeof captureService.create>[0]),
+      settings,
+    );
+  });
+  handleBaseIpc('base:captures:recapture', (captureId) => {
+    const settings = readSettings(settingsPath);
+    return formatRecordResult(
+      captureService.recapture(captureId as string),
+      settings,
+    );
+  });
   handleBaseIpc('base:captures:delete', (captureId) => (
     captureService.delete(captureId as string)
   ));
-  handleBaseIpc('base:captures:update-note', (captureId, userNote) => (
-    captureService.updateNote(captureId as string, userNote as string)
-  ));
-  handleBaseIpc('base:jobs:list', (captureId) => captureService.listJobs(captureId as string));
+  handleBaseIpc('base:captures:update-note', (captureId, userNote) => {
+    const settings = readSettings(settingsPath);
+    return formatRecordResult(
+      captureService.updateNote(captureId as string, userNote as string),
+      settings,
+    );
+  });
+  handleBaseIpc('base:jobs:list', (captureId) => {
+    const settings = readSettings(settingsPath);
+    return formatRecordListResult(
+      captureService.listJobs(captureId as string),
+      settings,
+    );
+  });
 
   createWindow();
   scrapeJobRunner.start();

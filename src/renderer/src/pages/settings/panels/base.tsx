@@ -90,7 +90,7 @@ export function BasePanel({ settings, update }: PanelProps) {
             label={t('settings.baseFetcher')}
             isLabelHidden
             size="sm"
-            width={192}
+            width={CONTROL_WIDTH}
             value={base.fetcher ?? 'none'}
             onChange={(value) => {
               updateBase({

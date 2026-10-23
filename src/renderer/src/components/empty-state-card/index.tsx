@@ -16,7 +16,7 @@ export function EmptyStateCard({
 }) {
   return (
     <HStack width="100%" hAlign="center">
-      <Card width="100%" maxWidth={720} padding={0}>
+      <Card width="100%" padding={0}>
         <EmptyState
           headingLevel={2}
           icon={icon}

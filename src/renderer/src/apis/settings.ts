@@ -1,9 +1,9 @@
 import type {
   BaseSettings,
   LanguageMode,
-  RegionCode,
   SettingsSnapshot,
   ThemeMode,
+  TimeFormatPattern,
   TimeZoneCode,
 } from '../../../shared/settings';
 
@@ -11,9 +11,9 @@ export type {
   BaseSettings,
   FetcherType,
   LanguageMode,
-  RegionCode,
   SettingsSnapshot,
   ThemeMode,
+  TimeFormatPattern,
   TimeZoneCode,
 } from '../../../shared/settings';
 
@@ -41,8 +41,8 @@ export function setLanguage(language: LanguageMode): Promise<SettingsSnapshot> {
   return globalThis.api.settings.setLanguage(language) as Promise<SettingsSnapshot>;
 }
 
-export function setRegion(region: RegionCode): Promise<SettingsSnapshot> {
-  return globalThis.api.settings.setRegion(region) as Promise<SettingsSnapshot>;
+export function setTimeFormat(timeFormat: TimeFormatPattern): Promise<SettingsSnapshot> {
+  return globalThis.api.settings.setTimeFormat(timeFormat) as Promise<SettingsSnapshot>;
 }
 
 export function setTimezone(timezone: TimeZoneCode): Promise<SettingsSnapshot> {

@@ -1,9 +1,10 @@
-import { GlobeAltIcon, LanguageIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { ClockIcon, GlobeAltIcon, LanguageIcon } from '@heroicons/react/24/outline';
 import { Selector } from '@astryxdesign/core/Selector';
 import { useI18n } from '@renderer/i18n/use-i18n';
 import { SettingsCard } from '../components/settings-card';
 import { SettingsRow } from '../components/settings-row';
-import type { PanelProps, RegionCode, SettingsState, TimeZoneCode } from '../types';
+import { CONTROL_WIDTH } from '../components/settings-row-styles';
+import type { PanelProps, SettingsState, TimeFormatPattern, TimeZoneCode } from '../types';
 
 export function LanguagePanel({ settings, update }: PanelProps) {
   const { t } = useI18n();
@@ -18,7 +19,7 @@ export function LanguagePanel({ settings, update }: PanelProps) {
             label={t('settings.language')}
             isLabelHidden
             size="sm"
-            width={192}
+            width={CONTROL_WIDTH}
             value={settings.language}
             onChange={(value) => update('language', value as SettingsState['language'])}
             options={[
@@ -32,22 +33,24 @@ export function LanguagePanel({ settings, update }: PanelProps) {
         )}
       />
       <SettingsRow
-        title={t('settings.regionFormat')}
-        icon={MapPinIcon}
-        description={t('settings.regionFormatDescription')}
+        title={t('settings.timeFormat')}
+        icon={ClockIcon}
+        description={t('settings.timeFormatDescription')}
         control={(
           <Selector
-            label={t('settings.regionFormat')}
+            label={t('settings.timeFormat')}
             isLabelHidden
             size="sm"
-            width={192}
-            value={settings.region}
-            onChange={(value) => update('region', value as RegionCode)}
+            width={CONTROL_WIDTH}
+            value={settings.timeFormat}
+            onChange={(value) => update('timeFormat', value as TimeFormatPattern)}
             options={[
-              { value: 'US', label: t('settings.unitedStates') },
-              { value: 'CN', label: t('settings.china') },
-              { value: 'TW', label: t('settings.taiwan') },
-              { value: 'JP', label: t('settings.japan') },
+              { value: 'YYYY-MM-DD HH:mm:ss', label: 'YYYY-MM-DD HH:mm:ss' },
+              { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD' },
+              { value: 'YYYY/MM/DD HH:mm:ss', label: 'YYYY/MM/DD HH:mm:ss' },
+              { value: 'DD/MM/YYYY HH:mm:ss', label: 'DD/MM/YYYY HH:mm:ss' },
+              { value: 'MM/DD/YYYY hh:mm:ss A', label: 'MM/DD/YYYY hh:mm:ss A' },
+              { value: 'HH:mm:ss', label: 'HH:mm:ss' },
             ]}
           />
         )}
@@ -61,7 +64,7 @@ export function LanguagePanel({ settings, update }: PanelProps) {
             label={t('settings.timezone')}
             isLabelHidden
             size="sm"
-            width={192}
+            width={CONTROL_WIDTH}
             value={settings.timezone}
             onChange={(value) => update('timezone', value as TimeZoneCode)}
             options={[

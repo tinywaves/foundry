@@ -14,7 +14,13 @@ export type Provider = {
   apiKey: string;
   customModels: CustomModel[];
   status: ProviderStatus;
+  /**
+  Formatted with the current Time format and Time zone before crossing IPC.
+  */
   createdAt: string;
+  /**
+  Formatted with the current Time format and Time zone before crossing IPC.
+  */
   updatedAt: string;
   deletedAt: string | null;
 };

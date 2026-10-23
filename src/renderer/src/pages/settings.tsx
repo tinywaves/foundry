@@ -9,8 +9,8 @@ import {
   getSettings,
   setBase,
   setLanguage,
-  setRegion,
   setTheme,
+  setTimeFormat,
   setTimezone,
   settingsKeys,
 } from '../apis/settings';
@@ -35,12 +35,12 @@ export default function SettingsPage() {
   const themeMutation = useMutation({ mutationFn: setTheme, onSuccess: updateSettings });
   const baseMutation = useMutation({ mutationFn: setBase, onSuccess: updateSettings });
   const languageMutation = useMutation({ mutationFn: setLanguage, onSuccess: updateSettings });
-  const regionMutation = useMutation({ mutationFn: setRegion, onSuccess: updateSettings });
+  const timeFormatMutation = useMutation({ mutationFn: setTimeFormat, onSuccess: updateSettings });
   const timezoneMutation = useMutation({ mutationFn: setTimezone, onSuccess: updateSettings });
   const settings: SettingsState = {
     theme: settingsQuery.data?.workspace.appearance['color-theme'] ?? INITIAL_SETTINGS.theme,
     language: settingsQuery.data?.workspace['language-region'].language ?? INITIAL_SETTINGS.language,
-    region: settingsQuery.data?.workspace['language-region']['region-format'] ?? INITIAL_SETTINGS.region,
+    timeFormat: settingsQuery.data?.workspace['language-region']['time-format'] ?? INITIAL_SETTINGS.timeFormat,
     timezone: settingsQuery.data?.workspace['language-region']['time-zone'] ?? INITIAL_SETTINGS.timezone,
     base: settingsQuery.data?.features.base ?? INITIAL_SETTINGS.base,
   };
@@ -59,8 +59,8 @@ export default function SettingsPage() {
         languageMutation.mutate(value as SettingsState['language']);
         break;
       }
-      case 'region': {
-        regionMutation.mutate(value as SettingsState['region']);
+      case 'timeFormat': {
+        timeFormatMutation.mutate(value as SettingsState['timeFormat']);
         break;
       }
       case 'timezone': {

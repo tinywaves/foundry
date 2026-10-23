@@ -8,7 +8,13 @@ export type CaptureSummary = {
   title: string | null;
   userNote: string | null;
   latestSuccessfulJobId: string | null;
+  /**
+  Formatted with the current Time format and Time zone before crossing IPC.
+  */
   createdAt: string;
+  /**
+  Formatted with the current Time format and Time zone before crossing IPC.
+  */
   updatedAt: string;
 };
 
@@ -31,7 +37,13 @@ export type ScrapeJobSummary = {
   fetcher: FetcherType;
   errorCode: string | null;
   errorMessage: string | null;
+  /**
+  Formatted with the current Time format and Time zone before crossing IPC.
+  */
   createdAt: string;
+  /**
+  Formatted with the current Time format and Time zone before crossing IPC.
+  */
   updatedAt: string;
 };
 

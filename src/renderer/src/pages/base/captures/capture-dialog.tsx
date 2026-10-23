@@ -47,14 +47,17 @@ export function CaptureDialog({
           type: 'error',
           uniqueID: `capture-error-${result.error.code}`,
         });
+        if (result.error.code === 'CAPTURE_ALREADY_EXISTS') {
+          setUrl('');
+        }
         dropZoneRef.current?.focus();
         return;
       }
 
       void queryClient.invalidateQueries({ queryKey: baseKeys.all });
       toast({
-        body: t(result.data.created ? 'base.captureAdded' : 'base.captureExists'),
-        uniqueID: result.data.created ? 'capture-added' : 'capture-exists',
+        body: t('base.captureAdded'),
+        uniqueID: 'capture-added',
       });
       onCreated(result.data);
     },

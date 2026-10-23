@@ -26,7 +26,12 @@ type StoredJobConfig = {
 };
 
 function failure<T>(
-  code: 'ACTIVE_JOB_EXISTS' | 'BASE_NOT_CONFIGURED' | 'CAPTURE_NOT_FOUND' | 'INVALID_URL',
+  code:
+    | 'ACTIVE_JOB_EXISTS'
+    | 'BASE_NOT_CONFIGURED'
+    | 'CAPTURE_ALREADY_EXISTS'
+    | 'CAPTURE_NOT_FOUND'
+    | 'INVALID_URL',
   message: string,
 ): BaseResult<T> {
   return { ok: false, error: { code, message } };
@@ -114,7 +119,7 @@ export class CaptureService {
       .get();
 
     if (existing) {
-      return { ok: true, data: { capture: toCaptureSummary(existing), created: false } };
+      return failure('CAPTURE_ALREADY_EXISTS', 'This link is already captured');
     }
 
     const config = executionConfig(readSettings(this.settingsPath).features.base);
@@ -160,7 +165,7 @@ export class CaptureService {
         .where(and(eq(captures.url, url), isNull(captures.deletedAt)))
         .get();
       if (duplicate) {
-        return { ok: true, data: { capture: toCaptureSummary(duplicate), created: false } };
+        return failure('CAPTURE_ALREADY_EXISTS', 'This link is already captured');
       }
       throw error;
     }
@@ -170,7 +175,7 @@ export class CaptureService {
       throw new Error('Capture was not created');
     }
     this.runner.enqueue(jobId);
-    return { ok: true, data: { capture: toCaptureSummary(row), created: true } };
+    return { ok: true, data: { capture: toCaptureSummary(row) } };
   }
 
   recapture(captureId: string): BaseResult<ScrapeJobSummary> {

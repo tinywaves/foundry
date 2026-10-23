@@ -25,7 +25,6 @@ export type CreateCaptureInput = {
 
 export type CreateCaptureResult = {
   capture: CaptureSummary;
-  created: boolean;
 };
 
 export type ScrapeJobStatus = 'pending' | 'running' | 'succeeded' | 'failed';
@@ -57,6 +56,7 @@ export type ScrapeJobFinishedEvent = {
 export type BaseErrorCode
   = | 'ACTIVE_JOB_EXISTS'
     | 'BASE_NOT_CONFIGURED'
+    | 'CAPTURE_ALREADY_EXISTS'
     | 'CAPTURE_NOT_FOUND'
     | 'INVALID_URL';
 

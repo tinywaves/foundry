@@ -9,6 +9,9 @@ export function baseErrorKey(code: BaseErrorCode): TranslationKey {
     case 'BASE_NOT_CONFIGURED': {
       return 'base.configureFetcherFirst';
     }
+    case 'CAPTURE_ALREADY_EXISTS': {
+      return 'base.captureExists';
+    }
     case 'CAPTURE_NOT_FOUND': {
       return 'base.captureNotFound';
     }

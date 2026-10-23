@@ -4,9 +4,9 @@ import process from 'node:process';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import icon from '../../resources/icon.png?asset';
 import { openFoundryDatabase } from './database';
-import { CaptureService } from './base/captures';
-import { ScrapeJobRunner } from './base/scrape-job-runner';
-import type { CaptureFilter } from '../shared/base';
+import { CaptureService } from './library/captures';
+import { ScrapeJobRunner } from './library/scrape-job-runner';
+import type { CaptureFilter } from '../shared/captures';
 import { initializeLogger, log } from './logger';
 import {
   ensureFoundryHome,
@@ -31,7 +31,7 @@ import {
 import {
   getCurrentUsedProviderIds,
   readSettings,
-  updateBaseSettings,
+  updateLibrarySettings,
   updateLanguage,
   updateSettings,
   updateTimeFormat,
@@ -73,7 +73,7 @@ function createWindow(): void {
     return { action: 'deny' };
   });
 
-  // HMR for renderer base on electron-vite cli.
+  // HMR for the renderer when running under electron-vite.
   // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env.ELECTRON_RENDERER_URL) {
     void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
@@ -98,7 +98,7 @@ void app.whenReady().then(() => {
     settingsPath,
     (event) => {
       for (const window of BrowserWindow.getAllWindows()) {
-        window.webContents.send('base:scrape-job-finished', event);
+        window.webContents.send('captures:scrape-job-finished', event);
       }
     },
   );
@@ -137,9 +137,9 @@ void app.whenReady().then(() => {
     updateTimeFormat(settingsPath, timeFormat)
   ));
   ipcMain.handle('settings:set-timezone', (_, timezone: TimeZoneCode) => updateTimezone(settingsPath, timezone));
-  ipcMain.handle('settings:set-base', (_, patch: Parameters<typeof updateBaseSettings>[1]) => {
-    log.info('ipc_call', { channel: 'settings:set-base' });
-    const settings = updateBaseSettings(settingsPath, patch);
+  ipcMain.handle('settings:set-library', (_, patch: Parameters<typeof updateLibrarySettings>[1]) => {
+    log.info('ipc_call', { channel: 'settings:set-library' });
+    const settings = updateLibrarySettings(settingsPath, patch);
     scrapeJobRunner.notifySettingsChanged();
     return settings;
   });
@@ -186,7 +186,7 @@ void app.whenReady().then(() => {
     (_, input: Pick<ProviderInput, 'protocol' | 'baseURL' | 'apiKey'>) => fetchModelsForInput(input),
   );
 
-  const handleBaseIpc = (
+  const handleCaptureIpc = (
     channel: string,
     handler: (...args: unknown[]) => unknown,
   ) => {
@@ -196,36 +196,50 @@ void app.whenReady().then(() => {
     });
   };
 
-  handleBaseIpc('base:captures:list', (filter) => {
+  handleCaptureIpc('captures:list', (filter) => {
     const settings = readSettings(settingsPath);
     return captureService.list(filter as CaptureFilter | undefined)
       .map((capture) => formatRecordTimes(capture, settings));
   });
-  handleBaseIpc('base:captures:create', (input) => {
+  handleCaptureIpc('captures:get', (captureId) => {
+    const settings = readSettings(settingsPath);
+    const result = captureService.get(captureId as string);
+    if (!result.ok) {
+      return result;
+    }
+    return {
+      ok: true as const,
+      data: {
+        ...result.data,
+        capture: formatRecordTimes(result.data.capture, settings),
+      },
+    };
+  });
+  handleCaptureIpc('captures:create', (input) => {
     const settings = readSettings(settingsPath);
     return formatCaptureCreationResult(
       captureService.create(input as Parameters<typeof captureService.create>[0]),
       settings,
     );
   });
-  handleBaseIpc('base:captures:recapture', (captureId) => {
+  handleCaptureIpc('captures:recapture', (captureId) => {
     const settings = readSettings(settingsPath);
     return formatRecordResult(
       captureService.recapture(captureId as string),
       settings,
     );
   });
-  handleBaseIpc('base:captures:delete', (captureId) => (
+  handleCaptureIpc('captures:delete', (captureId) => (
     captureService.delete(captureId as string)
   ));
-  handleBaseIpc('base:captures:update-note', (captureId, userNote) => {
+  handleCaptureIpc('captures:update-note', (captureId, userNote) => {
     const settings = readSettings(settingsPath);
     return formatRecordResult(
       captureService.updateNote(captureId as string, userNote as string),
       settings,
     );
   });
-  handleBaseIpc('base:jobs:list', (captureId) => {
+  handleCaptureIpc('captures:jobs:list', (captureId) => {
     const settings = readSettings(settingsPath);
     return formatRecordListResult(
       captureService.listJobs(captureId as string),

@@ -12,14 +12,14 @@ import { Table, pixel } from '@astryxdesign/core/Table';
 import type { TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
-import type { ScrapeJobStatus, ScrapeJobSummary } from '../../../../../shared/base';
+import type { ScrapeJobStatus, ScrapeJobSummary } from '../../../../../shared/captures';
 import {
-  baseKeys,
+  captureKeys,
   listScrapeJobs,
   recapture,
   subscribeToScrapeJobFinished,
-} from '@renderer/apis/base';
-import { baseErrorKey } from '@renderer/pages/base/base-error-key';
+} from '@renderer/apis/captures';
+import { captureErrorKey } from '@renderer/pages/library/capture-error-key';
 import { useI18n } from '@renderer/i18n/use-i18n';
 import { useAppToast } from '@renderer/hooks/use-app-toast';
 
@@ -37,7 +37,7 @@ export default function JobsPage() {
   const toast = useAppToast();
   const [titlebarActions, setTitlebarActions] = useState<HTMLElement | null>(null);
   const jobsQuery = useQuery({
-    queryKey: baseKeys.jobs(captureId),
+    queryKey: captureKeys.jobs(captureId),
     queryFn: () => listScrapeJobs(captureId),
     enabled: Boolean(captureId),
   });
@@ -46,15 +46,15 @@ export default function JobsPage() {
     onSuccess: (result) => {
       if (!result.ok) {
         toast({
-          body: t(baseErrorKey(result.error.code)),
+          body: t(captureErrorKey(result.error.code)),
           type: 'error',
           uniqueID: result.error.code,
         });
         return;
       }
-      void queryClient.invalidateQueries({ queryKey: baseKeys.jobs(captureId) });
+      void queryClient.invalidateQueries({ queryKey: captureKeys.jobs(captureId) });
       toast({
-        body: t('base.recaptureStarted'),
+        body: t('captures.recaptureStarted'),
         uniqueID: 'recapture-started',
       });
     },
@@ -71,12 +71,12 @@ export default function JobsPage() {
     }
     void queryClient.invalidateQueries({
       queryKey: event.status === 'succeeded'
-        ? baseKeys.all
-        : baseKeys.jobs(captureId),
+        ? captureKeys.all
+        : captureKeys.jobs(captureId),
     });
     if (event.status === 'failed') {
       toast({
-        body: t('base.scrapeFailed'),
+        body: t('captures.scrapeFailed'),
         type: 'error',
         uniqueID: `scrape-failed-${event.jobId}`,
       });
@@ -85,24 +85,24 @@ export default function JobsPage() {
 
   const jobs = jobsQuery.data?.ok ? jobsQuery.data.data : [];
   const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: baseKeys.jobs(captureId) });
+    void queryClient.invalidateQueries({ queryKey: captureKeys.jobs(captureId) });
   };
 
   const columns = useMemo<Array<TableColumn<ScrapeJobSummary>>>(() => [
     {
       key: 'status',
-      header: t('base.jobStatus'),
+      header: t('captures.jobStatus'),
       width: pixel(120),
       renderCell: (job) => (
         <Badge
-          label={t(`base.jobStatus.${job.status}`)}
+          label={t(`captures.jobStatus.${job.status}`)}
           variant={statusVariant[job.status]}
         />
       ),
     },
     {
       key: 'fetcher',
-      header: t('base.fetcher'),
+      header: t('captures.fetcher'),
       width: pixel(160),
       renderCell: (job) => (
         <Text>{job.fetcher === 'firecrawl' ? 'Firecrawl' : 'DeepSeek Fetch'}</Text>
@@ -110,7 +110,7 @@ export default function JobsPage() {
     },
     {
       key: 'createdAt',
-      header: t('base.createdAt'),
+      header: t('captures.createdAt'),
       width: pixel(200),
       renderCell: (job) => (
         <Text color="secondary">{job.createdAt}</Text>
@@ -118,7 +118,7 @@ export default function JobsPage() {
     },
     {
       key: 'updatedAt',
-      header: t('base.updatedAt'),
+      header: t('captures.updatedAt'),
       width: pixel(200),
       renderCell: (job) => (
         <Text color="secondary">{job.updatedAt}</Text>
@@ -126,7 +126,7 @@ export default function JobsPage() {
     },
     {
       key: 'error',
-      header: t('base.error'),
+      header: t('captures.error'),
       width: pixel(220),
       renderCell: (job) => (job.errorMessage
         ? (
@@ -150,15 +150,15 @@ export default function JobsPage() {
       {titlebarActions && createPortal(
         <HStack gap={2} vAlign="center">
           <IconButton
-            label={t('base.refresh')}
-            tooltip={t('base.refresh')}
+            label={t('captures.refresh')}
+            tooltip={t('captures.refresh')}
             icon={<ArrowPathIcon />}
             size="sm"
             variant="ghost"
             onClick={refresh}
           />
           <Button
-            label={t('base.recapture')}
+            label={t('captures.recapture')}
             size="sm"
             variant="primary"
             onClick={() => {
@@ -172,8 +172,8 @@ export default function JobsPage() {
         {jobs.length === 0
           ? (
               <EmptyState
-                title={t('base.noJobsTitle')}
-                description={t('base.noJobsDescription')}
+                title={t('captures.noJobsTitle')}
+                description={t('captures.noJobsDescription')}
               />
             )
           : (

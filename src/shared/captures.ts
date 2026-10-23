@@ -18,6 +18,16 @@ export type CaptureSummary = {
   updatedAt: string;
 };
 
+export type CaptureContent = {
+  jobId: string;
+  markdown: string;
+};
+
+export type CaptureDetail = {
+  capture: CaptureSummary;
+  content: CaptureContent | null;
+};
+
 export type CreateCaptureInput = {
   url: string;
   userNote?: string;
@@ -53,13 +63,13 @@ export type ScrapeJobFinishedEvent = {
   errorMessage?: string;
 };
 
-export type BaseErrorCode
+export type CaptureErrorCode
   = | 'ACTIVE_JOB_EXISTS'
-    | 'BASE_NOT_CONFIGURED'
+    | 'FETCHER_NOT_CONFIGURED'
     | 'CAPTURE_ALREADY_EXISTS'
     | 'CAPTURE_NOT_FOUND'
     | 'INVALID_URL';
 
-export type BaseResult<T>
+export type CaptureResult<T>
   = | { ok: true; data: T }
-    | { ok: false; error: { code: BaseErrorCode; message: string } };
+    | { ok: false; error: { code: CaptureErrorCode; message: string } };

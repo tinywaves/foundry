@@ -38,8 +38,8 @@ _Avoid_: permanently deleted Provider
 A user-created saved record for a link in Foundry. A Capture preserves the user's original URL and may later receive fetched page information; it is not yet a curated concept or grouped collection.
 _Avoid_: Item (for an unorganized Capture), Source (when referring to the Foundry record)
 
-**Base**:
-Foundry's configurable workspace for collecting and later organizing personal captures. Base is a product area, not a model-service Provider.
+**Library**:
+Foundry's product area for saved reusable material, including Prompts and Captures. Library is not a model-service Provider.
 
 **Fetcher**:
 A configured external service used by a Scrape Job to retrieve page information. A Fetcher is not a model-service Provider.

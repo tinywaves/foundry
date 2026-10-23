@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -6,6 +7,7 @@ import {
   ArrowPathIcon,
   ArrowPathRoundedSquareIcon,
   ClipboardDocumentListIcon,
+  EyeIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline';
 import { Button } from '@astryxdesign/core/Button';
@@ -21,24 +23,29 @@ import {
   Table,
   pixel,
   proportional,
+  useTableStickyColumns,
 } from '@astryxdesign/core/Table';
 import type { TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
-import type { CaptureFilter, CaptureSummary } from '../../../../../shared/base';
+import type { CaptureFilter, CaptureSummary } from '../../../../../shared/captures';
 import {
-  baseKeys,
+  captureKeys,
   deleteCapture,
   listCaptures,
   recapture,
   subscribeToScrapeJobFinished,
-} from '@renderer/apis/base';
-import { baseErrorKey } from '@renderer/pages/base/base-error-key';
+} from '@renderer/apis/captures';
+import { captureErrorKey } from '@renderer/pages/library/capture-error-key';
 import { useI18n } from '@renderer/i18n/use-i18n';
 import { useAppToast } from '@renderer/hooks/use-app-toast';
 import { CaptureDialog } from './capture-dialog';
 import { CapturesEmptyState } from './empty-state';
 import { NoteCell } from './note-cell';
 import { styles } from './styles';
+
+const stickyTableStyle = {
+  '--table-sticky-background': 'var(--color-background-surface)',
+} as CSSProperties;
 
 export default function CapturesPage() {
   const { t } = useI18n();
@@ -49,9 +56,10 @@ export default function CapturesPage() {
   const [titlebarActions, setTitlebarActions] = useState<HTMLElement | null>(null);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [captureToDelete, setCaptureToDelete] = useState<CaptureSummary | null>(null);
+  const stickyColumns = useTableStickyColumns<CaptureSummary>({ endKeys: ['actions'] });
 
   const capturesQuery = useQuery({
-    queryKey: baseKeys.captures(filter),
+    queryKey: captureKeys.list(filter),
     queryFn: () => listCaptures(filter),
   });
   const recaptureMutation = useMutation({
@@ -59,11 +67,11 @@ export default function CapturesPage() {
     onSuccess: (result) => {
       toast(result.ok
         ? {
-            body: t('base.recaptureStarted'),
+            body: t('captures.recaptureStarted'),
             uniqueID: 'recapture-started',
           }
         : {
-            body: t(baseErrorKey(result.error.code)),
+            body: t(captureErrorKey(result.error.code)),
             type: 'error',
             uniqueID: result.error.code,
           });
@@ -74,16 +82,16 @@ export default function CapturesPage() {
     onSuccess: (result) => {
       if (!result.ok) {
         toast({
-          body: t(baseErrorKey(result.error.code)),
+          body: t(captureErrorKey(result.error.code)),
           type: 'error',
           uniqueID: result.error.code,
         });
         setCaptureToDelete(null);
         return;
       }
-      void queryClient.invalidateQueries({ queryKey: baseKeys.all });
+      void queryClient.invalidateQueries({ queryKey: captureKeys.all });
       toast({
-        body: t('base.captureDeleted'),
+        body: t('captures.captureDeleted'),
         uniqueID: 'capture-deleted',
       });
       setCaptureToDelete(null);
@@ -97,24 +105,24 @@ export default function CapturesPage() {
 
   useEffect(() => subscribeToScrapeJobFinished((event) => {
     if (event.status === 'succeeded') {
-      void queryClient.invalidateQueries({ queryKey: baseKeys.all });
+      void queryClient.invalidateQueries({ queryKey: captureKeys.all });
       return;
     }
     toast({
-      body: t('base.scrapeFailed'),
+      body: t('captures.scrapeFailed'),
       type: 'error',
       uniqueID: `scrape-failed-${event.jobId}`,
     });
   }), [queryClient, t, toast]);
 
   const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: baseKeys.captures(filter) });
+    void queryClient.invalidateQueries({ queryKey: captureKeys.list(filter) });
   };
 
   const columns = useMemo<Array<TableColumn<CaptureSummary>>>(() => [
     {
       key: 'url',
-      header: t('base.url'),
+      header: t('captures.url'),
       width: proportional(3),
       renderCell: (capture) => (
         <Link
@@ -132,7 +140,7 @@ export default function CapturesPage() {
     },
     {
       key: 'title',
-      header: t('base.title'),
+      header: t('captures.title'),
       width: proportional(2),
       renderCell: (capture) => (
         <Text maxLines={1}>{capture.title ?? ''}</Text>
@@ -140,13 +148,13 @@ export default function CapturesPage() {
     },
     {
       key: 'note',
-      header: t('base.note'),
+      header: t('captures.note'),
       width: proportional(2),
       renderCell: (capture) => <NoteCell capture={capture} />,
     },
     {
       key: 'updatedAt',
-      header: t('base.updatedAt'),
+      header: t('captures.updatedAt'),
       width: pixel(160),
       renderCell: (capture) => (
         <Text color="secondary">{capture.updatedAt}</Text>
@@ -154,7 +162,7 @@ export default function CapturesPage() {
     },
     {
       key: 'createdAt',
-      header: t('base.createdAt'),
+      header: t('captures.createdAt'),
       width: pixel(160),
       renderCell: (capture) => (
         <Text color="secondary">{capture.createdAt}</Text>
@@ -163,23 +171,33 @@ export default function CapturesPage() {
     {
       key: 'actions',
       header: '',
-      width: pixel(144),
+      width: pixel(184),
       align: 'end',
       renderCell: (capture) => (
         <HStack gap={1} hAlign="end">
           <IconButton
-            label={t('base.viewJobs')}
-            tooltip={t('base.viewJobs')}
+            label={t('captures.viewDetails')}
+            tooltip={t('captures.viewDetails')}
+            icon={<EyeIcon />}
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              void navigate(`/library/captures/${capture.id}`);
+            }}
+          />
+          <IconButton
+            label={t('captures.viewJobs')}
+            tooltip={t('captures.viewJobs')}
             icon={<ClipboardDocumentListIcon />}
             size="sm"
             variant="ghost"
             onClick={() => {
-              void navigate(`/base/captures/${capture.id}/jobs`);
+              void navigate(`/library/captures/${capture.id}/jobs`);
             }}
           />
           <IconButton
-            label={t('base.recapture')}
-            tooltip={t('base.recapture')}
+            label={t('captures.recapture')}
+            tooltip={t('captures.recapture')}
             icon={<ArrowPathRoundedSquareIcon />}
             size="sm"
             variant="ghost"
@@ -188,17 +206,17 @@ export default function CapturesPage() {
             }}
           />
           <Popover
-            label={`${t('base.delete')} ${capture.url}`}
+            label={`${t('captures.delete')} ${capture.url}`}
             isOpen={captureToDelete?.id === capture.id}
             onOpenChange={(isOpen) => {
               setCaptureToDelete(isOpen ? capture : null);
             }}
             content={(
               <VStack gap={3}>
-                <Text type="label">{t('base.deleteCaptureTitle')}</Text>
+                <Text type="label">{t('captures.deleteCaptureTitle')}</Text>
                 <HStack gap={2} hAlign="end">
                   <Button
-                    label={t('base.cancel')}
+                    label={t('captures.cancel')}
                     size="sm"
                     variant="ghost"
                     onClick={() => {
@@ -206,7 +224,7 @@ export default function CapturesPage() {
                     }}
                   />
                   <Button
-                    label={t('base.delete')}
+                    label={t('captures.delete')}
                     size="sm"
                     variant="destructive"
                     isLoading={captureRemoval.isPending && captureToDelete?.id === capture.id}
@@ -219,8 +237,8 @@ export default function CapturesPage() {
             )}
           >
             <IconButton
-              label={t('base.delete')}
-              tooltip={t('base.delete')}
+              label={t('captures.delete')}
+              tooltip={t('captures.delete')}
               icon={<TrashIcon />}
               size="sm"
               variant="ghost"
@@ -238,15 +256,15 @@ export default function CapturesPage() {
       {titlebarActions && createPortal(
         <HStack gap={2} vAlign="center">
           <IconButton
-            label={t('base.refresh')}
-            tooltip={t('base.refresh')}
+            label={t('captures.refresh')}
+            tooltip={t('captures.refresh')}
             icon={<ArrowPathIcon />}
             size="sm"
             variant="ghost"
             onClick={refresh}
           />
           <Button
-            label={t('base.addCapture')}
+            label={t('captures.addCapture')}
             size="sm"
             variant="primary"
             onClick={() => {
@@ -258,15 +276,15 @@ export default function CapturesPage() {
       )}
       <VStack gap={5}>
         <SegmentedControl
-          label={t('base.captureFilter')}
+          label={t('captures.captureFilter')}
           size="sm"
           value={filter}
           onChange={(value) => {
             setFilter(value as CaptureFilter);
           }}
         >
-          <SegmentedControlItem value="all" label={t('base.allCaptures')} />
-          <SegmentedControlItem value="no-successful" label={t('base.noCapturedContent')} />
+          <SegmentedControlItem value="all" label={t('captures.allCaptures')} />
+          <SegmentedControlItem value="no-successful" label={t('captures.noCapturedContent')} />
         </SegmentedControl>
         {captures.length === 0
           ? (
@@ -283,6 +301,8 @@ export default function CapturesPage() {
                 idKey="id"
                 hasHover
                 density="compact"
+                plugins={{ stickyColumns }}
+                style={stickyTableStyle}
               />
             )}
       </VStack>

@@ -1,8 +1,9 @@
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import path from 'node:path';
 import type {
-  BaseSettings,
+  CaptureSettings,
   LanguageMode,
+  LibrarySettings,
   SettingsFeatures,
   SettingsSnapshot,
   ThemeMode,
@@ -11,8 +12,9 @@ import type {
 } from '../shared/settings';
 
 export type {
-  BaseSettings,
+  CaptureSettings,
   LanguageMode,
+  LibrarySettings,
   ThemeMode,
   TimeFormatPattern,
   TimeZoneCode,
@@ -32,12 +34,18 @@ type StoredSettings = {
   features?: unknown;
 };
 
-const DEFAULT_BASE_SETTINGS: BaseSettings = {
+const LEGACY_CAPTURE_SETTINGS_KEY = 'base';
+
+const DEFAULT_CAPTURE_SETTINGS: CaptureSettings = {
   fetcher: null,
   maxAttempts: 1,
   scrapeConcurrency: 2,
   firecrawl: { apiKey: '' },
   deepseek: { apiKey: '' },
+};
+
+const DEFAULT_LIBRARY_SETTINGS: LibrarySettings = {
+  captures: DEFAULT_CAPTURE_SETTINGS,
 };
 
 export const DEFAULT_SETTINGS: FoundrySettings = {
@@ -50,7 +58,7 @@ export const DEFAULT_SETTINGS: FoundrySettings = {
     },
   },
   features: {
-    base: DEFAULT_BASE_SETTINGS,
+    library: DEFAULT_LIBRARY_SETTINGS,
   },
 };
 
@@ -64,17 +72,23 @@ function clampInteger(value: unknown, fallback: number, maximum: number): number
     : fallback;
 }
 
-function normalizeBaseSettings(value: unknown): BaseSettings {
-  const base = isRecord(value) ? value : {};
-  const firecrawl = isRecord(base.firecrawl) ? base.firecrawl : {};
-  const deepseek = isRecord(base.deepseek) ? base.deepseek : {};
+function normalizeCaptureSettings(value: unknown): CaptureSettings {
+  const captures = isRecord(value) ? value : {};
+  const firecrawl = isRecord(captures.firecrawl) ? captures.firecrawl : {};
+  const deepseek = isRecord(captures.deepseek) ? captures.deepseek : {};
 
   return {
-    fetcher: base.fetcher === 'firecrawl' || base.fetcher === 'deepseek' ? base.fetcher : null,
-    maxAttempts: clampInteger(base.maxAttempts, DEFAULT_BASE_SETTINGS.maxAttempts, 10),
+    fetcher: captures.fetcher === 'firecrawl' || captures.fetcher === 'deepseek'
+      ? captures.fetcher
+      : null,
+    maxAttempts: clampInteger(
+      captures.maxAttempts,
+      DEFAULT_CAPTURE_SETTINGS.maxAttempts,
+      10,
+    ),
     scrapeConcurrency: clampInteger(
-      base.scrapeConcurrency,
-      DEFAULT_BASE_SETTINGS.scrapeConcurrency,
+      captures.scrapeConcurrency,
+      DEFAULT_CAPTURE_SETTINGS.scrapeConcurrency,
       5,
     ),
     firecrawl: {
@@ -88,9 +102,21 @@ function normalizeBaseSettings(value: unknown): BaseSettings {
 
 function normalizeFeatures(value: unknown): SettingsFeatures {
   const features = isRecord(value) ? value : {};
+  const legacyCaptureSettings = features[LEGACY_CAPTURE_SETTINGS_KEY];
+  const currentFeatures = Object.fromEntries(
+    Object.entries(features).filter(([key]) => key !== LEGACY_CAPTURE_SETTINGS_KEY),
+  );
+  const library = isRecord(currentFeatures.library) ? currentFeatures.library : {};
+  const captureSettings = isRecord(library.captures)
+    ? library.captures
+    : legacyCaptureSettings;
+
   return {
-    ...features,
-    base: normalizeBaseSettings(features.base),
+    ...currentFeatures,
+    library: {
+      ...library,
+      captures: normalizeCaptureSettings(captureSettings),
+    },
   };
 }
 
@@ -209,27 +235,36 @@ export function updateTimezone(settingsPath: string, timezone: TimeZoneCode): Fo
   });
 }
 
-export function updateBaseSettings(
+export function updateLibrarySettings(
   settingsPath: string,
-  patch: Partial<BaseSettings>,
+  patch: Partial<LibrarySettings>,
 ): FoundrySettings {
   const settings = readSettings(settingsPath);
-  const current = settings.features.base;
+  const current = settings.features.library;
+  const currentCaptures = current.captures;
+  const nextCaptures = patch.captures
+    ? {
+        ...currentCaptures,
+        ...patch.captures,
+        firecrawl: {
+          ...currentCaptures.firecrawl,
+          ...patch.captures.firecrawl,
+        },
+        deepseek: {
+          ...currentCaptures.deepseek,
+          ...patch.captures.deepseek,
+        },
+      }
+    : currentCaptures;
+
   return writeSettings(settingsPath, {
     ...settings,
     features: {
       ...settings.features,
-      base: {
+      library: {
         ...current,
         ...patch,
-        firecrawl: {
-          ...current.firecrawl,
-          ...patch.firecrawl,
-        },
-        deepseek: {
-          ...current.deepseek,
-          ...patch.deepseek,
-        },
+        captures: nextCaptures,
       },
     },
   });

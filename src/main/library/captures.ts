@@ -3,15 +3,17 @@ import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import type { FoundryDatabase } from '../database';
 import { captures, scrapeJobs } from '../database/schema';
 import type {
-  BaseResult,
+  CaptureContent,
+  CaptureDetail,
   CaptureFilter,
+  CaptureResult,
   CaptureSummary,
   CreateCaptureInput,
   CreateCaptureResult,
   ScrapeJobStatus,
   ScrapeJobSummary,
-} from '../../shared/base';
-import type { BaseSettings, FetcherType } from '../../shared/settings';
+} from '../../shared/captures';
+import type { CaptureSettings, FetcherType } from '../../shared/settings';
 import { readSettings } from '../settings';
 import type { ScrapeJobRunner } from './scrape-job-runner';
 
@@ -28,12 +30,12 @@ type StoredJobConfig = {
 function failure<T>(
   code:
     | 'ACTIVE_JOB_EXISTS'
-    | 'BASE_NOT_CONFIGURED'
+    | 'FETCHER_NOT_CONFIGURED'
     | 'CAPTURE_ALREADY_EXISTS'
     | 'CAPTURE_NOT_FOUND'
     | 'INVALID_URL',
   message: string,
-): BaseResult<T> {
+): CaptureResult<T> {
   return { ok: false, error: { code, message } };
 }
 
@@ -62,6 +64,45 @@ function toJobSummary(row: ScrapeJobRow): ScrapeJobSummary {
   };
 }
 
+function toCaptureContent(row: ScrapeJobRow | undefined): CaptureContent | null {
+  if (!row?.rawResponseJson) {
+    return null;
+  }
+
+  try {
+    const response: unknown = JSON.parse(row.rawResponseJson);
+    if (typeof response !== 'object' || response === null) {
+      return null;
+    }
+
+    const rawMarkdown = 'markdown' in response && typeof response.markdown === 'string'
+      ? response.markdown
+      : ('content' in response && typeof response.content === 'string'
+          ? response.content
+          : null);
+
+    if (rawMarkdown === null) {
+      return null;
+    }
+
+    return {
+      jobId: row.id,
+      // DeepSeek escapes Markdown punctuation in its extracted content.
+      markdown: row.fetcher === 'deepseek'
+        ? unescapeDeepSeekMarkdown(rawMarkdown)
+        : rawMarkdown,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function unescapeDeepSeekMarkdown(value: string): string {
+  return value.replaceAll(/\\(.)/g, (match, character: string) => (
+    (/\p{P}/u).test(character) ? character : match
+  ));
+}
+
 function normalizeUrl(value: string): string | null {
   const url = value.trim();
   try {
@@ -72,7 +113,7 @@ function normalizeUrl(value: string): string | null {
   }
 }
 
-function executionConfig(settings: BaseSettings): StoredJobConfig | null {
+function executionConfig(settings: CaptureSettings): StoredJobConfig | null {
   if (!settings.fetcher) {
     return null;
   }
@@ -107,7 +148,36 @@ export class CaptureService {
       .map((row) => toCaptureSummary(row));
   }
 
-  create(input: CreateCaptureInput): BaseResult<CreateCaptureResult> {
+  get(captureId: string): CaptureResult<CaptureDetail> {
+    const capture = this.db.select()
+      .from(captures)
+      .where(and(eq(captures.id, captureId), isNull(captures.deletedAt)))
+      .get();
+    if (!capture) {
+      return failure('CAPTURE_NOT_FOUND', 'Capture not found');
+    }
+
+    const successfulJob = capture.latestSuccessfulJobId
+      ? this.db.select()
+          .from(scrapeJobs)
+          .where(and(
+            eq(scrapeJobs.id, capture.latestSuccessfulJobId),
+            eq(scrapeJobs.captureId, captureId),
+            isNull(scrapeJobs.deletedAt),
+          ))
+          .get()
+      : undefined;
+
+    return {
+      ok: true,
+      data: {
+        capture: toCaptureSummary(capture),
+        content: toCaptureContent(successfulJob),
+      },
+    };
+  }
+
+  create(input: CreateCaptureInput): CaptureResult<CreateCaptureResult> {
     const url = normalizeUrl(input.url);
     if (!url) {
       return failure('INVALID_URL', 'Enter a valid HTTP or HTTPS URL');
@@ -122,9 +192,9 @@ export class CaptureService {
       return failure('CAPTURE_ALREADY_EXISTS', 'This link is already captured');
     }
 
-    const config = executionConfig(readSettings(this.settingsPath).features.base);
+    const config = executionConfig(readSettings(this.settingsPath).features.library.captures);
     if (!config) {
-      return failure('BASE_NOT_CONFIGURED', 'Configure a Fetcher before adding a capture');
+      return failure('FETCHER_NOT_CONFIGURED', 'Configure a Fetcher before adding a capture');
     }
 
     const timestamp = new Date();
@@ -178,7 +248,7 @@ export class CaptureService {
     return { ok: true, data: { capture: toCaptureSummary(row) } };
   }
 
-  recapture(captureId: string): BaseResult<ScrapeJobSummary> {
+  recapture(captureId: string): CaptureResult<ScrapeJobSummary> {
     const capture = this.db.select()
       .from(captures)
       .where(and(eq(captures.id, captureId), isNull(captures.deletedAt)))
@@ -187,9 +257,9 @@ export class CaptureService {
       return failure('CAPTURE_NOT_FOUND', 'Capture not found');
     }
 
-    const config = executionConfig(readSettings(this.settingsPath).features.base);
+    const config = executionConfig(readSettings(this.settingsPath).features.library.captures);
     if (!config) {
-      return failure('BASE_NOT_CONFIGURED', 'Configure a Fetcher before re-capturing');
+      return failure('FETCHER_NOT_CONFIGURED', 'Configure a Fetcher before re-capturing');
     }
 
     const timestamp = new Date();
@@ -235,7 +305,7 @@ export class CaptureService {
     return { ok: true, data: toJobSummary(row) };
   }
 
-  delete(captureId: string): BaseResult<null> {
+  delete(captureId: string): CaptureResult<null> {
     const timestamp = new Date();
     const outcome = this.db.transaction((tx) => {
       const capture = tx.select({ id: captures.id })
@@ -275,7 +345,7 @@ export class CaptureService {
     return outcome.kind === 'active' ? failure('ACTIVE_JOB_EXISTS', 'This capture already has an active scrape job') : { ok: true, data: null };
   }
 
-  updateNote(captureId: string, userNote: string): BaseResult<CaptureSummary> {
+  updateNote(captureId: string, userNote: string): CaptureResult<CaptureSummary> {
     const note = userNote.trim() || null;
     const rows = this.db.update(captures)
       .set({ userNote: note, updatedAt: new Date() })
@@ -287,7 +357,7 @@ export class CaptureService {
       : { ok: true, data: toCaptureSummary(rows[0]) };
   }
 
-  listJobs(captureId: string): BaseResult<ScrapeJobSummary[]> {
+  listJobs(captureId: string): CaptureResult<ScrapeJobSummary[]> {
     const capture = this.db.select({ id: captures.id })
       .from(captures)
       .where(and(eq(captures.id, captureId), isNull(captures.deletedAt)))

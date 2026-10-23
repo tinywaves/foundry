@@ -1,6 +1,6 @@
 import type {
-  BaseSettings,
   LanguageMode,
+  LibrarySettings,
   SettingsSnapshot,
   ThemeMode,
   TimeFormatPattern,
@@ -8,9 +8,10 @@ import type {
 } from '../../../shared/settings';
 
 export type {
-  BaseSettings,
+  CaptureSettings,
   FetcherType,
   LanguageMode,
+  LibrarySettings,
   SettingsSnapshot,
   ThemeMode,
   TimeFormatPattern,
@@ -49,6 +50,6 @@ export function setTimezone(timezone: TimeZoneCode): Promise<SettingsSnapshot> {
   return globalThis.api.settings.setTimezone(timezone) as Promise<SettingsSnapshot>;
 }
 
-export function setBase(patch: Partial<BaseSettings>): Promise<SettingsSnapshot> {
-  return globalThis.api.settings.setBase(patch) as Promise<SettingsSnapshot>;
+export function setLibrary(patch: Partial<LibrarySettings>): Promise<SettingsSnapshot> {
+  return globalThis.api.settings.setLibrary(patch) as Promise<SettingsSnapshot>;
 }

@@ -3,7 +3,7 @@ import { readSettings } from '../settings';
 import type { FoundryDatabase } from '../database';
 import { captures, scrapeJobs } from '../database/schema';
 import type { FetcherType } from '../../shared/settings';
-import type { ScrapeJobFinishedEvent } from '../../shared/base';
+import type { ScrapeJobFinishedEvent } from '../../shared/captures';
 import { scrapePage } from './fetcher';
 import { normalizeFetcherError } from './fetcher-error';
 import { log } from '../logger';
@@ -66,7 +66,7 @@ export class ScrapeJobRunner {
   ) {}
 
   private schedule(): void {
-    const concurrency = readSettings(this.settingsPath).features.base.scrapeConcurrency;
+    const concurrency = readSettings(this.settingsPath).features.library.captures.scrapeConcurrency;
     while (this.runningCount < concurrency && this.queue.length > 0) {
       const jobId = this.queue.shift();
       if (!jobId) {

@@ -5,22 +5,23 @@ import type {
   RemoteModel,
 } from '../shared/providers';
 import type {
-  BaseSettings,
   LanguageMode,
+  LibrarySettings,
   SettingsSnapshot,
   ThemeMode,
   TimeFormatPattern,
   TimeZoneCode,
 } from '../shared/settings';
 import type {
-  BaseResult,
+  CaptureDetail,
   CaptureFilter,
+  CaptureResult,
   CaptureSummary,
   CreateCaptureInput,
   CreateCaptureResult,
   ScrapeJobFinishedEvent,
   ScrapeJobSummary,
-} from '../shared/base';
+} from '../shared/captures';
 
 export type ProviderApi = {
   list: () => Promise<ProviderListItem[]>;
@@ -38,17 +39,18 @@ export type SettingsApi = {
   setLanguage: (language: LanguageMode) => Promise<SettingsSnapshot>;
   setTimeFormat: (timeFormat: TimeFormatPattern) => Promise<SettingsSnapshot>;
   setTimezone: (timezone: TimeZoneCode) => Promise<SettingsSnapshot>;
-  setBase: (patch: Partial<BaseSettings>) => Promise<SettingsSnapshot>;
+  setLibrary: (patch: Partial<LibrarySettings>) => Promise<SettingsSnapshot>;
   openConfigFolder: () => Promise<void>;
 };
 
-export type BaseApi = {
+export type CaptureApi = {
   listCaptures: (filter?: CaptureFilter) => Promise<CaptureSummary[]>;
-  createCapture: (input: CreateCaptureInput) => Promise<BaseResult<CreateCaptureResult>>;
-  recapture: (captureId: string) => Promise<BaseResult<ScrapeJobSummary>>;
-  deleteCapture: (captureId: string) => Promise<BaseResult<null>>;
-  updateNote: (captureId: string, userNote: string) => Promise<BaseResult<CaptureSummary>>;
-  listJobs: (captureId: string) => Promise<BaseResult<ScrapeJobSummary[]>>;
+  getCapture: (captureId: string) => Promise<CaptureResult<CaptureDetail>>;
+  createCapture: (input: CreateCaptureInput) => Promise<CaptureResult<CreateCaptureResult>>;
+  recapture: (captureId: string) => Promise<CaptureResult<ScrapeJobSummary>>;
+  deleteCapture: (captureId: string) => Promise<CaptureResult<null>>;
+  updateNote: (captureId: string, userNote: string) => Promise<CaptureResult<CaptureSummary>>;
+  listJobs: (captureId: string) => Promise<CaptureResult<ScrapeJobSummary[]>>;
   onScrapeJobFinished: (listener: (event: ScrapeJobFinishedEvent) => void) => number;
   offScrapeJobFinished: (subscriptionId: number) => void;
 };

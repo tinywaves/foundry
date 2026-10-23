@@ -8,8 +8,9 @@ import SettingsPage from './pages/settings';
 import NotFoundPage from './pages/not-found';
 import ProvidersPage from './pages/providers';
 import ProviderFormPage from './pages/providers/form';
-import CapturesPage from './pages/base/captures';
-import JobsPage from './pages/base/jobs';
+import CapturesPage from './pages/library/captures';
+import CaptureDetailPage from './pages/library/captures/detail';
+import JobsPage from './pages/library/jobs';
 
 export const router = createHashRouter([
   {
@@ -25,14 +26,18 @@ export const router = createHashRouter([
         children: [
           { path: 'overview', element: <OverviewPage />, handle: { title: 'Overview' } },
           {
-            path: 'base/captures',
+            path: 'library/captures',
             element: <CapturesPage />,
             handle: {
               title: 'Captures',
               description: 'Collect links first, then organize them later.',
             },
           },
-          { path: 'prompts', element: <PromptsPage />, handle: { title: 'Prompts' } },
+          {
+            path: 'library/prompts',
+            element: <PromptsPage />,
+            handle: { title: 'Prompts' },
+          },
           {
             path: 'providers',
             element: <ProvidersPage />,
@@ -47,7 +52,15 @@ export const router = createHashRouter([
         element: <StandaloneLayout />,
         children: [
           {
-            path: 'base/captures/:captureId/jobs',
+            path: 'library/captures/:captureId',
+            element: <CaptureDetailPage />,
+            handle: {
+              title: 'Capture details',
+              description: 'Read the latest successfully captured page.',
+            },
+          },
+          {
+            path: 'library/captures/:captureId/jobs',
             element: <JobsPage />,
             handle: {
               title: 'Jobs',

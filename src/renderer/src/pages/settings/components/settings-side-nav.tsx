@@ -31,8 +31,8 @@ export function SettingsSideNav({
       case 'language': {
         return t('settings.languageRegion');
       }
-      case 'base': {
-        return t('settings.base');
+      case 'library': {
+        return t('settings.library');
       }
       case 'advanced': {
         return t('settings.advanced');

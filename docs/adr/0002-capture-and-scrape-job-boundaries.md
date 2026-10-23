@@ -6,7 +6,7 @@ A Capture may have many historical Scrape Jobs but at most one pending or runnin
 
 The exact trimmed URL is unique among non-deleted Captures. Foundry does not canonicalize URLs or merge them by content. All deletions are logical.
 
-Fetchers are configured under Features > Base and are distinct from model Providers. Job retry policy belongs to Foundry rather than a provider SDK: SDK retries are disabled, each job performs up to the configured number of attempts with backoff, intermediate attempts are logged, and only the final failure is persisted on the job.
+Fetchers are configured under Settings > Features > Library > Captures and are distinct from model Providers. Job retry policy belongs to Foundry rather than a provider SDK: SDK retries are disabled, each job performs up to the configured number of attempts with backoff, intermediate attempts are logged, and only the final failure is persisted on the job.
 
 ## Consequences
 

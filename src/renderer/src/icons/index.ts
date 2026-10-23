@@ -1,6 +1,5 @@
 import {
   ChatBubbleLeftIcon,
-  CircleStackIcon,
   Cog6ToothIcon,
   DocumentTextIcon,
   FolderIcon,
@@ -11,7 +10,6 @@ import {
 
 export const appIcons = {
   overview: Squares2X2Icon,
-  base: CircleStackIcon,
   captures: LinkIcon,
   prompts: DocumentTextIcon,
   library: FolderIcon,

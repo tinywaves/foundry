@@ -2,8 +2,8 @@ import {
   AdjustmentsHorizontalIcon,
   BarsArrowUpIcon,
   BugAntIcon,
-  CircleStackIcon,
   ClockIcon,
+  FolderIcon,
   GlobeAltIcon,
   PaintBrushIcon,
 } from '@heroicons/react/24/outline';
@@ -37,10 +37,10 @@ export const PANEL_GROUPS: Array<{ label: string; panels: PanelConfig[] }> = [
     label: 'Features',
     panels: [
       {
-        id: 'base',
-        label: 'Base',
-        description: 'Page fetching, retries, and concurrency.',
-        icon: CircleStackIcon,
+        id: 'library',
+        label: 'Library',
+        description: 'Capture and prompt settings.',
+        icon: FolderIcon,
       },
     ],
   },
@@ -69,13 +69,13 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
   {
     title: 'Fetcher',
     description: 'Choose the service used to capture pages',
-    panel: 'base',
+    panel: 'library',
     icon: BugAntIcon,
   },
   {
     title: 'Scrape concurrency',
     description: 'Limit simultaneous page fetches',
-    panel: 'base',
+    panel: 'library',
     icon: BarsArrowUpIcon,
   },
 ];

@@ -1,7 +1,7 @@
 import type {
-  BaseResult,
+  CaptureResult,
   CreateCaptureResult,
-} from '../shared/base';
+} from '../shared/captures';
 import type { SettingsSnapshot } from '../shared/settings';
 import { formatTimestamp } from './format-time';
 
@@ -22,9 +22,9 @@ export function formatRecordTimes<T extends DatedRecord>(
 }
 
 export function formatCaptureCreationResult(
-  result: BaseResult<CreateCaptureResult>,
+  result: CaptureResult<CreateCaptureResult>,
   settings: SettingsSnapshot,
-): BaseResult<CreateCaptureResult> {
+): CaptureResult<CreateCaptureResult> {
   if (!result.ok) {
     return result;
   }
@@ -38,18 +38,18 @@ export function formatCaptureCreationResult(
 }
 
 export function formatRecordResult<T extends DatedRecord>(
-  result: BaseResult<T>,
+  result: CaptureResult<T>,
   settings: SettingsSnapshot,
-): BaseResult<T> {
+): CaptureResult<T> {
   return result.ok
     ? { ...result, data: formatRecordTimes(result.data, settings) }
     : result;
 }
 
 export function formatRecordListResult<T extends DatedRecord>(
-  result: BaseResult<T[]>,
+  result: CaptureResult<T[]>,
   settings: SettingsSnapshot,
-): BaseResult<T[]> {
+): CaptureResult<T[]> {
   return result.ok
     ? {
         ...result,

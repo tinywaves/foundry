@@ -17,7 +17,7 @@ export type TimeZoneCode
 
 export type FetcherType = 'firecrawl' | 'deepseek';
 
-export type BaseSettings = {
+export type CaptureSettings = {
   fetcher: FetcherType | null;
   maxAttempts: number;
   scrapeConcurrency: number;
@@ -29,8 +29,13 @@ export type BaseSettings = {
   };
 };
 
+export type LibrarySettings = {
+  captures: CaptureSettings;
+  [key: string]: unknown;
+};
+
 export type SettingsFeatures = {
-  base: BaseSettings;
+  library: LibrarySettings;
   [key: string]: unknown;
 };
 

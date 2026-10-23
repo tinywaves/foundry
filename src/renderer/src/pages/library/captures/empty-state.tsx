@@ -16,11 +16,11 @@ export function CapturesEmptyState({ onAdd }: { onAdd: () => void }) {
           endIcon={Square3Stack3DIcon}
         />
       )}
-      title={t('base.emptyTitle')}
-      description={t('base.emptyDescription')}
+      title={t('captures.emptyTitle')}
+      description={t('captures.emptyDescription')}
       actions={(
         <Button
-          label={t('base.addCapture')}
+          label={t('captures.addCapture')}
           size="sm"
           variant="primary"
           icon={<PlusIcon />}

@@ -7,9 +7,9 @@ import { Kbd } from '@astryxdesign/core/Kbd';
 import { Link } from '@astryxdesign/core/Link';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
-import type { CreateCaptureResult } from '../../../../../shared/base';
-import { baseKeys, createCapture } from '@renderer/apis/base';
-import { baseErrorKey } from '@renderer/pages/base/base-error-key';
+import type { CreateCaptureResult } from '../../../../../shared/captures';
+import { captureKeys, createCapture } from '@renderer/apis/captures';
+import { captureErrorKey } from '@renderer/pages/library/capture-error-key';
 import { useI18n } from '@renderer/i18n/use-i18n';
 import { useAppToast } from '@renderer/hooks/use-app-toast';
 import { styles } from './capture-dialog-styles';
@@ -43,7 +43,7 @@ export function CaptureDialog({
     onSuccess: (result) => {
       if (!result.ok) {
         toast({
-          body: t(baseErrorKey(result.error.code)),
+          body: t(captureErrorKey(result.error.code)),
           type: 'error',
           uniqueID: `capture-error-${result.error.code}`,
         });
@@ -54,9 +54,9 @@ export function CaptureDialog({
         return;
       }
 
-      void queryClient.invalidateQueries({ queryKey: baseKeys.all });
+      void queryClient.invalidateQueries({ queryKey: captureKeys.all });
       toast({
-        body: t('base.captureAdded'),
+        body: t('captures.captureAdded'),
         uniqueID: 'capture-added',
       });
       onCreated(result.data);
@@ -93,7 +93,7 @@ export function CaptureDialog({
     }
     if (!isValidHttpUrl(url)) {
       toast({
-        body: t('base.invalidUrl'),
+        body: t('captures.invalidUrl'),
         type: 'error',
         uniqueID: 'invalid-capture-url',
       });
@@ -109,13 +109,13 @@ export function CaptureDialog({
       width={620}
       padding={4}
       purpose="form"
-      aria-label={t('base.addCapture')}
+      aria-label={t('captures.addCapture')}
     >
       <Card
         ref={dropZoneRef}
         role="button"
         tabIndex={0}
-        aria-label={t('base.pasteLink')}
+        aria-label={t('captures.pasteLink')}
         padding={8}
         variant="transparent"
         xstyle={styles.dropZone}
@@ -142,11 +142,11 @@ export function CaptureDialog({
                     {url}
                   </Link>
                   {mutation.isPending
-                    ? <Text type="supporting">{t('base.capturing')}</Text>
+                    ? <Text type="supporting">{t('captures.capturing')}</Text>
                     : (
                         <HStack gap={2} vAlign="center" hAlign="center">
                           <Kbd keys="enter" xstyle={styles.enterKey} />
-                          <Text type="supporting">{t('base.enterToCapture')}</Text>
+                          <Text type="supporting">{t('captures.enterToCapture')}</Text>
                         </HStack>
                       )}
                 </>
@@ -154,7 +154,7 @@ export function CaptureDialog({
             : (
                 <HStack gap={2} vAlign="center" hAlign="center" wrap="wrap">
                   <Kbd keys="mod+v" />
-                  <Text type="supporting">{t('base.toPaste')}</Text>
+                  <Text type="supporting">{t('captures.toPaste')}</Text>
                 </HStack>
               )}
         </VStack>

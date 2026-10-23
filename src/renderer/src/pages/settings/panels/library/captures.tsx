@@ -9,10 +9,10 @@ import { NumberInput } from '@astryxdesign/core/NumberInput';
 import { Selector } from '@astryxdesign/core/Selector';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { useI18n } from '@renderer/i18n/use-i18n';
-import { SettingsCard } from '../components/settings-card';
-import { SettingsRow } from '../components/settings-row';
-import { CONTROL_WIDTH } from '../components/settings-row-styles';
-import type { BaseSettings, PanelProps } from '../types';
+import { SettingsCard } from '../../components/settings-card';
+import { SettingsRow } from '../../components/settings-row';
+import { CONTROL_WIDTH } from '../../components/settings-row-styles';
+import type { CaptureSettings, PanelProps } from '../../types';
 
 function ApiKeyField({
   value,
@@ -55,68 +55,72 @@ function ApiKeyField({
   );
 }
 
-export function BasePanel({ settings, update }: PanelProps) {
+export function CapturesSettingsBlock({ settings, update }: PanelProps) {
   const { t } = useI18n();
-  const base = settings.base;
-  const selectedApiKey = base.fetcher ? base[base.fetcher].apiKey : '';
+  const library = settings.library;
+  const captures = library.captures;
+  const selectedApiKey = captures.fetcher ? captures[captures.fetcher].apiKey : '';
 
-  const updateBase = (patch: Partial<BaseSettings>) => {
-    update('base', {
-      ...base,
-      ...patch,
-      firecrawl: { ...base.firecrawl, ...patch.firecrawl },
-      deepseek: { ...base.deepseek, ...patch.deepseek },
+  const updateCaptures = (patch: Partial<CaptureSettings>) => {
+    update('library', {
+      ...library,
+      captures: {
+        ...captures,
+        ...patch,
+        firecrawl: { ...captures.firecrawl, ...patch.firecrawl },
+        deepseek: { ...captures.deepseek, ...patch.deepseek },
+      },
     });
   };
 
   const setApiKey = (apiKey: string) => {
-    if (!base.fetcher) {
+    if (!captures.fetcher) {
       return;
     }
-    updateBase({
-      [base.fetcher]: { apiKey },
+    updateCaptures({
+      [captures.fetcher]: { apiKey },
     });
   };
 
   return (
-    <SettingsCard>
+    <SettingsCard title={t('settings.captures')}>
       <SettingsRow
         key="fetcher"
-        title={t('settings.baseFetcher')}
+        title={t('settings.capturesFetcher')}
         icon={BugAntIcon}
-        description={t('settings.baseFetcherDescription')}
+        description={t('settings.capturesFetcherDescription')}
         control={(
           <Selector
-            label={t('settings.baseFetcher')}
+            label={t('settings.capturesFetcher')}
             isLabelHidden
             size="sm"
             width={CONTROL_WIDTH}
-            value={base.fetcher ?? 'none'}
+            value={captures.fetcher ?? 'none'}
             onChange={(value) => {
-              updateBase({
-                fetcher: value === 'none' ? null : value as BaseSettings['fetcher'],
+              updateCaptures({
+                fetcher: value === 'none' ? null : value as CaptureSettings['fetcher'],
               });
             }}
             options={[
-              { value: 'none', label: t('settings.baseNotConfigured') },
+              { value: 'none', label: t('settings.capturesNotConfigured') },
               { value: 'firecrawl', label: 'Firecrawl' },
               { value: 'deepseek', label: 'DeepSeek Fetch' },
             ]}
           />
         )}
       />
-      {base.fetcher && (
+      {captures.fetcher && (
         <SettingsRow
-          key={`api-key-${base.fetcher}`}
-          title={t('settings.baseApiKey')}
+          key={`api-key-${captures.fetcher}`}
+          title={t('settings.capturesApiKey')}
           icon={KeyIcon}
-          description={t('settings.baseApiKeyDescription')}
+          description={t('settings.capturesApiKeyDescription')}
           control={(
             <ApiKeyField
-              key={base.fetcher}
+              key={captures.fetcher}
               value={selectedApiKey}
-              label={t('settings.baseApiKey')}
-              placeholder={t('settings.baseApiKeyPlaceholder')}
+              label={t('settings.capturesApiKey')}
+              placeholder={t('settings.capturesApiKeyPlaceholder')}
               onChange={setApiKey}
             />
           )}
@@ -124,17 +128,17 @@ export function BasePanel({ settings, update }: PanelProps) {
       )}
       <SettingsRow
         key="max-attempts"
-        title={t('settings.baseMaxAttempts')}
+        title={t('settings.capturesMaxAttempts')}
         icon={ArrowPathRoundedSquareIcon}
-        description={t('settings.baseMaxAttemptsDescription')}
+        description={t('settings.capturesMaxAttemptsDescription')}
         control={(
           <NumberInput
-            label={t('settings.baseMaxAttempts')}
+            label={t('settings.capturesMaxAttempts')}
             isLabelHidden
             size="sm"
-            value={base.maxAttempts}
+            value={captures.maxAttempts}
             onChange={(value) => {
-              updateBase({ maxAttempts: value });
+              updateCaptures({ maxAttempts: value });
             }}
             min={1}
             max={10}
@@ -146,17 +150,17 @@ export function BasePanel({ settings, update }: PanelProps) {
       />
       <SettingsRow
         key="scrape-concurrency"
-        title={t('settings.baseConcurrency')}
+        title={t('settings.capturesConcurrency')}
         icon={BarsArrowUpIcon}
-        description={t('settings.baseConcurrencyDescription')}
+        description={t('settings.capturesConcurrencyDescription')}
         control={(
           <NumberInput
-            label={t('settings.baseConcurrency')}
+            label={t('settings.capturesConcurrency')}
             isLabelHidden
             size="sm"
-            value={base.scrapeConcurrency}
+            value={captures.scrapeConcurrency}
             onChange={(value) => {
-              updateBase({ scrapeConcurrency: value });
+              updateCaptures({ scrapeConcurrency: value });
             }}
             min={1}
             max={5}

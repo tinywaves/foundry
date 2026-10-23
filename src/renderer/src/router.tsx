@@ -32,11 +32,6 @@ export const router = createHashRouter([
               description: 'Collect links first, then organize them later.',
             },
           },
-          {
-            path: 'base/captures/:captureId/jobs',
-            element: <JobsPage />,
-            handle: { title: 'Jobs' },
-          },
           { path: 'prompts', element: <PromptsPage />, handle: { title: 'Prompts' } },
           {
             path: 'providers',
@@ -51,6 +46,14 @@ export const router = createHashRouter([
       {
         element: <StandaloneLayout />,
         children: [
+          {
+            path: 'base/captures/:captureId/jobs',
+            element: <JobsPage />,
+            handle: {
+              title: 'Jobs',
+              description: 'Review scrape history and errors for this capture.',
+            },
+          },
           { path: 'settings', element: <SettingsPage />, handle: { title: 'Settings' } },
           {
             path: 'providers/new',

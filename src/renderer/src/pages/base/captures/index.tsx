@@ -9,7 +9,7 @@ import {
   TrashIcon,
 } from '@heroicons/react/24/outline';
 import { Button } from '@astryxdesign/core/Button';
-import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
+import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { IconButton } from '@astryxdesign/core/IconButton';
 import { Link } from '@astryxdesign/core/Link';
 import { Popover } from '@astryxdesign/core/Popover';
@@ -236,30 +236,7 @@ export default function CapturesPage() {
   return (
     <>
       {titlebarActions && createPortal(
-        <Button
-          label={t('base.addCapture')}
-          size="sm"
-          variant="primary"
-          onClick={() => {
-            setIsComposerOpen(true);
-          }}
-        />,
-        titlebarActions,
-      )}
-      <VStack gap={5}>
-        <HStack gap={3} vAlign="center" wrap="wrap">
-          <SegmentedControl
-            label={t('base.captureFilter')}
-            size="sm"
-            value={filter}
-            onChange={(value) => {
-              setFilter(value as CaptureFilter);
-            }}
-          >
-            <SegmentedControlItem value="all" label={t('base.allCaptures')} />
-            <SegmentedControlItem value="no-successful" label={t('base.noCapturedContent')} />
-          </SegmentedControl>
-          <StackItem size="fill" />
+        <HStack gap={2} vAlign="center">
           <IconButton
             label={t('base.refresh')}
             tooltip={t('base.refresh')}
@@ -268,7 +245,29 @@ export default function CapturesPage() {
             variant="ghost"
             onClick={refresh}
           />
-        </HStack>
+          <Button
+            label={t('base.addCapture')}
+            size="sm"
+            variant="primary"
+            onClick={() => {
+              setIsComposerOpen(true);
+            }}
+          />
+        </HStack>,
+        titlebarActions,
+      )}
+      <VStack gap={5}>
+        <SegmentedControl
+          label={t('base.captureFilter')}
+          size="sm"
+          value={filter}
+          onChange={(value) => {
+            setFilter(value as CaptureFilter);
+          }}
+        >
+          <SegmentedControlItem value="all" label={t('base.allCaptures')} />
+          <SegmentedControlItem value="no-successful" label={t('base.noCapturedContent')} />
+        </SegmentedControl>
         {captures.length === 0
           ? (
               <CapturesEmptyState

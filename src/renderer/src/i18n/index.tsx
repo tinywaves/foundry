@@ -17,6 +17,7 @@ export type TranslationKey
     | 'navigation.base'
     | 'navigation.baseDescription'
     | 'navigation.jobs'
+    | 'navigation.jobsDescription'
     | 'navigation.library'
     | 'navigation.prompts'
     | 'navigation.providers'
@@ -124,7 +125,6 @@ export type TranslationKey
     | 'base.createdAt'
     | 'base.updatedAt'
     | 'base.error'
-    | 'base.backToCaptures'
     | 'base.noJobsTitle'
     | 'base.noJobsDescription'
     | 'base.addNote';
@@ -136,6 +136,7 @@ const english: TranslationTable = {
   'navigation.base': 'Base',
   'navigation.baseDescription': 'Collect links first, then organize them later.',
   'navigation.jobs': 'Jobs',
+  'navigation.jobsDescription': 'Review scrape history and errors for this capture.',
   'navigation.library': 'Library',
   'navigation.prompts': 'Prompts',
   'navigation.providers': 'Providers',
@@ -261,7 +262,6 @@ const english: TranslationTable = {
   'base.createdAt': 'Created at',
   'base.updatedAt': 'Updated at',
   'base.error': 'Error',
-  'base.backToCaptures': 'Back to captures',
   'base.noJobsTitle': 'No scrape jobs',
   'base.noJobsDescription': 'This capture does not have any scrape history.',
   'base.addNote': 'Add a note',
@@ -347,6 +347,7 @@ const simplifiedChinese: TranslationTable = {
   'navigation.base': 'Base',
   'navigation.baseDescription': '先收集链接，之后再整理。',
   'navigation.jobs': '抓取记录',
+  'navigation.jobsDescription': '查看这条收藏的抓取历史与错误。',
   'overview.title': '欢迎回来',
   'settings.features': '功能',
   'settings.base': 'Base',
@@ -398,7 +399,6 @@ const simplifiedChinese: TranslationTable = {
   'base.createdAt': '创建时间',
   'base.updatedAt': '更新时间',
   'base.error': '错误',
-  'base.backToCaptures': '返回收藏',
   'base.noJobsTitle': '没有抓取记录',
   'base.noJobsDescription': '这条收藏还没有抓取历史。',
   'base.addNote': '添加备注',
@@ -484,6 +484,7 @@ const traditionalChinese: TranslationTable = {
   'navigation.base': 'Base',
   'navigation.baseDescription': '先收集連結，之後再整理。',
   'navigation.jobs': '抓取紀錄',
+  'navigation.jobsDescription': '查看這筆收藏的抓取紀錄與錯誤。',
   'overview.title': '歡迎回來',
   'settings.features': '功能',
   'settings.base': 'Base',
@@ -535,7 +536,6 @@ const traditionalChinese: TranslationTable = {
   'base.createdAt': '建立時間',
   'base.updatedAt': '更新時間',
   'base.error': '錯誤',
-  'base.backToCaptures': '返回收藏',
   'base.noJobsTitle': '沒有抓取紀錄',
   'base.noJobsDescription': '這筆收藏還沒有抓取紀錄。',
   'base.addNote': '新增備註',
@@ -621,6 +621,7 @@ const japanese: TranslationTable = {
   'navigation.base': 'Base',
   'navigation.baseDescription': 'まずリンクを集め、後から整理します。',
   'navigation.jobs': '取得履歴',
+  'navigation.jobsDescription': 'このキャプチャの取得履歴とエラーを確認します。',
   'overview.title': 'おかえりなさい',
   'settings.features': '機能',
   'settings.base': 'Base',
@@ -672,7 +673,6 @@ const japanese: TranslationTable = {
   'base.createdAt': '作成日時',
   'base.updatedAt': '更新日時',
   'base.error': 'エラー',
-  'base.backToCaptures': 'キャプチャに戻る',
   'base.noJobsTitle': '取得履歴はありません',
   'base.noJobsDescription': 'このキャプチャには取得履歴がありません。',
   'base.addNote': 'メモを追加',

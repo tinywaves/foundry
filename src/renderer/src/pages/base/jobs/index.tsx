@@ -1,19 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams } from 'react-router-dom';
-import {
-  ArrowLeftIcon,
-  ArrowPathIcon,
-} from '@heroicons/react/24/outline';
+import { useParams } from 'react-router-dom';
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import { Badge } from '@astryxdesign/core/Badge';
 import { Button } from '@astryxdesign/core/Button';
 import { EmptyState } from '@astryxdesign/core/EmptyState';
-import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
+import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { IconButton } from '@astryxdesign/core/IconButton';
 import { Table, pixel } from '@astryxdesign/core/Table';
 import type { TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
+import { Tooltip } from '@astryxdesign/core/Tooltip';
 import type { ScrapeJobStatus, ScrapeJobSummary } from '../../../../../shared/base';
 import {
   baseKeys,
@@ -35,7 +33,6 @@ const statusVariant: Record<ScrapeJobStatus, 'neutral' | 'success' | 'error'> = 
 export default function JobsPage() {
   const { captureId = '' } = useParams();
   const { t } = useI18n();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const toast = useAppToast();
   const [titlebarActions, setTitlebarActions] = useState<HTMLElement | null>(null);
@@ -91,7 +88,7 @@ export default function JobsPage() {
     {
       key: 'status',
       header: t('base.jobStatus'),
-      width: pixel(80),
+      width: pixel(120),
       renderCell: (job) => (
         <Badge
           label={t(`base.jobStatus.${job.status}`)}
@@ -102,7 +99,7 @@ export default function JobsPage() {
     {
       key: 'fetcher',
       header: t('base.fetcher'),
-      width: pixel(96),
+      width: pixel(160),
       renderCell: (job) => (
         <Text>{job.fetcher === 'firecrawl' ? 'Firecrawl' : 'DeepSeek Fetch'}</Text>
       ),
@@ -110,7 +107,7 @@ export default function JobsPage() {
     {
       key: 'createdAt',
       header: t('base.createdAt'),
-      width: pixel(128),
+      width: pixel(200),
       renderCell: (job) => (
         <Text color="secondary">{job.createdAt}</Text>
       ),
@@ -118,7 +115,7 @@ export default function JobsPage() {
     {
       key: 'updatedAt',
       header: t('base.updatedAt'),
-      width: pixel(128),
+      width: pixel(200),
       renderCell: (job) => (
         <Text color="secondary">{job.updatedAt}</Text>
       ),
@@ -127,16 +124,20 @@ export default function JobsPage() {
       key: 'error',
       header: t('base.error'),
       width: pixel(220),
-      renderCell: (job) => (
-        <Text
-          color={job.errorMessage ? 'primary' : 'secondary'}
-          display="block"
-          maxLines={2}
-          textWrap="wrap"
-        >
-          {job.errorMessage ?? '—'}
-        </Text>
-      ),
+      renderCell: (job) => (job.errorMessage
+        ? (
+            <Tooltip content={job.errorMessage}>
+              <Text
+                color="primary"
+                display="block"
+                maxLines={2}
+                textWrap="wrap"
+              >
+                {job.errorMessage}
+              </Text>
+            </Tooltip>
+          )
+        : <Text color="secondary">—</Text>),
     },
   ], [t]);
 
@@ -155,7 +156,7 @@ export default function JobsPage() {
           <Button
             label={t('base.recapture')}
             size="sm"
-            variant="secondary"
+            variant="primary"
             onClick={() => {
               recaptureMutation.mutate(captureId);
             }}
@@ -164,18 +165,6 @@ export default function JobsPage() {
         titlebarActions,
       )}
       <VStack gap={5}>
-        <HStack gap={2} vAlign="center">
-          <Button
-            label={t('base.backToCaptures')}
-            size="sm"
-            variant="ghost"
-            icon={<ArrowLeftIcon />}
-            onClick={() => {
-              void navigate('/base/captures');
-            }}
-          />
-          <StackItem size="fill" />
-        </HStack>
         {jobs.length === 0
           ? (
               <EmptyState

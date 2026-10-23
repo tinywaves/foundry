@@ -18,6 +18,7 @@ export default function SidebarLayout() {
     const labels: Record<string, string> = {
       overview: t('navigation.overview'),
       base: t('navigation.base'),
+      captures: t('navigation.captures'),
       prompts: t('navigation.prompts'),
       providers: t('navigation.providers'),
       settings: t('navigation.settings'),
@@ -58,6 +59,7 @@ export default function SidebarLayout() {
                         title={navigationLabel(node.id, node.title)}
                         icon={node.icon}
                         items={node.items}
+                        getLabel={navigationLabel}
                       />
                     )
               ))}

@@ -4,6 +4,7 @@ import {
   Cog6ToothIcon,
   DocumentTextIcon,
   FolderIcon,
+  LinkIcon,
   Square3Stack3DIcon,
   Squares2X2Icon,
 } from '@heroicons/react/24/outline';
@@ -11,8 +12,9 @@ import {
 export const appIcons = {
   overview: Squares2X2Icon,
   base: CircleStackIcon,
-  library: FolderIcon,
+  captures: LinkIcon,
   prompts: DocumentTextIcon,
+  library: FolderIcon,
   providers: Square3Stack3DIcon,
   chat: ChatBubbleLeftIcon,
   settings: Cog6ToothIcon,

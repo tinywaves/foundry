@@ -28,6 +28,7 @@ export default function WindowTitlebar({ collapsible, showBackButton = false }: 
   const titleTranslations: Record<string, string> = {
     'Overview': t('navigation.overview'),
     'Base': t('navigation.base'),
+    'Captures': t('navigation.captures'),
     'Jobs': t('navigation.jobs'),
     'Prompts': t('navigation.prompts'),
     'Providers': t('navigation.providers'),

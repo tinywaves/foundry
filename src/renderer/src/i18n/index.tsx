@@ -18,6 +18,7 @@ export type TranslationKey
     | 'navigation.baseDescription'
     | 'navigation.jobs'
     | 'navigation.jobsDescription'
+    | 'navigation.captures'
     | 'navigation.library'
     | 'navigation.prompts'
     | 'navigation.providers'
@@ -137,6 +138,7 @@ const english: TranslationTable = {
   'navigation.baseDescription': 'Collect links first, then organize them later.',
   'navigation.jobs': 'Jobs',
   'navigation.jobsDescription': 'Review scrape history and errors for this capture.',
+  'navigation.captures': 'Captures',
   'navigation.library': 'Library',
   'navigation.prompts': 'Prompts',
   'navigation.providers': 'Providers',
@@ -270,6 +272,7 @@ const english: TranslationTable = {
 const simplifiedChinese: TranslationTable = {
   ...english,
   'navigation.overview': '概览',
+  'navigation.captures': '收藏',
   'navigation.library': '资料库',
   'navigation.prompts': '提示词',
   'navigation.providers': '服务提供商',
@@ -407,6 +410,7 @@ const simplifiedChinese: TranslationTable = {
 const traditionalChinese: TranslationTable = {
   ...simplifiedChinese,
   'navigation.overview': '總覽',
+  'navigation.captures': '收藏',
   'navigation.library': '資料庫',
   'navigation.prompts': '提示詞',
   'navigation.providers': '服務提供者',
@@ -544,6 +548,7 @@ const traditionalChinese: TranslationTable = {
 const japanese: TranslationTable = {
   ...english,
   'navigation.overview': '概要',
+  'navigation.captures': 'キャプチャ',
   'navigation.library': 'ライブラリ',
   'navigation.prompts': 'プロンプト',
   'navigation.providers': 'プロバイダー',

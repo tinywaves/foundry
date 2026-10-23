@@ -10,10 +10,12 @@ export default function MenuGroup({
   title,
   icon,
   items,
+  getLabel,
 }: {
   title: string;
   icon: NavigationItem['icon'];
   items: readonly NavigationItem[];
+  getLabel: (id: string, fallback: string) => string;
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const firstItem = items[0];
@@ -34,8 +36,8 @@ export default function MenuGroup({
       <VStack gap={0} xstyle={styles.compactNavItems}>
         {items.map((item) => (
           <RoutedSideNavItem
-            key={item.label}
-            label={item.label}
+            key={item.id}
+            label={getLabel(item.id, item.label)}
             icon={item.icon}
             href={item.href}
           />

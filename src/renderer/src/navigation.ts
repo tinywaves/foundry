@@ -43,11 +43,19 @@ export const sidebarNavigation: readonly NavigationNode[] = [
     ],
   },
   {
-    kind: 'item',
+    kind: 'section',
     id: 'base',
-    label: 'Base',
-    href: '/base/captures',
+    title: 'Base',
     icon: appIcons.base,
+    items: [
+      {
+        kind: 'item',
+        id: 'captures',
+        label: 'Captures',
+        href: '/base/captures',
+        icon: appIcons.captures,
+      },
+    ],
   },
   {
     kind: 'item',

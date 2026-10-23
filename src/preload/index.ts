@@ -15,6 +15,7 @@ const captureSubscriptions = new Map<
 const api: { captures: CaptureApi; providers: ProviderApi; settings: SettingsApi } = {
   captures: {
     listCaptures: (filter) => ipcRenderer.invoke('captures:list', filter),
+    countCaptures: () => ipcRenderer.invoke('captures:count'),
     getCapture: (captureId) => ipcRenderer.invoke('captures:get', captureId),
     createCapture: (input) => ipcRenderer.invoke('captures:create', input),
     recapture: (captureId) => ipcRenderer.invoke('captures:recapture', captureId),

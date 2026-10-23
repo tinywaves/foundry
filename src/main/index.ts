@@ -201,6 +201,7 @@ void app.whenReady().then(() => {
     return captureService.list(filter as CaptureFilter | undefined)
       .map((capture) => formatRecordTimes(capture, settings));
   });
+  handleCaptureIpc('captures:count', () => captureService.counts());
   handleCaptureIpc('captures:get', (captureId) => {
     const settings = readSettings(settingsPath);
     const result = captureService.get(captureId as string);

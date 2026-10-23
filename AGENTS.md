@@ -38,5 +38,6 @@ RULES:
 - Put types and contracts shared by main, preload, and renderer in `src/shared/`; process-specific modules should not be the source of shared renderer contracts.
 - Use TanStack Query for server-state fetching, caching, and mutations.
 - Split components into focused files instead of placing many components in one file.
+- Page-level and primary content containers must fill the available layout width. Do not cap them with numeric `maxWidth`; render full-width Markdown with `contentWidth="none"`. The surrounding `LayoutContent` owns the page width; use padding and component gaps elsewhere.
 - After writing code, run `pnpm run lint` and `pnpm run lint-fix`.
 - During every implementation, check for unused translation keys and remove any leftover multilingual entries that are no longer referenced.

@@ -1,4 +1,5 @@
 import type {
+  CaptureCounts,
   CaptureDetail,
   CaptureFilter,
   CaptureResult,
@@ -12,12 +13,17 @@ import type {
 export const captureKeys = {
   all: ['captures'] as const,
   list: (filter: CaptureFilter) => [...captureKeys.all, 'list', filter] as const,
+  counts: () => [...captureKeys.all, 'counts'] as const,
   detail: (captureId: string) => [...captureKeys.all, 'detail', captureId] as const,
   jobs: (captureId: string) => [...captureKeys.all, 'jobs', captureId] as const,
 };
 
 export function listCaptures(filter: CaptureFilter = 'all'): Promise<CaptureSummary[]> {
   return globalThis.api.captures.listCaptures(filter);
+}
+
+export function countCaptures(): Promise<CaptureCounts> {
+  return globalThis.api.captures.countCaptures();
 }
 
 export function getCapture(captureId: string): Promise<CaptureResult<CaptureDetail>> {

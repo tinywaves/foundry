@@ -13,6 +13,7 @@ import type {
   TimeZoneCode,
 } from '../shared/settings';
 import type {
+  CaptureCounts,
   CaptureDetail,
   CaptureFilter,
   CaptureResult,
@@ -45,6 +46,7 @@ export type SettingsApi = {
 
 export type CaptureApi = {
   listCaptures: (filter?: CaptureFilter) => Promise<CaptureSummary[]>;
+  countCaptures: () => Promise<CaptureCounts>;
   getCapture: (captureId: string) => Promise<CaptureResult<CaptureDetail>>;
   createCapture: (input: CreateCaptureInput) => Promise<CaptureResult<CreateCaptureResult>>;
   recapture: (captureId: string) => Promise<CaptureResult<ScrapeJobSummary>>;

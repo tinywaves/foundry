@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNull } from 'drizzle-orm';
 import type { FoundryDatabase } from '../database';
 import { captures, scrapeJobs } from '../database/schema';
 import type {
   CaptureContent,
+  CaptureCounts,
   CaptureDetail,
   CaptureFilter,
   CaptureResult,
@@ -146,6 +147,24 @@ export class CaptureService {
       .orderBy(desc(captures.createdAt))
       .all()
       .map((row) => toCaptureSummary(row));
+  }
+
+  counts(): CaptureCounts {
+    const activeCaptures = isNull(captures.deletedAt);
+    const all = this.db
+      .select({ value: count() })
+      .from(captures)
+      .where(activeCaptures)
+      .get()
+      ?.value ?? 0;
+    const noSuccessful = this.db
+      .select({ value: count() })
+      .from(captures)
+      .where(and(activeCaptures, isNull(captures.latestSuccessfulJobId)))
+      .get()
+      ?.value ?? 0;
+
+    return { all, noSuccessful };
   }
 
   get(captureId: string): CaptureResult<CaptureDetail> {

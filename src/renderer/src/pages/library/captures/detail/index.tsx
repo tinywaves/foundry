@@ -63,7 +63,7 @@ export default function CaptureDetailPage() {
       )}
       {detailQuery.isPending
         ? (
-            <VStack gap={3} width="100%" maxWidth={960}>
+            <VStack gap={3} width="100%">
               <Skeleton width={280} height={30} />
               <Skeleton width={420} height={18} index={1} />
               <Skeleton width="100%" height={280} radius={2} index={2} />
@@ -71,7 +71,7 @@ export default function CaptureDetailPage() {
           )
         : (detail
             ? (
-                <VStack gap={5} width="100%" maxWidth={960}>
+                <VStack gap={5} width="100%">
                   <VStack gap={2}>
                     <Heading level={1}>
                       {detail.capture.title || t('navigation.captureDetails')}
@@ -104,7 +104,7 @@ export default function CaptureDetailPage() {
                           <Markdown
                             density="compact"
                             headingLevelStart={2}
-                            contentWidth={760}
+                            contentWidth="none"
                             onLinkClick={(href, event) => {
                               if (href.startsWith('#')) {
                                 return;

@@ -29,6 +29,7 @@ import type { TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
 import type { CaptureFilter, CaptureSummary } from '../../../../../shared/captures';
 import {
+  countCaptures,
   captureKeys,
   deleteCapture,
   listCaptures,
@@ -47,6 +48,10 @@ const stickyTableStyle = {
   '--table-sticky-background': 'var(--color-background-surface)',
 } as CSSProperties;
 
+function countLabel(label: string, value: number | undefined): string {
+  return value === undefined ? label : `${label} (${value})`;
+}
+
 export default function CapturesPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
@@ -61,6 +66,10 @@ export default function CapturesPage() {
   const capturesQuery = useQuery({
     queryKey: captureKeys.list(filter),
     queryFn: () => listCaptures(filter),
+  });
+  const captureCountsQuery = useQuery({
+    queryKey: captureKeys.counts(),
+    queryFn: countCaptures,
   });
   const recaptureMutation = useMutation({
     mutationFn: recapture,
@@ -250,6 +259,7 @@ export default function CapturesPage() {
   ], [captureRemoval, captureToDelete, navigate, recaptureMutation, t]);
 
   const captures = capturesQuery.data ?? [];
+  const captureCounts = captureCountsQuery.data;
 
   return (
     <>
@@ -283,8 +293,14 @@ export default function CapturesPage() {
             setFilter(value as CaptureFilter);
           }}
         >
-          <SegmentedControlItem value="all" label={t('captures.allCaptures')} />
-          <SegmentedControlItem value="no-successful" label={t('captures.noCapturedContent')} />
+          <SegmentedControlItem
+            value="all"
+            label={countLabel(t('captures.allCaptures'), captureCounts?.all)}
+          />
+          <SegmentedControlItem
+            value="no-successful"
+            label={countLabel(t('captures.noCapturedContent'), captureCounts?.noSuccessful)}
+          />
         </SegmentedControl>
         {captures.length === 0
           ? (

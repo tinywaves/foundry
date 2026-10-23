@@ -2,6 +2,11 @@ import type { FetcherType } from './settings';
 
 export type CaptureFilter = 'all' | 'no-successful';
 
+export type CaptureCounts = {
+  all: number;
+  noSuccessful: number;
+};
+
 export type CaptureSummary = {
   id: string;
   url: string;

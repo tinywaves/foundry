@@ -16,7 +16,8 @@ export async function scrapeWithFirecrawl(url: string, apiKey: string): Promise<
   const client = new Firecrawl({
     apiKey,
     timeoutMs: FIRECRAWL_TIMEOUT_MS,
-    maxRetries: 0,
+    // Firecrawl counts this as total attempts, not additional retries.
+    maxRetries: 1,
   });
 
   try {

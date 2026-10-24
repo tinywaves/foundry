@@ -58,6 +58,13 @@ export type TranslationKey
     | 'settings.advanced'
     | 'settings.configFolder'
     | 'settings.openConfigFolder'
+    | 'settings.exportDataDescription'
+    | 'settings.exportData'
+    | 'settings.exportDataAction'
+    | 'settings.finishJobsBeforeTransfer'
+    | 'settings.importData'
+    | 'settings.importDataAction'
+    | 'settings.importDataDescription'
     | 'settings.appearance'
     | 'settings.languageRegion'
     | 'settings.search'
@@ -99,6 +106,7 @@ export type TranslationKey
     | 'captures.enterToCapture'
     | 'captures.configureFetcherFirst'
     | 'captures.activeJobExists'
+    | 'captures.dataTransferBusy'
     | 'captures.captureNotFound'
     | 'captures.invalidUrl'
     | 'captures.addCapture'
@@ -133,7 +141,46 @@ export type TranslationKey
     | 'captures.noContentTitle'
     | 'captures.noContentDescription'
     | 'captures.detailUnavailable'
-    | 'captures.addNote';
+    | 'captures.addNote'
+    | 'dataTransfer.exportTitle'
+    | 'dataTransfer.exportSubtitle'
+    | 'dataTransfer.passphrase'
+    | 'dataTransfer.passphraseDescription'
+    | 'dataTransfer.confirmPassphrase'
+    | 'dataTransfer.passphraseTooShort'
+    | 'dataTransfer.passphraseMismatch'
+    | 'dataTransfer.passphraseWarning'
+    | 'dataTransfer.cancel'
+    | 'dataTransfer.exportAction'
+    | 'dataTransfer.exported'
+    | 'dataTransfer.importTitle'
+    | 'dataTransfer.importPassphraseDescription'
+    | 'dataTransfer.inspectAction'
+    | 'dataTransfer.previewTitle'
+    | 'dataTransfer.exportedAt'
+    | 'dataTransfer.appVersion'
+    | 'dataTransfer.schemaVersion'
+    | 'dataTransfer.providers'
+    | 'dataTransfer.captures'
+    | 'dataTransfer.jobs'
+    | 'dataTransfer.replaceWarning'
+    | 'dataTransfer.importAction'
+    | 'dataTransfer.importingTitle'
+    | 'dataTransfer.importingDescription'
+    | 'dataTransfer.importingHint'
+    | 'dataTransfer.restartTitle'
+    | 'dataTransfer.restartDescription'
+    | 'dataTransfer.restartHint'
+    | 'dataTransfer.restartAction'
+    | 'dataTransfer.activeJobs'
+    | 'dataTransfer.archiveHasActiveJobs'
+    | 'dataTransfer.busy'
+    | 'dataTransfer.importExpired'
+    | 'dataTransfer.invalidPassphrase'
+    | 'dataTransfer.newerVersion'
+    | 'dataTransfer.unsupportedArchive'
+    | 'dataTransfer.invalidArchive'
+    | 'dataTransfer.ioError';
 
 type TranslationTable = Record<TranslationKey, string>;
 
@@ -201,6 +248,13 @@ const english: TranslationTable = {
   'settings.advanced': 'Advanced',
   'settings.configFolder': 'Config folder',
   'settings.openConfigFolder': 'Open folder',
+  'settings.exportDataDescription': 'Create an encrypted Foundry snapshot.',
+  'settings.exportData': 'Export data',
+  'settings.exportDataAction': 'Export',
+  'settings.finishJobsBeforeTransfer': 'Finish active scrape jobs before transferring data.',
+  'settings.importData': 'Import data',
+  'settings.importDataAction': 'Import',
+  'settings.importDataDescription': 'Restore data from an encrypted Foundry snapshot.',
   'settings.appearance': 'Appearance',
   'settings.languageRegion': 'Language & region',
   'settings.search': 'Search settings',
@@ -242,6 +296,7 @@ const english: TranslationTable = {
   'captures.enterToCapture': 'to capture',
   'captures.configureFetcherFirst': 'Configure a Fetcher in Settings before capturing pages.',
   'captures.activeJobExists': 'A scrape job is already running for this capture.',
+  'captures.dataTransferBusy': 'Wait for the current data transfer to finish.',
   'captures.captureNotFound': 'Capture not found.',
   'captures.invalidUrl': 'Enter a valid HTTP or HTTPS URL.',
   'captures.addCapture': 'Add a capture',
@@ -277,6 +332,45 @@ const english: TranslationTable = {
   'captures.noContentDescription': 'This capture has no successful page content. Review its jobs or re-capture it.',
   'captures.detailUnavailable': 'Capture details are unavailable',
   'captures.addNote': 'Add a note',
+  'dataTransfer.exportTitle': 'Export Foundry data',
+  'dataTransfer.exportSubtitle': 'Protect this snapshot with a passphrase.',
+  'dataTransfer.passphrase': 'Passphrase',
+  'dataTransfer.passphraseDescription': 'At least 12 characters. Spaces and letter case matter.',
+  'dataTransfer.confirmPassphrase': 'Confirm passphrase',
+  'dataTransfer.passphraseTooShort': 'Use at least 12 characters.',
+  'dataTransfer.passphraseMismatch': 'The passphrases do not match.',
+  'dataTransfer.passphraseWarning': 'Foundry cannot recover a forgotten passphrase. Store it somewhere safe before exporting.',
+  'dataTransfer.cancel': 'Cancel',
+  'dataTransfer.exportAction': 'Choose file and export',
+  'dataTransfer.exported': 'Foundry data exported.',
+  'dataTransfer.importTitle': 'Import Foundry data',
+  'dataTransfer.importPassphraseDescription': 'Enter the passphrase used when this snapshot was exported.',
+  'dataTransfer.inspectAction': 'Unlock snapshot',
+  'dataTransfer.previewTitle': 'Review import',
+  'dataTransfer.exportedAt': 'Exported',
+  'dataTransfer.appVersion': 'Foundry version',
+  'dataTransfer.schemaVersion': 'Data version',
+  'dataTransfer.providers': 'Providers',
+  'dataTransfer.captures': 'Captures',
+  'dataTransfer.jobs': 'Jobs',
+  'dataTransfer.replaceWarning': 'Importing replaces all current Providers, Captures, Jobs, and application settings. Foundry will restart afterward.',
+  'dataTransfer.importAction': 'Import and replace',
+  'dataTransfer.importingTitle': 'Importing data',
+  'dataTransfer.importingDescription': 'Importing Foundry data…',
+  'dataTransfer.importingHint': 'Keep Foundry open until the import finishes.',
+  'dataTransfer.restartTitle': 'Import complete',
+  'dataTransfer.restartDescription': 'The data was imported successfully. Restart Foundry to load it.',
+  'dataTransfer.restartHint': 'The current session remains locked until Foundry restarts.',
+  'dataTransfer.restartAction': 'Restart Foundry',
+  'dataTransfer.activeJobs': 'Finish active scrape jobs before exporting or importing data.',
+  'dataTransfer.archiveHasActiveJobs': 'This snapshot contains unfinished scrape jobs and cannot be imported.',
+  'dataTransfer.busy': 'Another data transfer is already in progress.',
+  'dataTransfer.importExpired': 'The import session has expired. Select the file again.',
+  'dataTransfer.invalidPassphrase': 'The passphrase is incorrect or the snapshot is corrupted.',
+  'dataTransfer.newerVersion': 'This snapshot was created by a newer version of Foundry.',
+  'dataTransfer.unsupportedArchive': 'This snapshot format is not supported by this version of Foundry.',
+  'dataTransfer.invalidArchive': 'This is not a valid Foundry snapshot.',
+  'dataTransfer.ioError': 'The data transfer could not be completed.',
 };
 
 const simplifiedChinese: TranslationTable = {
@@ -420,6 +514,53 @@ const simplifiedChinese: TranslationTable = {
   'captures.noContentDescription': '这条收藏尚无成功抓取的页面内容。请查看抓取记录或重新抓取。',
   'captures.detailUnavailable': '无法加载收藏详情',
   'captures.addNote': '添加备注',
+  'captures.dataTransferBusy': '请等待当前数据传输完成。',
+  'settings.exportDataDescription': '创建加密的 Foundry 快照。',
+  'settings.exportData': '导出数据',
+  'settings.exportDataAction': '导出',
+  'settings.finishJobsBeforeTransfer': '请先等待正在运行的抓取任务完成。',
+  'settings.importData': '导入数据',
+  'settings.importDataAction': '导入',
+  'settings.importDataDescription': '从加密的 Foundry 快照恢复数据。',
+  'dataTransfer.exportTitle': '导出 Foundry 数据',
+  'dataTransfer.exportSubtitle': '使用口令保护这个快照。',
+  'dataTransfer.passphrase': '口令',
+  'dataTransfer.passphraseDescription': '至少 12 个字符，空格和大小写都会影响解密。',
+  'dataTransfer.confirmPassphrase': '确认口令',
+  'dataTransfer.passphraseTooShort': '请至少输入 12 个字符。',
+  'dataTransfer.passphraseMismatch': '两次输入的口令不一致。',
+  'dataTransfer.passphraseWarning': 'Foundry 无法恢复遗忘的口令，请在导出前妥善保存。',
+  'dataTransfer.cancel': '取消',
+  'dataTransfer.exportAction': '选择文件并导出',
+  'dataTransfer.exported': 'Foundry 数据已导出。',
+  'dataTransfer.importTitle': '导入 Foundry 数据',
+  'dataTransfer.importPassphraseDescription': '输入导出这个快照时使用的口令。',
+  'dataTransfer.inspectAction': '解锁快照',
+  'dataTransfer.previewTitle': '确认导入',
+  'dataTransfer.exportedAt': '导出时间',
+  'dataTransfer.appVersion': 'Foundry 版本',
+  'dataTransfer.schemaVersion': '数据版本',
+  'dataTransfer.providers': '服务提供商',
+  'dataTransfer.captures': '收藏',
+  'dataTransfer.jobs': '抓取任务',
+  'dataTransfer.replaceWarning': '导入会替换当前全部服务提供商、收藏、抓取任务和应用设置。导入完成后 Foundry 将重新启动。',
+  'dataTransfer.importAction': '导入并替换',
+  'dataTransfer.importingTitle': '正在导入数据',
+  'dataTransfer.importingDescription': '正在导入 Foundry 数据…',
+  'dataTransfer.importingHint': '导入完成前请保持 Foundry 开启。',
+  'dataTransfer.restartTitle': '导入完成',
+  'dataTransfer.restartDescription': '数据已成功导入，请重启 Foundry 以载入数据。',
+  'dataTransfer.restartHint': '重启前当前会话会保持锁定。',
+  'dataTransfer.restartAction': '重启 Foundry',
+  'dataTransfer.activeJobs': '请先等待正在运行的抓取任务完成，再导出或导入数据。',
+  'dataTransfer.archiveHasActiveJobs': '这个快照包含未完成的抓取任务，无法导入。',
+  'dataTransfer.busy': '另一个数据传输正在进行中。',
+  'dataTransfer.importExpired': '导入会话已过期，请重新选择文件。',
+  'dataTransfer.invalidPassphrase': '口令错误或快照已损坏。',
+  'dataTransfer.newerVersion': '这个快照由更新版本的 Foundry 创建。',
+  'dataTransfer.unsupportedArchive': '当前 Foundry 版本不支持这个快照格式。',
+  'dataTransfer.invalidArchive': '这不是有效的 Foundry 快照。',
+  'dataTransfer.ioError': '数据传输未能完成。',
 };
 
 const traditionalChinese: TranslationTable = {
@@ -563,6 +704,53 @@ const traditionalChinese: TranslationTable = {
   'captures.noContentDescription': '這筆收藏尚無成功抓取的頁面內容。請查看抓取紀錄或重新抓取。',
   'captures.detailUnavailable': '無法載入收藏詳情',
   'captures.addNote': '新增備註',
+  'captures.dataTransferBusy': '請等待目前的資料傳輸完成。',
+  'settings.exportDataDescription': '建立加密的 Foundry 快照。',
+  'settings.exportData': '匯出資料',
+  'settings.exportDataAction': '匯出',
+  'settings.finishJobsBeforeTransfer': '請先等待執行中的抓取工作完成。',
+  'settings.importData': '匯入資料',
+  'settings.importDataAction': '匯入',
+  'settings.importDataDescription': '從加密的 Foundry 快照還原資料。',
+  'dataTransfer.exportTitle': '匯出 Foundry 資料',
+  'dataTransfer.exportSubtitle': '使用通關密語保護這個快照。',
+  'dataTransfer.passphrase': '通關密語',
+  'dataTransfer.passphraseDescription': '至少 12 個字元，空格與大小寫都會影響解密。',
+  'dataTransfer.confirmPassphrase': '確認通關密語',
+  'dataTransfer.passphraseTooShort': '請至少輸入 12 個字元。',
+  'dataTransfer.passphraseMismatch': '兩次輸入的通關密語不一致。',
+  'dataTransfer.passphraseWarning': 'Foundry 無法還原忘記的通關密語，請在匯出前妥善保存。',
+  'dataTransfer.cancel': '取消',
+  'dataTransfer.exportAction': '選擇檔案並匯出',
+  'dataTransfer.exported': 'Foundry 資料已匯出。',
+  'dataTransfer.importTitle': '匯入 Foundry 資料',
+  'dataTransfer.importPassphraseDescription': '輸入匯出這個快照時使用的通關密語。',
+  'dataTransfer.inspectAction': '解鎖快照',
+  'dataTransfer.previewTitle': '確認匯入',
+  'dataTransfer.exportedAt': '匯出時間',
+  'dataTransfer.appVersion': 'Foundry 版本',
+  'dataTransfer.schemaVersion': '資料版本',
+  'dataTransfer.providers': '服務提供者',
+  'dataTransfer.captures': '收藏',
+  'dataTransfer.jobs': '抓取工作',
+  'dataTransfer.replaceWarning': '匯入會取代目前全部服務提供者、收藏、抓取工作與應用程式設定。匯入完成後 Foundry 將重新啟動。',
+  'dataTransfer.importAction': '匯入並取代',
+  'dataTransfer.importingTitle': '正在匯入資料',
+  'dataTransfer.importingDescription': '正在匯入 Foundry 資料…',
+  'dataTransfer.importingHint': '匯入完成前請保持 Foundry 開啟。',
+  'dataTransfer.restartTitle': '匯入完成',
+  'dataTransfer.restartDescription': '資料已成功匯入，請重新啟動 Foundry 以載入資料。',
+  'dataTransfer.restartHint': '重新啟動前目前工作階段會保持鎖定。',
+  'dataTransfer.restartAction': '重新啟動 Foundry',
+  'dataTransfer.activeJobs': '請先等待執行中的抓取工作完成，再匯出或匯入資料。',
+  'dataTransfer.archiveHasActiveJobs': '這個快照包含未完成的抓取工作，無法匯入。',
+  'dataTransfer.busy': '另一個資料傳輸正在進行中。',
+  'dataTransfer.importExpired': '匯入工作階段已過期，請重新選擇檔案。',
+  'dataTransfer.invalidPassphrase': '通關密語錯誤或快照已損壞。',
+  'dataTransfer.newerVersion': '這個快照由較新版本的 Foundry 建立。',
+  'dataTransfer.unsupportedArchive': '目前 Foundry 版本不支援這個快照格式。',
+  'dataTransfer.invalidArchive': '這不是有效的 Foundry 快照。',
+  'dataTransfer.ioError': '資料傳輸未能完成。',
 };
 
 const japanese: TranslationTable = {
@@ -706,6 +894,53 @@ const japanese: TranslationTable = {
   'captures.noContentDescription': 'このキャプチャには成功したページコンテンツがありません。取得履歴を確認するか、再取得してください。',
   'captures.detailUnavailable': 'キャプチャの詳細を読み込めません',
   'captures.addNote': 'メモを追加',
+  'captures.dataTransferBusy': '現在のデータ転送が完了するまでお待ちください。',
+  'settings.exportDataDescription': '暗号化された Foundry スナップショットを作成します。',
+  'settings.exportData': 'データをエクスポート',
+  'settings.exportDataAction': 'エクスポート',
+  'settings.finishJobsBeforeTransfer': '実行中の取得ジョブが完了するまでお待ちください。',
+  'settings.importData': 'データをインポート',
+  'settings.importDataAction': 'インポート',
+  'settings.importDataDescription': '暗号化された Foundry スナップショットからデータを復元します。',
+  'dataTransfer.exportTitle': 'Foundry データをエクスポート',
+  'dataTransfer.exportSubtitle': 'パスフレーズでこのスナップショットを保護します。',
+  'dataTransfer.passphrase': 'パスフレーズ',
+  'dataTransfer.passphraseDescription': '12 文字以上。空白と大文字・小文字も区別されます。',
+  'dataTransfer.confirmPassphrase': 'パスフレーズを確認',
+  'dataTransfer.passphraseTooShort': '12 文字以上入力してください。',
+  'dataTransfer.passphraseMismatch': 'パスフレーズが一致しません。',
+  'dataTransfer.passphraseWarning': '忘れたパスフレーズは復元できません。エクスポート前に安全な場所へ保管してください。',
+  'dataTransfer.cancel': 'キャンセル',
+  'dataTransfer.exportAction': 'ファイルを選択してエクスポート',
+  'dataTransfer.exported': 'Foundry データをエクスポートしました。',
+  'dataTransfer.importTitle': 'Foundry データをインポート',
+  'dataTransfer.importPassphraseDescription': 'このスナップショットのエクスポート時に使用したパスフレーズを入力してください。',
+  'dataTransfer.inspectAction': 'スナップショットを開く',
+  'dataTransfer.previewTitle': 'インポートを確認',
+  'dataTransfer.exportedAt': 'エクスポート日時',
+  'dataTransfer.appVersion': 'Foundry バージョン',
+  'dataTransfer.schemaVersion': 'データバージョン',
+  'dataTransfer.providers': 'プロバイダー',
+  'dataTransfer.captures': 'キャプチャ',
+  'dataTransfer.jobs': 'ジョブ',
+  'dataTransfer.replaceWarning': 'インポートすると、現在のプロバイダー、キャプチャ、ジョブ、アプリ設定がすべて置き換わります。完了後は Foundry が再起動します。',
+  'dataTransfer.importAction': 'インポートして置き換える',
+  'dataTransfer.importingTitle': 'データをインポート中',
+  'dataTransfer.importingDescription': 'Foundry データをインポートしています…',
+  'dataTransfer.importingHint': 'インポートが完了するまで Foundry を開いたままにしてください。',
+  'dataTransfer.restartTitle': 'インポート完了',
+  'dataTransfer.restartDescription': 'データをインポートしました。Foundry を再起動して読み込んでください。',
+  'dataTransfer.restartHint': '再起動するまで現在のセッションはロックされます。',
+  'dataTransfer.restartAction': 'Foundry を再起動',
+  'dataTransfer.activeJobs': 'データをエクスポートまたはインポートする前に、実行中の取得ジョブを完了してください。',
+  'dataTransfer.archiveHasActiveJobs': 'このスナップショットには未完了の取得ジョブが含まれているため、インポートできません。',
+  'dataTransfer.busy': '別のデータ転送が進行中です。',
+  'dataTransfer.importExpired': 'インポートセッションの有効期限が切れました。ファイルを選択し直してください。',
+  'dataTransfer.invalidPassphrase': 'パスフレーズが正しくないか、スナップショットが破損しています。',
+  'dataTransfer.newerVersion': 'このスナップショットは新しいバージョンの Foundry で作成されています。',
+  'dataTransfer.unsupportedArchive': 'この Foundry バージョンではこのスナップショット形式をサポートしていません。',
+  'dataTransfer.invalidArchive': '有効な Foundry スナップショットではありません。',
+  'dataTransfer.ioError': 'データ転送を完了できませんでした。',
 };
 
 const translations: Record<Locale, TranslationTable> = {

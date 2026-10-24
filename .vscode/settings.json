@@ -113,7 +113,8 @@
     "stylexjs",
     "unmaximize",
     "unrs",
-    "xstyle"
+    "xstyle",
+    "yazl"
   ],
   "js/ts.tsdk.path": "node_modules/typescript/lib"
 }

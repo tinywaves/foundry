@@ -1,4 +1,5 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import type { OpenDialogOptions, SaveDialogOptions } from 'electron';
 import path from 'node:path';
 import process from 'node:process';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
@@ -6,11 +7,16 @@ import icon from '../../resources/icon.png?asset';
 import { openFoundryDatabase } from './database';
 import { CaptureService } from './library/captures';
 import { ScrapeJobRunner } from './library/scrape-job-runner';
+import { DataTransferService } from './data-transfer/service';
+import { dataTransferFailure } from './data-transfer/errors';
+import { ensureDataExportExtension } from './data-transfer/format';
 import type { CaptureFilter } from '../shared/captures';
+import { dataExportExtension } from '../shared/data-transfer';
 import { initializeLogger, log } from './logger';
 import {
   ensureFoundryHome,
   getFoundryDatabasePath,
+  getFoundryDataTransferPath,
   getFoundrySettingsPath,
 } from './paths';
 import {
@@ -85,7 +91,7 @@ function createWindow(): void {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-void app.whenReady().then(() => {
+void app.whenReady().then(async () => {
   initializeLogger();
   // Set app user model id for windows
   electronApp.setAppUserModelId('foundry');
@@ -103,6 +109,20 @@ void app.whenReady().then(() => {
     },
   );
   const captureService = new CaptureService(database.db, settingsPath, scrapeJobRunner);
+  const dataTransferService = new DataTransferService(
+    database,
+    settingsPath,
+    scrapeJobRunner,
+    getFoundryDataTransferPath(),
+    app.getVersion(),
+  );
+  try {
+    await dataTransferService.cleanupStaleTransfers();
+  } catch (error) {
+    log.error('data_transfer_cleanup_failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
   app.on('will-quit', () => {
     database.client.close();
   });
@@ -150,6 +170,91 @@ void app.whenReady().then(() => {
     if (error) {
       throw new Error(error);
     }
+  });
+
+  ipcMain.handle('data-transfer:status', () => dataTransferService.getStatus());
+  ipcMain.handle('data-transfer:export', async (event, passphrase: string) => {
+    try {
+      const owner = BrowserWindow.fromWebContents(event.sender);
+      const timestamp = new Date().toISOString().replaceAll(/[:.]/gu, '-');
+      const options: SaveDialogOptions = {
+        defaultPath: `foundry-${timestamp}${dataExportExtension}`,
+        filters: [
+          {
+            name: 'Foundry Export',
+            extensions: ['foundry-export'],
+          },
+        ],
+      };
+      const result = owner
+        ? await dialog.showSaveDialog(owner, options)
+        : await dialog.showSaveDialog(options);
+      if (result.canceled || !result.filePath) {
+        return { ok: true, data: { status: 'canceled' } };
+      }
+      return {
+        ok: true,
+        data: await dataTransferService.exportData(
+          ensureDataExportExtension(result.filePath),
+          passphrase,
+        ),
+      };
+    } catch (error) {
+      return dataTransferFailure(error);
+    }
+  });
+  ipcMain.handle('data-transfer:select-import-file', async (event) => {
+    const owner = BrowserWindow.fromWebContents(event.sender);
+    const options: OpenDialogOptions = {
+      filters: [
+        {
+          name: 'Foundry Export',
+          extensions: ['foundry-export'],
+        },
+      ],
+      properties: ['openFile'],
+    };
+    const result = owner
+      ? await dialog.showOpenDialog(owner, options)
+      : await dialog.showOpenDialog(options);
+    const filePath = result.filePaths[0];
+    return !filePath || result.canceled
+      ? { status: 'canceled' as const }
+      : {
+          status: 'selected' as const,
+          filePath,
+          fileName: path.basename(filePath),
+        };
+  });
+  ipcMain.handle(
+    'data-transfer:inspect-import',
+    async (_, filePath: string, passphrase: string) => {
+      try {
+        return {
+          ok: true,
+          data: await dataTransferService.inspectImport(filePath, passphrase),
+        };
+      } catch (error) {
+        return dataTransferFailure(error);
+      }
+    },
+  );
+  ipcMain.handle('data-transfer:cancel-import', async (_, importId: string) => {
+    await dataTransferService.cancelImport(importId);
+  });
+  ipcMain.handle('data-transfer:commit-import', async (_, importId: string) => {
+    try {
+      return {
+        ok: true,
+        data: await dataTransferService.commitImport(importId),
+      };
+    } catch (error) {
+      return dataTransferFailure(error);
+    }
+  });
+  ipcMain.handle('data-transfer:restart', () => {
+    app.relaunch();
+    app.exit(0);
   });
 
   ipcMain.handle('providers:list', () => {
@@ -217,6 +322,15 @@ void app.whenReady().then(() => {
     };
   });
   handleCaptureIpc('captures:create', (input) => {
+    if (dataTransferService.isBusy()) {
+      return {
+        ok: false as const,
+        error: {
+          code: 'DATA_TRANSFER_BUSY' as const,
+          message: 'Data transfer is in progress',
+        },
+      };
+    }
     const settings = readSettings(settingsPath);
     return formatCaptureCreationResult(
       captureService.create(input as Parameters<typeof captureService.create>[0]),
@@ -224,6 +338,15 @@ void app.whenReady().then(() => {
     );
   });
   handleCaptureIpc('captures:recapture', (captureId) => {
+    if (dataTransferService.isBusy()) {
+      return {
+        ok: false as const,
+        error: {
+          code: 'DATA_TRANSFER_BUSY' as const,
+          message: 'Data transfer is in progress',
+        },
+      };
+    }
     const settings = readSettings(settingsPath);
     return formatRecordResult(
       captureService.recapture(captureId as string),

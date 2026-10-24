@@ -1,5 +1,7 @@
 import {
   AdjustmentsHorizontalIcon,
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
   BarsArrowUpIcon,
   BugAntIcon,
   ClockIcon,
@@ -28,7 +30,7 @@ export const PANEL_GROUPS: Array<{ label: string; panels: PanelConfig[] }> = [
       {
         id: 'advanced',
         label: 'Advanced',
-        description: 'Open the folder containing local config and data.',
+        description: 'Data transfer and local configuration.',
         icon: AdjustmentsHorizontalIcon,
       },
     ],
@@ -77,6 +79,18 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
     description: 'Limit simultaneous page fetches',
     panel: 'library',
     icon: BarsArrowUpIcon,
+  },
+  {
+    title: 'Export data',
+    description: 'Create an encrypted Foundry snapshot',
+    panel: 'advanced',
+    icon: ArrowUpTrayIcon,
+  },
+  {
+    title: 'Import data',
+    description: 'Restore data from an encrypted Foundry snapshot',
+    panel: 'advanced',
+    icon: ArrowDownTrayIcon,
   },
 ];
 export function panelConfig(id: PanelId): PanelConfig {

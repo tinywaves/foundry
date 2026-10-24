@@ -31,6 +31,7 @@ type StoredJobConfig = {
 function failure<T>(
   code:
     | 'ACTIVE_JOB_EXISTS'
+    | 'DATA_TRANSFER_BUSY'
     | 'FETCHER_NOT_CONFIGURED'
     | 'CAPTURE_ALREADY_EXISTS'
     | 'CAPTURE_NOT_FOUND'

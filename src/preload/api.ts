@@ -23,6 +23,14 @@ import type {
   ScrapeJobFinishedEvent,
   ScrapeJobSummary,
 } from '../shared/captures';
+import type {
+  DataTransferResult,
+  DataTransferStatus,
+  ExportDataOutcome,
+  ImportCommitOutcome,
+  ImportPreview,
+  SelectImportFileOutcome,
+} from '../shared/data-transfer';
 
 export type ProviderApi = {
   list: () => Promise<ProviderListItem[]>;
@@ -55,4 +63,17 @@ export type CaptureApi = {
   listJobs: (captureId: string) => Promise<CaptureResult<ScrapeJobSummary[]>>;
   onScrapeJobFinished: (listener: (event: ScrapeJobFinishedEvent) => void) => number;
   offScrapeJobFinished: (subscriptionId: number) => void;
+};
+
+export type DataTransferApi = {
+  getStatus: () => Promise<DataTransferStatus>;
+  exportData: (passphrase: string) => Promise<DataTransferResult<ExportDataOutcome>>;
+  selectImportFile: () => Promise<SelectImportFileOutcome>;
+  inspectImport: (
+    filePath: string,
+    passphrase: string,
+  ) => Promise<DataTransferResult<ImportPreview>>;
+  cancelImport: (importId: string) => Promise<void>;
+  commitImport: (importId: string) => Promise<DataTransferResult<ImportCommitOutcome>>;
+  restart: () => Promise<void>;
 };

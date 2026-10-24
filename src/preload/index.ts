@@ -2,7 +2,12 @@ import process from 'node:process';
 import type { IpcRendererEvent } from 'electron';
 import { contextBridge, ipcRenderer } from 'electron';
 import { electronAPI } from '@electron-toolkit/preload';
-import type { CaptureApi, ProviderApi, SettingsApi } from './api';
+import type {
+  CaptureApi,
+  DataTransferApi,
+  ProviderApi,
+  SettingsApi,
+} from './api';
 import type { ScrapeJobFinishedEvent } from '../shared/captures';
 
 const captureSubscriptionState = { nextId: 0 };
@@ -12,7 +17,12 @@ const captureSubscriptions = new Map<
 >();
 
 // Custom APIs for renderer
-const api: { captures: CaptureApi; providers: ProviderApi; settings: SettingsApi } = {
+const api: {
+  captures: CaptureApi;
+  dataTransfer: DataTransferApi;
+  providers: ProviderApi;
+  settings: SettingsApi;
+} = {
   captures: {
     listCaptures: (filter) => ipcRenderer.invoke('captures:list', filter),
     countCaptures: () => ipcRenderer.invoke('captures:count'),
@@ -50,6 +60,17 @@ const api: { captures: CaptureApi; providers: ProviderApi; settings: SettingsApi
     setTimezone: (timezone) => ipcRenderer.invoke('settings:set-timezone', timezone),
     setLibrary: (patch) => ipcRenderer.invoke('settings:set-library', patch),
     openConfigFolder: () => ipcRenderer.invoke('settings:open-config-folder'),
+  },
+  dataTransfer: {
+    getStatus: () => ipcRenderer.invoke('data-transfer:status'),
+    exportData: (passphrase) => ipcRenderer.invoke('data-transfer:export', passphrase),
+    selectImportFile: () => ipcRenderer.invoke('data-transfer:select-import-file'),
+    inspectImport: (filePath, passphrase) => (
+      ipcRenderer.invoke('data-transfer:inspect-import', filePath, passphrase)
+    ),
+    cancelImport: (importId) => ipcRenderer.invoke('data-transfer:cancel-import', importId),
+    commitImport: (importId) => ipcRenderer.invoke('data-transfer:commit-import', importId),
+    restart: () => ipcRenderer.invoke('data-transfer:restart'),
   },
   providers: {
     list: () => ipcRenderer.invoke('providers:list'),

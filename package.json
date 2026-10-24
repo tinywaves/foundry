@@ -69,7 +69,9 @@
     "i18next": "^26.5.3",
     "openai": "^7.37.0",
     "react-i18next": "^17.1.0",
-    "react-router-dom": "^7.18.4"
+    "react-router-dom": "^7.18.4",
+    "yauzl": "^3.4.0",
+    "yazl": "^3.3.1"
   },
   "devDependencies": {
     "@dhzh/eslint-config": "^3.1.1",
@@ -79,6 +81,8 @@
     "@types/node": "^22.19.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "@types/yauzl": "^3.4.0",
+    "@types/yazl": "^3.3.1",
     "@vitejs/plugin-react": "^5.1.1",
     "drizzle-kit": "^0.31.11",
     "electron": "^39.2.6",

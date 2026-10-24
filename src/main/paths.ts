@@ -23,3 +23,7 @@ export function getFoundryDatabasePath(): string {
 export function getFoundrySettingsPath(): string {
   return path.join(getFoundryHomePath(), 'settings.json');
 }
+
+export function getFoundryDataTransferPath(): string {
+  return path.join(getFoundryHomePath(), '.data-transfer');
+}

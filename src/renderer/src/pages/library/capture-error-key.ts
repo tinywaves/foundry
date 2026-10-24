@@ -6,6 +6,9 @@ export function captureErrorKey(code: CaptureErrorCode): TranslationKey {
     case 'ACTIVE_JOB_EXISTS': {
       return 'captures.activeJobExists';
     }
+    case 'DATA_TRANSFER_BUSY': {
+      return 'captures.dataTransferBusy';
+    }
     case 'FETCHER_NOT_CONFIGURED': {
       return 'captures.configureFetcherFirst';
     }

@@ -58,6 +58,7 @@ export class ScrapeJobRunner {
   private readonly queue: string[] = [];
   private readonly knownJobIds = new Set<string>();
   private runningCount = 0;
+  private paused = false;
 
   constructor(
     private readonly db: Database,
@@ -66,6 +67,9 @@ export class ScrapeJobRunner {
   ) {}
 
   private schedule(): void {
+    if (this.paused) {
+      return;
+    }
     const concurrency = readSettings(this.settingsPath).features.library.captures.scrapeConcurrency;
     while (this.runningCount < concurrency && this.queue.length > 0) {
       const jobId = this.queue.shift();
@@ -259,6 +263,18 @@ export class ScrapeJobRunner {
   }
 
   notifySettingsChanged(): void {
+    this.schedule();
+  }
+
+  pause(): void {
+    this.paused = true;
+  }
+
+  resume(): void {
+    if (!this.paused) {
+      return;
+    }
+    this.paused = false;
     this.schedule();
   }
 }

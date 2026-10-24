@@ -24,7 +24,6 @@ import type { ScrapeJobRunner } from '../library/scrape-job-runner';
 import { log } from '../logger';
 import { readSettings, writeSettings } from '../settings';
 import {
-  dataExportPassphraseMinimumLength,
   dataExportSettingsVersion,
 } from '../../shared/data-transfer';
 import type {
@@ -54,10 +53,10 @@ type StagedImport = {
 };
 
 function assertPassphrase(passphrase: string): void {
-  if (passphrase.length < dataExportPassphraseMinimumLength) {
+  if (passphrase.length === 0) {
     throw new DataTransferError(
-      'INVALID_PASSPHRASE',
-      'The passphrase is too short',
+      'PASSPHRASE_REQUIRED',
+      'Enter a passphrase',
     );
   }
 }

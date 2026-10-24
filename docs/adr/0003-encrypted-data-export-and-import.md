@@ -1,6 +1,6 @@
 # Encrypted data export and import
 
-Foundry remains local-first and does not provide synchronization. Data portability and disaster recovery use a full encrypted snapshot with the `.foundry-export` extension.
+Foundry remains local-first and does not provide synchronization. Data portability and disaster recovery use a full encrypted snapshot with the `.foundry-backup` extension.
 
 ## Archive format
 

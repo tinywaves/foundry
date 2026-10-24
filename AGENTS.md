@@ -41,3 +41,9 @@ RULES:
 - Page-level and primary content containers must fill the available layout width. Do not cap them with numeric `maxWidth`; render full-width Markdown with `contentWidth="none"`. The surrounding `LayoutContent` owns the page width; use padding and component gaps elsewhere.
 - After writing code, run `pnpm run lint` and `pnpm run lint-fix`.
 - During every implementation, check for unused translation keys and remove any leftover multilingual entries that are no longer referenced.
+
+## Dialog spacing
+- Treat `Dialog` `padding` as the single source of outer inset. Use `padding={5}` for standard forms and multi-section dialogs; a compact utility dialog may use `padding={4}`.
+- Do not use `padding={0}` on a dialog unless its design is intentionally full-bleed, and then add padding explicitly to every header, content, and footer region.
+- When a dialog uses `Layout`, let the inherited `Dialog` padding align `DialogHeader`, `LayoutContent`, and `LayoutFooter`. Do not add competing outer padding to those regions; use stack `gap` for spacing between sections.
+- Keep field validation attached to its `TextInput` through `status`; do not add detached error rows that compete with the form's vertical rhythm.

@@ -1,7 +1,6 @@
-export const dataExportExtension = '.foundry-export';
+export const dataExportExtension = '.foundry-backup';
 export const dataExportArchiveVersion = 1;
 export const dataExportSettingsVersion = 1;
-export const dataExportPassphraseMinimumLength = 12;
 
 export type DataTransferErrorCode
   = | 'ACTIVE_JOBS'
@@ -11,6 +10,7 @@ export type DataTransferErrorCode
     | 'INVALID_ARCHIVE'
     | 'INVALID_PASSPHRASE'
     | 'NEWER_SCHEMA'
+    | 'PASSPHRASE_REQUIRED'
     | 'UNSUPPORTED_ARCHIVE'
     | 'IO_ERROR';
 

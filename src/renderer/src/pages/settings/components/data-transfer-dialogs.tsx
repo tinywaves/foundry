@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { LockClosedIcon } from '@heroicons/react/24/outline';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
+import { Icon } from '@astryxdesign/core/Icon';
 import {
   Layout,
   LayoutContent,
@@ -20,7 +22,6 @@ import {
   restartApp,
 } from '@renderer/apis/data-transfer';
 import type { ImportPreview } from '../../../../../shared/data-transfer';
-import { dataExportPassphraseMinimumLength } from '../../../../../shared/data-transfer';
 import { useAppToast } from '@renderer/hooks/use-app-toast';
 import { useI18n } from '@renderer/i18n/use-i18n';
 import { dataTransferErrorKey } from '../data-transfer-error-key';
@@ -48,9 +49,11 @@ function PassphraseFields({
         description={t('dataTransfer.passphraseDescription')}
         type="password"
         size="sm"
+        width="100%"
         value={passphrase}
         onChange={onPassphraseChange}
         isDisabled={isDisabled}
+        isRequired
         hasAutoFocus
         autoComplete="new-password"
       />
@@ -58,10 +61,15 @@ function PassphraseFields({
         label={t('dataTransfer.confirmPassphrase')}
         type="password"
         size="sm"
+        width="100%"
         value={confirmation}
         onChange={onConfirmationChange}
         onEnter={onEnter}
         isDisabled={isDisabled}
+        isRequired
+        status={passphrase !== confirmation && confirmation.length > 0
+          ? { type: 'error', message: t('dataTransfer.passphraseMismatch') }
+          : undefined}
         autoComplete="new-password"
       />
     </VStack>
@@ -107,10 +115,8 @@ export function ExportDataDialog({
     },
   });
 
-  const isTooShort = passphrase.length < dataExportPassphraseMinimumLength;
-  const isMismatch = confirmation.length > 0 && passphrase !== confirmation;
   const submit = () => {
-    if (isTooShort || passphrase !== confirmation || mutation.isPending) {
+    if (passphrase !== confirmation || passphrase.length === 0 || mutation.isPending) {
       return;
     }
     mutation.mutate();
@@ -124,8 +130,8 @@ export function ExportDataDialog({
           onClose();
         }
       }}
-      width={500}
-      padding={0}
+      width={560}
+      padding={5}
       purpose="form"
     >
       <Layout
@@ -142,7 +148,7 @@ export function ExportDataDialog({
         )}
         content={(
           <LayoutContent>
-            <VStack gap={4}>
+            <VStack gap={5}>
               <PassphraseFields
                 passphrase={passphrase}
                 confirmation={confirmation}
@@ -151,20 +157,13 @@ export function ExportDataDialog({
                 onEnter={submit}
                 isDisabled={mutation.isPending}
               />
-              {isTooShort && passphrase.length > 0 && (
-                <Text type="supporting" color="secondary">
-                  {t('dataTransfer.passphraseTooShort')}
-                </Text>
-              )}
-              {isMismatch && (
-                <Text type="supporting" color="secondary">
-                  {t('dataTransfer.passphraseMismatch')}
-                </Text>
-              )}
-              <Card padding={3} variant="muted">
-                <Text type="supporting" color="secondary">
-                  {t('dataTransfer.passphraseWarning')}
-                </Text>
+              <Card padding={2} variant="muted">
+                <HStack gap={2} align="start">
+                  <Icon icon={LockClosedIcon} size="sm" color="secondary" />
+                  <Text type="supporting" color="secondary">
+                    {t('dataTransfer.passphraseWarning')}
+                  </Text>
+                </HStack>
               </Card>
             </VStack>
           </LayoutContent>
@@ -184,7 +183,7 @@ export function ExportDataDialog({
                 variant="primary"
                 size="sm"
                 isLoading={mutation.isPending}
-                isDisabled={isTooShort || passphrase !== confirmation}
+                isDisabled={passphrase !== confirmation || passphrase.length === 0}
                 onClick={submit}
               />
             </HStack>
@@ -269,8 +268,8 @@ export function ImportDataDialog({
     },
   });
 
-  const isPassphraseReady = passphrase.length >= dataExportPassphraseMinimumLength
-    && passphrase === confirmation;
+  const isPassphraseReady = passphrase === confirmation
+    && passphrase.length > 0;
   const isBlocking = step === 'importing' || step === 'complete';
   const close = () => {
     if (isBlocking || commitMutation.isPending) {
@@ -336,7 +335,7 @@ export function ImportDataDialog({
         }
       }}
       width={520}
-      padding={0}
+      padding={5}
       purpose={isBlocking ? 'required' : 'form'}
     >
       <Layout
@@ -359,11 +358,6 @@ export function ImportDataDialog({
                   onEnter={inspect}
                   isDisabled={inspectMutation.isPending}
                 />
-                {confirmation.length > 0 && passphrase !== confirmation && (
-                  <Text type="supporting" color="secondary">
-                    {t('dataTransfer.passphraseMismatch')}
-                  </Text>
-                )}
                 <Card padding={3} variant="muted">
                   <Text type="supporting" color="secondary">
                     {t('dataTransfer.importPassphraseDescription')}

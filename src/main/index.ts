@@ -181,8 +181,8 @@ void app.whenReady().then(async () => {
         defaultPath: `foundry-${timestamp}${dataExportExtension}`,
         filters: [
           {
-            name: 'Foundry Export',
-            extensions: ['foundry-export'],
+            name: 'Foundry Backup',
+            extensions: [dataExportExtension.slice(1)],
           },
         ],
       };
@@ -208,8 +208,8 @@ void app.whenReady().then(async () => {
     const options: OpenDialogOptions = {
       filters: [
         {
-          name: 'Foundry Export',
-          extensions: ['foundry-export'],
+          name: 'Foundry Backup',
+          extensions: [dataExportExtension.slice(1)],
         },
       ],
       properties: ['openFile'],

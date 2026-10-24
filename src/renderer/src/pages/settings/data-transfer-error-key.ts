@@ -18,6 +18,9 @@ export function dataTransferErrorKey(code: DataTransferErrorCode): TranslationKe
     case 'INVALID_PASSPHRASE': {
       return 'dataTransfer.invalidPassphrase';
     }
+    case 'PASSPHRASE_REQUIRED': {
+      return 'dataTransfer.passphraseRequired';
+    }
     case 'NEWER_SCHEMA': {
       return 'dataTransfer.newerVersion';
     }

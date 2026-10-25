@@ -1,0 +1,99 @@
+name: Release Electron app
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: electron-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: 24.22.0
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux
+          - os: macos-latest
+            target: mac
+          - os: windows-latest
+            target: win
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the tagged source
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Set the app version from the tag
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          node - "$VERSION" <<'NODE'
+          const version = process.argv[2];
+          if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version)) {
+            console.error(`Tag must contain a valid semver version: v${version}`);
+            process.exit(1);
+          }
+          NODE
+          pnpm pkg set version="$VERSION"
+          echo "Building Foundry $VERSION for ${{ matrix.target }}"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the Electron app
+        run: |
+          pnpm run build
+          pnpm exec electron-builder --${{ matrix.target }} --publish never
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-${{ matrix.target }}
+          path: dist/**
+          if-no-files-found: error
+
+  github-release:
+    name: Create GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download installers
+        uses: actions/download-artifact@v4
+        with:
+          pattern: electron-*
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create the GitHub release and upload installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --generate-notes
+          find artifacts -type f -print0 | xargs -0 -r gh release upload "$TAG" --repo "$GITHUB_REPOSITORY"

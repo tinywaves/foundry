@@ -14,7 +14,7 @@ env:
 
 jobs:
   build:
-    name: Build ${{ matrix.target }}
+    name: Build ${{ matrix.artifact }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -22,10 +22,20 @@ jobs:
         include:
           - os: ubuntu-latest
             target: linux
+            targets: AppImage deb
+            artifact: linux
+          - os: ubuntu-latest
+            target: linux
+            targets: snap
+            artifact: linux-snap
           - os: macos-latest
             target: mac
+            targets: ''
+            artifact: mac
           - os: windows-latest
             target: win
+            targets: ''
+            artifact: win
     permissions:
       contents: read
     steps:
@@ -58,7 +68,7 @@ jobs:
           }
           NODE
           pnpm pkg set version="$VERSION"
-          echo "Building Foundry $VERSION for ${{ matrix.target }}"
+          echo "Building Foundry $VERSION for ${{ matrix.artifact }}"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -66,12 +76,12 @@ jobs:
       - name: Build the Electron app
         run: |
           pnpm run build
-          pnpm exec electron-builder --${{ matrix.target }} --publish never
+          pnpm exec electron-builder --${{ matrix.target }} ${{ matrix.targets }} --publish never
 
       - name: Upload installers
         uses: actions/upload-artifact@v4
         with:
-          name: electron-${{ matrix.target }}
+          name: electron-${{ matrix.artifact }}
           path: dist/**
           if-no-files-found: error
 

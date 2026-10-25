@@ -14,28 +14,8 @@ env:
 
 jobs:
   build:
-    name: Build ${{ matrix.artifact }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: linux
-            targets: AppImage deb
-            artifact: linux
-          - os: ubuntu-latest
-            target: linux
-            targets: snap
-            artifact: linux-snap
-          - os: macos-latest
-            target: mac
-            targets: ''
-            artifact: mac
-          - os: windows-latest
-            target: win
-            targets: ''
-            artifact: win
+    name: Build macOS
+    runs-on: macos-latest
     permissions:
       contents: read
     steps:
@@ -68,7 +48,7 @@ jobs:
           }
           NODE
           pnpm pkg set version="$VERSION"
-          echo "Building Foundry $VERSION for ${{ matrix.artifact }}"
+          echo "Building Foundry $VERSION for macOS"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -76,13 +56,18 @@ jobs:
       - name: Build the Electron app
         run: |
           pnpm run build
-          pnpm exec electron-builder --${{ matrix.target }} ${{ matrix.targets }} --publish never
+          pnpm exec electron-builder --mac --publish never
 
       - name: Upload installers
         uses: actions/upload-artifact@v4
         with:
-          name: electron-${{ matrix.artifact }}
-          path: dist/**
+          name: electron-mac
+          path: |
+            dist/*.dmg
+            dist/*.dmg.blockmap
+            dist/*-mac.zip
+            dist/*-mac.zip.blockmap
+            dist/latest-mac.yml
           if-no-files-found: error
 
   github-release:
@@ -105,5 +90,7 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --generate-notes
-          find artifacts -type f -print0 | xargs -0 -r gh release upload "$TAG" --repo "$GITHUB_REPOSITORY"
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 ||
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --generate-notes
+          find artifacts -type f -print0 |
+            xargs -0 -r gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber

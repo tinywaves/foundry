@@ -94,7 +94,7 @@ function createWindow(): void {
 void app.whenReady().then(async () => {
   initializeLogger();
   // Set app user model id for windows
-  electronApp.setAppUserModelId('foundry');
+  electronApp.setAppUserModelId('site.tinywaves.foundry');
 
   const configFolderPath = ensureFoundryHome();
   const database = openFoundryDatabase(getFoundryDatabasePath());

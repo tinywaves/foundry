@@ -76,6 +76,7 @@ jobs:
           done
 
           if (( present == 0 )); then
+            unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
             echo "signing_mode=adhoc" >> "$GITHUB_OUTPUT"
             echo "No Apple signing secrets found; building an ad-hoc signed app."
             pnpm exec electron-builder --mac --publish never \

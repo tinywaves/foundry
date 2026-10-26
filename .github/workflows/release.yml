@@ -53,10 +53,63 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build the Electron app
+      - name: Build macOS installer
+        id: build-macos
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           pnpm run build
-          pnpm exec electron-builder --mac --publish never
+
+          required=(CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID)
+          present=0
+          missing=()
+          for name in "${required[@]}"; do
+            if [[ -n "${!name:-}" ]]; then
+              present=$((present + 1))
+            else
+              missing+=("$name")
+            fi
+          done
+
+          if (( present == 0 )); then
+            echo "signing_mode=adhoc" >> "$GITHUB_OUTPUT"
+            echo "No Apple signing secrets found; building an ad-hoc signed app."
+            pnpm exec electron-builder --mac --publish never \
+              --config.mac.identity=- \
+              --config.mac.hardenedRuntime=false \
+              --config.mac.notarize=false
+          elif (( present == ${#required[@]} )); then
+            echo "signing_mode=developer-id" >> "$GITHUB_OUTPUT"
+            echo "Building with Developer ID signing and notarization."
+            pnpm exec electron-builder --mac --publish never
+          else
+            echo "::error::Apple signing secrets are partially configured. Missing: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Verify macOS signature and notarization
+        shell: bash
+        env:
+          SIGNING_MODE: ${{ steps.build-macos.outputs.signing_mode }}
+        run: |
+          set -euo pipefail
+          APP_PATH="$(find dist -maxdepth 2 -type d -name 'Foundry.app' -print -quit)"
+          test -n "$APP_PATH"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          SIGNATURE_INFO="$(codesign -dv --verbose=4 "$APP_PATH" 2>&1)"
+
+          if [[ "$SIGNING_MODE" == "developer-id" ]]; then
+            grep -q "Authority=Developer ID Application" <<< "$SIGNATURE_INFO"
+            xcrun stapler validate "$APP_PATH"
+            spctl --assess --type execute --verbose=4 "$APP_PATH"
+          else
+            grep -q "Signature=adhoc" <<< "$SIGNATURE_INFO"
+            echo "Ad-hoc signature is valid; users can allow it from Privacy & Security."
+          fi
 
       - name: Upload installers
         uses: actions/upload-artifact@v4

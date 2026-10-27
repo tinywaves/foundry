@@ -1,11 +1,15 @@
 # Logs
 logs
 *.log
+*.log*
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
+
+# Local files
+*.local
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
@@ -62,6 +66,7 @@ web_modules/
 .rts2_cache_cjs/
 .rts2_cache_es/
 .rts2_cache_umd/
+.rspack-profile-*/
 
 # Optional REPL history
 .node_repl_history
@@ -121,6 +126,11 @@ dist
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+
+# IDE
+**/.vscode/*
+!**/.vscode/extensions.json
+.idea
 
 # yarn v2
 .yarn/cache

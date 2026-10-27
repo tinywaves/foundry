@@ -1,12 +1,12 @@
 import { defineConfig } from 'tsdown';
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  entry: ['src/cli/index.ts'],
   outDir: 'dist',
   shims: true,
-  format: ['cjs', 'esm'],
   clean: true,
-  dts: true,
+  dts: false,
   minify: true,
   target: false,
+  banner: { js: '#!/usr/bin/env node' },
 });

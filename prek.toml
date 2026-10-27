@@ -1,0 +1,17 @@
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "lint-staged"
+name = "lint-staged"
+language = "system"
+entry = "pnpm exec lint-staged"
+pass_filenames = false
+stages = [ "pre-commit" ]
+
+[[repos.hooks]]
+id = "commitlint"
+name = "commitlint"
+language = "system"
+entry = "pnpm exec commitlint --edit"
+stages = [ "commit-msg" ]

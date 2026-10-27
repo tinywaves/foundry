@@ -1,0 +1,83 @@
+{
+  "name": "foundry",
+  "type": "module",
+  "version": "0.0.0",
+  "packageManager": "pnpm@12.15.0",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^12.15.0",
+      "onFail": "download"
+    },
+    "runtime": {
+      "name": "node",
+      "version": "^24.22.1",
+      "onFail": "download"
+    }
+  },
+  "description": "An AI-native local personal workbench",
+  "author": {
+    "name": "tinywaves",
+    "email": "dhzhme@gmail.com"
+  },
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/tinywaves/foundry",
+  "keywords": [
+    "agent",
+    "ai"
+  ],
+  "exports": {
+    ".": {
+      "types": {
+        "import": "./dist/index.d.mts",
+        "require": "./dist/index.d.cts"
+      },
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.mts",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "url": "git+https://github.com/tinywaves/foundry.git",
+    "type": "git"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown",
+    "build:dev": "tsdown --watch",
+    "dev": "tsx watch --clear-screen=false src/index.ts",
+    "lint": "eslint",
+    "lint-fix": "eslint --fix",
+    "prepack": "pnpm build",
+    "prepare": "prek install --hook-type pre-commit --hook-type commit-msg",
+    "release": "bumpp",
+    "release:publish": "pnpm release && pnpm publish --access public",
+    "test": "vitest run",
+    "test:coverage": "pnpm run test --coverage",
+    "test:dev": "vitest",
+    "version:update": "taze major",
+    "version:update:w": "taze major -w"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@dhzh/eslint-config": "^3.1.3",
+    "@j178/prek": "^0.5.7",
+    "@types/node": "^26.6.5",
+    "@vitest/coverage-v8": "^5.0.5",
+    "bumpp": "^12.3.0",
+    "changelogithub": "^15.0.5",
+    "eslint": "^10.13.0",
+    "lint-staged": "^17.6.0",
+    "taze": "^21.3.0",
+    "tsdown": "^0.23.2",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.5"
+  }
+}

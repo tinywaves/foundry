@@ -1,0 +1,3 @@
+/* Must load before Astryx CSS so StyleX priority layers keep Electron's order. */
+@layer priority1, priority2, priority3, priority4, priority5,
+  priority6, priority7, priority8;

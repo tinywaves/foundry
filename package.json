@@ -44,6 +44,8 @@
     "build": "pnpm run build:cli && pnpm run build:web",
     "build:cli": "tsdown",
     "build:web": "pnpm --filter web build",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
     "dev:api": "tsx watch --clear-screen=false src/server/dev.ts",
     "dev:web": "pnpm --filter web dev",
     "lint": "eslint",
@@ -64,10 +66,14 @@
     "@commitlint/config-conventional": "^21.2.4",
     "@dhzh/eslint-config": "^3.1.3",
     "@j178/prek": "^0.5.7",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "catalog:",
+    "@types/yauzl": "^3.4.0",
+    "@types/yazl": "^3.3.1",
     "@vitest/coverage-v8": "^5.0.5",
     "bumpp": "^12.3.0",
     "changelogithub": "^15.0.5",
+    "drizzle-kit": "^0.31.11",
     "eslint": "^10.13.0",
     "lint-staged": "^17.6.0",
     "taze": "^21.3.0",
@@ -78,7 +84,11 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.5",
+    "better-sqlite3": "^13.0.3",
     "citty": "^0.2.2",
-    "hono": "^4.13.14"
+    "drizzle-orm": "^0.45.4",
+    "hono": "^4.13.14",
+    "yauzl": "^3.4.0",
+    "yazl": "^3.3.1"
   }
 }

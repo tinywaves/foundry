@@ -1,7 +1,0 @@
-@import '@astryxdesign/core/reset.css';
-@import '@astryxdesign/core/astryx.css';
-
-[popover],
-[role='dialog'] {
-  -webkit-app-region: no-drag;
-}

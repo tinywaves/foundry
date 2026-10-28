@@ -1,4 +1,0 @@
-provider: github
-owner: tinywaves
-repo: foundry
-updaterCacheDirName: foundry-updater

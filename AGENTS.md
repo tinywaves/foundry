@@ -2,41 +2,114 @@
 
 Project guidance for coding agents working on Foundry.
 
-## Product
+## Product Contract
 
-Foundry is distributed as a CLI, not as a JavaScript library. The CLI starts a
-local Hono server, serves the bundled React Web UI, and opens the browser.
+Foundry is a local personal workbench distributed as a CLI, not as a JavaScript
+library. The CLI prepares local storage, starts a local Hono server, serves the
+bundled React Web UI, and opens the browser.
 
-Do not expose a package-level JavaScript entry unless the product requirement
-changes. Keep `bin` and the Web UI assets as the public surface.
+- Keep `bin` pointed at `dist/index.mjs`.
+- Publish only `dist`.
+- Keep `exports` limited to `./package.json` unless the product requirement
+  explicitly changes.
+- Do not add a package-level JavaScript entry point.
+- Keep the Node shebang in the `tsdown` banner, not in source.
+
+The CLI startup sequence is part of the product contract:
+
+1. Parse CLI arguments with citty.
+2. Initialize `~/.foundry` and open the SQLite database.
+3. Apply packaged Drizzle migrations.
+4. Start capture and data-transfer services.
+5. Serve the API and bundled Web UI on `127.0.0.1:11111`.
+6. Print the URL and open the browser unless `--no-open` is used.
+
+Do not serve the production Web UI before storage initialization succeeds.
 
 ## Architecture
 
 ```text
-app/web/                 React Web UI built with Rsbuild
-src/cli/                 CLI arguments, output, and browser opening
-src/server/api.ts        Hono API routes
-src/server/app.ts        API plus static Web UI and SPA fallback
-src/server/start.ts      production HTTP server
-src/server/dev.ts        standalone API development server
-src/server/web-root.ts   resolves bundled dist/web assets
+app/web/
+|-- src/app.tsx            Hash router, app shell, navigation, and titlebar
+|-- src/features/          Feature pages, dialogs, API adapters, and types
+|-- src/components/        Shared feature-level UI
+|-- src/i18n/              Translations and locale providers
+|-- src/lib/               Browser helpers and query client
+|-- src/shared/            Browser-side contracts shared by Web features
+|-- src/layer-order.css    StyleX layer precedence
+`-- vite.config.ts         Vite, Astryx/StyleX, and development proxy
+
+src/
+|-- cli/
+|   |-- index.ts           CLI command definitions and startup
+|   `-- open-browser.ts    Platform-specific browser opening
+|-- features/
+|   |-- captures/          Capture service, fetchers, runner, repository, routes
+|   |-- data-transfer/     Encrypted archive export and import
+|   |-- providers/         Provider repository, model discovery, routes
+|   `-- settings/          Settings validation, persistence, routes
+|-- lib/                   Small server-side utilities
+|-- server/
+|   |-- api.ts             API composition and feature route mounting
+|   |-- app.ts             API plus static Web UI and SPA fallback
+|   |-- dev.ts             Standalone API development server
+|   |-- start.ts           Production server and service composition
+|   `-- web-root.ts        Bundled Web UI resolution
+`-- storage/
+    |-- database.ts        SQLite connection, migrations, and schema version
+    |-- paths.ts           `~/.foundry` paths and permissions
+    `-- schema.ts          Drizzle table definitions
+
+drizzle/                   Generated migration SQL and metadata
+test/                      Behavioral tests using temporary storage
 ```
 
 Keep CLI and server responsibilities separate:
 
-- CLI code may call the server, but must not contain API routes or static-file
-  serving.
+- CLI code may compose the server, but must not contain API routes or
+  static-file serving.
 - Server code must not parse CLI arguments or open browsers.
-- Put API routes in `src/server/api.ts`.
-- Keep production composition in `src/server/app.ts`.
+- Put API route composition in `src/server/api.ts`.
+- Keep production composition in `src/server/start.ts`.
+- Keep standalone API development composition in `src/server/dev.ts`.
 
-## Commands
+## Feature Boundaries
 
-Install dependencies:
+- Keep route handlers thin. Put business rules in a feature service and SQL in
+  its repository.
+- Keep request/response validation in feature `contracts.ts` files.
+- Mount new feature routes from `src/server/api.ts`.
+- Return API errors as `{ "error": { "code": string, "message": string } }`
+  with a deliberate HTTP status. Unknown `/api/*` routes must remain JSON 404s.
+- Do not expose stored API keys. Public provider and settings payloads expose
+  only `hasApiKey`; secrets stay on the server.
+- Keep capture job execution and retries in `ScrapeJobRunner`, not in route
+  handlers.
+- Treat `.foundry-backup` archive versions and manifest validation as
+  compatibility contracts. Change them only with focused migration and
+  round-trip tests.
 
-```bash
-pnpm install
-```
+## Web UI Rules
+
+- The active Web UI lives in `app/web` and uses React, Vite, Astryx, and StyleX.
+- Keep feature code under `app/web/src/features`; each feature owns its pages,
+  dialogs, adapters, types, and local styling.
+- Keep the shell, navigation, titlebar, and hash router in
+  `app/web/src/app.tsx`.
+- Use Vite plus the official `@stylexjs/unplugin`. Do not add a custom StyleX
+  runtime, compatibility injector, or Rsbuild integration.
+- Keep `src/layer-order.css` as the first CSS import in
+  `app/web/src/index.tsx`. Vite otherwise emits Astryx layers before StyleX
+  priority layers and breaks low-specificity rules such as hover backgrounds.
+- Preserve the Astryx visual language. The Electron renderer is the visual
+  reference, but do not copy its directory structure or native window APIs.
+- Do not reintroduce Electron-only titlebar drag regions or macOS traffic-light
+  padding into the Web UI.
+- Do not introduce Next.js. The Web UI is a client-side React application.
+
+See `app/web/AGENTS.md` for additional Web-specific guidance.
+
+## Development and Ports
 
 Development runs as two independent processes:
 
@@ -45,84 +118,92 @@ pnpm dev:api
 pnpm dev:web
 ```
 
-- Web dev: `http://localhost:33333`
-- API dev: `http://localhost:22222`
-- Rsbuild proxies `/api` to the API dev server.
+- Web dev server: `http://localhost:33333`
+- API dev server: `http://localhost:22222`
+- Production CLI entry: `http://localhost:11111`
 
-There is intentionally no CLI dev command. Test page behavior through the Web
-dev server and API dev server.
+Vite proxies `/api` from the Web dev server to the API server. Ports are fixed
+and strict; do not add environment-variable or CLI port overrides unless
+explicitly requested.
 
-Build and run:
+There is intentionally no CLI dev command. Test page behavior with the Web and
+API development servers. Rebuild `dist` to test production static serving.
 
-```bash
-pnpm build
-pnpm start
-```
-
-The CLI entry is `src/cli/index.ts`. `tsdown` writes `dist/index.mjs` and injects
-the Node shebang through `banner`.
-
-## Fixed Ports
-
-Ports are hard-coded while the local development flow is being established:
-
-- Web dev server: `33333`
-- API dev server: `22222`
-- Production CLI entry: `11111`
-
-Do not add environment-variable or CLI port overrides unless explicitly
-requested.
-
-## Build Contract
+## Build and Packaging
 
 `pnpm build` must remain:
 
 1. Build and clean the CLI with `tsdown`.
-2. Build the Web UI directly to `dist/web` with Rsbuild.
+2. Copy Drizzle migrations into `dist/drizzle` with `tsdown`.
+3. Build the Web UI directly to `dist/web` with Vite.
 
-Do not add a manual copy step. `app/web/rsbuild.config.ts` owns the output path.
-Keep `output.distPath.root` pointed at `../../dist/web`.
-
-Do not introduce Next.js. The Web UI is a client-side React application built
-with Rsbuild.
-
-## Package Rules
-
-- The package is CLI-only; keep `bin` pointed at `dist/index.mjs`.
-- Publish only `dist`.
-- Keep the CLI shebang in the `tsdown` banner, not in source.
+- Do not add a manual Web UI copy step.
+- Keep `app/web/vite.config.ts` `build.outDir` pointed at `../../dist/web`.
+- Keep `tsdown.config.ts` `entry` pointed at `src/cli/index.ts`.
+- Keep migration copying in `tsdown.config.ts`; packaged CLI builds must not
+  depend on the repository `drizzle/` directory at runtime.
 - Keep TypeScript and `@types/node` versions in the pnpm catalog.
-- Verify packaging with `pnpm pack --dry-run`; the tarball must include
-  `dist/index.mjs` and `dist/web`.
+- `pnpm start` runs `node dist/index.mjs`; it does not build implicitly.
+- Verify packaging with `pnpm pack --dry-run`. The tarball must contain
+  `dist/index.mjs`, `dist/web`, and `dist/drizzle`.
+
+## Storage and Migrations
+
+- Runtime data belongs in `~/.foundry`, never in the repository or `dist`.
+- `src/storage/schema.ts` is the schema source of truth.
+- Generate migrations with `pnpm db:generate`; commit the SQL and `meta/`
+  files. Do not hand-edit generated migrations.
+- The CLI and API development server apply migrations automatically. Do not add
+  a second migration path with different behavior.
+- Increment `CURRENT_DATABASE_SCHEMA_VERSION` when the persisted SQLite
+  structure changes.
+- Keep `resolveMigrationsRoot()` compatible with packaged execution and local
+  development.
+- On POSIX, preserve the intended `0700` directory and `0600` file permissions.
+- Tests must use temporary directories. Never point tests or destructive
+  migration experiments at the developer's real `~/.foundry` data.
+
+## Generated Files
+
+`dist/` is generated output. Change source and build configuration instead of
+editing files there.
 
 ## Verification
 
 After changing active source files:
 
 ```bash
-pnpm exec eslint src app/web/rsbuild.config.ts vitest.config.ts tsdown.config.ts package.json
+pnpm exec eslint src app/web/src app/web/vite.config.ts vitest.config.ts tsdown.config.ts drizzle.config.ts package.json
+pnpm --filter web exec tsc --noEmit
 pnpm build
 pnpm test
 git diff --check
 ```
 
-`pnpm lint` still scans legacy files under `backups/` and may report unrelated
-historical errors. Use targeted ESLint checks for active code unless the
-backup directory is explicitly cleaned up.
+Use targeted ESLint checks for active code when the repository-wide lint scope
+includes files outside the current implementation.
 
-Only add tests for meaningful behavior. Do not keep placeholder tests for
-static-file serving or the health endpoint. `pnpm test` currently has no active
-test files and must pass.
+Only add tests for meaningful behavior. Prefer API-level, repository-level, or
+user-visible behavior over implementation-detail tests. Do not keep placeholder
+tests for static-file serving or the health endpoint.
 
-For server-related changes, smoke-test the real flow:
+For CLI, server, or static-serving changes, smoke-test the production flow:
 
 ```bash
+pnpm build
+node dist/index.mjs --no-open
 curl http://localhost:11111/
 curl http://localhost:11111/api/health
 ```
 
-For API development changes, also verify the separate API server:
+For API development changes, also verify the standalone API server:
 
 ```bash
+pnpm dev:api
 curl http://localhost:22222/api/health
 ```
+
+For Web UI changes, test the real interaction in a browser, including hover,
+dialog, empty, loading, error, collapsed-sidebar, and narrow-viewport states
+affected by the change. Do not rely on TypeScript or a successful build as proof
+that visual behavior is correct.

@@ -5,6 +5,13 @@ export default defineConfig({
   outDir: 'dist',
   shims: true,
   clean: true,
+  copy: [
+    {
+      from: 'drizzle',
+      to: 'dist',
+      flatten: false,
+    },
+  ],
   dts: false,
   minify: true,
   target: false,

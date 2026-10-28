@@ -107,6 +107,8 @@
     "editor.defaultFormatter": "dbaeumer.vscode-eslint"
   },
   "cSpell.words": [
+    "ASTRYX",
+    "astryxdesign",
     "bumpp",
     "changelogithub",
     "citty",
@@ -115,6 +117,8 @@
     "rsbuild",
     "Rspack",
     "taze",
-    "unrs"
+    "unrs",
+    "xstyle",
+    "yazl"
   ]
 }

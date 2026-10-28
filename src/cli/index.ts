@@ -1,6 +1,7 @@
 import { defineCommand, runMain } from 'citty';
 import packageJson from '../../package.json' with { type: 'json' };
 import { startServer } from '../server/start';
+import { initializeFoundryStorage } from '../storage/database';
 import { openInBrowser } from './open-browser';
 
 const main = defineCommand({
@@ -18,7 +19,10 @@ const main = defineCommand({
     },
   },
   run({ args }) {
+    const database = initializeFoundryStorage();
+
     startServer({
+      database,
       onListening({ url }) {
         console.info(`Foundry is running at ${url}`);
 

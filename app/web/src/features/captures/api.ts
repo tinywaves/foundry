@@ -11,7 +11,7 @@ import type {
 } from './types';
 import { errorResult, requestJSON } from '../../lib/api';
 import { formatRecordTimes } from '../../lib/format-time';
-import { getSettings } from '../settings/api';
+import { getCachedSettings } from '../settings/api';
 
 export const captureKeys = {
   all: ['captures'] as const,
@@ -26,7 +26,7 @@ export async function listCaptures(
 ): Promise<CaptureSummary[]> {
   const [captures, settings] = await Promise.all([
     requestJSON<CaptureSummary[]>(`/api/captures?filter=${filter}`),
-    getSettings(),
+    getCachedSettings(),
   ]);
   return captures.map((capture) => formatRecordTimes(capture, settings));
 }
@@ -41,7 +41,7 @@ export async function getCapture(
   try {
     const [data, settings] = await Promise.all([
       requestJSON<CaptureDetail>(`/api/captures/${captureId}`),
-      getSettings(),
+      getCachedSettings(),
     ]);
     return {
       ok: true,
@@ -65,7 +65,7 @@ export async function createCapture(
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(input),
       }),
-      getSettings(),
+      getCachedSettings(),
     ]);
     return { ok: true, data: { capture: formatRecordTimes(capture, settings) } };
   } catch (error) {
@@ -82,7 +82,7 @@ export async function recapture(
         `/api/captures/${captureId}/recapture`,
         { method: 'POST' },
       ),
-      getSettings(),
+      getCachedSettings(),
     ]);
     return { ok: true, data: formatRecordTimes(data, settings) };
   } catch (error) {
@@ -115,7 +115,7 @@ export async function updateCaptureNote(
           body: JSON.stringify({ userNote }),
         },
       ),
-      getSettings(),
+      getCachedSettings(),
     ]);
     return { ok: true, data: formatRecordTimes(data, settings) };
   } catch (error) {
@@ -129,7 +129,7 @@ export async function listScrapeJobs(
   try {
     const [data, settings] = await Promise.all([
       requestJSON<ScrapeJobSummary[]>(`/api/captures/${captureId}/jobs`),
-      getSettings(),
+      getCachedSettings(),
     ]);
     return {
       ok: true,

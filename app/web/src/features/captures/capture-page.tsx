@@ -74,12 +74,10 @@ export default function CapturesPage() {
   const capturesQuery = useQuery({
     queryKey: captureKeys.list(filter),
     queryFn: () => listCaptures(filter),
-    refetchInterval: 2000,
   });
   const captureCountsQuery = useQuery({
     queryKey: captureKeys.counts(),
     queryFn: countCaptures,
-    refetchInterval: 2000,
   });
   const recaptureMutation = useMutation({
     mutationFn: recapture,

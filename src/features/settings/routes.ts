@@ -6,11 +6,12 @@ import {
   parseSettingsPatch,
   SettingsInputError,
 } from './contracts';
+import type { SettingsChangedEvent } from './events';
 import { readSettings, updateSettings } from './repository';
 
 export function createSettingsRoutes(
   settingsPath = getFoundrySettingsPath(),
-  onSettingsChanged: () => void = () => {},
+  onSettingsChanged: (event: SettingsChangedEvent) => void = () => {},
 ): Hono {
   const app = new Hono();
 
@@ -26,7 +27,7 @@ export function createSettingsRoutes(
         ...updateSettings(patch, settingsPath),
         configFolder: getFoundryHomePath(),
       };
-      onSettingsChanged();
+      onSettingsChanged({ fields: Object.keys(patch) });
       return c.json(settings);
     } catch (error) {
       return settingsError(c, error);

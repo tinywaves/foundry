@@ -686,7 +686,6 @@ function AdvancedPanel({
   const statusQuery = useQuery({
     queryKey: dataTransferKeys.status(),
     queryFn: getDataTransferStatus,
-    refetchInterval: 5000,
   });
   const activeJobCount = statusQuery.data?.activeJobCount ?? 0;
   const isTransferBlocked = statusQuery.isLoading

@@ -16,7 +16,10 @@ import {
   ProviderRepository,
 } from './repository';
 
-export function createProviderRoutes(database: FoundryDatabase): Hono {
+export function createProviderRoutes(
+  database: FoundryDatabase,
+  onChanged: () => void = () => {},
+): Hono {
   const app = new Hono();
   const repository = new ProviderRepository(database.db);
 
@@ -57,7 +60,9 @@ export function createProviderRoutes(database: FoundryDatabase): Hono {
   app.post('/', async (c) => {
     try {
       const input = parseProviderInput(await readJson(c));
-      return c.json(repository.save(input), 201);
+      const provider = repository.save(input);
+      onChanged();
+      return c.json(provider, 201);
     } catch (error) {
       return providerError(c, error);
     }
@@ -66,7 +71,9 @@ export function createProviderRoutes(database: FoundryDatabase): Hono {
   app.put('/:id', async (c) => {
     try {
       const input = parseProviderInput(await readJson(c));
-      return c.json(repository.save(input, c.req.param('id')));
+      const provider = repository.save(input, c.req.param('id'));
+      onChanged();
+      return c.json(provider);
     } catch (error) {
       return providerError(c, error);
     }
@@ -78,7 +85,9 @@ export function createProviderRoutes(database: FoundryDatabase): Hono {
       const status = parseProviderStatus(
         typeof body === 'object' && body !== null && 'status' in body ? body.status : undefined,
       );
-      return c.json(repository.setStatus(c.req.param('id'), status));
+      const provider = repository.setStatus(c.req.param('id'), status);
+      onChanged();
+      return c.json(provider);
     } catch (error) {
       return providerError(c, error);
     }

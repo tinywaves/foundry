@@ -38,7 +38,6 @@ export default function JobsPage() {
     queryKey: captureKeys.jobs(captureId),
     queryFn: () => listScrapeJobs(captureId),
     enabled: Boolean(captureId),
-    refetchInterval: 2000,
   });
   const recaptureMutation = useMutation({
     mutationFn: recapture,

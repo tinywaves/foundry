@@ -37,6 +37,7 @@ import {
 import * as stylex from '@stylexjs/stylex';
 import { foundryTheme } from './astryx-themes';
 import { I18nProvider, useI18n } from './i18n';
+import { FoundryEventsProvider } from './lib/foundry-events';
 import { queryClient } from './lib/query-client';
 import OverviewPage from './features/overview/overview-page';
 import PromptsPage from './features/prompts/prompts-page';
@@ -46,6 +47,10 @@ import ProviderFormPage from './features/providers/provider-form';
 import CapturesPage from './features/captures/capture-page';
 import CaptureDetailDialog from './features/captures/capture-detail-dialog';
 import JobsPage from './features/captures/jobs-page';
+import { CaptureRealtimeBridge } from './features/captures/realtime';
+import { DataTransferRealtimeBridge } from './features/data-transfer/realtime';
+import { ProvidersRealtimeBridge } from './features/providers/realtime';
+import { SettingsRealtimeBridge } from './features/settings/realtime';
 import { getSettings, settingsKeys } from './features/settings/api';
 
 const styles = stylex.create({
@@ -531,11 +536,17 @@ function AppTheme({ children }: { children: ReactNode }) {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppTheme>
-        <I18nProvider>
-          <RouterProvider router={router} />
-        </I18nProvider>
-      </AppTheme>
+      <FoundryEventsProvider>
+        <CaptureRealtimeBridge />
+        <DataTransferRealtimeBridge />
+        <ProvidersRealtimeBridge />
+        <SettingsRealtimeBridge />
+        <AppTheme>
+          <I18nProvider>
+            <RouterProvider router={router} />
+          </I18nProvider>
+        </AppTheme>
+      </FoundryEventsProvider>
     </QueryClientProvider>
   );
 }

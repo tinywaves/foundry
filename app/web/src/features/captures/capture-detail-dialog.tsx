@@ -27,7 +27,6 @@ export default function CaptureDetailDialog() {
     queryKey: captureKeys.detail(captureId),
     queryFn: () => getCapture(captureId),
     enabled: Boolean(captureId),
-    refetchInterval: 2000,
   });
 
   useEffect(() => {

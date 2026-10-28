@@ -7,9 +7,13 @@ import {
   parseUserNote,
 } from './contracts';
 import { CaptureError } from './errors';
+import type { CapturesChangedEvent } from './events';
 import type { CaptureService } from './service';
 
-export function createCaptureRoutes(service: CaptureService): Hono {
+export function createCaptureRoutes(
+  service: CaptureService,
+  onChanged: (event: CapturesChangedEvent) => void = () => {},
+): Hono {
   const app = new Hono();
 
   app.get('/', (c) => {
@@ -21,7 +25,9 @@ export function createCaptureRoutes(service: CaptureService): Hono {
   app.post('/', async (c) => {
     try {
       const input = parseCreateCaptureInput(await readJSON(c));
-      return c.json(service.create(input), 201);
+      const capture = service.create(input);
+      onChanged({ captureId: capture.id, action: 'created' });
+      return c.json(capture, 201);
     } catch (error) {
       return captureError(c, error);
     }
@@ -37,7 +43,10 @@ export function createCaptureRoutes(service: CaptureService): Hono {
 
   app.post('/:id/recapture', (c) => {
     try {
-      return c.json(service.recapture(c.req.param('id')), 202);
+      const captureId = c.req.param('id');
+      const job = service.recapture(captureId);
+      onChanged({ captureId, action: 'recaptured' });
+      return c.json(job, 202);
     } catch (error) {
       return captureError(c, error);
     }
@@ -45,7 +54,9 @@ export function createCaptureRoutes(service: CaptureService): Hono {
 
   app.delete('/:id', (c) => {
     try {
-      service.delete(c.req.param('id'));
+      const captureId = c.req.param('id');
+      service.delete(captureId);
+      onChanged({ captureId, action: 'deleted' });
       return c.body(null, 204);
     } catch (error) {
       return captureError(c, error);
@@ -55,7 +66,10 @@ export function createCaptureRoutes(service: CaptureService): Hono {
   app.patch('/:id/note', async (c) => {
     try {
       const note = parseUserNote(await readJSON(c));
-      return c.json(service.updateNote(c.req.param('id'), note));
+      const captureId = c.req.param('id');
+      const capture = service.updateNote(captureId, note);
+      onChanged({ captureId, action: 'updated' });
+      return c.json(capture);
     } catch (error) {
       return captureError(c, error);
     }

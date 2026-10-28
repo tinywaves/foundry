@@ -7,6 +7,7 @@ import type {
   TimeZoneCode,
 } from '../../shared/settings';
 import { requestJSON } from '../../lib/api';
+import { queryClient } from '../../lib/query-client';
 
 export type {
   CaptureSettings,
@@ -23,12 +24,21 @@ export const settingsKeys = {
   current: () => ['settings', 'current'] as const,
 };
 
+type SettingsPayload = SettingsSnapshot & { configFolder: string };
+
 export function getSettings(): Promise<SettingsSnapshot> {
   return readSettings();
 }
 
+export function getCachedSettings(): Promise<SettingsPayload> {
+  return queryClient.query({
+    queryKey: settingsKeys.current(),
+    queryFn: readSettings,
+  });
+}
+
 export async function getConfigFolder(): Promise<string> {
-  const settings = await readSettings();
+  const settings = await getCachedSettings();
   return settings.configFolder;
 }
 
@@ -67,7 +77,7 @@ export function setLibrary(patch: Partial<LibrarySettings>): Promise<SettingsSna
   });
 }
 
-async function readSettings(): Promise<SettingsSnapshot & { configFolder: string }> {
+async function readSettings(): Promise<SettingsPayload> {
   const value = await requestJSON<Record<string, unknown>>('/api/settings');
   return normalizeSettings(value);
 }

@@ -5,7 +5,7 @@ import type {
 } from './types';
 import { requestJSON } from '../../lib/api';
 import { formatRecordTimes } from '../../lib/format-time';
-import { getSettings } from '../settings/api';
+import { getCachedSettings } from '../settings/api';
 
 export const providerKeys = {
   all: ['providers'] as const,
@@ -16,7 +16,7 @@ export const providerKeys = {
 export async function listProviders() {
   const [providers, settings] = await Promise.all([
     requestJSON<ProviderSummary[]>('/api/providers'),
-    getSettings(),
+    getCachedSettings(),
   ]);
   return providers.map((provider) => ({
     ...formatRecordTimes(provider, settings),
@@ -35,7 +35,7 @@ export async function saveProvider(input: ProviderInput, id?: string) {
         body: JSON.stringify(input),
       },
     ),
-    getSettings(),
+    getCachedSettings(),
   ]);
   return { ...formatRecordTimes(provider, settings), apiKey: '' };
 }
@@ -44,7 +44,7 @@ export async function getProvider(id: string): Promise<ProviderSummary | null> {
   try {
     const [provider, settings] = await Promise.all([
       requestJSON<ProviderSummary>(`/api/providers/${id}`),
-      getSettings(),
+      getCachedSettings(),
     ]);
     return { ...formatRecordTimes(provider, settings), apiKey: '' };
   } catch {
@@ -62,7 +62,7 @@ export async function setProviderStatus(
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ status }),
     }),
-    getSettings(),
+    getCachedSettings(),
   ]);
   return { ...formatRecordTimes(provider, settings), apiKey: '' };
 }

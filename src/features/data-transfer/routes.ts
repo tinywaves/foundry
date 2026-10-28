@@ -13,7 +13,10 @@ import {
 } from './errors';
 import type { DataTransferService } from './service';
 
-export function createDataTransferRoutes(service: DataTransferService): Hono {
+export function createDataTransferRoutes(
+  service: DataTransferService,
+  onImported: () => void = () => {},
+): Hono {
   const app = new Hono();
 
   app.get('/status', (c) => c.json(service.getStatus()));
@@ -71,6 +74,7 @@ export function createDataTransferRoutes(service: DataTransferService): Hono {
   app.post('/imports/:id/commit', async (c) => {
     try {
       await service.commitImport(c.req.param('id'));
+      onImported();
       return c.json({ status: 'imported' });
     } catch (error) {
       return dataTransferError(c, error);

@@ -1,4 +1,5 @@
 import { readStoredSettings } from '../settings/repository';
+import type { CaptureJobChangedEvent } from './events';
 import { scrapePage } from './fetchers';
 import { normalizeFetcherError } from './fetchers/error';
 import type { StoredJobConfig } from './contracts';
@@ -6,13 +7,6 @@ import type { CaptureRepository } from './repository';
 
 const RETRY_BASE_DELAY_MS = 1000;
 const RETRY_MAX_DELAY_MS = 30_000;
-
-export interface ScrapeJobFinishedEvent {
-  captureId: string;
-  jobId: string;
-  status: 'succeeded' | 'failed';
-  errorMessage?: string;
-}
 
 export class ScrapeJobRunner {
   private readonly queue: string[] = [];
@@ -23,7 +17,7 @@ export class ScrapeJobRunner {
   constructor(
     private readonly repository: CaptureRepository,
     private readonly settingsPath: string,
-    private readonly onFinished: (event: ScrapeJobFinishedEvent) => void = () => {},
+    private readonly onChanged: (event: CaptureJobChangedEvent) => void = () => {},
   ) {}
 
   private schedule(): void {
@@ -66,6 +60,11 @@ export class ScrapeJobRunner {
     }
 
     this.repository.markRunning(jobId);
+    this.onChanged({
+      captureId: context.capture.id,
+      jobId,
+      status: 'running',
+    });
 
     for (let attempt = 1; attempt <= config.maxAttempts; attempt += 1) {
       try {
@@ -76,7 +75,7 @@ export class ScrapeJobRunner {
           result.title,
           result.rawResponse,
         );
-        this.onFinished({
+        this.onChanged({
           captureId: context.capture.id,
           jobId,
           status: 'succeeded',
@@ -107,7 +106,7 @@ export class ScrapeJobRunner {
     message: string,
   ): void {
     this.repository.markFailed(jobId, code, message);
-    this.onFinished({
+    this.onChanged({
       captureId,
       jobId,
       status: 'failed',
@@ -127,8 +126,18 @@ export class ScrapeJobRunner {
       return;
     }
 
+    const context = this.repository.getJobContext(jobId);
+    if (!context) {
+      return;
+    }
+
     this.knownJobIDs.add(jobId);
     this.queue.push(jobId);
+    this.onChanged({
+      captureId: context.capture.id,
+      jobId,
+      status: 'pending',
+    });
     this.schedule();
   }
 

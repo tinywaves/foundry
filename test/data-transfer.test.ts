@@ -4,6 +4,7 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 import { createCaptureRuntime } from '../src/features/captures/runtime';
 import { DataTransferService } from '../src/features/data-transfer/service';
+import type { DataTransferStatus } from '../src/features/data-transfer/contracts';
 import { ProviderRepository } from '../src/features/providers/repository';
 import { readSettings, updateSettings } from '../src/features/settings/repository';
 import { openFoundryDatabase } from '../src/storage/database';
@@ -16,12 +17,16 @@ it('exports and restores an encrypted Foundry snapshot', async () => {
   const database = openFoundryDatabase(join(directory, 'foundry.sqlite'));
   const providers = new ProviderRepository(database.db);
   const captureRuntime = createCaptureRuntime(database, settingsPath);
+  const statusEvents: DataTransferStatus[] = [];
   const transfer = new DataTransferService(
     database,
     settingsPath,
     captureRuntime.runner,
     join(directory, '.data-transfer'),
     '0.0.0',
+    (status) => {
+      statusEvents.push(status);
+    },
   );
 
   try {
@@ -53,6 +58,8 @@ it('exports and restores an encrypted Foundry snapshot', async () => {
 
     expect(providers.list()).toHaveLength(1);
     expect(readSettings(settingsPath).workspace.appearance['color-theme']).toBe('dark');
+    expect(statusEvents[0]?.isBusy).toBe(true);
+    expect(statusEvents.at(-1)?.isBusy).toBe(false);
   } finally {
     database.client.close();
     await rm(directory, { recursive: true, force: true });

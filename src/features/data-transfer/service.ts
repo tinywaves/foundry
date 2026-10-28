@@ -57,6 +57,7 @@ export class DataTransferService {
     private readonly runner: ScrapeJobRunner,
     private readonly temporaryRoot: string,
     private readonly appVersion: string,
+    private readonly onStatusChanged: (status: DataTransferStatus) => void = () => {},
   ) {}
 
   private async runExclusive<T>(operation: () => Promise<T>): Promise<T> {
@@ -65,10 +66,12 @@ export class DataTransferService {
     }
 
     this.busy = true;
+    this.onStatusChanged(this.getStatus());
     try {
       return await operation();
     } finally {
       this.busy = false;
+      this.onStatusChanged(this.getStatus());
     }
   }
 

@@ -2,6 +2,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, it, vi } from 'vitest';
+import { FoundryEventHub } from '../src/events/hub';
+import { PROVIDERS_CHANGED_EVENT } from '../src/features/providers/events';
 import { createApiApp } from '../src/server/api';
 import { openFoundryDatabase } from '../src/storage/database';
 
@@ -12,7 +14,12 @@ it('creates, updates, and preserves provider credentials', async () => {
   const database = openFoundryDatabase(join(directory, 'foundry.sqlite'));
 
   try {
-    const app = createApiApp(database);
+    const eventHub = new FoundryEventHub();
+    const events: string[] = [];
+    eventHub.subscribe((event) => {
+      events.push(event.type);
+    });
+    const app = createApiApp(database, { eventHub });
     const postResponse = await app.request('/api/providers', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -49,6 +56,7 @@ it('creates, updates, and preserves provider credentials', async () => {
     expect(providers).toHaveLength(1);
     expect(providers[0]?.hasApiKey).toBe(true);
     expect(providers[0]?.customModels).toHaveLength(1);
+    expect(events.filter((type) => type === PROVIDERS_CHANGED_EVENT)).toHaveLength(2);
 
     vi.stubGlobal('fetch', vi.fn<typeof fetch>(() =>
       Promise.resolve(Response.json({

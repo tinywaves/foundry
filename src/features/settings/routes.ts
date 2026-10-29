@@ -1,32 +1,24 @@
 import type { Context } from 'hono';
 import { Hono } from 'hono';
-import { openPath } from '../../lib/open-path';
-import { getFoundryHomePath, getFoundrySettingsPath } from '../../storage/paths';
 import {
   parseSettingsPatch,
   SettingsInputError,
 } from './contracts';
 import type { SettingsChangedEvent } from './events';
-import { readSettings, updateSettings } from './repository';
+import type { SettingsService } from './service';
 
 export function createSettingsRoutes(
-  settingsPath = getFoundrySettingsPath(),
+  service: SettingsService,
   onSettingsChanged: (event: SettingsChangedEvent) => void = () => {},
 ): Hono {
   const app = new Hono();
 
-  app.get('/', (c) => c.json({
-    ...readSettings(settingsPath),
-    configFolder: getFoundryHomePath(),
-  }));
+  app.get('/', (c) => c.json(service.read()));
 
   app.patch('/', async (c) => {
     try {
       const patch = parseSettingsPatch(await readJson(c));
-      const settings = {
-        ...updateSettings(patch, settingsPath),
-        configFolder: getFoundryHomePath(),
-      };
+      const settings = service.update(patch);
       onSettingsChanged({ fields: Object.keys(patch) });
       return c.json(settings);
     } catch (error) {
@@ -35,9 +27,8 @@ export function createSettingsRoutes(
   });
 
   app.post('/config-folder/open', (c) => {
-    const configFolder = getFoundryHomePath();
-    openPath(configFolder);
-    return c.json({ configFolder }, 202);
+    const settings = service.openConfigFolder();
+    return c.json({ configFolder: settings.configFolder }, 202);
   });
 
   return app;

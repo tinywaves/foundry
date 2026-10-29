@@ -13,8 +13,10 @@ import type { FoundryEventHub } from '../events/hub';
 import { DATA_TRANSFER_IMPORTED_EVENT } from '../features/data-transfer/events';
 import { PROVIDERS_CHANGED_EVENT } from '../features/providers/events';
 import { createProviderRoutes } from '../features/providers/routes';
+import { ProviderService } from '../features/providers/service';
 import { SETTINGS_CHANGED_EVENT } from '../features/settings/events';
 import { createSettingsRoutes } from '../features/settings/routes';
+import { SettingsService } from '../features/settings/service';
 import { createEventRoutes } from '../events/routes';
 import type { FoundryDatabase } from '../storage/database';
 
@@ -22,6 +24,8 @@ export interface ApiAppOptions {
   settingsPath?: string;
   captureService?: CaptureService;
   dataTransferService?: DataTransferService;
+  providerService?: ProviderService;
+  settingsService?: SettingsService;
   workspaceMutationGate?: WorkspaceMutationGate;
   eventHub?: FoundryEventHub;
   onSettingsChanged?: () => void;
@@ -36,6 +40,10 @@ export function createApiApp(database: FoundryDatabase, options: ApiAppOptions =
   const workspaceMutationGate = options.workspaceMutationGate
     ?? options.dataTransferService?.workspaceMutationGate
     ?? new WorkspaceMutationGate();
+  const providerService = options.providerService
+    ?? new ProviderService(database, options.settingsPath);
+  const settingsService = options.settingsService
+    ?? new SettingsService(options.settingsPath);
 
   app.use(
     '/api/*',
@@ -55,13 +63,13 @@ export function createApiApp(database: FoundryDatabase, options: ApiAppOptions =
   }
   app.route(
     '/api/providers',
-    createProviderRoutes(database, options.settingsPath, () => {
+    createProviderRoutes(providerService, () => {
       options.eventHub?.publish(PROVIDERS_CHANGED_EVENT, {});
     }),
   );
   app.route(
     '/api/settings',
-    createSettingsRoutes(options.settingsPath, (event) => {
+    createSettingsRoutes(settingsService, (event) => {
       options.onSettingsChanged?.();
       options.eventHub?.publish(SETTINGS_CHANGED_EVENT, event);
     }),

@@ -1,6 +1,5 @@
 import type { CSSProperties } from 'react';
-import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -42,6 +41,7 @@ import {
   recapture,
 } from './api';
 import { captureErrorKey, useI18n } from '../../i18n';
+import { TitlebarActions } from '../../components/titlebar-actions';
 import { useAppToast } from '../../lib/api';
 import { CaptureDialog } from './capture-create-dialog';
 import { NoteCell } from './capture-note-cell';
@@ -66,7 +66,6 @@ export default function CapturesPage() {
   const queryClient = useQueryClient();
   const toast = useAppToast();
   const [filter, setFilter] = useState<CaptureFilter>('all');
-  const [titlebarActions, setTitlebarActions] = useState<HTMLElement | null>(null);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [captureToDelete, setCaptureToDelete] = useState<CaptureSummary | null>(null);
   const stickyColumns = useTableStickyColumns<CaptureSummary>({ endKeys: ['actions'] });
@@ -114,11 +113,6 @@ export default function CapturesPage() {
       setCaptureToDelete(null);
     },
   });
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect, @eslint-react/set-state-in-effect
-    setTitlebarActions(document.getElementById('window-titlebar-actions'));
-  }, []);
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: captureKeys.list(filter) });
@@ -259,7 +253,7 @@ export default function CapturesPage() {
 
   return (
     <>
-      {titlebarActions && createPortal(
+      <TitlebarActions>
         <HStack gap={2} vAlign="center">
           <IconButton
             label={t('captures.refresh')}
@@ -277,9 +271,8 @@ export default function CapturesPage() {
               setIsComposerOpen(true);
             }}
           />
-        </HStack>,
-        titlebarActions,
-      )}
+        </HStack>
+      </TitlebarActions>
       <VStack gap={5}>
         <SegmentedControl
           label={t('captures.captureFilter')}

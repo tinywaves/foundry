@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
@@ -20,6 +19,7 @@ import {
 } from './api';
 import { captureErrorKey, useI18n } from '../../i18n';
 import { useAppToast } from '../../lib/api';
+import { TitlebarActions } from '../../components/titlebar-actions';
 
 const statusVariant: Record<ScrapeJobStatus, 'neutral' | 'success' | 'error'> = {
   pending: 'neutral',
@@ -33,7 +33,6 @@ export default function JobsPage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const toast = useAppToast();
-  const [titlebarActions, setTitlebarActions] = useState<HTMLElement | null>(null);
   const jobsQuery = useQuery({
     queryKey: captureKeys.jobs(captureId),
     queryFn: () => listScrapeJobs(captureId),
@@ -57,11 +56,6 @@ export default function JobsPage() {
       });
     },
   });
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect, @eslint-react/set-state-in-effect
-    setTitlebarActions(document.getElementById('window-titlebar-actions'));
-  }, []);
 
   const jobs = jobsQuery.data?.ok ? jobsQuery.data.data : [];
   const refresh = () => {
@@ -127,7 +121,7 @@ export default function JobsPage() {
 
   return (
     <>
-      {titlebarActions && createPortal(
+      <TitlebarActions>
         <HStack gap={2} vAlign="center">
           <IconButton
             label={t('captures.refresh')}
@@ -145,9 +139,8 @@ export default function JobsPage() {
               recaptureMutation.mutate(captureId);
             }}
           />
-        </HStack>,
-        titlebarActions,
-      )}
+        </HStack>
+      </TitlebarActions>
       <VStack gap={5}>
         {jobs.length === 0
           ? (

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@astryxdesign/core/Button';
@@ -23,6 +22,7 @@ import {
   saveProvider,
 } from './api';
 import { useI18n } from '../../i18n';
+import { TitlebarActions } from '../../components/titlebar-actions';
 
 const styles = stylex.create({
   formFieldRow: {
@@ -97,14 +97,6 @@ export default function ProviderFormPage() {
   const [modelName, setModelName] = useState('');
   const [isFetching, setIsFetching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [titlebarActions, setTitlebarActions] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    // The titlebar is committed alongside the route outlet, so resolve its portal target after mount.
-    // eslint-disable-next-line react-hooks/set-state-in-effect, @eslint-react/set-state-in-effect
-    setTitlebarActions(document.getElementById('window-titlebar-actions'));
-  }, []);
-
   useEffect(() => {
     if (!providerId) {
       return;
@@ -221,7 +213,7 @@ export default function ProviderFormPage() {
   }, []);
   return (
     <>
-      {titlebarActions && createPortal(
+      <TitlebarActions>
         <HStack gap={2}>
           <Button label={t('providers.cancel')} variant="ghost" size="sm" onClick={cancel} />
           <Button
@@ -232,9 +224,8 @@ export default function ProviderFormPage() {
             isLoading={isSaving}
             onClick={submit}
           />
-        </HStack>,
-        titlebarActions,
-      )}
+        </HStack>
+      </TitlebarActions>
       <VStack gap={5}>
         <VStack gap={4}>
           <HStack gap={3} wrap="wrap" xstyle={styles.formFieldRow}>

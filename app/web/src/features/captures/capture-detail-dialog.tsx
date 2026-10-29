@@ -1,5 +1,3 @@
-import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
@@ -17,22 +15,17 @@ import {
   getCapture,
 } from './api';
 import { useI18n } from '../../i18n';
+import { TitlebarActions } from '../../components/titlebar-actions';
 
 export default function CaptureDetailDialog() {
   const { captureId = '' } = useParams();
   const queryClient = useQueryClient();
   const { t } = useI18n();
-  const [titlebarActions, setTitlebarActions] = useState<HTMLElement | null>(null);
   const detailQuery = useQuery({
     queryKey: captureKeys.detail(captureId),
     queryFn: () => getCapture(captureId),
     enabled: Boolean(captureId),
   });
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect, @eslint-react/set-state-in-effect
-    setTitlebarActions(document.getElementById('window-titlebar-actions'));
-  }, []);
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: captureKeys.detail(captureId) });
@@ -41,7 +34,7 @@ export default function CaptureDetailDialog() {
 
   return (
     <>
-      {titlebarActions && createPortal(
+      <TitlebarActions>
         <HStack gap={2} vAlign="center">
           <IconButton
             label={t('captures.refresh')}
@@ -51,9 +44,8 @@ export default function CaptureDetailDialog() {
             variant="ghost"
             onClick={refresh}
           />
-        </HStack>,
-        titlebarActions,
-      )}
+        </HStack>
+      </TitlebarActions>
       {detailQuery.isPending
         ? (
             <VStack gap={3} width="100%">

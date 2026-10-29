@@ -36,6 +36,10 @@ import {
 } from '@heroicons/react/24/outline';
 import * as stylex from '@stylexjs/stylex';
 import { foundryTheme } from './astryx-themes';
+import {
+  TitlebarActionsProvider,
+} from './components/titlebar-actions';
+import { useTitlebarActionsTarget } from './components/titlebar-actions-context';
 import { I18nProvider, useI18n } from './i18n';
 import type { TranslationKey } from './i18n';
 import { FoundryEventsProvider } from './lib/foundry-events';
@@ -263,6 +267,7 @@ function WindowTitlebar({
   const matches = useMatches();
   const navigate = useNavigate();
   const { t } = useI18n();
+  const setTitlebarActionsTarget = useTitlebarActionsTarget();
   const titleHandle = matches.findLast((match) => isRouteHandle(match.handle))?.handle;
 
   return (
@@ -297,7 +302,7 @@ function WindowTitlebar({
           )}
           <StackItem size="fill" />
           <HStack
-            id="window-titlebar-actions"
+            ref={setTitlebarActionsTarget}
             vAlign="center"
             xstyle={styles.actions}
           />
@@ -523,15 +528,17 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <FoundryEventsProvider>
-        <CaptureRealtimeBridge />
-        <DataTransferRealtimeBridge />
-        <ProvidersRealtimeBridge />
-        <SettingsRealtimeBridge />
-        <AppTheme>
-          <I18nProvider>
-            <RouterProvider router={router} />
-          </I18nProvider>
-        </AppTheme>
+        <TitlebarActionsProvider>
+          <CaptureRealtimeBridge />
+          <DataTransferRealtimeBridge />
+          <ProvidersRealtimeBridge />
+          <SettingsRealtimeBridge />
+          <AppTheme>
+            <I18nProvider>
+              <RouterProvider router={router} />
+            </I18nProvider>
+          </AppTheme>
+        </TitlebarActionsProvider>
       </FoundryEventsProvider>
     </QueryClientProvider>
   );

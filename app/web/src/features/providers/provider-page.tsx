@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
@@ -30,6 +29,7 @@ import {
   setProviderStatus,
 } from './api';
 import { useI18n } from '../../i18n';
+import { TitlebarActions } from '../../components/titlebar-actions';
 
 const styles = stylex.create({
   providerList: {
@@ -79,7 +79,6 @@ export default function ProvidersPage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const [providerToDelete, setProviderToDelete] = useState<ProviderListItem | null>(null);
-  const [titlebarActions, setTitlebarActions] = useState<HTMLElement | null>(null);
   const providersQuery = useQuery({
     queryKey: providerKeys.list(),
     queryFn: listProviders,
@@ -100,12 +99,6 @@ export default function ProvidersPage() {
   });
   const providers: ProviderListItem[] = providersQuery.data ?? [];
 
-  useEffect(() => {
-    // The titlebar is committed with the layout, so resolve its portal target after the page mounts.
-    // eslint-disable-next-line react-hooks/set-state-in-effect, @eslint-react/set-state-in-effect
-    setTitlebarActions(document.getElementById('window-titlebar-actions'));
-  }, []);
-
   function setStatus(provider: ProviderListItem, isChecked: boolean) {
     if (provider.status === 'deleted' || provider.isInUse) {
       return;
@@ -122,10 +115,9 @@ export default function ProvidersPage() {
 
   return (
     <>
-      {titlebarActions && createPortal(
-        <Button label={t('providers.add')} size="sm" variant="primary" href="/providers/new" as={Link} />,
-        titlebarActions,
-      )}
+      <TitlebarActions>
+        <Button label={t('providers.add')} size="sm" variant="primary" href="/providers/new" as={Link} />
+      </TitlebarActions>
       <VStack gap={5}>
         {providers.length === 0
           ? (

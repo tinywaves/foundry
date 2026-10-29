@@ -1,6 +1,5 @@
 import type { Context } from 'hono';
 import { Hono } from 'hono';
-import type { FoundryDatabase } from '../../storage/database';
 import {
   parseProviderConnection,
   parseProviderInput,
@@ -9,45 +8,31 @@ import {
   ProviderInputError,
 } from './contracts';
 import {
-  fetchProviderModels,
   ProviderModelsError,
 } from './models';
 import {
   ProviderNotFoundError,
-  ProviderRepository,
 } from './repository';
-import { getCurrentUsedProviderIds } from './usage';
+import type { ProviderService } from './service';
 
 export function createProviderRoutes(
-  database: FoundryDatabase,
-  settingsPath?: string,
+  service: ProviderService,
   onChanged: () => void = () => {},
 ): Hono {
   const app = new Hono();
-  const repository = new ProviderRepository(database.db);
 
-  app.get('/', (c) => c.json(
-    repository.list(getCurrentUsedProviderIds(settingsPath)),
-  ));
+  app.get('/', (c) => c.json(service.list()));
 
   app.get('/:id', (c) => {
-    const provider = repository.get(c.req.param('id'));
+    const provider = service.get(c.req.param('id'));
     return provider
       ? c.json(provider)
       : c.json({ error: { code: 'PROVIDER_NOT_FOUND', message: 'Provider not found' } }, 404);
   });
 
   app.get('/:id/models', async (c) => {
-    const connection = repository.getConnection(c.req.param('id'));
-    if (!connection) {
-      return c.json(
-        { error: { code: 'PROVIDER_NOT_FOUND', message: 'Provider not found' } },
-        404,
-      );
-    }
-
     try {
-      return c.json(await fetchProviderModels(connection));
+      return c.json(await service.fetchModels(c.req.param('id')));
     } catch (error) {
       return providerError(c, error);
     }
@@ -56,7 +41,7 @@ export function createProviderRoutes(
   app.post('/models', async (c) => {
     try {
       const connection = parseProviderConnection(await readJson(c));
-      return c.json(await fetchProviderModels(connection));
+      return c.json(await service.fetchModelsForConnection(connection));
     } catch (error) {
       return providerError(c, error);
     }
@@ -65,7 +50,7 @@ export function createProviderRoutes(
   app.post('/', async (c) => {
     try {
       const input = parseProviderInput(await readJson(c));
-      const provider = repository.save(input);
+      const provider = service.save(input);
       onChanged();
       return c.json(provider, 201);
     } catch (error) {
@@ -76,7 +61,7 @@ export function createProviderRoutes(
   app.put('/:id', async (c) => {
     try {
       const input = parseProviderInput(await readJson(c));
-      const provider = repository.save(input, c.req.param('id'));
+      const provider = service.save(input, c.req.param('id'));
       onChanged();
       return c.json(provider);
     } catch (error) {
@@ -90,11 +75,7 @@ export function createProviderRoutes(
       const status = parseProviderStatus(
         typeof body === 'object' && body !== null && 'status' in body ? body.status : undefined,
       );
-      const provider = repository.setStatus(
-        c.req.param('id'),
-        status,
-        getCurrentUsedProviderIds(settingsPath),
-      );
+      const provider = service.setStatus(c.req.param('id'), status);
       onChanged();
       return c.json(provider);
     } catch (error) {

@@ -17,7 +17,6 @@ import {
   CpuChipIcon,
   PencilSquareIcon,
   PlusIcon,
-  ServerStackIcon,
   Square3Stack3DIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline';
@@ -123,7 +122,7 @@ export default function ProvidersPage() {
           ? (
               <FeatureEmptyState
                 startIcon={CloudIcon}
-                centerIcon={ServerStackIcon}
+                centerIcon={Square3Stack3DIcon}
                 endIcon={CpuChipIcon}
                 title={t('providers.emptyTitle')}
                 description={t('providers.empty')}

@@ -7,10 +7,10 @@ import {
   ArrowPathRoundedSquareIcon,
   ClipboardDocumentListIcon,
   EyeIcon,
+  GlobeAltIcon,
   InboxStackIcon,
   LinkIcon as HeroLinkIcon,
   PlusIcon,
-  Square3Stack3DIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline';
 import { Button } from '@astryxdesign/core/Button';
@@ -294,9 +294,9 @@ export default function CapturesPage() {
         {captures.length === 0
           ? (
               <FeatureEmptyState
-                startIcon={HeroLinkIcon}
-                centerIcon={InboxStackIcon}
-                endIcon={Square3Stack3DIcon}
+                startIcon={GlobeAltIcon}
+                centerIcon={HeroLinkIcon}
+                endIcon={InboxStackIcon}
                 title={t('captures.emptyTitle')}
                 description={t('captures.emptyDescription')}
                 actions={(

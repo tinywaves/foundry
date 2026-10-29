@@ -1,5 +1,6 @@
 import type {
   ProviderInput,
+  ProviderListItem,
   ProviderSummary,
   RemoteModel,
 } from './types';
@@ -15,13 +16,12 @@ export const providerKeys = {
 
 export async function listProviders() {
   const [providers, settings] = await Promise.all([
-    requestJSON<ProviderSummary[]>('/api/providers'),
+    requestJSON<ProviderListItem[]>('/api/providers'),
     getCachedSettings(),
   ]);
   return providers.map((provider) => ({
     ...formatRecordTimes(provider, settings),
     apiKey: '',
-    isInUse: false,
   }));
 }
 

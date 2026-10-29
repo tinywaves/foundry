@@ -9,7 +9,7 @@ import {
   GlobeAltIcon,
   PaintBrushIcon,
 } from '@heroicons/react/24/outline';
-import type { TranslationKey } from '../../i18n';
+import type { TranslationKey } from '../../i18n/messages';
 import type { PanelConfig, PanelId, SearchableSetting } from './types';
 
 export const PANEL_GROUPS: Array<{

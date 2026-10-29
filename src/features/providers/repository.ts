@@ -2,10 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { desc, eq, ne } from 'drizzle-orm';
 import type { FoundryDatabase } from '../../storage/database';
 import { providers } from '../../storage/schema';
-import { parseCustomModels } from './contracts';
+import { parseCustomModels, ProviderInUseError } from './contracts';
 import type {
   ProviderConnection,
   ProviderInput,
+  ProviderListItem,
   ProviderStatus,
   ProviderSummary,
 } from './contracts';
@@ -25,14 +26,17 @@ export class ProviderNotFoundError extends Error {
 export class ProviderRepository {
   constructor(private readonly db: Database) {}
 
-  list(): ProviderSummary[] {
+  list(usedProviderIds: ReadonlySet<string> = new Set()): ProviderListItem[] {
     return this.db
       .select()
       .from(providers)
       .where(ne(providers.status, 'deleted'))
       .orderBy(desc(providers.updatedAt))
       .all()
-      .map((row) => toProviderSummary(row));
+      .map((row) => ({
+        ...toProviderSummary(row),
+        isInUse: usedProviderIds.has(row.id),
+      }));
   }
 
   get(id: string): ProviderSummary | null {
@@ -85,7 +89,15 @@ export class ProviderRepository {
     return toProviderSummary(row);
   }
 
-  setStatus(id: string, status: ProviderStatus): ProviderSummary {
+  setStatus(
+    id: string,
+    status: ProviderStatus,
+    usedProviderIds: ReadonlySet<string> = new Set(),
+  ): ProviderSummary {
+    if (usedProviderIds.has(id) && (status === 'disabled' || status === 'deleted')) {
+      throw new ProviderInUseError();
+    }
+
     const rows = this.db
       .update(providers)
       .set({

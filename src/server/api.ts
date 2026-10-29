@@ -55,7 +55,7 @@ export function createApiApp(database: FoundryDatabase, options: ApiAppOptions =
   }
   app.route(
     '/api/providers',
-    createProviderRoutes(database, () => {
+    createProviderRoutes(database, options.settingsPath, () => {
       options.eventHub?.publish(PROVIDERS_CHANGED_EVENT, {});
     }),
   );

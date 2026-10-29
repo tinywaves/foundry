@@ -5,6 +5,7 @@ import {
   parseProviderConnection,
   parseProviderInput,
   parseProviderStatus,
+  ProviderInUseError,
   ProviderInputError,
 } from './contracts';
 import {
@@ -15,15 +16,19 @@ import {
   ProviderNotFoundError,
   ProviderRepository,
 } from './repository';
+import { getCurrentUsedProviderIds } from './usage';
 
 export function createProviderRoutes(
   database: FoundryDatabase,
+  settingsPath?: string,
   onChanged: () => void = () => {},
 ): Hono {
   const app = new Hono();
   const repository = new ProviderRepository(database.db);
 
-  app.get('/', (c) => c.json(repository.list()));
+  app.get('/', (c) => c.json(
+    repository.list(getCurrentUsedProviderIds(settingsPath)),
+  ));
 
   app.get('/:id', (c) => {
     const provider = repository.get(c.req.param('id'));
@@ -85,7 +90,11 @@ export function createProviderRoutes(
       const status = parseProviderStatus(
         typeof body === 'object' && body !== null && 'status' in body ? body.status : undefined,
       );
-      const provider = repository.setStatus(c.req.param('id'), status);
+      const provider = repository.setStatus(
+        c.req.param('id'),
+        status,
+        getCurrentUsedProviderIds(settingsPath),
+      );
       onChanged();
       return c.json(provider);
     } catch (error) {
@@ -110,6 +119,9 @@ function providerError(c: Context, error: unknown) {
   }
   if (error instanceof ProviderNotFoundError) {
     return c.json({ error: { code: error.code, message: error.message } }, 404);
+  }
+  if (error instanceof ProviderInUseError) {
+    return c.json({ error: { code: error.code, message: error.message } }, 409);
   }
   if (error instanceof ProviderModelsError) {
     return c.json({ error: { code: error.code, message: error.message } }, 502);

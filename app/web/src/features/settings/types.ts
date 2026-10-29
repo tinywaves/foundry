@@ -6,7 +6,7 @@ import type {
   TimeFormatPattern,
   TimeZoneCode,
 } from './api';
-import type { TranslationKey } from '../../i18n';
+import type { TranslationKey } from '../../i18n/messages';
 
 export type {
   CaptureSettings,

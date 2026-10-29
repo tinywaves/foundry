@@ -36,6 +36,10 @@ export interface ProviderSummary {
   deletedAt: string | null;
 }
 
+export interface ProviderListItem extends ProviderSummary {
+  isInUse: boolean;
+}
+
 export interface ProviderConnection {
   protocol: ProviderProtocol;
   baseURL: string;
@@ -53,6 +57,15 @@ export class ProviderInputError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'ProviderInputError';
+  }
+}
+
+export class ProviderInUseError extends Error {
+  readonly code = 'PROVIDER_IN_USE';
+
+  constructor() {
+    super('Provider is currently in use');
+    this.name = 'ProviderInUseError';
   }
 }
 

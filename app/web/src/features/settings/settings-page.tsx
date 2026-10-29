@@ -179,13 +179,6 @@ function SettingsSearchResults({
   onSelect: (setting: SearchableSetting) => void;
 }) {
   const { t } = useI18n();
-  const translatedLabels: Record<string, string> = {
-    'Color theme': t('settings.colorTheme'),
-    'Time zone': t('settings.timezone'),
-    'Appearance': t('settings.appearance'),
-    'Language & region': t('settings.languageRegion'),
-  };
-  const translate = (value: string) => translatedLabels[value] ?? value;
   return results.length === 0
     ? (
         <VStack id="settings-search-results" gap={0.5} padding={2}>
@@ -204,12 +197,12 @@ function SettingsSearchResults({
         >
           {results.map((setting, index) => (
             <ListItem
-              key={`${setting.panel}-${setting.title}`}
+              key={setting.id}
               id={`settings-search-result-${index}`}
               role="option"
               aria-selected={index === activeIndex}
-              label={translate(setting.title)}
-              description={`${translate(panelConfig(setting.panel).label)} · ${setting.description}`}
+              label={t(setting.titleKey)}
+              description={`${t(panelConfig(setting.panel).labelKey)} · ${t(setting.descriptionKey)}`}
               startContent={<Icon icon={setting.icon} size="sm" color="secondary" />}
               endContent={<Icon icon={ChevronRightIcon} size="sm" color="secondary" />}
               isSelected={index === activeIndex}
@@ -236,22 +229,6 @@ function SettingsSideNav({
   onSelectPanel: (panel: PanelId) => void;
 }) {
   const { t } = useI18n();
-  const panelLabel = (panel: PanelId) => {
-    switch (panel) {
-      case 'appearance': {
-        return t('settings.appearance');
-      }
-      case 'language': {
-        return t('settings.languageRegion');
-      }
-      case 'library': {
-        return t('settings.library');
-      }
-      case 'advanced': {
-        return t('settings.advanced');
-      }
-    }
-  };
   return (
     <SideNav
       aria-label={t('settings.search')}
@@ -269,14 +246,14 @@ function SettingsSideNav({
           )
         : PANEL_GROUPS.map((group) => (
             <SideNavSection
-              key={group.label}
-              title={t(group.label === 'Workspace' ? 'settings.workspace' : 'settings.features')}
+              key={group.labelKey}
+              title={t(group.labelKey)}
               xstyle={styles_settings_side_nav.sideNavSection}
             >
               {group.panels.map((panel) => (
                 <SideNavItem
                   key={panel.id}
-                  label={panelLabel(panel.id)}
+                  label={t(panel.labelKey)}
                   icon={<Icon icon={panel.icon} size="sm" color="primary" />}
                   size="sm"
                   isSelected={panel.id === activePanel}

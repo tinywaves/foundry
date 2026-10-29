@@ -6,6 +6,7 @@ import type {
   TimeFormatPattern,
   TimeZoneCode,
 } from './api';
+import type { TranslationKey } from '../../i18n';
 
 export type {
   CaptureSettings,
@@ -18,7 +19,12 @@ export type {
 
 export type PanelId = 'appearance' | 'language' | 'library' | 'advanced';
 export type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
-export interface PanelConfig { id: PanelId; label: string; description: string; icon: IconComponent }
+export interface PanelConfig {
+  id: PanelId;
+  labelKey: TranslationKey;
+  descriptionKey: TranslationKey;
+  icon: IconComponent;
+}
 export interface SettingsState {
   theme: ThemeMode;
   language: LanguageMode;
@@ -43,4 +49,10 @@ export const INITIAL_SETTINGS: SettingsState = {
 };
 export type UpdateSetting = <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => void;
 export interface PanelProps { settings: SettingsState; update: UpdateSetting }
-export interface SearchableSetting { title: string; description: string; panel: PanelId; icon: IconComponent }
+export interface SearchableSetting {
+  id: string;
+  titleKey: TranslationKey;
+  descriptionKey: TranslationKey;
+  panel: PanelId;
+  icon: IconComponent;
+}

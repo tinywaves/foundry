@@ -37,6 +37,7 @@ import {
 import * as stylex from '@stylexjs/stylex';
 import { foundryTheme } from './astryx-themes';
 import { I18nProvider, useI18n } from './i18n';
+import type { TranslationKey } from './i18n';
 import { FoundryEventsProvider } from './lib/foundry-events';
 import { queryClient } from './lib/query-client';
 import OverviewPage from './features/overview/overview-page';
@@ -243,11 +244,14 @@ function MenuGroup({
   );
 }
 
-function isRouteHandle(value: unknown): value is { title?: string; description?: string } {
+function isRouteHandle(value: unknown): value is {
+  titleKey: TranslationKey;
+  descriptionKey?: TranslationKey;
+} {
   return typeof value === 'object'
     && value !== null
-    && 'title' in value
-    && typeof value.title === 'string';
+    && 'titleKey' in value
+    && typeof value.titleKey === 'string';
 }
 
 function WindowTitlebar({
@@ -260,25 +264,6 @@ function WindowTitlebar({
   const navigate = useNavigate();
   const { t } = useI18n();
   const titleHandle = matches.findLast((match) => isRouteHandle(match.handle))?.handle;
-  const titleTranslations: Record<string, string> = {
-    'Overview': t('navigation.overview'),
-    'Captures': t('navigation.captures'),
-    'Capture details': t('navigation.captureDetails'),
-    'Jobs': t('navigation.jobs'),
-    'Prompts': t('navigation.prompts'),
-    'Providers': t('navigation.providers'),
-    'Settings': t('navigation.settings'),
-    'New provider': t('navigation.newProvider'),
-    'Edit provider': t('navigation.editProvider'),
-    'Page not found': t('navigation.notFound'),
-  };
-  const descriptionTranslations: Record<string, string> = {
-    'Manage the model service connections used by Foundry.': t('navigation.providersDescription'),
-    'Collect links first, then organize them later.': t('navigation.capturesDescription'),
-    'Read the latest successfully captured page.': t('navigation.captureDetailsDescription'),
-    'Review scrape history and errors for this capture.': t('navigation.jobsDescription'),
-    'Connect a model service using one of Foundry\'s supported protocols.': t('providers.formDescription'),
-  };
 
   return (
     <header {...titlebarStyle} aria-label={t('navigation.windowTitlebar')}>
@@ -303,11 +288,11 @@ function WindowTitlebar({
       {isRouteHandle(titleHandle) && (
         <HStack gap={2} vAlign="center" width="100%" xstyle={styles.titlebarContent}>
           <Text type="large" weight="semibold" maxLines={1} textWrap="nowrap" xstyle={styles.title}>
-            {titleHandle.title && (titleTranslations[titleHandle.title] ?? titleHandle.title)}
+            {t(titleHandle.titleKey)}
           </Text>
-          {titleHandle.description && (
+          {titleHandle.descriptionKey && (
             <Text type="supporting" maxLines={1} textWrap="nowrap" xstyle={styles.description}>
-              {descriptionTranslations[titleHandle.description] ?? titleHandle.description}
+              {t(titleHandle.descriptionKey)}
             </Text>
           )}
           <StackItem size="fill" />
@@ -440,6 +425,10 @@ function RootLayout() {
   return <Outlet />;
 }
 
+function routeHandle(titleKey: TranslationKey, descriptionKey?: TranslationKey) {
+  return { titleKey, descriptionKey };
+}
+
 const router = createHashRouter([
   {
     path: '/',
@@ -452,27 +441,25 @@ const router = createHashRouter([
       {
         element: <SidebarLayout />,
         children: [
-          { path: 'overview', element: <OverviewPage />, handle: { title: 'Overview' } },
+          {
+            path: 'overview',
+            element: <OverviewPage />,
+            handle: routeHandle('navigation.overview'),
+          },
           {
             path: 'library/captures',
             element: <CapturesPage />,
-            handle: {
-              title: 'Captures',
-              description: 'Collect links first, then organize them later.',
-            },
+            handle: routeHandle('navigation.captures', 'navigation.capturesDescription'),
           },
           {
             path: 'library/prompts',
             element: <PromptsPage />,
-            handle: { title: 'Prompts' },
+            handle: routeHandle('navigation.prompts'),
           },
           {
             path: 'providers',
             element: <ProvidersPage />,
-            handle: {
-              title: 'Providers',
-              description: 'Manage the model service connections used by Foundry.',
-            },
+            handle: routeHandle('navigation.providers', 'navigation.providersDescription'),
           },
         ],
       },
@@ -482,37 +469,36 @@ const router = createHashRouter([
           {
             path: 'library/captures/:captureId',
             element: <CaptureDetailDialog />,
-            handle: {
-              title: 'Capture details',
-              description: 'Read the latest successfully captured page.',
-            },
+            handle: routeHandle(
+              'navigation.captureDetails',
+              'navigation.captureDetailsDescription',
+            ),
           },
           {
             path: 'library/captures/:captureId/jobs',
             element: <JobsPage />,
-            handle: {
-              title: 'Jobs',
-              description: 'Review scrape history and errors for this capture.',
-            },
+            handle: routeHandle('navigation.jobs', 'navigation.jobsDescription'),
           },
-          { path: 'settings', element: <SettingsPage />, handle: { title: 'Settings' } },
+          {
+            path: 'settings',
+            element: <SettingsPage />,
+            handle: routeHandle('navigation.settings'),
+          },
           {
             path: 'providers/new',
             element: <ProviderFormPage />,
-            handle: {
-              title: 'New provider',
-              description: 'Connect a model service using one of Foundry\'s supported protocols.',
-            },
+            handle: routeHandle('navigation.newProvider', 'providers.formDescription'),
           },
           {
             path: 'providers/:providerId',
             element: <ProviderFormPage />,
-            handle: {
-              title: 'Edit provider',
-              description: 'Connect a model service using one of Foundry\'s supported protocols.',
-            },
+            handle: routeHandle('navigation.editProvider', 'providers.formDescription'),
           },
-          { path: '*', element: <NotFoundPage />, handle: { title: 'Page not found' } },
+          {
+            path: '*',
+            element: <NotFoundPage />,
+            handle: routeHandle('navigation.notFound'),
+          },
         ],
       },
     ],

@@ -56,7 +56,9 @@ export type TranslationKey
     | 'settings.importDataAction'
     | 'settings.importDataDescription'
     | 'settings.appearance'
+    | 'settings.appearanceDescription'
     | 'settings.languageRegion'
+    | 'settings.languageRegionDescription'
     | 'settings.search'
     | 'settings.colorTheme'
     | 'settings.colorThemeDescription'
@@ -77,6 +79,8 @@ export type TranslationKey
     | 'settings.utc'
     | 'settings.noResults'
     | 'settings.trySearch'
+    | 'settings.libraryDescription'
+    | 'settings.advancedDescription'
     | 'settings.capturesFetcher'
     | 'settings.capturesFetcherDescription'
     | 'settings.capturesNotConfigured'
@@ -250,7 +254,9 @@ const english: TranslationTable = {
   'settings.importDataAction': 'Import',
   'settings.importDataDescription': 'Restore data from an encrypted Foundry snapshot.',
   'settings.appearance': 'Appearance',
+  'settings.appearanceDescription': 'Theme and density for this browser.',
   'settings.languageRegion': 'Language & region',
+  'settings.languageRegionDescription': 'Language, formats, and time zone.',
   'settings.search': 'Search settings',
   'settings.colorTheme': 'Color theme',
   'settings.colorThemeDescription': 'Applies to this browser only.',
@@ -271,6 +277,8 @@ const english: TranslationTable = {
   'settings.utc': 'UTC (GMT+00:00)',
   'settings.noResults': 'No settings found',
   'settings.trySearch': 'Try theme, language, or sessions.',
+  'settings.libraryDescription': 'Capture and prompt settings.',
+  'settings.advancedDescription': 'Data transfer and local configuration.',
   'settings.capturesFetcher': 'Fetcher',
   'settings.capturesFetcherDescription': 'The service used to retrieve page content.',
   'settings.capturesNotConfigured': 'Not configured',
@@ -430,7 +438,9 @@ const simplifiedChinese: TranslationTable = {
   'settings.configFolder': '配置文件夹',
   'settings.openConfigFolder': '打开文件夹',
   'settings.appearance': '外观',
+  'settings.appearanceDescription': '此应用的明暗主题和密度。',
   'settings.languageRegion': '语言和地区',
+  'settings.languageRegionDescription': '语言、格式和时区。',
   'settings.search': '搜索设置',
   'settings.colorTheme': '颜色主题',
   'settings.colorThemeDescription': '仅应用于此应用。',
@@ -451,6 +461,8 @@ const simplifiedChinese: TranslationTable = {
   'settings.utc': 'UTC（GMT+00:00）',
   'settings.noResults': '未找到设置',
   'settings.trySearch': '试试搜索主题、语言或会话。',
+  'settings.libraryDescription': '收藏和提示词设置。',
+  'settings.advancedDescription': '数据传输和本地配置。',
   'navigation.capturesDescription': '先收集链接，之后再整理。',
   'navigation.jobs': '抓取记录',
   'navigation.jobsDescription': '查看这条收藏的抓取历史与错误。',
@@ -624,7 +636,9 @@ const traditionalChinese: TranslationTable = {
   'settings.configFolder': '設定資料夾',
   'settings.openConfigFolder': '開啟資料夾',
   'settings.appearance': '外觀',
+  'settings.appearanceDescription': '此應用程式的外觀主題與密度。',
   'settings.languageRegion': '語言與地區',
+  'settings.languageRegionDescription': '語言、格式與時區。',
   'settings.search': '搜尋設定',
   'settings.colorTheme': '色彩主題',
   'settings.colorThemeDescription': '僅套用於此應用程式。',
@@ -645,6 +659,8 @@ const traditionalChinese: TranslationTable = {
   'settings.utc': 'UTC（GMT+00:00）',
   'settings.noResults': '找不到設定',
   'settings.trySearch': '試著搜尋主題、語言或工作階段。',
+  'settings.libraryDescription': '收藏與提示詞設定。',
+  'settings.advancedDescription': '資料傳輸與本機設定。',
   'navigation.capturesDescription': '先收集連結，之後再整理。',
   'navigation.jobs': '抓取紀錄',
   'navigation.jobsDescription': '查看這筆收藏的抓取紀錄與錯誤。',
@@ -816,7 +832,9 @@ const japanese: TranslationTable = {
   'settings.configFolder': '設定フォルダー',
   'settings.openConfigFolder': 'フォルダーを開く',
   'settings.appearance': '外観',
+  'settings.appearanceDescription': 'このアプリのテーマと密度。',
   'settings.languageRegion': '言語と地域',
+  'settings.languageRegionDescription': '言語、形式、タイムゾーン。',
   'settings.search': '設定を検索',
   'settings.colorTheme': 'カラーテーマ',
   'settings.colorThemeDescription': 'このアプリにのみ適用されます。',
@@ -837,6 +855,8 @@ const japanese: TranslationTable = {
   'settings.utc': 'UTC（GMT+00:00）',
   'settings.noResults': '設定が見つかりません',
   'settings.trySearch': 'テーマ、言語、セッションを検索してみてください。',
+  'settings.libraryDescription': 'キャプチャとプロンプトの設定。',
+  'settings.advancedDescription': 'データ転送とローカル設定。',
   'navigation.capturesDescription': 'まずリンクを集め、後から整理します。',
   'navigation.jobs': '取得履歴',
   'navigation.jobsDescription': 'このキャプチャの取得履歴とエラーを確認します。',

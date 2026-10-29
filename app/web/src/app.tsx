@@ -11,10 +11,11 @@ import {
   useNavigate,
   RouterProvider,
 } from 'react-router-dom';
-import { AppShell } from '@astryxdesign/core/AppShell';
+import { AppShell, useAppShellMobile } from '@astryxdesign/core/AppShell';
 import { Icon } from '@astryxdesign/core/Icon';
 import { IconButton } from '@astryxdesign/core/IconButton';
 import { Layout, LayoutContent } from '@astryxdesign/core/Layout';
+import { MobileNav, MobileNavToggle } from '@astryxdesign/core/MobileNav';
 import {
   SideNav,
   SideNavCollapseButton,
@@ -44,6 +45,7 @@ import { I18nProvider, useI18n } from './i18n';
 import type { TranslationKey } from './i18n';
 import { FoundryEventsProvider } from './lib/foundry-events';
 import { queryClient } from './lib/query-client';
+import mobileNavStyles from './styles/mobile-nav.module.css';
 import OverviewPage from './features/overview/overview-page';
 import PromptsPage from './features/prompts/prompts-page';
 import SettingsPage from './features/settings/settings-page';
@@ -63,6 +65,7 @@ const styles = stylex.create({
     fontFamily: 'Poppins, sans-serif',
   },
   sideNav: { width: 'calc(var(--spacing-4) * 12.5) !important' },
+  mobileSideNav: { width: '100% !important' },
   sideNavCollapsed: { width: 'var(--spacing-12) !important' },
   compactNavItems: {
     rowGap: 'calc(var(--spacing-0-5) / 2)',
@@ -194,6 +197,7 @@ function RoutedSideNavItem({
   href,
 }: Pick<NavigationItem, 'label' | 'icon' | 'href'>) {
   const { pathname } = useLocation();
+  const { isMobile, closeMobileNav } = useAppShellMobile();
 
   return (
     <SideNavItem
@@ -203,6 +207,7 @@ function RoutedSideNavItem({
       as={RouterLink}
       isSelected={pathname === href}
       size="sm"
+      onClick={isMobile ? closeMobileNav : undefined}
     />
   );
 }
@@ -219,6 +224,7 @@ function MenuGroup({
   getLabel: (id: string, fallback: string) => string;
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { isMobile, closeMobileNav } = useAppShellMobile();
   const firstItem = items[0];
 
   return (
@@ -231,7 +237,12 @@ function MenuGroup({
         isCollapsed,
         onCollapsedChange: setIsCollapsed,
       }}
-      onClick={() => setIsCollapsed(false)}
+      onClick={() => {
+        setIsCollapsed(false);
+        if (isMobile) {
+          closeMobileNav();
+        }
+      }}
       size="sm"
     >
       <VStack gap={0} xstyle={styles.compactNavItems}>
@@ -267,6 +278,7 @@ function WindowTitlebar({
   const matches = useMatches();
   const navigate = useNavigate();
   const { t } = useI18n();
+  const { isMobile } = useAppShellMobile();
   const setTitlebarActionsTarget = useTitlebarActionsTarget();
   const titleHandle = matches.findLast((match) => isRouteHandle(match.handle))?.handle;
 
@@ -282,7 +294,8 @@ function WindowTitlebar({
           onClick={() => navigate(-1)}
         />
       )}
-      {collapsible && (
+      <MobileNavToggle label={t('navigation.openNavigation')} />
+      {!isMobile && collapsible && (
         <SideNavCollapseButton
           collapsible={collapsible}
           size="sm"
@@ -330,46 +343,67 @@ function SidebarLayout() {
     isCollapsed: isSideNavCollapsed,
     onCollapsedChange: setIsSideNavCollapsed,
   };
+  const navigationFooter = (
+    <SideNavSection title={t('navigation.account')} isHeaderHidden>
+      <RoutedSideNavItem
+        {...settingsNavigationItem}
+        label={navigationLabel(settingsNavigationItem.id, settingsNavigationItem.label)}
+      />
+    </SideNavSection>
+  );
+  const navigationContent = (
+    <SideNavSection title={t('navigation.main')} isHeaderHidden>
+      <VStack gap={0} xstyle={styles.compactNavItems}>
+        {sidebarNavigation.map((node) => (
+          node.kind === 'item'
+            ? <RoutedSideNavItem key={node.id} {...node} label={navigationLabel(node.id, node.label)} />
+            : (
+                <MenuGroup
+                  key={node.id}
+                  title={navigationLabel(node.id, node.title)}
+                  icon={node.icon}
+                  items={node.items}
+                  getLabel={navigationLabel}
+                />
+              )
+        ))}
+      </VStack>
+    </SideNavSection>
+  );
+  const sideNav = (
+    <SideNav
+      collapsible={{ ...collapsible, hasButton: false }}
+      xstyle={isSideNavCollapsed ? styles.sideNavCollapsed : styles.sideNav}
+      footer={navigationFooter}
+    >
+      {navigationContent}
+    </SideNav>
+  );
+  const mobileSideNav = (
+    <SideNav footer={navigationFooter} xstyle={styles.mobileSideNav}>
+      {navigationContent}
+    </SideNav>
+  );
 
   return (
     <AppShell
       height="fill"
       variant="surface"
       contentPadding={0}
+      mobileNav={{
+        content: (
+          <MobileNav
+            className={mobileNavStyles.drawer}
+            label={t('navigation.main')}
+            side="start"
+          >
+            {mobileSideNav}
+          </MobileNav>
+        ),
+      }}
       xstyle={styles.appShell}
       topNav={<WindowTitlebar collapsible={collapsible} />}
-      sideNav={(
-        <SideNav
-          collapsible={{ ...collapsible, hasButton: false }}
-          xstyle={isSideNavCollapsed ? styles.sideNavCollapsed : styles.sideNav}
-          footer={(
-            <SideNavSection title={t('navigation.account')} isHeaderHidden>
-              <RoutedSideNavItem
-                {...settingsNavigationItem}
-                label={navigationLabel(settingsNavigationItem.id, settingsNavigationItem.label)}
-              />
-            </SideNavSection>
-          )}
-        >
-          <SideNavSection title={t('navigation.main')} isHeaderHidden>
-            <VStack gap={0} xstyle={styles.compactNavItems}>
-              {sidebarNavigation.map((node) => (
-                node.kind === 'item'
-                  ? <RoutedSideNavItem key={node.id} {...node} label={navigationLabel(node.id, node.label)} />
-                  : (
-                      <MenuGroup
-                        key={node.id}
-                        title={navigationLabel(node.id, node.title)}
-                        icon={node.icon}
-                        items={node.items}
-                        getLabel={navigationLabel}
-                      />
-                    )
-              ))}
-            </VStack>
-          </SideNavSection>
-        </SideNav>
-      )}
+      sideNav={sideNav}
     >
       <Layout
         height="fill"

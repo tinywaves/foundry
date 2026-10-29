@@ -17,6 +17,7 @@ export type TranslationKey
     | 'navigation.main'
     | 'navigation.account'
     | 'navigation.back'
+    | 'navigation.openNavigation'
     | 'navigation.windowTitlebar'
     | 'overview.title'
     | 'overview.description'
@@ -193,6 +194,7 @@ const english: TranslationTable = {
   'navigation.main': 'Main',
   'navigation.account': 'Account',
   'navigation.back': 'Back',
+  'navigation.openNavigation': 'Open navigation',
   'navigation.windowTitlebar': 'Window titlebar',
   'overview.title': 'Good to see you',
   'overview.description': 'A summary of the local workspace.',
@@ -384,6 +386,7 @@ const simplifiedChinese: TranslationTable = {
   'navigation.main': '主要功能',
   'navigation.account': '账户',
   'navigation.back': '返回',
+  'navigation.openNavigation': '打开导航',
   'navigation.windowTitlebar': '窗口标题栏',
   'overview.description': '本地工作区摘要。',
   'prompts.description': '可复用于智能体对话的文本片段。',
@@ -578,6 +581,7 @@ const traditionalChinese: TranslationTable = {
   'navigation.main': '主要功能',
   'navigation.account': '帳戶',
   'navigation.back': '返回',
+  'navigation.openNavigation': '開啟導覽',
   'navigation.windowTitlebar': '視窗標題列',
   'overview.description': '本機工作區摘要。',
   'prompts.description': '可重複用於代理人對話的文字片段。',
@@ -770,6 +774,7 @@ const japanese: TranslationTable = {
   'navigation.main': 'メイン',
   'navigation.account': 'アカウント',
   'navigation.back': '戻る',
+  'navigation.openNavigation': 'ナビゲーションを開く',
   'navigation.windowTitlebar': 'ウィンドウタイトルバー',
   'overview.description': 'ローカルワークスペースの概要。',
   'prompts.description': 'エージェントとの会話で再利用できるテキスト。',

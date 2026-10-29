@@ -1,0 +1,3 @@
+.drawer > div > div:first-child {
+  border-block-end-width: 0;
+}

@@ -1,8 +1,13 @@
 import { defineCommand, runMain } from 'citty';
+import process from 'node:process';
 import packageJson from '../../package.json' with { type: 'json' };
 import { startServer } from '../server/start';
+import { assertPortAvailable } from '../server/port';
 import { initializeFoundryStorage } from '../storage/database';
 import { openInBrowser } from './open-browser';
+
+const HOSTNAME = '127.0.0.1';
+const PORT = 11_111;
 
 const main = defineCommand({
   meta: {
@@ -18,7 +23,16 @@ const main = defineCommand({
       default: true,
     },
   },
-  run({ args }) {
+  async run({ args }) {
+    try {
+      await assertPortAvailable(HOSTNAME, PORT);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`Unable to start Foundry: ${message}`);
+      process.exitCode = 1;
+      return;
+    }
+
     const database = initializeFoundryStorage();
 
     startServer({

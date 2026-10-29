@@ -1,7 +1,7 @@
 {
   "name": "@dhzh/foundry",
   "type": "module",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "packageManager": "pnpm@12.15.0",
   "devEngines": {
     "packageManager": {

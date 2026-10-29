@@ -9,6 +9,24 @@ export interface BundledSkillCopyResult {
   }>;
 }
 
+export interface BundledSkillTargetInfo {
+  target: BundledSkillTarget;
+  destination: string;
+}
+
+export interface BundledSkillTargetsResult {
+  targets: BundledSkillTargetInfo[];
+}
+
+export async function getBundledSkillTargets(): Promise<BundledSkillTargetsResult> {
+  const response = await fetch('/api/settings/skill-copy');
+  if (!response.ok) {
+    throw toApiError(await readErrorPayload(response), response.status);
+  }
+
+  return await response.json() as BundledSkillTargetsResult;
+}
+
 export async function copyBundledSkill(
   targets: readonly BundledSkillTarget[],
 ): Promise<BundledSkillCopyResult> {

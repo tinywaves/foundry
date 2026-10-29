@@ -86,8 +86,7 @@ export type TranslationKey
     | 'settings.downloadSkillDescription'
     | 'settings.downloadSkillAction'
     | 'settings.downloadSkillTargets'
-    | 'settings.downloadSkillAgentsDescription'
-    | 'settings.downloadSkillClaudeDescription'
+    | 'settings.downloadSkillResolvingPath'
     | 'settings.skillCancel'
     | 'settings.skillDownloaded'
     | 'settings.skillDownloadFailed'
@@ -290,8 +289,7 @@ const english: TranslationTable = {
   'settings.downloadSkillDescription': 'Choose which user-level agent skill directories to install Foundry into.',
   'settings.downloadSkillAction': 'Download skill',
   'settings.downloadSkillTargets': 'Destinations',
-  'settings.downloadSkillAgentsDescription': 'Install to .agents/skills/foundry in your user directory',
-  'settings.downloadSkillClaudeDescription': 'Install to .claude/skills/foundry in your user directory',
+  'settings.downloadSkillResolvingPath': 'Resolving destination path…',
   'settings.skillCancel': 'Cancel',
   'settings.skillDownloaded': 'Skill copied to',
   'settings.skillDownloadFailed': 'Unable to download the skill.',
@@ -480,8 +478,7 @@ const simplifiedChinese: TranslationTable = {
   'settings.downloadSkillDescription': '选择要安装 Foundry Skill 的用户级 agent 目录。',
   'settings.downloadSkillAction': '下载 Skill',
   'settings.downloadSkillTargets': '目标位置',
-  'settings.downloadSkillAgentsDescription': '安装到用户目录下的 .agents/skills/foundry',
-  'settings.downloadSkillClaudeDescription': '安装到用户目录下的 .claude/skills/foundry',
+  'settings.downloadSkillResolvingPath': '正在获取目标路径…',
   'settings.skillCancel': '取消',
   'settings.skillDownloaded': 'Skill 已复制到',
   'settings.skillDownloadFailed': '无法下载 Skill。',
@@ -684,8 +681,7 @@ const traditionalChinese: TranslationTable = {
   'settings.downloadSkillDescription': '選擇要安裝 Foundry Skill 的使用者層級 agent 目錄。',
   'settings.downloadSkillAction': '下載 Skill',
   'settings.downloadSkillTargets': '目標位置',
-  'settings.downloadSkillAgentsDescription': '安裝到使用者目錄下的 .agents/skills/foundry',
-  'settings.downloadSkillClaudeDescription': '安裝到使用者目錄下的 .claude/skills/foundry',
+  'settings.downloadSkillResolvingPath': '正在取得目標路徑…',
   'settings.skillCancel': '取消',
   'settings.skillDownloaded': 'Skill 已複製到',
   'settings.skillDownloadFailed': '無法下載 Skill。',
@@ -886,8 +882,7 @@ const japanese: TranslationTable = {
   'settings.downloadSkillDescription': 'Foundry Skill をインストールするユーザーレベルの agent ディレクトリを選択します。',
   'settings.downloadSkillAction': 'Skill をダウンロード',
   'settings.downloadSkillTargets': 'コピー先',
-  'settings.downloadSkillAgentsDescription': 'ユーザーディレクトリの .agents/skills/foundry にインストール',
-  'settings.downloadSkillClaudeDescription': 'ユーザーディレクトリの .claude/skills/foundry にインストール',
+  'settings.downloadSkillResolvingPath': '保存先を取得しています…',
   'settings.skillCancel': 'キャンセル',
   'settings.skillDownloaded': 'Skill のコピー先',
   'settings.skillDownloadFailed': 'Skill をダウンロードできませんでした。',

@@ -49,6 +49,8 @@ export function createSettingsRoutes(
     }
   });
 
+  app.get('/skill-copy', (c) => c.json(skillCopyService.getTargets()));
+
   return app;
 }
 

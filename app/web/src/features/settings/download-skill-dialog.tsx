@@ -11,10 +11,13 @@ import {
   LayoutFooter,
 } from '@astryxdesign/core/Layout';
 import { HStack } from '@astryxdesign/core/Stack';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useAppToast } from '../../lib/api';
 import { useI18n } from '../../i18n';
-import { copyBundledSkill } from './skill-copy-api';
+import {
+  copyBundledSkill,
+  getBundledSkillTargets,
+} from './skill-copy-api';
 import type { BundledSkillTarget } from './skill-copy-api';
 
 export function DownloadSkillDialog({
@@ -27,6 +30,11 @@ export function DownloadSkillDialog({
   const { t } = useI18n();
   const toast = useAppToast();
   const [targets, setTargets] = useState<BundledSkillTarget[]>(['agents']);
+  const targetsQuery = useQuery({
+    queryKey: ['settings', 'skill-copy-targets'],
+    queryFn: getBundledSkillTargets,
+    enabled: isOpen,
+  });
   const mutation = useMutation({
     mutationFn: () => copyBundledSkill(targets),
     onSuccess: (result) => {
@@ -85,12 +93,18 @@ export function DownloadSkillDialog({
               <CheckboxListItem
                 label=".agents"
                 value="agents"
-                description={t('settings.downloadSkillAgentsDescription')}
+                description={
+                  targetDestination(targetsQuery.data, 'agents')
+                  ?? t('settings.downloadSkillResolvingPath')
+                }
               />
               <CheckboxListItem
                 label=".claude"
                 value="claude"
-                description={t('settings.downloadSkillClaudeDescription')}
+                description={
+                  targetDestination(targetsQuery.data, 'claude')
+                  ?? t('settings.downloadSkillResolvingPath')
+                }
               />
             </CheckboxList>
           </LayoutContent>
@@ -125,4 +139,11 @@ export function DownloadSkillDialog({
 
 function isBundledSkillTarget(value: string): value is BundledSkillTarget {
   return value === 'agents' || value === 'claude';
+}
+
+function targetDestination(
+  result: Awaited<ReturnType<typeof getBundledSkillTargets>> | undefined,
+  target: BundledSkillTarget,
+): string | undefined {
+  return result?.targets.find((item) => item.target === target)?.destination;
 }

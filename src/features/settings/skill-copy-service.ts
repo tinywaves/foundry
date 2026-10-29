@@ -19,6 +19,15 @@ export interface BundledSkillCopyResult {
   installed: BundledSkillInstall[];
 }
 
+export interface BundledSkillTargetInfo {
+  target: BundledSkillTarget;
+  destination: string;
+}
+
+export interface BundledSkillTargetsResult {
+  targets: BundledSkillTargetInfo[];
+}
+
 export interface BundledSkillCopyServiceOptions {
   skillRoot?: string;
   homeDirectory?: string;
@@ -47,11 +56,7 @@ export class BundledSkillCopyService {
       );
     }
 
-    const resolvedParent = path.join(
-      this.homeDirectory,
-      target === 'agents' ? '.agents' : '.claude',
-      'skills',
-    );
+    const resolvedParent = this.getTargetParent(target);
     const destination = path.join(resolvedParent, SKILL_NAME);
     const temporaryDirectory = path.join(
       resolvedParent,
@@ -81,6 +86,23 @@ export class BundledSkillCopyService {
         { cause: error },
       );
     }
+  }
+
+  private getTargetParent(target: BundledSkillTarget): string {
+    return path.join(
+      this.homeDirectory,
+      target === 'agents' ? '.agents' : '.claude',
+      'skills',
+    );
+  }
+
+  getTargets(): BundledSkillTargetsResult {
+    return {
+      targets: (['agents', 'claude'] as const).map((target) => ({
+        target,
+        destination: path.join(this.getTargetParent(target), SKILL_NAME),
+      })),
+    };
   }
 
   async copyToTargets(

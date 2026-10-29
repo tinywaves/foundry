@@ -17,6 +17,18 @@ it('copies the skill into every selected user-level target', async () => {
   });
 
   try {
+    expect(service.getTargets()).toEqual({
+      targets: [
+        {
+          target: 'agents',
+          destination: join(directory, '.agents', 'skills', 'foundry'),
+        },
+        {
+          target: 'claude',
+          destination: join(directory, '.claude', 'skills', 'foundry'),
+        },
+      ],
+    });
     const result = await service.copyToTargets(['agents', 'claude']);
     expect(result).toEqual({
       installed: [
@@ -75,6 +87,21 @@ it('copies selected targets through the API', async () => {
   const app = createApiApp(database, { settingsSkillCopyService: service });
 
   try {
+    const targetsResponse = await app.request('/api/settings/skill-copy');
+    expect(targetsResponse.status).toBe(200);
+    expect(await targetsResponse.json()).toEqual({
+      targets: [
+        {
+          target: 'agents',
+          destination: join(directory, '.agents', 'skills', 'foundry'),
+        },
+        {
+          target: 'claude',
+          destination: join(directory, '.claude', 'skills', 'foundry'),
+        },
+      ],
+    });
+
     const response = await app.request('/api/settings/skill-copy', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

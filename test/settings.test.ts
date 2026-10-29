@@ -9,7 +9,7 @@ import { openFoundryDatabase } from '../src/storage/database';
 
 const { join } = path;
 
-it('persists settings without exposing capture API keys', async () => {
+it('persists settings and exposes capture API keys', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-settings-'));
   const settingsPath = join(directory, 'settings.json');
   const database = openFoundryDatabase(join(directory, 'foundry.sqlite'));
@@ -28,12 +28,12 @@ it('persists settings without exposing capture API keys', async () => {
       workspace: { appearance: { 'color-theme': string } };
       features: {
         library: {
-          captures: { firecrawl: { hasApiKey: boolean } };
+          captures: { firecrawl: { apiKey: string } };
         };
       };
     };
     expect(initial.workspace.appearance['color-theme']).toBe('system');
-    expect(initial.features.library.captures.firecrawl.hasApiKey).toBe(false);
+    expect(initial.features.library.captures.firecrawl.apiKey).toBe('');
 
     const updateResponse = await app.request('/api/settings', {
       method: 'PATCH',
@@ -52,13 +52,13 @@ it('persists settings without exposing capture API keys', async () => {
       features: {
         library: {
           captures: {
-            firecrawl: { apiKey?: string; hasApiKey: boolean };
+            firecrawl: { apiKey: string };
           };
         };
       };
     };
     expect(updated.workspace.appearance['color-theme']).toBe('dark');
-    expect(updated.features.library.captures.firecrawl).toEqual({ hasApiKey: true });
+    expect(updated.features.library.captures.firecrawl).toEqual({ apiKey: 'secret' });
     expect(events).toEqual(expect.arrayContaining([
       expect.objectContaining({
         type: SETTINGS_CHANGED_EVENT,
@@ -87,7 +87,7 @@ it('persists settings without exposing capture API keys', async () => {
       features: {
         library: {
           captures: {
-            firecrawl: { hasApiKey: false },
+            firecrawl: { apiKey: '' },
           },
         },
       },

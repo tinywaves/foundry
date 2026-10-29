@@ -81,8 +81,9 @@ Keep CLI and server responsibilities separate:
 - Mount new feature routes from `src/server/api.ts`.
 - Return API errors as `{ "error": { "code": string, "message": string } }`
   with a deliberate HTTP status. Unknown `/api/*` routes must remain JSON 404s.
-- Do not expose stored API keys. Public provider and settings payloads expose
-  only `hasApiKey`; secrets stay on the server.
+- This local-only Web UI returns stored provider and capture API keys so edit
+  forms can repopulate credentials and provider model discovery can run
+  automatically. Do not log keys or expose them outside API responses.
 - Keep capture job execution and retries in `ScrapeJobRunner`, not in route
   handlers.
 - Treat `.foundry-backup` archive versions and manifest validation as

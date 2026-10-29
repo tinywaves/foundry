@@ -479,22 +479,15 @@ function LanguagePanel({ settings, update }: PanelProps) {
 
 function ApiKeyField({
   value,
-  hasStoredKey,
-  isClearPending,
   label,
   placeholder,
   onChange,
-  onClear,
 }: {
   value: string;
-  hasStoredKey: boolean;
-  isClearPending: boolean;
   label: string;
   placeholder: string;
   onChange: (value: string) => void;
-  onClear: () => void;
 }) {
-  const { t } = useI18n();
   const [draft, setDraft] = useState(value);
 
   useEffect(() => {
@@ -509,31 +502,19 @@ function ApiKeyField({
   };
 
   return (
-    <HStack gap={2} vAlign="center">
-      <TextInput
-        label={label}
-        isLabelHidden
-        size="sm"
-        type="password"
-        value={draft}
-        onChange={setDraft}
-        onBlur={commit}
-        onEnter={commit}
-        placeholder={placeholder}
-        hasClear
-        width={CONTROL_WIDTH}
-      />
-      {hasStoredKey && (
-        <Button
-          label={t(isClearPending
-            ? 'settings.keepCapturesApiKey'
-            : 'settings.clearCapturesApiKey')}
-          variant="ghost"
-          size="sm"
-          onClick={onClear}
-        />
-      )}
-    </HStack>
+    <TextInput
+      label={label}
+      isLabelHidden
+      size="sm"
+      type="password"
+      value={draft}
+      onChange={setDraft}
+      onBlur={commit}
+      onEnter={commit}
+      placeholder={placeholder}
+      hasClear
+      width={CONTROL_WIDTH}
+    />
   );
 }
 
@@ -541,8 +522,7 @@ function CapturesSettingsBlock({ settings, update }: PanelProps) {
   const { t } = useI18n();
   const library = settings.library;
   const captures = library.captures;
-  const selectedCredential = captures.fetcher ? captures[captures.fetcher] : null;
-  const selectedApiKey = selectedCredential?.apiKey ?? '';
+  const selectedApiKey = captures.fetcher ? captures[captures.fetcher].apiKey : '';
 
   const updateCaptures = (patch: Partial<CaptureSettings>) => {
     update('library', {
@@ -561,24 +541,7 @@ function CapturesSettingsBlock({ settings, update }: PanelProps) {
       return;
     }
     updateCaptures({
-      [captures.fetcher]: {
-        ...captures[captures.fetcher],
-        apiKey,
-        shouldClearApiKey: false,
-      },
-    });
-  };
-  const clearApiKey = () => {
-    if (!captures.fetcher) {
-      return;
-    }
-    const credential = captures[captures.fetcher];
-    updateCaptures({
-      [captures.fetcher]: {
-        ...credential,
-        apiKey: '',
-        shouldClearApiKey: !credential.shouldClearApiKey,
-      },
+      [captures.fetcher]: { apiKey },
     });
   };
 
@@ -619,12 +582,9 @@ function CapturesSettingsBlock({ settings, update }: PanelProps) {
             <ApiKeyField
               key={captures.fetcher}
               value={selectedApiKey}
-              hasStoredKey={selectedCredential?.hasApiKey ?? false}
-              isClearPending={selectedCredential?.shouldClearApiKey ?? false}
               label={t('settings.capturesApiKey')}
               placeholder={t('settings.capturesApiKeyPlaceholder')}
               onChange={setApiKey}
-              onClear={clearApiKey}
             />
           )}
         />

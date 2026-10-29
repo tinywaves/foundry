@@ -37,8 +37,8 @@ it('creates, updates, and preserves provider credentials', async () => {
       }),
     });
     expect(postResponse.status).toBe(201);
-    const created = await postResponse.json() as { id: string; hasApiKey: boolean };
-    expect(created.hasApiKey).toBe(true);
+    const created = await postResponse.json() as { id: string; apiKey: string };
+    expect(created.apiKey).toBe('secret');
 
     const updateResponse = await app.request(`/api/providers/${created.id}`, {
       method: 'PUT',
@@ -55,11 +55,11 @@ it('creates, updates, and preserves provider credentials', async () => {
 
     const listResponse = await app.request('/api/providers');
     const providers = await listResponse.json() as Array<{
-      hasApiKey: boolean;
+      apiKey: string;
       customModels: unknown[];
     }>;
     expect(providers).toHaveLength(1);
-    expect(providers[0]?.hasApiKey).toBe(true);
+    expect(providers[0]?.apiKey).toBe('secret');
     expect(providers[0]).toMatchObject({ isInUse: false });
     expect(providers[0]?.customModels).toHaveLength(1);
     expect(events.filter((type) => type === PROVIDERS_CHANGED_EVENT)).toHaveLength(2);
@@ -86,7 +86,7 @@ it('creates, updates, and preserves provider credentials', async () => {
       }),
     });
     expect(clearResponse.status).toBe(200);
-    expect(await clearResponse.json()).toMatchObject({ hasApiKey: false });
+    expect(await clearResponse.json()).toMatchObject({ apiKey: '' });
 
     writeSettings({
       ...DEFAULT_SETTINGS,

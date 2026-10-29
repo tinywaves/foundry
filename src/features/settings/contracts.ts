@@ -61,8 +61,8 @@ export interface PublicSettings {
   features: {
     library: {
       captures: Omit<CaptureSettings, 'firecrawl' | 'deepseek'> & {
-        firecrawl: { hasApiKey: boolean };
-        deepseek: { hasApiKey: boolean };
+        firecrawl: { apiKey: string };
+        deepseek: { apiKey: string };
       };
       [key: string]: unknown;
     };
@@ -250,10 +250,10 @@ export function toPublicSettings(settings: FoundrySettings): PublicSettings {
           maxAttempts: captures.maxAttempts,
           scrapeConcurrency: captures.scrapeConcurrency,
           firecrawl: {
-            hasApiKey: Boolean(captures.firecrawl.apiKey),
+            apiKey: captures.firecrawl.apiKey,
           },
           deepseek: {
-            hasApiKey: Boolean(captures.deepseek.apiKey),
+            apiKey: captures.deepseek.apiKey,
           },
         },
       },

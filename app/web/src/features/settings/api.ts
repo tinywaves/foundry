@@ -70,8 +70,8 @@ export function setLibrary(patch: Partial<LibrarySettings>): Promise<SettingsSna
           fetcher: captures.fetcher,
           maxAttempts: captures.maxAttempts,
           scrapeConcurrency: captures.scrapeConcurrency,
-          ...credentialPatch(captures.firecrawl, 'firecrawlApiKey'),
-          ...credentialPatch(captures.deepseek, 'deepseekApiKey'),
+          firecrawlApiKey: captures.firecrawl.apiKey,
+          deepseekApiKey: captures.deepseek.apiKey,
         }
       : undefined,
   });
@@ -100,8 +100,8 @@ function normalizeSettings(
         fetcher: SettingsSnapshot['features']['library']['captures']['fetcher'];
         maxAttempts: number;
         scrapeConcurrency: number;
-        firecrawl: { hasApiKey: boolean };
-        deepseek: { hasApiKey: boolean };
+        firecrawl: { apiKey: string };
+        deepseek: { apiKey: string };
       };
       [key: string]: unknown;
     };
@@ -118,31 +118,14 @@ function normalizeSettings(
         captures: {
           ...captures,
           firecrawl: {
-            apiKey: '',
-            hasApiKey: captures.firecrawl.hasApiKey,
-            shouldClearApiKey: false,
+            apiKey: captures.firecrawl.apiKey,
           },
           deepseek: {
-            apiKey: '',
-            hasApiKey: captures.deepseek.hasApiKey,
-            shouldClearApiKey: false,
+            apiKey: captures.deepseek.apiKey,
           },
         },
       },
     },
     configFolder: typeof value.configFolder === 'string' ? value.configFolder : '',
   };
-}
-
-export function credentialPatch(
-  credential: SettingsSnapshot['features']['library']['captures']['firecrawl'],
-  field: 'firecrawlApiKey' | 'deepseekApiKey',
-): Record<string, string> {
-  if (credential.shouldClearApiKey) {
-    return { [field]: '' };
-  }
-  if (credential.apiKey) {
-    return { [field]: credential.apiKey };
-  }
-  return {};
 }

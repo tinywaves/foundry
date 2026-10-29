@@ -28,9 +28,9 @@ export interface ProviderSummary {
   name: string;
   protocol: ProviderProtocol;
   baseURL: string;
+  apiKey: string;
   customModels: CustomModel[];
   status: ProviderStatus;
-  hasApiKey: boolean;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;

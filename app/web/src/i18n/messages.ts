@@ -87,8 +87,6 @@ export type TranslationKey
     | 'settings.capturesApiKey'
     | 'settings.capturesApiKeyDescription'
     | 'settings.capturesApiKeyPlaceholder'
-    | 'settings.clearCapturesApiKey'
-    | 'settings.keepCapturesApiKey'
     | 'settings.capturesMaxAttempts'
     | 'settings.capturesMaxAttemptsDescription'
     | 'settings.capturesConcurrency'
@@ -285,8 +283,6 @@ const english: TranslationTable = {
   'settings.capturesApiKey': 'API key',
   'settings.capturesApiKeyDescription': 'Authenticates requests to the selected fetch service.',
   'settings.capturesApiKeyPlaceholder': 'Enter an API key',
-  'settings.clearCapturesApiKey': 'Clear stored API key',
-  'settings.keepCapturesApiKey': 'Keep stored API key',
   'settings.capturesMaxAttempts': 'Maximum attempts',
   'settings.capturesMaxAttemptsDescription': 'Total requests per scrape job, from 1 to 10.',
   'settings.capturesConcurrency': 'Scrape concurrency',
@@ -476,8 +472,6 @@ const simplifiedChinese: TranslationTable = {
   'settings.capturesApiKey': 'API 密钥',
   'settings.capturesApiKeyDescription': '用于向所选抓取服务认证请求。',
   'settings.capturesApiKeyPlaceholder': '输入 API 密钥',
-  'settings.clearCapturesApiKey': '清除已保存的 API 密钥',
-  'settings.keepCapturesApiKey': '保留已保存的 API 密钥',
   'settings.capturesMaxAttempts': '最大尝试次数',
   'settings.capturesMaxAttemptsDescription': '每个抓取任务的总请求次数，1 到 10。',
   'settings.capturesConcurrency': '抓取并发数',
@@ -674,8 +668,6 @@ const traditionalChinese: TranslationTable = {
   'settings.capturesApiKey': 'API 金鑰',
   'settings.capturesApiKeyDescription': '用於向所選抓取服務驗證請求。',
   'settings.capturesApiKeyPlaceholder': '輸入 API 金鑰',
-  'settings.clearCapturesApiKey': '清除已儲存的 API 金鑰',
-  'settings.keepCapturesApiKey': '保留已儲存的 API 金鑰',
   'settings.capturesMaxAttempts': '最大嘗試次數',
   'settings.capturesMaxAttemptsDescription': '每個抓取工作的總請求次數，1 到 10。',
   'settings.capturesConcurrency': '抓取並行數',
@@ -872,8 +864,6 @@ const japanese: TranslationTable = {
   'settings.capturesApiKey': 'API キー',
   'settings.capturesApiKeyDescription': '選択した取得サービスへのリクエストを認証します。',
   'settings.capturesApiKeyPlaceholder': 'API キーを入力',
-  'settings.clearCapturesApiKey': '保存済みの API キーを削除',
-  'settings.keepCapturesApiKey': '保存済みの API キーを保持',
   'settings.capturesMaxAttempts': '最大試行回数',
   'settings.capturesMaxAttemptsDescription': 'ジョブごとの総リクエスト数（1〜10）。',
   'settings.capturesConcurrency': '取得の同時実行数',

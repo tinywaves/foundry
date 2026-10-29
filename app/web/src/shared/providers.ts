@@ -24,7 +24,7 @@ export type Provider = {
   updatedAt: string;
   deletedAt: string | null;
 };
-export type ProviderSummary = Provider & { hasApiKey: boolean };
+export type ProviderSummary = Provider;
 export type ProviderListItem = ProviderSummary & { isInUse: boolean };
 export type ProviderInput = Pick<
   Provider,

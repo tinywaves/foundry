@@ -19,8 +19,6 @@ export type FetcherType = 'firecrawl' | 'deepseek';
 
 export type CaptureCredential = {
   apiKey: string;
-  hasApiKey: boolean;
-  shouldClearApiKey: boolean;
 };
 
 export type CaptureSettings = {

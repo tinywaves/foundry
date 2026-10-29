@@ -21,7 +21,6 @@ export async function listProviders() {
   ]);
   return providers.map((provider) => ({
     ...formatRecordTimes(provider, settings),
-    apiKey: '',
   }));
 }
 
@@ -37,7 +36,7 @@ export async function saveProvider(input: ProviderInput, id?: string) {
     ),
     getCachedSettings(),
   ]);
-  return { ...formatRecordTimes(provider, settings), apiKey: '' };
+  return formatRecordTimes(provider, settings);
 }
 
 export async function getProvider(id: string): Promise<ProviderSummary | null> {
@@ -46,7 +45,7 @@ export async function getProvider(id: string): Promise<ProviderSummary | null> {
       requestJSON<ProviderSummary>(`/api/providers/${id}`),
       getCachedSettings(),
     ]);
-    return { ...formatRecordTimes(provider, settings), apiKey: '' };
+    return formatRecordTimes(provider, settings);
   } catch {
     return null;
   }
@@ -64,7 +63,7 @@ export async function setProviderStatus(
     }),
     getCachedSettings(),
   ]);
-  return { ...formatRecordTimes(provider, settings), apiKey: '' };
+  return formatRecordTimes(provider, settings);
 }
 
 export function fetchProviderModels(id: string): Promise<RemoteModel[]> {

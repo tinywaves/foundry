@@ -109,7 +109,7 @@ export default function ProviderFormPage() {
       setProtocol(provider.protocol);
       setBaseURL(provider.baseURL);
       setApiKey(provider.apiKey);
-      setHasStoredApiKey(provider.hasApiKey);
+      setHasStoredApiKey(Boolean(provider.apiKey));
       setShouldClearApiKey(false);
       setModels(provider.customModels.map((model) => ({ ...model, source: 'custom' as const })));
     });

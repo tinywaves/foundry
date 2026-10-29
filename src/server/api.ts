@@ -5,6 +5,10 @@ import { CAPTURES_CHANGED_EVENT } from '../features/captures/events';
 import type { CaptureService } from '../features/captures/service';
 import { createDataTransferRoutes } from '../features/data-transfer/routes';
 import type { DataTransferService } from '../features/data-transfer/service';
+import {
+  createWorkspaceMutationMiddleware,
+  WorkspaceMutationGate,
+} from '../features/data-transfer/workspace-mutation';
 import type { FoundryEventHub } from '../events/hub';
 import { DATA_TRANSFER_IMPORTED_EVENT } from '../features/data-transfer/events';
 import { PROVIDERS_CHANGED_EVENT } from '../features/providers/events';
@@ -18,12 +22,21 @@ export interface ApiAppOptions {
   settingsPath?: string;
   captureService?: CaptureService;
   dataTransferService?: DataTransferService;
+  workspaceMutationGate?: WorkspaceMutationGate;
   eventHub?: FoundryEventHub;
   onSettingsChanged?: () => void;
 }
 
 export function createApiApp(database: FoundryDatabase, options: ApiAppOptions = {}): Hono {
   const app = new Hono();
+  const workspaceMutationGate = options.workspaceMutationGate
+    ?? options.dataTransferService?.workspaceMutationGate
+    ?? new WorkspaceMutationGate();
+
+  app.use(
+    '/api/*',
+    createWorkspaceMutationMiddleware(workspaceMutationGate),
+  );
 
   app.get('/api/health', (c) => c.json({
     status: 'ok',

@@ -5,6 +5,7 @@ import packageJson from '../../package.json' with { type: 'json' };
 import { createCaptureRuntime } from '../features/captures/runtime';
 import { DATA_TRANSFER_STATUS_CHANGED_EVENT } from '../features/data-transfer/events';
 import { DataTransferService } from '../features/data-transfer/service';
+import { WorkspaceMutationGate } from '../features/data-transfer/workspace-mutation';
 import { FoundryEventHub } from '../events/hub';
 import type { FoundryDatabase } from '../storage/database';
 import { getFoundryDataTransferPath, getFoundrySettingsPath } from '../storage/paths';
@@ -28,6 +29,7 @@ export function startServer({
   const hostname = '127.0.0.1';
   const settingsPath = getFoundrySettingsPath();
   const eventHub = new FoundryEventHub();
+  const workspaceMutationGate = new WorkspaceMutationGate();
   const captureRuntime = createCaptureRuntime(database, settingsPath, eventHub);
   const dataTransferService = new DataTransferService(
     database,
@@ -35,6 +37,7 @@ export function startServer({
     captureRuntime.runner,
     getFoundryDataTransferPath(),
     packageJson.version,
+    workspaceMutationGate,
     (status) => eventHub.publish(DATA_TRANSFER_STATUS_CHANGED_EVENT, status),
   );
   dataTransferService.cleanupStaleTransfers();
@@ -42,6 +45,7 @@ export function startServer({
     settingsPath,
     captureService: captureRuntime.service,
     dataTransferService,
+    workspaceMutationGate,
     eventHub,
     onSettingsChanged: captureRuntime.notifySettingsChanged,
   });

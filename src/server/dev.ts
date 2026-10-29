@@ -3,6 +3,7 @@ import packageJson from '../../package.json' with { type: 'json' };
 import { createCaptureRuntime } from '../features/captures/runtime';
 import { DATA_TRANSFER_STATUS_CHANGED_EVENT } from '../features/data-transfer/events';
 import { DataTransferService } from '../features/data-transfer/service';
+import { WorkspaceMutationGate } from '../features/data-transfer/workspace-mutation';
 import { FoundryEventHub } from '../events/hub';
 import { initializeFoundryStorage } from '../storage/database';
 import { getFoundryDataTransferPath, getFoundrySettingsPath } from '../storage/paths';
@@ -12,6 +13,7 @@ const hostname = '127.0.0.1';
 const database = initializeFoundryStorage();
 const settingsPath = getFoundrySettingsPath();
 const eventHub = new FoundryEventHub();
+const workspaceMutationGate = new WorkspaceMutationGate();
 const captureRuntime = createCaptureRuntime(database, settingsPath, eventHub);
 const dataTransferService = new DataTransferService(
   database,
@@ -19,6 +21,7 @@ const dataTransferService = new DataTransferService(
   captureRuntime.runner,
   getFoundryDataTransferPath(),
   packageJson.version,
+  workspaceMutationGate,
   (status) => eventHub.publish(DATA_TRANSFER_STATUS_CHANGED_EVENT, status),
 );
 dataTransferService.cleanupStaleTransfers();
@@ -26,6 +29,7 @@ const app = createApiApp(database, {
   settingsPath,
   captureService: captureRuntime.service,
   dataTransferService,
+  workspaceMutationGate,
   eventHub,
   onSettingsChanged: captureRuntime.notifySettingsChanged,
 });

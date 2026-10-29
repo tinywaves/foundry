@@ -32,6 +32,7 @@ import type {
 import { createFoundryArchive, extractFoundryArchive } from './archive';
 import { decryptExportFile, encryptExportFile } from './crypto';
 import { DataTransferError } from './errors';
+import type { WorkspaceMutationGate } from './workspace-mutation';
 import {
   DATABASE_ENTRY_PATH,
   MANIFEST_ENTRY_PATH,
@@ -57,20 +58,22 @@ export class DataTransferService {
     private readonly runner: ScrapeJobRunner,
     private readonly temporaryRoot: string,
     private readonly appVersion: string,
+    readonly workspaceMutationGate: WorkspaceMutationGate,
     private readonly onStatusChanged: (status: DataTransferStatus) => void = () => {},
   ) {}
 
   private async runExclusive<T>(operation: () => Promise<T>): Promise<T> {
-    if (this.busy) {
+    if (this.busy || !this.workspaceMutationGate.tryBeginTransfer()) {
       throw new DataTransferError('BUSY', 'Another data transfer is in progress');
     }
 
     this.busy = true;
-    this.onStatusChanged(this.getStatus());
     try {
+      this.onStatusChanged(this.getStatus());
       return await operation();
     } finally {
       this.busy = false;
+      this.workspaceMutationGate.endTransfer();
       this.onStatusChanged(this.getStatus());
     }
   }

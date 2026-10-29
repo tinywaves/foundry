@@ -5,6 +5,7 @@ import { expect, it } from 'vitest';
 import { createCaptureRuntime } from '../src/features/captures/runtime';
 import { DataTransferService } from '../src/features/data-transfer/service';
 import type { DataTransferStatus } from '../src/features/data-transfer/contracts';
+import { WorkspaceMutationGate } from '../src/features/data-transfer/workspace-mutation';
 import { ProviderRepository } from '../src/features/providers/repository';
 import { readSettings, updateSettings } from '../src/features/settings/repository';
 import { openFoundryDatabase } from '../src/storage/database';
@@ -18,12 +19,14 @@ it('exports and restores an encrypted Foundry snapshot', async () => {
   const providers = new ProviderRepository(database.db);
   const captureRuntime = createCaptureRuntime(database, settingsPath);
   const statusEvents: DataTransferStatus[] = [];
+  const workspaceMutationGate = new WorkspaceMutationGate();
   const transfer = new DataTransferService(
     database,
     settingsPath,
     captureRuntime.runner,
     join(directory, '.data-transfer'),
     '0.0.0',
+    workspaceMutationGate,
     (status) => {
       statusEvents.push(status);
     },

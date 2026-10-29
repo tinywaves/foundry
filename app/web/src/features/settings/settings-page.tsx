@@ -8,8 +8,37 @@ import * as stylex from '@stylexjs/stylex';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Icon } from '@astryxdesign/core/Icon';
 import { Stack, StackItem } from '@astryxdesign/core/Stack';
-import type { IconComponent, SearchableSetting, PanelId, PanelProps, SettingsState, TimeFormatPattern, TimeZoneCode, CaptureSettings } from './types';
-import { MagnifyingGlassIcon, ChevronRightIcon, ComputerDesktopIcon, MoonIcon, SunIcon, PaintBrushIcon, ClockIcon, GlobeAltIcon, LanguageIcon, ArrowPathRoundedSquareIcon, BarsArrowUpIcon, BugAntIcon, KeyIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, FolderIcon, FolderOpenIcon } from '@heroicons/react/24/outline';
+import type {
+  IconComponent,
+  SearchableSetting,
+  PanelId,
+  PanelProps,
+  SettingsState,
+  TimeFormatPattern,
+  TimeZoneCode,
+  CaptureSettings,
+} from './types';
+import {
+  MagnifyingGlassIcon,
+  ChevronRightIcon,
+  CommandLineIcon,
+  ComputerDesktopIcon,
+  MoonIcon,
+  SparklesIcon,
+  SunIcon,
+  PaintBrushIcon,
+  ClockIcon,
+  GlobeAltIcon,
+  LanguageIcon,
+  ArrowPathRoundedSquareIcon,
+  BarsArrowUpIcon,
+  BugAntIcon,
+  KeyIcon,
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
+  FolderIcon,
+  FolderOpenIcon,
+} from '@heroicons/react/24/outline';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import type { SettingsSearch } from './search';
 import { useI18n } from '../../i18n';
@@ -40,6 +69,7 @@ import { openConfigFolder } from './api';
 import { useSearchParams } from 'react-router-dom';
 import { useSettingsSearch } from './search';
 import { useSettings } from './use-settings';
+import { DownloadSkillDialog } from './download-skill-dialog';
 
 function SettingsCard({
   title,
@@ -656,6 +686,7 @@ function AdvancedPanel({
   const toast = useAppToast();
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isSelectingImport, setIsSelectingImport] = useState(false);
+  const [isSkillDownloadOpen, setIsSkillDownloadOpen] = useState(false);
   const [selectedImport, setSelectedImport] = useState<{
     file: File;
     fileName: string;
@@ -699,6 +730,20 @@ function AdvancedPanel({
   return (
     <>
       <SettingsCard>
+        <SettingsRow
+          title={t('settings.downloadSkill')}
+          icon={CommandLineIcon}
+          description={t('settings.downloadSkillDescription')}
+          control={(
+            <Button
+              label={t('settings.downloadSkillAction')}
+              icon={<SparklesIcon />}
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsSkillDownloadOpen(true)}
+            />
+          )}
+        />
         <SettingsRow
           title={t('settings.configFolder')}
           icon={FolderIcon}
@@ -747,6 +792,10 @@ function AdvancedPanel({
           )}
         />
       </SettingsCard>
+      <DownloadSkillDialog
+        isOpen={isSkillDownloadOpen}
+        onClose={() => setIsSkillDownloadOpen(false)}
+      />
       {isExportOpen && (
         <ExportDataDialog
           onClose={() => setIsExportOpen(false)}

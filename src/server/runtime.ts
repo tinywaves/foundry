@@ -5,13 +5,23 @@ import { DataTransferService } from '../features/data-transfer/service';
 import { WorkspaceMutationGate } from '../features/data-transfer/workspace-mutation';
 import { ProviderService } from '../features/providers/service';
 import { SettingsService } from '../features/settings/service';
+import { BundledSkillCopyService } from '../features/settings/skill-copy-service';
 import { FoundryEventHub } from '../events/hub';
 import type { FoundryDatabase } from '../storage/database';
 import { getFoundryDataTransferPath, getFoundrySettingsPath } from '../storage/paths';
 import type { ApiAppOptions } from './api';
 
+export interface FoundryFeatureServices {
+  captureRuntime: ReturnType<typeof createCaptureRuntime>;
+  dataTransferService: DataTransferService;
+  providerService: ProviderService;
+  settingsService: SettingsService;
+  settingsSkillCopyService: BundledSkillCopyService;
+}
+
 export interface ServerRuntime {
   apiOptions: ApiAppOptions;
+  services: FoundryFeatureServices;
   start: () => void;
 }
 
@@ -31,14 +41,24 @@ export function createServerRuntime(database: FoundryDatabase): ServerRuntime {
   );
   const providerService = new ProviderService(database, settingsPath);
   const settingsService = new SettingsService(settingsPath);
+  const settingsSkillCopyService = new BundledSkillCopyService();
+  const services: FoundryFeatureServices = {
+    captureRuntime,
+    dataTransferService,
+    providerService,
+    settingsService,
+    settingsSkillCopyService,
+  };
 
   return {
+    services,
     apiOptions: {
       settingsPath,
       captureService: captureRuntime.service,
       dataTransferService,
       providerService,
       settingsService,
+      settingsSkillCopyService,
       workspaceMutationGate,
       eventHub,
       onSettingsChanged: captureRuntime.notifySettingsChanged,

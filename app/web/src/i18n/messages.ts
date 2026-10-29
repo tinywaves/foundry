@@ -82,6 +82,15 @@ export type TranslationKey
     | 'settings.trySearch'
     | 'settings.libraryDescription'
     | 'settings.advancedDescription'
+    | 'settings.downloadSkill'
+    | 'settings.downloadSkillDescription'
+    | 'settings.downloadSkillAction'
+    | 'settings.downloadSkillTargets'
+    | 'settings.downloadSkillAgentsDescription'
+    | 'settings.downloadSkillClaudeDescription'
+    | 'settings.skillCancel'
+    | 'settings.skillDownloaded'
+    | 'settings.skillDownloadFailed'
     | 'settings.capturesFetcher'
     | 'settings.capturesFetcherDescription'
     | 'settings.capturesNotConfigured'
@@ -276,7 +285,16 @@ const english: TranslationTable = {
   'settings.noResults': 'No settings found',
   'settings.trySearch': 'Try theme, language, or sessions.',
   'settings.libraryDescription': 'Capture and prompt settings.',
-  'settings.advancedDescription': 'Data transfer and local configuration.',
+  'settings.advancedDescription': 'Agent skill, data transfer, and local configuration.',
+  'settings.downloadSkill': 'Agent skill',
+  'settings.downloadSkillDescription': 'Choose which user-level agent skill directories to install Foundry into.',
+  'settings.downloadSkillAction': 'Download skill',
+  'settings.downloadSkillTargets': 'Destinations',
+  'settings.downloadSkillAgentsDescription': 'Install to .agents/skills/foundry in your user directory',
+  'settings.downloadSkillClaudeDescription': 'Install to .claude/skills/foundry in your user directory',
+  'settings.skillCancel': 'Cancel',
+  'settings.skillDownloaded': 'Skill copied to',
+  'settings.skillDownloadFailed': 'Unable to download the skill.',
   'settings.capturesFetcher': 'Fetcher',
   'settings.capturesFetcherDescription': 'The service used to retrieve page content.',
   'settings.capturesNotConfigured': 'Not configured',
@@ -457,7 +475,16 @@ const simplifiedChinese: TranslationTable = {
   'settings.noResults': '未找到设置',
   'settings.trySearch': '试试搜索主题、语言或会话。',
   'settings.libraryDescription': '收藏和提示词设置。',
-  'settings.advancedDescription': '数据传输和本地配置。',
+  'settings.advancedDescription': 'Agent Skill、数据传输和本地配置。',
+  'settings.downloadSkill': 'Agent Skill',
+  'settings.downloadSkillDescription': '选择要安装 Foundry Skill 的用户级 agent 目录。',
+  'settings.downloadSkillAction': '下载 Skill',
+  'settings.downloadSkillTargets': '目标位置',
+  'settings.downloadSkillAgentsDescription': '安装到用户目录下的 .agents/skills/foundry',
+  'settings.downloadSkillClaudeDescription': '安装到用户目录下的 .claude/skills/foundry',
+  'settings.skillCancel': '取消',
+  'settings.skillDownloaded': 'Skill 已复制到',
+  'settings.skillDownloadFailed': '无法下载 Skill。',
   'navigation.capturesDescription': '先收集链接，之后再整理。',
   'navigation.jobs': '抓取记录',
   'navigation.jobsDescription': '查看这条收藏的抓取历史与错误。',
@@ -652,7 +679,16 @@ const traditionalChinese: TranslationTable = {
   'settings.noResults': '找不到設定',
   'settings.trySearch': '試著搜尋主題、語言或工作階段。',
   'settings.libraryDescription': '收藏與提示詞設定。',
-  'settings.advancedDescription': '資料傳輸與本機設定。',
+  'settings.advancedDescription': 'Agent Skill、資料傳輸與本機設定。',
+  'settings.downloadSkill': 'Agent Skill',
+  'settings.downloadSkillDescription': '選擇要安裝 Foundry Skill 的使用者層級 agent 目錄。',
+  'settings.downloadSkillAction': '下載 Skill',
+  'settings.downloadSkillTargets': '目標位置',
+  'settings.downloadSkillAgentsDescription': '安裝到使用者目錄下的 .agents/skills/foundry',
+  'settings.downloadSkillClaudeDescription': '安裝到使用者目錄下的 .claude/skills/foundry',
+  'settings.skillCancel': '取消',
+  'settings.skillDownloaded': 'Skill 已複製到',
+  'settings.skillDownloadFailed': '無法下載 Skill。',
   'navigation.capturesDescription': '先收集連結，之後再整理。',
   'navigation.jobs': '抓取紀錄',
   'navigation.jobsDescription': '查看這筆收藏的抓取紀錄與錯誤。',
@@ -845,7 +881,16 @@ const japanese: TranslationTable = {
   'settings.noResults': '設定が見つかりません',
   'settings.trySearch': 'テーマ、言語、セッションを検索してみてください。',
   'settings.libraryDescription': 'キャプチャとプロンプトの設定。',
-  'settings.advancedDescription': 'データ転送とローカル設定。',
+  'settings.advancedDescription': 'Agent Skill、データ転送、ローカル設定。',
+  'settings.downloadSkill': 'Agent Skill',
+  'settings.downloadSkillDescription': 'Foundry Skill をインストールするユーザーレベルの agent ディレクトリを選択します。',
+  'settings.downloadSkillAction': 'Skill をダウンロード',
+  'settings.downloadSkillTargets': 'コピー先',
+  'settings.downloadSkillAgentsDescription': 'ユーザーディレクトリの .agents/skills/foundry にインストール',
+  'settings.downloadSkillClaudeDescription': 'ユーザーディレクトリの .claude/skills/foundry にインストール',
+  'settings.skillCancel': 'キャンセル',
+  'settings.skillDownloaded': 'Skill のコピー先',
+  'settings.skillDownloadFailed': 'Skill をダウンロードできませんでした。',
   'navigation.capturesDescription': 'まずリンクを集め、後から整理します。',
   'navigation.jobs': '取得履歴',
   'navigation.jobsDescription': 'このキャプチャの取得履歴とエラーを確認します。',

@@ -240,6 +240,11 @@ export class CaptureRepository {
       .map((row) => toJobSummary(row));
   }
 
+  getJob(captureId: string, jobId: string): ScrapeJobSummary | null {
+    const context = this.getJobContext(jobId);
+    return context?.capture.id === captureId ? toJobSummary(context.job) : null;
+  }
+
   getJobContext(jobId: string): JobContext | null {
     const job = this.findJob(jobId);
     if (!job || job.deletedAt) {

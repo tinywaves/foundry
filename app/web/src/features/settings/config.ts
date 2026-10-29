@@ -5,6 +5,7 @@ import {
   BarsArrowUpIcon,
   BugAntIcon,
   ClockIcon,
+  CommandLineIcon,
   FolderIcon,
   GlobeAltIcon,
   PaintBrushIcon,
@@ -102,6 +103,13 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
     descriptionKey: 'settings.importDataDescription',
     panel: 'advanced',
     icon: ArrowDownTrayIcon,
+  },
+  {
+    id: 'download-skill',
+    titleKey: 'settings.downloadSkill',
+    descriptionKey: 'settings.downloadSkillDescription',
+    panel: 'advanced',
+    icon: CommandLineIcon,
   },
 ];
 export function panelConfig(id: PanelId): PanelConfig {

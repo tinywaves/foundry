@@ -135,6 +135,11 @@ export class CaptureService {
     this.get(captureId);
     return this.repository.listJobs(captureId);
   }
+
+  getJob(captureId: string, jobId: string): ScrapeJobSummary | null {
+    this.get(captureId);
+    return this.repository.getJob(captureId, jobId);
+  }
 }
 
 function normalizeURL(value: string): string | null {

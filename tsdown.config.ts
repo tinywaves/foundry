@@ -11,6 +11,11 @@ export default defineConfig({
       to: 'dist',
       flatten: false,
     },
+    {
+      from: 'skills',
+      to: 'dist',
+      flatten: false,
+    },
   ],
   dts: false,
   minify: true,

@@ -80,13 +80,15 @@ export async function inspectImport(
   file: File,
   passphrase: string,
 ): Promise<DataTransferResult<ImportPreview>> {
-  const form = new FormData();
-  form.append('file', file);
-  form.append('passphrase', passphrase);
   try {
     const preview = await requestJSON<ImportPreview>('/api/data-transfer/inspect', {
       method: 'POST',
-      body: form,
+      headers: {
+        'content-type': 'application/octet-stream',
+        'x-foundry-filename': encodeURIComponent(file.name),
+        'x-foundry-passphrase': encodeURIComponent(passphrase),
+      },
+      body: file,
     });
     return { ok: true, data: preview };
   } catch (error) {

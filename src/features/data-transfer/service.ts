@@ -48,6 +48,11 @@ interface StagedImport {
   settingsPath: string;
 }
 
+export interface DataTransferUploadTarget {
+  filePath: string;
+  cleanup: () => Promise<void>;
+}
+
 export class DataTransferService {
   private busy = false;
   private readonly stagedImports = new Map<string, StagedImport>();
@@ -97,6 +102,14 @@ export class DataTransferService {
     try {
       await rm(targetPath, { recursive: true, force: true });
     } catch {}
+  }
+
+  async createUploadTarget(): Promise<DataTransferUploadTarget> {
+    const directory = await this.createWorkDirectory('upload');
+    return {
+      filePath: path.join(directory, 'archive.foundry-backup'),
+      cleanup: () => this.removeQuietly(directory),
+    };
   }
 
   cleanupStaleTransfers(): void {
@@ -181,7 +194,11 @@ export class DataTransferService {
     });
   }
 
-  async inspectImport(sourcePath: string, passphrase: string): Promise<ImportPreview> {
+  async inspectImport(
+    sourcePath: string,
+    passphrase: string,
+    originalFileName = path.basename(sourcePath),
+  ): Promise<ImportPreview> {
     assertPassphrase(passphrase);
 
     return this.runExclusive(async () => {
@@ -232,7 +249,7 @@ export class DataTransferService {
 
         const preview: ImportPreview = {
           importId,
-          fileName: path.basename(sourcePath),
+          fileName: path.basename(originalFileName),
           exportedAt: manifest.createdAt,
           appVersion: manifest.appVersion,
           databaseSchemaVersion: manifest.database.schemaVersion,

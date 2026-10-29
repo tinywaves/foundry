@@ -11,7 +11,7 @@ import {
   SETTINGS_ENTRY_PATH,
 } from './format';
 
-const MAXIMUM_ARCHIVE_BYTES = 4 * 1024 * 1024 * 1024;
+export const MAXIMUM_ARCHIVE_BYTES = 4 * 1024 * 1024 * 1024;
 const MAXIMUM_MANIFEST_BYTES = 1024 * 1024;
 const ALLOWED_ENTRIES = new Set([
   MANIFEST_ENTRY_PATH,

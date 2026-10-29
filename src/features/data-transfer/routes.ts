@@ -1,21 +1,29 @@
-import { randomUUID } from 'node:crypto';
-import { Buffer } from 'node:buffer';
-import { createReadStream } from 'node:fs';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import type { Buffer } from 'node:buffer';
+import { createReadStream, createWriteStream } from 'node:fs';
 import path from 'node:path';
-import { Readable } from 'node:stream';
+import { Readable, Transform } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import type { Context } from 'hono';
 import { Hono } from 'hono';
-import { getFoundryDataTransferPath } from '../../storage/paths';
+import { MAXIMUM_ARCHIVE_BYTES } from './archive';
 import {
   DataTransferError,
   normalizeDataTransferError,
 } from './errors';
 import type { DataTransferService } from './service';
 
+const MAXIMUM_IMPORT_UPLOAD_BYTES = MAXIMUM_ARCHIVE_BYTES + 1024 * 1024;
+
+interface DataTransferRouteOptions {
+  maximumUploadBytes?: number;
+}
+
 export function createDataTransferRoutes(
   service: DataTransferService,
   onImported: () => void = () => {},
+  {
+    maximumUploadBytes = MAXIMUM_IMPORT_UPLOAD_BYTES,
+  }: DataTransferRouteOptions = {},
 ): Hono {
   const app = new Hono();
 
@@ -43,31 +51,37 @@ export function createDataTransferRoutes(
   });
 
   app.post('/inspect', async (c) => {
-    const uploadPath = path.join(
-      getFoundryDataTransferPath(),
-      `upload-${randomUUID()}.foundry-backup`,
-    );
+    let upload: Awaited<ReturnType<DataTransferService['createUploadTarget']>> | undefined;
 
     try {
-      const form = await c.req.formData();
-      const file = form.get('file');
-      const passphrase = form.get('passphrase');
-      if (typeof passphrase !== 'string' || !(file instanceof File)) {
+      const contentType = c.req.header('content-type')
+        ?.split(';', 1)[0]
+        ?.trim()
+        .toLowerCase();
+      if (contentType !== 'application/octet-stream') {
         throw new DataTransferError(
           'INVALID_ARCHIVE',
-          'A Foundry backup file and passphrase are required',
+          'The Foundry backup must be uploaded as application/octet-stream',
         );
       }
 
-      await mkdir(path.dirname(uploadPath), { recursive: true, mode: 0o700 });
-      await writeFile(uploadPath, Buffer.from(await file.arrayBuffer()), {
-        mode: 0o600,
-      });
-      return c.json(await service.inspectImport(uploadPath, passphrase));
+      assertUploadLength(c, maximumUploadBytes);
+      const passphrase = readEncodedHeader(c, 'x-foundry-passphrase');
+      if (!passphrase) {
+        throw new DataTransferError('PASSPHRASE_REQUIRED', 'Enter a passphrase');
+      }
+
+      const originalFileName = readEncodedHeader(c, 'x-foundry-filename')
+        ?.trim() || 'foundry.foundry-backup';
+      upload = await service.createUploadTarget();
+      await receiveUpload(c, upload.filePath, maximumUploadBytes);
+      return c.json(
+        await service.inspectImport(upload.filePath, passphrase, originalFileName),
+      );
     } catch (error) {
       return dataTransferError(c, error);
     } finally {
-      await rm(uploadPath, { force: true });
+      await upload?.cleanup();
     }
   });
 
@@ -91,6 +105,84 @@ export function createDataTransferRoutes(
   });
 
   return app;
+}
+
+async function receiveUpload(
+  c: Context,
+  uploadPath: string,
+  maximumBytes: number,
+): Promise<void> {
+  const body = c.req.raw.body;
+  if (!body) {
+    throw new DataTransferError(
+      'INVALID_ARCHIVE',
+      'A Foundry backup file is required',
+    );
+  }
+
+  let receivedBytes = 0;
+  const limiter = new Transform({
+    transform(chunk: Buffer, _encoding, callback) {
+      receivedBytes += chunk.byteLength;
+      if (receivedBytes > maximumBytes) {
+        callback(new DataTransferError('INVALID_ARCHIVE', 'The Foundry archive is too large'));
+        return;
+      }
+      callback(null, chunk);
+    },
+  });
+
+  try {
+    await pipeline(
+      Readable.fromWeb(body),
+      limiter,
+      createWriteStream(uploadPath, { mode: 0o600 }),
+    );
+  } catch (error) {
+    if (error instanceof DataTransferError) {
+      throw error;
+    }
+    throw new DataTransferError(
+      'IO_ERROR',
+      'Unable to receive the Foundry archive',
+      { cause: error },
+    );
+  }
+
+  if (receivedBytes === 0) {
+    throw new DataTransferError(
+      'INVALID_ARCHIVE',
+      'A Foundry backup file is required',
+    );
+  }
+}
+
+function assertUploadLength(c: Context, maximumBytes: number): void {
+  const contentLength = c.req.header('content-length');
+  if (contentLength === undefined) {
+    return;
+  }
+
+  const length = Number(contentLength);
+  if (!Number.isSafeInteger(length) || length < 0) {
+    throw new DataTransferError('INVALID_ARCHIVE', 'The upload length is invalid');
+  }
+  if (length > maximumBytes) {
+    throw new DataTransferError('INVALID_ARCHIVE', 'The Foundry archive is too large');
+  }
+}
+
+function readEncodedHeader(c: Context, name: string): string | undefined {
+  const value = c.req.header(name);
+  if (value === undefined) {
+    return undefined;
+  }
+
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    throw new DataTransferError('INVALID_ARCHIVE', `The ${name} header is invalid`);
+  }
 }
 
 async function readPassphrase(c: Context): Promise<string> {

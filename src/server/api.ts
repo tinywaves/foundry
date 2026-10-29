@@ -27,6 +27,10 @@ export interface ApiAppOptions {
   onSettingsChanged?: () => void;
 }
 
+export function isApiPath(path: string): boolean {
+  return path === '/api' || path.startsWith('/api/');
+}
+
 export function createApiApp(database: FoundryDatabase, options: ApiAppOptions = {}): Hono {
   const app = new Hono();
   const workspaceMutationGate = options.workspaceMutationGate
@@ -79,12 +83,36 @@ export function createApiApp(database: FoundryDatabase, options: ApiAppOptions =
     );
   }
 
-  app.all('/api/*', (c) => c.json(
-    {
-      error: 'Not found',
-    },
-    404,
-  ));
+  app.notFound((c) => {
+    if (!isApiPath(c.req.path)) {
+      return c.text('Not Found', 404);
+    }
+
+    return c.json(
+      {
+        error: {
+          code: 'NOT_FOUND',
+          message: 'API route not found',
+        },
+      },
+      404,
+    );
+  });
+
+  app.onError((error, c) => {
+    console.error(error);
+    return isApiPath(c.req.path)
+      ? c.json(
+          {
+            error: {
+              code: 'INTERNAL_SERVER_ERROR',
+              message: 'Internal server error',
+            },
+          },
+          500,
+        )
+      : c.text('Internal Server Error', 500);
+  });
 
   return app;
 }

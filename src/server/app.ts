@@ -1,8 +1,9 @@
 import { serveStatic } from '@hono/node-server/serve-static';
 import type { Hono } from 'hono';
+import path from 'node:path';
 import type { ApiAppOptions } from './api';
 import type { FoundryDatabase } from '../storage/database';
-import { createApiApp } from './api';
+import { createApiApp, isApiPath } from './api';
 
 export function createApp(
   webRoot: string,
@@ -14,10 +15,19 @@ export function createApp(
 
   app.use(
     '*',
-    (c, next) => c.req.path.startsWith('/api/') ? next() : staticFiles(c, next),
+    (c, next) => isApiPath(c.req.path) ? next() : staticFiles(c, next),
   );
 
-  app.get('*', serveStatic({ root: webRoot, path: '/index.html' }));
+  const indexFile = serveStatic({ root: webRoot, path: '/index.html' });
+  app.get('*', (c, next) => {
+    const accept = c.req.header('accept')?.toLowerCase() ?? '';
+    const isNavigation = accept.includes('text/html')
+      && !isApiPath(c.req.path)
+      && !c.req.path.startsWith('/assets/')
+      && path.posix.extname(c.req.path) === '';
+
+    return isNavigation ? indexFile(c, next) : next();
+  });
 
   return app;
 }

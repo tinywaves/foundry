@@ -19,6 +19,7 @@ import {
 } from '../../storage/database';
 import type { FoundryDatabase } from '../../storage/database';
 import { captures, providers, scrapeJobs } from '../../storage/schema';
+import { parseProviderInput } from '../providers/contracts';
 import { readStoredSettings, writeSettings } from '../settings/repository';
 import type { ScrapeJobRunner } from '../captures/runner';
 import {
@@ -473,27 +474,25 @@ function validateCapturePointers(db: FoundryDatabase['db']): void {
 }
 
 function validateArchiveRows(db: FoundryDatabase['db']): void {
-  const protocols = new Set([
-    'openai-responses',
-    'anthropic-messages',
-    'openai-compatible-chat-completions',
-  ]);
   const statuses = new Set(['active', 'disabled', 'deleted']);
   const jobStatuses = new Set(['pending', 'running', 'succeeded', 'failed']);
   const fetchers = new Set(['firecrawl', 'deepseek']);
 
   for (const provider of db.select().from(providers).all()) {
-    if (!protocols.has(provider.protocol) || !statuses.has(provider.status)) {
+    if (!statuses.has(provider.status)) {
       throw new DataTransferError('INVALID_ARCHIVE', 'A provider record is invalid');
     }
     try {
-      if (!Array.isArray(JSON.parse(provider.customModels))) {
-        throw new TypeError('Custom models must be an array');
-      }
+      parseProviderInput({
+        name: provider.name,
+        protocol: provider.protocol,
+        baseURL: provider.baseURL,
+        customModels: JSON.parse(provider.customModels),
+      });
     } catch {
       throw new DataTransferError(
         'INVALID_ARCHIVE',
-        'A provider custom model list is invalid',
+        'A provider record is invalid',
       );
     }
   }

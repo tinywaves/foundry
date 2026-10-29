@@ -26,4 +26,9 @@ export type Provider = {
 };
 export type ProviderSummary = Provider & { hasApiKey: boolean };
 export type ProviderListItem = ProviderSummary & { isInUse: boolean };
-export type ProviderInput = Pick<Provider, 'name' | 'protocol' | 'baseURL' | 'apiKey' | 'customModels'>;
+export type ProviderInput = Pick<
+  Provider,
+  'name' | 'protocol' | 'baseURL' | 'apiKey' | 'customModels'
+> & {
+  shouldClearApiKey?: boolean;
+};

@@ -67,7 +67,7 @@ export class ProviderRepository {
       name: input.name,
       protocol: input.protocol,
       baseURL: input.baseURL,
-      apiKey: input.apiKey || existing?.apiKey || '',
+      apiKey: input.shouldClearApiKey ? '' : input.apiKey || existing?.apiKey || '',
       customModels: JSON.stringify(input.customModels),
       updatedAt: timestamp,
     };

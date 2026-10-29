@@ -36,7 +36,7 @@ export type TranslationKey
     | 'providers.customModels'
     | 'providers.enabled'
     | 'providers.formDescription'
-    | 'providers.failedFetchModels' | 'providers.save' | 'providers.name' | 'providers.protocol' | 'providers.baseUrl' | 'providers.apiKey' | 'providers.hideApiKey' | 'providers.showApiKey' | 'providers.models' | 'providers.required' | 'providers.modelSources' | 'providers.modelsTemporary' | 'providers.aboutModelSources' | 'providers.fetchModels' | 'providers.modelId' | 'providers.customModelId' | 'providers.displayName' | 'providers.displayNameOptional' | 'providers.addCustomModel'
+    | 'providers.failedFetchModels' | 'providers.save' | 'providers.name' | 'providers.protocol' | 'providers.baseUrl' | 'providers.apiKey' | 'providers.hideApiKey' | 'providers.showApiKey' | 'providers.clearApiKey' | 'providers.keepApiKey' | 'providers.models' | 'providers.required' | 'providers.modelSources' | 'providers.modelsTemporary' | 'providers.aboutModelSources' | 'providers.fetchModels' | 'providers.modelId' | 'providers.customModelId' | 'providers.displayName' | 'providers.displayNameOptional' | 'providers.addCustomModel'
     | 'navigation.notFound'
     | 'navigation.newProvider'
     | 'navigation.editProvider'
@@ -83,6 +83,8 @@ export type TranslationKey
     | 'settings.capturesApiKey'
     | 'settings.capturesApiKeyDescription'
     | 'settings.capturesApiKeyPlaceholder'
+    | 'settings.clearCapturesApiKey'
+    | 'settings.keepCapturesApiKey'
     | 'settings.capturesMaxAttempts'
     | 'settings.capturesMaxAttemptsDescription'
     | 'settings.capturesConcurrency'
@@ -216,6 +218,8 @@ const english: TranslationTable = {
   'providers.apiKey': 'API key',
   'providers.hideApiKey': 'Hide API key',
   'providers.showApiKey': 'Show API key',
+  'providers.clearApiKey': 'Clear stored API key',
+  'providers.keepApiKey': 'Keep stored API key',
   'providers.models': 'Models',
   'providers.required': 'Required',
   'providers.modelSources': 'Model sources',
@@ -273,6 +277,8 @@ const english: TranslationTable = {
   'settings.capturesApiKey': 'API key',
   'settings.capturesApiKeyDescription': 'Authenticates requests to the selected fetch service.',
   'settings.capturesApiKeyPlaceholder': 'Enter an API key',
+  'settings.clearCapturesApiKey': 'Clear stored API key',
+  'settings.keepCapturesApiKey': 'Keep stored API key',
   'settings.capturesMaxAttempts': 'Maximum attempts',
   'settings.capturesMaxAttemptsDescription': 'Total requests per scrape job, from 1 to 10.',
   'settings.capturesConcurrency': 'Scrape concurrency',
@@ -402,6 +408,8 @@ const simplifiedChinese: TranslationTable = {
   'providers.apiKey': 'API 密钥',
   'providers.hideApiKey': '隐藏 API 密钥',
   'providers.showApiKey': '显示 API 密钥',
+  'providers.clearApiKey': '清除已保存的 API 密钥',
+  'providers.keepApiKey': '保留已保存的 API 密钥',
   'providers.models': '模型',
   'providers.required': '必填',
   'providers.modelSources': '模型来源',
@@ -456,6 +464,8 @@ const simplifiedChinese: TranslationTable = {
   'settings.capturesApiKey': 'API 密钥',
   'settings.capturesApiKeyDescription': '用于向所选抓取服务认证请求。',
   'settings.capturesApiKeyPlaceholder': '输入 API 密钥',
+  'settings.clearCapturesApiKey': '清除已保存的 API 密钥',
+  'settings.keepCapturesApiKey': '保留已保存的 API 密钥',
   'settings.capturesMaxAttempts': '最大尝试次数',
   'settings.capturesMaxAttemptsDescription': '每个抓取任务的总请求次数，1 到 10。',
   'settings.capturesConcurrency': '抓取并发数',
@@ -592,6 +602,8 @@ const traditionalChinese: TranslationTable = {
   'providers.apiKey': 'API 金鑰',
   'providers.hideApiKey': '隱藏 API 金鑰',
   'providers.showApiKey': '顯示 API 金鑰',
+  'providers.clearApiKey': '清除已儲存的 API 金鑰',
+  'providers.keepApiKey': '保留已儲存的 API 金鑰',
   'providers.models': '模型',
   'providers.required': '必填',
   'providers.modelSources': '模型來源',
@@ -646,6 +658,8 @@ const traditionalChinese: TranslationTable = {
   'settings.capturesApiKey': 'API 金鑰',
   'settings.capturesApiKeyDescription': '用於向所選抓取服務驗證請求。',
   'settings.capturesApiKeyPlaceholder': '輸入 API 金鑰',
+  'settings.clearCapturesApiKey': '清除已儲存的 API 金鑰',
+  'settings.keepCapturesApiKey': '保留已儲存的 API 金鑰',
   'settings.capturesMaxAttempts': '最大嘗試次數',
   'settings.capturesMaxAttemptsDescription': '每個抓取工作的總請求次數，1 到 10。',
   'settings.capturesConcurrency': '抓取並行數',
@@ -780,6 +794,8 @@ const japanese: TranslationTable = {
   'providers.apiKey': 'API キー',
   'providers.hideApiKey': 'API キーを隠す',
   'providers.showApiKey': 'API キーを表示',
+  'providers.clearApiKey': '保存済みの API キーを削除',
+  'providers.keepApiKey': '保存済みの API キーを保持',
   'providers.models': 'モデル',
   'providers.required': '必須',
   'providers.modelSources': 'モデルソース',
@@ -836,6 +852,8 @@ const japanese: TranslationTable = {
   'settings.capturesApiKey': 'API キー',
   'settings.capturesApiKeyDescription': '選択した取得サービスへのリクエストを認証します。',
   'settings.capturesApiKeyPlaceholder': 'API キーを入力',
+  'settings.clearCapturesApiKey': '保存済みの API キーを削除',
+  'settings.keepCapturesApiKey': '保存済みの API キーを保持',
   'settings.capturesMaxAttempts': '最大試行回数',
   'settings.capturesMaxAttemptsDescription': 'ジョブごとの総リクエスト数（1〜10）。',
   'settings.capturesConcurrency': '取得の同時実行数',

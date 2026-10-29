@@ -72,6 +72,26 @@ it('persists settings without exposing capture API keys', async () => {
     expect(stored.features.library.captures.firecrawl.apiKey).toBe('secret');
     const settingsStat = await stat(settingsPath);
     expect(settingsStat.mode & 0o777).toBe(0o600);
+
+    const clearResponse = await app.request('/api/settings', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        captures: {
+          firecrawlApiKey: '',
+        },
+      }),
+    });
+    expect(clearResponse.status).toBe(200);
+    expect(await clearResponse.json()).toMatchObject({
+      features: {
+        library: {
+          captures: {
+            firecrawl: { hasApiKey: false },
+          },
+        },
+      },
+    });
   } finally {
     database.client.close();
     await rm(directory, { recursive: true, force: true });

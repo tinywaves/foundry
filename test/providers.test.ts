@@ -66,6 +66,21 @@ it('creates, updates, and preserves provider credentials', async () => {
     const modelsResponse = await app.request(`/api/providers/${created.id}/models`);
     expect(modelsResponse.status).toBe(200);
     expect(await modelsResponse.json()).toEqual([{ id: 'local-model', displayName: 'Local model' }]);
+
+    const clearResponse = await app.request(`/api/providers/${created.id}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Local OpenAI',
+        protocol: 'openai-compatible-chat-completions',
+        baseURL: 'http://127.0.0.1:11434/v1',
+        apiKey: '',
+        shouldClearApiKey: true,
+        customModels: [{ id: 'local-model', displayName: 'Local model' }],
+      }),
+    });
+    expect(clearResponse.status).toBe(200);
+    expect(await clearResponse.json()).toMatchObject({ hasApiKey: false });
   } finally {
     vi.unstubAllGlobals();
     database.client.close();

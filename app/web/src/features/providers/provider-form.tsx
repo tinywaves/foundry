@@ -87,6 +87,8 @@ export default function ProviderFormPage() {
   const [protocol, setProtocol] = useState<ProviderProtocol>('openai-responses');
   const [baseURL, setBaseURL] = useState('');
   const [apiKey, setApiKey] = useState('');
+  const [hasStoredApiKey, setHasStoredApiKey] = useState(false);
+  const [shouldClearApiKey, setShouldClearApiKey] = useState(false);
   const [isApiKeyVisible, setIsApiKeyVisible] = useState(false);
   const [isModelHelpOpen, setIsModelHelpOpen] = useState(false);
   const modelHelpCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -115,6 +117,8 @@ export default function ProviderFormPage() {
       setProtocol(provider.protocol);
       setBaseURL(provider.baseURL);
       setApiKey(provider.apiKey);
+      setHasStoredApiKey(provider.hasApiKey);
+      setShouldClearApiKey(false);
       setModels(provider.customModels.map((model) => ({ ...model, source: 'custom' as const })));
     });
   }, [providerId]);
@@ -170,7 +174,14 @@ export default function ProviderFormPage() {
       return;
     }
     setIsSaving(true);
-    const input: ProviderInput = { name: name.trim(), protocol, baseURL: baseURL.trim(), apiKey, customModels: customModels.map(({ source: _source, ...model }) => model) };
+    const input: ProviderInput = {
+      name: name.trim(),
+      protocol,
+      baseURL: baseURL.trim(),
+      apiKey: shouldClearApiKey ? '' : apiKey,
+      shouldClearApiKey: shouldClearApiKey || undefined,
+      customModels: customModels.map(({ source: _source, ...model }) => model),
+    };
     try {
       await saveProvider(input, providerId);
       await queryClient.invalidateQueries({ queryKey: providerKeys.all });
@@ -178,7 +189,18 @@ export default function ProviderFormPage() {
     } finally {
       setIsSaving(false);
     }
-  }, [apiKey, baseURL, canSave, customModels, navigate, name, providerId, protocol, queryClient]);
+  }, [
+    apiKey,
+    baseURL,
+    canSave,
+    customModels,
+    navigate,
+    name,
+    providerId,
+    protocol,
+    queryClient,
+    shouldClearApiKey,
+  ]);
 
   const cancel = useCallback(() => {
     void navigate('/providers');
@@ -232,7 +254,10 @@ export default function ProviderFormPage() {
               isLabelHidden
               type={isApiKeyVisible ? 'text' : 'password'}
               value={apiKey}
-              onChange={setApiKey}
+              onChange={(value) => {
+                setApiKey(value);
+                setShouldClearApiKey(false);
+              }}
             />
             <InputGroupText xstyle={styles.apiKeyVisibilityAddon}>
               <IconButton
@@ -245,6 +270,21 @@ export default function ProviderFormPage() {
               />
             </InputGroupText>
           </InputGroup>
+          {hasStoredApiKey && (
+            <HStack hAlign="start">
+              <Button
+                label={t(shouldClearApiKey
+                  ? 'providers.keepApiKey'
+                  : 'providers.clearApiKey')}
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setApiKey('');
+                  setShouldClearApiKey((current) => !current);
+                }}
+              />
+            </HStack>
+          )}
         </VStack>
         <VStack gap={3}>
           <HStack gap={1} vAlign="center">

@@ -36,8 +36,8 @@ export const INITIAL_SETTINGS: SettingsState = {
       fetcher: null,
       maxAttempts: 1,
       scrapeConcurrency: 2,
-      firecrawl: { apiKey: '' },
-      deepseek: { apiKey: '' },
+      firecrawl: { apiKey: '', hasApiKey: false, shouldClearApiKey: false },
+      deepseek: { apiKey: '', hasApiKey: false, shouldClearApiKey: false },
     },
   },
 };

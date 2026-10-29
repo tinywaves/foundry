@@ -17,16 +17,18 @@ export type TimeZoneCode
 
 export type FetcherType = 'firecrawl' | 'deepseek';
 
+export type CaptureCredential = {
+  apiKey: string;
+  hasApiKey: boolean;
+  shouldClearApiKey: boolean;
+};
+
 export type CaptureSettings = {
   fetcher: FetcherType | null;
   maxAttempts: number;
   scrapeConcurrency: number;
-  firecrawl: {
-    apiKey: string;
-  };
-  deepseek: {
-    apiKey: string;
-  };
+  firecrawl: CaptureCredential;
+  deepseek: CaptureCredential;
 };
 
 export type LibrarySettings = {

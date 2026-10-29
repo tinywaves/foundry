@@ -19,6 +19,7 @@ export interface ProviderInput {
   protocol: ProviderProtocol;
   baseURL: string;
   apiKey: string;
+  shouldClearApiKey?: boolean;
   customModels: CustomModel[];
 }
 
@@ -66,6 +67,13 @@ export function parseProviderInput(value: unknown): ProviderInput {
   const apiKey = value.apiKey === undefined
     ? ''
     : parseRequiredString(value.apiKey, 'apiKey', { allowEmpty: true });
+  const shouldClearApiKey = value.shouldClearApiKey ?? false;
+  if (typeof shouldClearApiKey !== 'boolean') {
+    throw new ProviderInputError('shouldClearApiKey must be a boolean');
+  }
+  if (shouldClearApiKey && apiKey.length > 0) {
+    throw new ProviderInputError('apiKey and shouldClearApiKey cannot be combined');
+  }
   const customModels = parseCustomModels(value.customModels);
 
   return {
@@ -73,6 +81,7 @@ export function parseProviderInput(value: unknown): ProviderInput {
     protocol,
     baseURL,
     apiKey,
+    shouldClearApiKey,
     customModels,
   };
 }

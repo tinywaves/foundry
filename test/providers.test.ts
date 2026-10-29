@@ -47,7 +47,7 @@ it('creates, updates, and preserves provider credentials', async () => {
         name: 'Local OpenAI',
         protocol: 'openai-compatible-chat-completions',
         baseURL: 'http://127.0.0.1:11434/v1',
-        apiKey: '',
+        apiKey: 'secret',
         customModels: [{ id: 'local-model', displayName: 'Local model' }],
       }),
     });
@@ -81,7 +81,6 @@ it('creates, updates, and preserves provider credentials', async () => {
         protocol: 'openai-compatible-chat-completions',
         baseURL: 'http://127.0.0.1:11434/v1',
         apiKey: '',
-        shouldClearApiKey: true,
         customModels: [{ id: 'local-model', displayName: 'Local model' }],
       }),
     });

@@ -36,7 +36,7 @@ export type TranslationKey
     | 'providers.customModels'
     | 'providers.enabled'
     | 'providers.formDescription'
-    | 'providers.failedFetchModels' | 'providers.save' | 'providers.name' | 'providers.protocol' | 'providers.baseUrl' | 'providers.apiKey' | 'providers.hideApiKey' | 'providers.showApiKey' | 'providers.clearApiKey' | 'providers.keepApiKey' | 'providers.models' | 'providers.required' | 'providers.modelSources' | 'providers.modelsTemporary' | 'providers.aboutModelSources' | 'providers.fetchModels' | 'providers.modelId' | 'providers.customModelId' | 'providers.displayName' | 'providers.displayNameOptional' | 'providers.addCustomModel'
+    | 'providers.failedFetchModels' | 'providers.save' | 'providers.name' | 'providers.protocol' | 'providers.baseUrl' | 'providers.apiKey' | 'providers.hideApiKey' | 'providers.showApiKey' | 'providers.models' | 'providers.required' | 'providers.modelSources' | 'providers.modelsTemporary' | 'providers.aboutModelSources' | 'providers.fetchModels' | 'providers.modelId' | 'providers.customModelId' | 'providers.displayName' | 'providers.displayNameOptional' | 'providers.addCustomModel'
     | 'navigation.notFound'
     | 'navigation.newProvider'
     | 'navigation.editProvider'
@@ -220,8 +220,6 @@ const english: TranslationTable = {
   'providers.apiKey': 'API key',
   'providers.hideApiKey': 'Hide API key',
   'providers.showApiKey': 'Show API key',
-  'providers.clearApiKey': 'Clear stored API key',
-  'providers.keepApiKey': 'Keep stored API key',
   'providers.models': 'Models',
   'providers.required': 'Required',
   'providers.modelSources': 'Model sources',
@@ -412,8 +410,6 @@ const simplifiedChinese: TranslationTable = {
   'providers.apiKey': 'API 密钥',
   'providers.hideApiKey': '隐藏 API 密钥',
   'providers.showApiKey': '显示 API 密钥',
-  'providers.clearApiKey': '清除已保存的 API 密钥',
-  'providers.keepApiKey': '保留已保存的 API 密钥',
   'providers.models': '模型',
   'providers.required': '必填',
   'providers.modelSources': '模型来源',
@@ -608,8 +604,6 @@ const traditionalChinese: TranslationTable = {
   'providers.apiKey': 'API 金鑰',
   'providers.hideApiKey': '隱藏 API 金鑰',
   'providers.showApiKey': '顯示 API 金鑰',
-  'providers.clearApiKey': '清除已儲存的 API 金鑰',
-  'providers.keepApiKey': '保留已儲存的 API 金鑰',
   'providers.models': '模型',
   'providers.required': '必填',
   'providers.modelSources': '模型來源',
@@ -802,8 +796,6 @@ const japanese: TranslationTable = {
   'providers.apiKey': 'API キー',
   'providers.hideApiKey': 'API キーを隠す',
   'providers.showApiKey': 'API キーを表示',
-  'providers.clearApiKey': '保存済みの API キーを削除',
-  'providers.keepApiKey': '保存済みの API キーを保持',
   'providers.models': 'モデル',
   'providers.required': '必須',
   'providers.modelSources': 'モデルソース',

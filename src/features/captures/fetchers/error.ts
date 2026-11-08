@@ -19,7 +19,7 @@ export function normalizeFetcherError(error: unknown): FetcherError {
     return error;
   }
   if (error instanceof Error && error.name === 'TimeoutError') {
-    return new FetcherError('timeout', 'The page fetch timed out', true);
+    return new FetcherError('timeout', 'The configured fetcher timed out', true);
   }
   if (error instanceof TypeError) {
     return new FetcherError('network_error', error.message, true);
@@ -27,7 +27,7 @@ export function normalizeFetcherError(error: unknown): FetcherError {
 
   return new FetcherError(
     'fetch_failed',
-    error instanceof Error ? error.message : 'The page fetch failed',
+    error instanceof Error ? error.message : 'The capture fetch failed',
     false,
   );
 }

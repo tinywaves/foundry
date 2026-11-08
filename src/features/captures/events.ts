@@ -1,4 +1,4 @@
-import type { ScrapeJobStatus } from './contracts';
+import type { FetchJobStatus } from './contracts';
 
 export const CAPTURE_JOB_CHANGED_EVENT = 'capture.job.changed';
 export const CAPTURES_CHANGED_EVENT = 'captures.changed';
@@ -6,7 +6,7 @@ export const CAPTURES_CHANGED_EVENT = 'captures.changed';
 export interface CaptureJobChangedEvent {
   captureId: string;
   jobId: string;
-  status: ScrapeJobStatus;
+  status: FetchJobStatus;
   errorMessage?: string;
 }
 

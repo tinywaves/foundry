@@ -1,7 +1,7 @@
 # Foundry
 
 Foundry is an AI-native local personal workbench distributed as a CLI. Its
-settings, providers, captures, scrape jobs, encrypted data transfer, and bundled
+settings, providers, captures, fetch jobs, encrypted data transfer, and bundled
 agent skill copy are available as JSON CLI commands for both people and agents.
 `foundry web` prepares local storage, starts a Hono server, serves the bundled
 React Web UI, and opens it in the default browser.
@@ -14,8 +14,8 @@ entry point.
 - Manage model providers using OpenAI Responses, Anthropic Messages, or
   OpenAI-compatible Chat Completions protocols.
 - Discover provider models and keep custom model IDs alongside remote models.
-- Capture links with Firecrawl or DeepSeek, run background jobs with retries,
-  and review scrape history and captured Markdown.
+- Save links as agent-facing index cards using the configured capture fetcher,
+  run background jobs with retries, and inspect the raw fetcher response.
 - Configure appearance, language and region, capture behavior, and concurrency.
 - Export and import an encrypted `.foundry-backup` snapshot containing the
   database and application settings.
@@ -120,7 +120,7 @@ production server and static assets.
 Foundry keeps user data outside the repository in `<home>/.foundry`. `<home>` is
 `~` on macOS/Linux and `%USERPROFILE%` on Windows:
 
-- `foundry.sqlite`: providers and their credentials, captures, and scrape jobs
+- `foundry.sqlite`: providers and their credentials, captures, and fetch jobs
 - `settings.json`: application settings and capture-fetcher credentials
 - `.data-transfer/`: temporary export and import files
 

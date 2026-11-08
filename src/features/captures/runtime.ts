@@ -2,12 +2,12 @@ import type { FoundryDatabase } from '../../storage/database';
 import type { FoundryEventHub } from '../../events/hub';
 import { CAPTURE_JOB_CHANGED_EVENT } from './events';
 import { CaptureRepository } from './repository';
-import { ScrapeJobRunner } from './runner';
+import { FetchJobRunner } from './runner';
 import { CaptureService } from './service';
 
 export interface CaptureRuntime {
   service: CaptureService;
-  runner: ScrapeJobRunner;
+  runner: FetchJobRunner;
   start: () => void;
   notifySettingsChanged: () => void;
 }
@@ -18,7 +18,7 @@ export function createCaptureRuntime(
   eventHub?: FoundryEventHub,
 ): CaptureRuntime {
   const repository = new CaptureRepository(database.db);
-  const runner = new ScrapeJobRunner(
+  const runner = new FetchJobRunner(
     repository,
     settingsPath,
     (event) => eventHub?.publish(CAPTURE_JOB_CHANGED_EVENT, event),

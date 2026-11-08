@@ -35,7 +35,7 @@ it('exports and restores an encrypted Foundry snapshot', async () => {
   try {
     updateSettings({
       theme: 'dark',
-      captures: { fetcher: 'deepseek', deepseekApiKey: 'capture-secret' },
+      captures: { fetcher: 'firecrawl', firecrawlApiKey: 'capture-secret' },
     }, settingsPath);
     providers.save({
       name: 'Exported provider',

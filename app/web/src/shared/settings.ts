@@ -15,7 +15,9 @@ export type TimeZoneCode
     | 'Asia/Tokyo'
     | 'UTC';
 
-export type FetcherType = 'firecrawl' | 'deepseek';
+export const FETCHER_TYPES = ['firecrawl'] as const;
+
+export type FetcherType = (typeof FETCHER_TYPES)[number];
 
 export type CaptureCredential = {
   apiKey: string;
@@ -24,9 +26,8 @@ export type CaptureCredential = {
 export type CaptureSettings = {
   fetcher: FetcherType | null;
   maxAttempts: number;
-  scrapeConcurrency: number;
+  fetchConcurrency: number;
   firecrawl: CaptureCredential;
-  deepseek: CaptureCredential;
 };
 
 export type LibrarySettings = {

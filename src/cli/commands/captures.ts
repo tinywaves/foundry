@@ -43,7 +43,7 @@ const counts = defineCommand({
 const get = defineCommand({
   meta: {
     name: 'get',
-    description: 'Read a capture and its latest Markdown content',
+    description: 'Read a capture and its latest successful fetcher response',
   },
   args: {
     id: {
@@ -93,7 +93,7 @@ const create = defineCommand({
 const recapture = defineCommand({
   meta: {
     name: 'recapture',
-    description: 'Create a new scrape job for an existing capture',
+    description: 'Create a new fetch job for an existing capture',
   },
   args: {
     id: {
@@ -139,7 +139,7 @@ const note = defineCommand({
 const remove = defineCommand({
   meta: {
     name: 'delete',
-    description: 'Delete a capture and its scrape jobs',
+    description: 'Delete a capture and its fetch jobs',
     alias: ['remove', 'rm'],
   },
   args: {

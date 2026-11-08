@@ -42,6 +42,8 @@ import {
 import { TextInput } from '@astryxdesign/core/TextInput';
 import type { SettingsSearch } from './search';
 import { useI18n } from '../../i18n';
+import { fetcherLabelKey } from '../../i18n/fetchers';
+import { FETCHER_TYPES } from '../../shared/settings';
 import { ListItem } from '@astryxdesign/core/List';
 import { panelConfig, PANEL_GROUPS, DEFAULT_PANEL } from './config';
 import { SideNav, SideNavItem, SideNavSection } from '@astryxdesign/core/SideNav';
@@ -561,7 +563,6 @@ function CapturesSettingsBlock({ settings, update }: PanelProps) {
         ...captures,
         ...patch,
         firecrawl: { ...captures.firecrawl, ...patch.firecrawl },
-        deepseek: { ...captures.deepseek, ...patch.deepseek },
       },
     });
   };
@@ -596,8 +597,10 @@ function CapturesSettingsBlock({ settings, update }: PanelProps) {
             }}
             options={[
               { value: 'none', label: t('settings.capturesNotConfigured') },
-              { value: 'firecrawl', label: 'Firecrawl' },
-              { value: 'deepseek', label: 'DeepSeek Fetch' },
+              ...FETCHER_TYPES.map((fetcher) => ({
+                value: fetcher,
+                label: t(fetcherLabelKey(fetcher)),
+              })),
             ]}
           />
         )}
@@ -642,7 +645,7 @@ function CapturesSettingsBlock({ settings, update }: PanelProps) {
         )}
       />
       <SettingsRow
-        key="scrape-concurrency"
+        key="fetch-concurrency"
         title={t('settings.capturesConcurrency')}
         icon={BarsArrowUpIcon}
         description={t('settings.capturesConcurrencyDescription')}
@@ -651,9 +654,9 @@ function CapturesSettingsBlock({ settings, update }: PanelProps) {
             label={t('settings.capturesConcurrency')}
             isLabelHidden
             size="sm"
-            value={captures.scrapeConcurrency}
+            value={captures.fetchConcurrency}
             onChange={(value) => {
-              updateCaptures({ scrapeConcurrency: value });
+              updateCaptures({ fetchConcurrency: value });
             }}
             min={1}
             max={5}

@@ -11,7 +11,7 @@ CREATE TABLE `captures` (
 --> statement-breakpoint
 CREATE UNIQUE INDEX `captures_url_active_unique` ON `captures` (`url`) WHERE "captures"."deleted_at" is null;--> statement-breakpoint
 CREATE INDEX `captures_created_at_idx` ON `captures` (`created_at`);--> statement-breakpoint
-CREATE TABLE `scrape_jobs` (
+CREATE TABLE `fetch_jobs` (
 	`id` text PRIMARY KEY NOT NULL,
 	`capture_id` text NOT NULL,
 	`fetcher` text NOT NULL,
@@ -26,5 +26,17 @@ CREATE TABLE `scrape_jobs` (
 	FOREIGN KEY (`capture_id`) REFERENCES `captures`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `scrape_jobs_one_active_per_capture` ON `scrape_jobs` (`capture_id`) WHERE "scrape_jobs"."status" in ('pending', 'running') and "scrape_jobs"."deleted_at" is null;--> statement-breakpoint
-CREATE INDEX `scrape_jobs_capture_created_at_idx` ON `scrape_jobs` (`capture_id`,`created_at`);
+CREATE UNIQUE INDEX `fetch_jobs_one_active_per_capture` ON `fetch_jobs` (`capture_id`) WHERE "fetch_jobs"."status" in ('pending', 'running') and "fetch_jobs"."deleted_at" is null;--> statement-breakpoint
+CREATE INDEX `fetch_jobs_capture_created_at_idx` ON `fetch_jobs` (`capture_id`,`created_at`);--> statement-breakpoint
+CREATE TABLE `providers` (
+	`id` text PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`protocol` text NOT NULL,
+	`base_url` text NOT NULL,
+	`api_key` text DEFAULT '' NOT NULL,
+	`custom_models` text DEFAULT '[]' NOT NULL,
+	`status` text DEFAULT 'active' NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	`deleted_at` integer
+);

@@ -5,7 +5,7 @@ import { CliInputError, runCliAction } from '../shared';
 const list = defineCommand({
   meta: {
     name: 'list',
-    description: 'List scrape jobs for a capture',
+    description: 'List fetch jobs for a capture',
     alias: ['ls'],
   },
   args: {
@@ -24,7 +24,7 @@ const list = defineCommand({
 const get = defineCommand({
   meta: {
     name: 'get',
-    description: 'Read one scrape job owned by a capture',
+    description: 'Read one fetch job owned by a capture',
     alias: ['show'],
   },
   args: {
@@ -35,7 +35,7 @@ const get = defineCommand({
     },
     'job-id': {
       type: 'positional',
-      description: 'Scrape job ID',
+      description: 'Fetch job ID',
       required: true,
     },
   },
@@ -46,7 +46,7 @@ const get = defineCommand({
         args['job-id'],
       );
       if (!job) {
-        throw new CliInputError('JOB_NOT_FOUND', 'Scrape job not found');
+        throw new CliInputError('JOB_NOT_FOUND', 'Fetch job not found');
       }
 
       return job;
@@ -57,7 +57,7 @@ const get = defineCommand({
 const recapture = defineCommand({
   meta: {
     name: 'recapture',
-    description: 'Run a new scrape job for a capture and wait for completion',
+    description: 'Run a new fetch job for a capture and wait for completion',
   },
   args: {
     'capture-id': {

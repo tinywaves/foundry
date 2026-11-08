@@ -32,8 +32,8 @@ Command aliases:
 
 ## JSON Contract
 
-Successful feature commands write one JSON value to stdout. Do not scrape or
-parse localized human prose. Help output is plain text and is only for command
+Successful feature commands write one JSON value to stdout. Do not parse
+localized human prose. Help output is plain text and is only for command
 discovery.
 
 Expected domain failures write a JSON envelope to stderr:
@@ -47,7 +47,7 @@ Expected domain failures write a JSON envelope to stderr:
 }
 ```
 
-The process exit code is `1` for handled command errors. A failed scrape is
+The process exit code is `1` for handled command errors. A failed fetch is
 different: capture commands can return successful JSON with `job.status` set to
 `"failed"`, so always inspect the job payload.
 

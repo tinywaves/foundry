@@ -4,6 +4,7 @@ import path from 'node:path';
 import { expect, it, vi } from 'vitest';
 import type { FoundryEvent } from '../src/events/contracts';
 import { FoundryEventHub } from '../src/events/hub';
+import { FIRECRAWL_WIRE_PAGE_OPTIONS_KEY } from '../src/features/captures/fetchers/firecrawl';
 import { createCaptureRuntime } from '../src/features/captures/runtime';
 import { updateSettings } from '../src/features/settings/repository';
 import { createApiApp } from '../src/server/api';
@@ -11,7 +12,14 @@ import { openFoundryDatabase } from '../src/storage/database';
 
 const { join } = path;
 
-it('captures a page through the configured fetcher', async () => {
+function expectedEvent(type: string, data: Record<string, unknown>) {
+  return expect.objectContaining({
+    type,
+    data: expect.objectContaining(data),
+  });
+}
+
+it('captures a link through Firecrawl Search', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-captures-'));
   const settingsPath = join(directory, 'settings.json');
   const database = openFoundryDatabase(join(directory, 'foundry.sqlite'));
@@ -22,13 +30,25 @@ it('captures a page through the configured fetcher', async () => {
     },
   }, settingsPath);
 
-  const fetchMock = vi.fn<typeof fetch>(() =>
-    Promise.resolve(Response.json({
-      data: {
-        markdown: '# Captured page',
-        metadata: { title: 'Example page' },
-      },
-    })));
+  const rawResponse = {
+    success: true,
+    data: {
+      web: [
+        {
+          url: 'https://example.com/article',
+          title: 'Example page',
+          description: 'An example article',
+          summary: 'A longer summary from Firecrawl.',
+          metadata: {
+            sourceURL: 'https://example.com/article',
+            statusCode: 200,
+          },
+        },
+      ],
+    },
+    creditsUsed: 2,
+  };
+  const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(Response.json(rawResponse)));
   vi.stubGlobal('fetch', fetchMock);
 
   try {
@@ -58,21 +78,40 @@ it('captures a page through the configured fetcher', async () => {
 
     let detail: {
       capture: { title: string | null };
-      content: { markdown: string } | null;
+      rawResponse: typeof rawResponse | null;
     } = {
       capture: { title: null },
-      content: null,
+      rawResponse: null,
     };
 
     await vi.waitFor(async () => {
       const response = await app.request(`/api/captures/${created.id}`);
       expect(response.status).toBe(200);
       detail = await response.json() as typeof detail;
-      expect(detail.content?.markdown).toBe('# Captured page');
+      expect(detail.rawResponse).toEqual(rawResponse);
     });
 
     expect(detail.capture.title).toBe('Example page');
     expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.firecrawl.dev/v2/search',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    const requestInit = fetchMock.mock.calls[0]?.[1];
+    const requestBodyText = requestInit?.body;
+    if (typeof requestBodyText !== 'string') {
+      throw new TypeError('Expected the Firecrawl request body to be JSON text');
+    }
+    const requestBody = JSON.parse(requestBodyText) as Record<string, unknown>;
+    expect(requestBody).toMatchObject({
+      query: 'site:example.com article',
+      limit: 5,
+      sources: ['web'],
+      highlights: false,
+    });
+    expect(requestBody[FIRECRAWL_WIRE_PAGE_OPTIONS_KEY]).toMatchObject({
+      formats: ['summary'],
+    });
 
     const noteResponse = await app.request(`/api/captures/${created.id}/note`, {
       method: 'PATCH',
@@ -81,37 +120,20 @@ it('captures a page through the configured fetcher', async () => {
     });
     expect(noteResponse.status).toBe(200);
 
-    const deleteResponse = await app.request(`/api/captures/${created.id}`, {
+    const captureDeletionResponse = await app.request(`/api/captures/${created.id}`, {
       method: 'DELETE',
     });
-    expect(deleteResponse.status).toBe(204);
+    expect(captureDeletionResponse.status).toBe(204);
 
-    expect(events).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        type: 'capture.job.changed',
-        data: expect.objectContaining({ status: 'pending' }),
-      }),
-      expect.objectContaining({
-        type: 'capture.job.changed',
-        data: expect.objectContaining({ status: 'running' }),
-      }),
-      expect.objectContaining({
-        type: 'captures.changed',
-        data: expect.objectContaining({ action: 'created' }),
-      }),
-      expect.objectContaining({
-        type: 'captures.changed',
-        data: expect.objectContaining({ action: 'updated' }),
-      }),
-      expect.objectContaining({
-        type: 'captures.changed',
-        data: expect.objectContaining({ action: 'deleted' }),
-      }),
-      expect.objectContaining({
-        type: 'capture.job.changed',
-        data: expect.objectContaining({ status: 'succeeded' }),
-      }),
-    ]));
+    const expectedEvents = [
+      expectedEvent('capture.job.changed', { status: 'pending' }),
+      expectedEvent('capture.job.changed', { status: 'running' }),
+      expectedEvent('captures.changed', { action: 'created' }),
+      expectedEvent('captures.changed', { action: 'updated' }),
+      expectedEvent('captures.changed', { action: 'deleted' }),
+      expectedEvent('capture.job.changed', { status: 'succeeded' }),
+    ];
+    expect(events).toEqual(expect.arrayContaining(expectedEvents));
   } finally {
     vi.unstubAllGlobals();
     database.client.close();

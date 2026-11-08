@@ -1,23 +1,22 @@
 import { randomUUID } from 'node:crypto';
 import { and, count, desc, eq, inArray, isNull } from 'drizzle-orm';
 import type { FoundryDatabase } from '../../storage/database';
-import { captures, scrapeJobs } from '../../storage/schema';
+import { captures, fetchJobs } from '../../storage/schema';
 import type {
-  CaptureContent,
   CaptureCounts,
   CaptureDetail,
   CaptureFilter,
   CaptureSummary,
-  ScrapeJobSummary,
+  FetchJobSummary,
   StoredJobConfig,
 } from './contracts';
 
 type Database = FoundryDatabase['db'];
 type CaptureRow = typeof captures.$inferSelect;
-type ScrapeJobRow = typeof scrapeJobs.$inferSelect;
+type FetchJobRow = typeof fetchJobs.$inferSelect;
 
 export interface JobContext {
-  job: ScrapeJobRow;
+  job: FetchJobRow;
   capture: CaptureRow;
 }
 
@@ -32,11 +31,11 @@ export class CaptureRepository {
       .get() ?? null;
   }
 
-  private findJob(jobId: string): ScrapeJobRow | null {
+  private findJob(jobId: string): FetchJobRow | null {
     return this.db
       .select()
-      .from(scrapeJobs)
-      .where(eq(scrapeJobs.id, jobId))
+      .from(fetchJobs)
+      .where(eq(fetchJobs.id, jobId))
       .get() ?? null;
   }
 
@@ -81,18 +80,18 @@ export class CaptureRepository {
     const successfulJob = capture.latestSuccessfulJobId
       ? this.db
           .select()
-          .from(scrapeJobs)
+          .from(fetchJobs)
           .where(and(
-            eq(scrapeJobs.id, capture.latestSuccessfulJobId),
-            eq(scrapeJobs.captureId, captureId),
-            isNull(scrapeJobs.deletedAt),
+            eq(fetchJobs.id, capture.latestSuccessfulJobId),
+            eq(fetchJobs.captureId, captureId),
+            isNull(fetchJobs.deletedAt),
           ))
           .get()
       : undefined;
 
     return {
       capture: toCaptureSummary(capture),
-      content: successfulJob ? toCaptureContent(successfulJob) : null,
+      rawResponse: successfulJob ? parseRawResponse(successfulJob.rawResponseJson) : null,
     };
   }
 
@@ -124,7 +123,7 @@ export class CaptureRepository {
         deletedAt: null,
       }).run();
 
-      tx.insert(scrapeJobs).values({
+      tx.insert(fetchJobs).values({
         id: jobId,
         captureId,
         fetcher: config.fetcher,
@@ -152,12 +151,12 @@ export class CaptureRepository {
 
   hasActiveJob(captureId: string): boolean {
     const row = this.db
-      .select({ id: scrapeJobs.id })
-      .from(scrapeJobs)
+      .select({ id: fetchJobs.id })
+      .from(fetchJobs)
       .where(and(
-        eq(scrapeJobs.captureId, captureId),
-        inArray(scrapeJobs.status, ['pending', 'running']),
-        isNull(scrapeJobs.deletedAt),
+        eq(fetchJobs.captureId, captureId),
+        inArray(fetchJobs.status, ['pending', 'running']),
+        isNull(fetchJobs.deletedAt),
       ))
       .get();
 
@@ -165,13 +164,13 @@ export class CaptureRepository {
   }
 
   createJob(captureId: string, config: StoredJobConfig): {
-    job: ScrapeJobSummary;
+    job: FetchJobSummary;
     jobId: string;
   } {
     const timestamp = new Date();
     const jobId = randomUUID();
 
-    this.db.insert(scrapeJobs).values({
+    this.db.insert(fetchJobs).values({
       id: jobId,
       captureId,
       fetcher: config.fetcher,
@@ -187,7 +186,7 @@ export class CaptureRepository {
 
     const job = this.findJob(jobId);
     if (!job) {
-      throw new Error('Scrape job was not created');
+      throw new Error('Fetch job was not created');
     }
 
     return {
@@ -210,9 +209,9 @@ export class CaptureRepository {
     }
 
     this.db
-      .update(scrapeJobs)
+      .update(fetchJobs)
       .set({ deletedAt: timestamp, updatedAt: timestamp })
-      .where(and(eq(scrapeJobs.captureId, captureId), isNull(scrapeJobs.deletedAt)))
+      .where(and(eq(fetchJobs.captureId, captureId), isNull(fetchJobs.deletedAt)))
       .run();
 
     return true;
@@ -230,17 +229,17 @@ export class CaptureRepository {
     return rows.length === 0 ? null : toCaptureSummary(rows[0]);
   }
 
-  listJobs(captureId: string): ScrapeJobSummary[] {
+  listJobs(captureId: string): FetchJobSummary[] {
     return this.db
       .select()
-      .from(scrapeJobs)
-      .where(and(eq(scrapeJobs.captureId, captureId), isNull(scrapeJobs.deletedAt)))
-      .orderBy(desc(scrapeJobs.createdAt))
+      .from(fetchJobs)
+      .where(and(eq(fetchJobs.captureId, captureId), isNull(fetchJobs.deletedAt)))
+      .orderBy(desc(fetchJobs.createdAt))
       .all()
       .map((row) => toJobSummary(row));
   }
 
-  getJob(captureId: string, jobId: string): ScrapeJobSummary | null {
+  getJob(captureId: string, jobId: string): FetchJobSummary | null {
     const context = this.getJobContext(jobId);
     return context?.capture.id === captureId ? toJobSummary(context.job) : null;
   }
@@ -257,9 +256,9 @@ export class CaptureRepository {
 
   markRunning(jobId: string): void {
     this.db
-      .update(scrapeJobs)
+      .update(fetchJobs)
       .set({ status: 'running', updatedAt: new Date() })
-      .where(and(eq(scrapeJobs.id, jobId), eq(scrapeJobs.status, 'pending')))
+      .where(and(eq(fetchJobs.id, jobId), eq(fetchJobs.status, 'pending')))
       .run();
   }
 
@@ -272,7 +271,7 @@ export class CaptureRepository {
     const timestamp = new Date();
 
     this.db.transaction((tx) => {
-      tx.update(scrapeJobs)
+      tx.update(fetchJobs)
         .set({
           status: 'succeeded',
           rawResponseJson: JSON.stringify(rawResponse),
@@ -280,7 +279,7 @@ export class CaptureRepository {
           errorMessage: null,
           updatedAt: timestamp,
         })
-        .where(eq(scrapeJobs.id, jobId))
+        .where(eq(fetchJobs.id, jobId))
         .run();
 
       tx.update(captures)
@@ -300,29 +299,29 @@ export class CaptureRepository {
     errorMessage: string,
   ): void {
     this.db
-      .update(scrapeJobs)
+      .update(fetchJobs)
       .set({
         status: 'failed',
         errorCode,
         errorMessage,
         updatedAt: new Date(),
       })
-      .where(eq(scrapeJobs.id, jobId))
+      .where(eq(fetchJobs.id, jobId))
       .run();
   }
 
   recoverRunningJobs(): number {
     const rows = this.db
-      .select({ id: scrapeJobs.id })
-      .from(scrapeJobs)
-      .where(and(eq(scrapeJobs.status, 'running'), isNull(scrapeJobs.deletedAt)))
+      .select({ id: fetchJobs.id })
+      .from(fetchJobs)
+      .where(and(eq(fetchJobs.status, 'running'), isNull(fetchJobs.deletedAt)))
       .all();
 
     if (rows.length > 0) {
       this.db
-        .update(scrapeJobs)
+        .update(fetchJobs)
         .set({ status: 'pending' })
-        .where(and(eq(scrapeJobs.status, 'running'), isNull(scrapeJobs.deletedAt)))
+        .where(and(eq(fetchJobs.status, 'running'), isNull(fetchJobs.deletedAt)))
         .run();
     }
 
@@ -331,10 +330,10 @@ export class CaptureRepository {
 
   pendingJobIDs(): string[] {
     return this.db
-      .select({ id: scrapeJobs.id })
-      .from(scrapeJobs)
-      .where(and(eq(scrapeJobs.status, 'pending'), isNull(scrapeJobs.deletedAt)))
-      .orderBy(scrapeJobs.createdAt)
+      .select({ id: fetchJobs.id })
+      .from(fetchJobs)
+      .where(and(eq(fetchJobs.status, 'pending'), isNull(fetchJobs.deletedAt)))
+      .orderBy(fetchJobs.createdAt)
       .all()
       .map((row) => row.id);
   }
@@ -352,12 +351,12 @@ function toCaptureSummary(row: CaptureRow): CaptureSummary {
   };
 }
 
-function toJobSummary(row: ScrapeJobRow): ScrapeJobSummary {
+function toJobSummary(row: FetchJobRow): FetchJobSummary {
   return {
     id: row.id,
     captureId: row.captureId,
-    status: row.status as ScrapeJobSummary['status'],
-    fetcher: row.fetcher as ScrapeJobSummary['fetcher'],
+    status: row.status as FetchJobSummary['status'],
+    fetcher: row.fetcher as FetchJobSummary['fetcher'],
     errorCode: row.errorCode,
     errorMessage: row.errorMessage,
     createdAt: row.createdAt.toISOString(),
@@ -365,41 +364,14 @@ function toJobSummary(row: ScrapeJobRow): ScrapeJobSummary {
   };
 }
 
-function toCaptureContent(row: ScrapeJobRow): CaptureContent | null {
-  if (!row.rawResponseJson) {
+function parseRawResponse(value: string | null): unknown {
+  if (!value) {
     return null;
   }
 
   try {
-    const response: unknown = JSON.parse(row.rawResponseJson);
-    if (!isRecord(response)) {
-      return null;
-    }
-
-    const markdown = typeof response.markdown === 'string'
-      ? response.markdown
-      : (typeof response.content === 'string'
-          ? response.content
-          : null);
-
-    if (markdown === null) {
-      return null;
-    }
-
-    return {
-      jobId: row.id,
-      markdown: row.fetcher === 'deepseek' ? unescapeDeepSeekMarkdown(markdown) : markdown,
-    };
+    return JSON.parse(value) as unknown;
   } catch {
     return null;
   }
-}
-
-function unescapeDeepSeekMarkdown(value: string): string {
-  return value.replaceAll(/\\(.)/g, (match, character: string) =>
-    (/\p{P}/u).test(character) ? character : match);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

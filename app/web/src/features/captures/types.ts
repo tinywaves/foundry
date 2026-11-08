@@ -1,5 +1,4 @@
 export type {
-  CaptureContent,
   CaptureCounts,
   CaptureDetail,
   CaptureErrorCode,
@@ -8,6 +7,6 @@ export type {
   CaptureSummary,
   CreateCaptureInput,
   CreateCaptureResult,
-  ScrapeJobStatus,
-  ScrapeJobSummary,
+  FetchJobStatus,
+  FetchJobSummary,
 } from '../../shared/captures';

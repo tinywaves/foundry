@@ -5,7 +5,7 @@ Project guidance for coding agents working on Foundry.
 ## Product Contract
 
 Foundry is a local personal workbench distributed as a CLI, not as a JavaScript
-library. The CLI exposes settings, providers, captures, scrape jobs, and
+library. The CLI exposes settings, providers, captures, fetch jobs, and
 encrypted data transfer as JSON commands. It can also copy the bundled agent
 skill into `<home>/.agents/skills/foundry`,
 `<home>/.claude/skills/foundry`, or both. `foundry web` prepares local storage,
@@ -98,7 +98,7 @@ Keep CLI and server responsibilities separate:
 - This local-only Web UI returns stored provider and capture API keys so edit
   forms can repopulate credentials and provider model discovery can run
   automatically. Do not log keys or expose them outside API responses.
-- Keep capture job execution and retries in `ScrapeJobRunner`, not in route
+- Keep capture job execution and retries in `FetchJobRunner`, not in route
   handlers.
 - Skill copy targets are fixed user-level keys: `agents` maps to
   `<home>/.agents/skills/foundry`, and `claude` maps to

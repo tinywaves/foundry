@@ -23,14 +23,9 @@ export type CaptureSummary = {
   updatedAt: string;
 };
 
-export type CaptureContent = {
-  jobId: string;
-  markdown: string;
-};
-
 export type CaptureDetail = {
   capture: CaptureSummary;
-  content: CaptureContent | null;
+  rawResponse: unknown;
 };
 
 export type CreateCaptureInput = {
@@ -42,12 +37,12 @@ export type CreateCaptureResult = {
   capture: CaptureSummary;
 };
 
-export type ScrapeJobStatus = 'pending' | 'running' | 'succeeded' | 'failed';
+export type FetchJobStatus = 'pending' | 'running' | 'succeeded' | 'failed';
 
-export type ScrapeJobSummary = {
+export type FetchJobSummary = {
   id: string;
   captureId: string;
-  status: ScrapeJobStatus;
+  status: FetchJobStatus;
   fetcher: FetcherType;
   errorCode: string | null;
   errorMessage: string | null;

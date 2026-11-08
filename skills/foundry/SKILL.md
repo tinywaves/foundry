@@ -1,6 +1,6 @@
 ---
 name: foundry
-description: Operate the local Foundry CLI for settings, model providers, saved page captures and their scrape jobs, or encrypted backup export/import. Use when a task asks to inspect or change Foundry data, capture web content into Foundry, investigate capture jobs, or transfer Foundry data; start the Web UI only when the user explicitly needs it.
+description: Operate the local Foundry CLI for settings, model providers, saved link captures and their fetch jobs, or encrypted backup export/import. Use when a task asks to inspect or change Foundry data, save a URL as an agent-facing bookmark, investigate capture jobs, or transfer Foundry data; start the Web UI only when the user explicitly needs it.
 ---
 
 # Foundry
@@ -20,18 +20,18 @@ Read only the references needed for the current request.
 | Invocation, JSON conventions, IDs, stdin, the Web UI | [references/cli-conventions.md](references/cli-conventions.md) |
 | Appearance, language, timezone, capture fetcher configuration | [references/settings.md](references/settings.md) |
 | List, create, update, disable, or discover models for providers | [references/providers.md](references/providers.md) |
-| Captures, capture detail, notes, recapture, or child scrape jobs | [references/captures.md](references/captures.md) |
+| Captures, capture detail, notes, recapture, or child fetch jobs | [references/captures.md](references/captures.md) |
 | Encrypted export, preview, or destructive restore | [references/data-transfer.md](references/data-transfer.md) |
 
 ## Core Model
 
 - A **provider** has a stable provider ID and model-discovery configuration.
-- A **capture** has a stable capture ID, URL, note, and latest successful
-  content job.
-- A **scrape job** is a child of exactly one capture. Its canonical command path
+- A **capture** is an agent-facing bookmark: a URL plus a response from the
+  configured fetcher that explains what the URL is about.
+- A **fetch job** is a child of exactly one capture. Its canonical command path
   is `foundry captures jobs ...`; there is no global jobs command.
 - A successful capture command returns `capture.id`, `job.id`,
-  `job.status`, and `content.markdown`.
+  `job.status`, and the raw fetcher response in `rawResponse`.
 - CLI timestamps are ISO-8601 strings. The CLI does not apply the user's display
   time format or timezone; that formatting belongs to the Web UI.
 - Capture and provider records intentionally expose stored API keys in JSON
@@ -92,13 +92,13 @@ foundry data-transfer import <path>
 groups. Run `foundry <command> --help` when the installed version may differ
 from these references.
 
-## Workflow: Capture A Page
+## Workflow: Capture A Link
 
 1. Read `settings get`; if no capture fetcher is selected or its API key is
    empty, update settings first.
 2. Run `captures create <url> --note <text>`.
 3. Inspect the returned `job.status`.
-4. On success, use the returned `content.markdown` directly or fetch it again
+4. On success, inspect the returned `rawResponse` or fetch it again
    later with `captures get <capture-id>`.
 5. On failure, read the job reference and investigate through
    `captures jobs get`.

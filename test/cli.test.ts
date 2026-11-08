@@ -151,16 +151,24 @@ it('copies the bundled Foundry skill through the CLI', async () => {
   }
 });
 
-it('captures a URL and returns the scraped Markdown', async () => {
+it('captures a URL and returns the Firecrawl Search response', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-cli-capture-'));
   stubHome(directory);
-  const fetchMock = vi.fn<typeof fetch>(() =>
-    Promise.resolve(Response.json({
-      data: {
-        markdown: '# CLI capture',
-        metadata: { title: 'Captured from CLI' },
-      },
-    })));
+  const rawResponse = {
+    success: true,
+    data: {
+      web: [
+        {
+          url: 'https://example.com/cli',
+          title: 'Captured from CLI',
+          description: 'Captured from the command line',
+          metadata: { sourceURL: 'https://example.com/cli', statusCode: 200 },
+        },
+      ],
+    },
+    creditsUsed: 2,
+  };
+  const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(Response.json(rawResponse)));
   vi.stubGlobal('fetch', fetchMock);
 
   try {
@@ -184,7 +192,7 @@ it('captures a URL and returns the scraped Markdown', async () => {
       'CLI note',
     ]) as {
       capture: { id: string; title: string; userNote: string };
-      content: { markdown: string };
+      rawResponse: typeof rawResponse;
       job: { id: string; status: string };
     };
     expect(captured).toMatchObject({
@@ -192,9 +200,7 @@ it('captures a URL and returns the scraped Markdown', async () => {
         title: 'Captured from CLI',
         userNote: 'CLI note',
       },
-      content: {
-        markdown: '# CLI capture',
-      },
+      rawResponse,
       job: {
         status: 'succeeded',
       },

@@ -43,8 +43,8 @@ export const captures = sqliteTable(
   ],
 );
 
-export const scrapeJobs = sqliteTable(
-  'scrape_jobs',
+export const fetchJobs = sqliteTable(
+  'fetch_jobs',
   {
     id: text('id').primaryKey().notNull(),
     captureId: text('capture_id')
@@ -61,9 +61,9 @@ export const scrapeJobs = sqliteTable(
     deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
   },
   (table) => [
-    uniqueIndex('scrape_jobs_one_active_per_capture')
+    uniqueIndex('fetch_jobs_one_active_per_capture')
       .on(table.captureId)
       .where(sql`${table.status} in ('pending', 'running') and ${table.deletedAt} is null`),
-    index('scrape_jobs_capture_created_at_idx').on(table.captureId, table.createdAt),
+    index('fetch_jobs_capture_created_at_idx').on(table.captureId, table.createdAt),
   ],
 );

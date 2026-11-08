@@ -69,9 +69,8 @@ export function setLibrary(patch: Partial<LibrarySettings>): Promise<SettingsSna
       ? {
           fetcher: captures.fetcher,
           maxAttempts: captures.maxAttempts,
-          scrapeConcurrency: captures.scrapeConcurrency,
+          fetchConcurrency: captures.fetchConcurrency,
           firecrawlApiKey: captures.firecrawl.apiKey,
-          deepseekApiKey: captures.deepseek.apiKey,
         }
       : undefined,
   });
@@ -99,9 +98,8 @@ function normalizeSettings(
       captures: {
         fetcher: SettingsSnapshot['features']['library']['captures']['fetcher'];
         maxAttempts: number;
-        scrapeConcurrency: number;
+        fetchConcurrency: number;
         firecrawl: { apiKey: string };
-        deepseek: { apiKey: string };
       };
       [key: string]: unknown;
     };
@@ -119,9 +117,6 @@ function normalizeSettings(
           ...captures,
           firecrawl: {
             apiKey: captures.firecrawl.apiKey,
-          },
-          deepseek: {
-            apiKey: captures.deepseek.apiKey,
           },
         },
       },

@@ -23,7 +23,7 @@ accepted but may expose the secret in shell history or process inspection.
 }
 ```
 
-`activeJobCount` counts pending/running scrape jobs. Export, inspect, and import
+`activeJobCount` counts pending/running fetch jobs. Export, inspect, and import
 are blocked when the current Foundry database has active jobs. Concurrent
 transfers return `BUSY`.
 
@@ -104,7 +104,7 @@ Import performs inspection and commit in one process:
 1. Validate current state has no active jobs.
 2. Decrypt and validate the archive.
 3. Stage the imported database and settings.
-4. Replace current providers, captures, scrape jobs, and settings in a
+4. Replace current providers, captures, fetch jobs, and settings in a
    transaction where applicable.
 
 This operation is destructive: the current Foundry database and settings are

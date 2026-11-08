@@ -7,7 +7,7 @@ import type {
   CaptureSummary,
   CreateCaptureInput,
   CreateCaptureResult,
-  ScrapeJobSummary,
+  FetchJobSummary,
 } from './types';
 import { errorResult, requestJSON } from '../../lib/api';
 import { formatRecordTimes } from '../../lib/format-time';
@@ -75,10 +75,10 @@ export async function createCapture(
 
 export async function recapture(
   captureId: string,
-): Promise<CaptureResult<ScrapeJobSummary>> {
+): Promise<CaptureResult<FetchJobSummary>> {
   try {
     const [data, settings] = await Promise.all([
-      requestJSON<ScrapeJobSummary>(
+      requestJSON<FetchJobSummary>(
         `/api/captures/${captureId}/recapture`,
         { method: 'POST' },
       ),
@@ -123,12 +123,12 @@ export async function updateCaptureNote(
   }
 }
 
-export async function listScrapeJobs(
+export async function listFetchJobs(
   captureId: string,
-): Promise<CaptureResult<ScrapeJobSummary[]>> {
+): Promise<CaptureResult<FetchJobSummary[]>> {
   try {
     const [data, settings] = await Promise.all([
-      requestJSON<ScrapeJobSummary[]>(`/api/captures/${captureId}/jobs`),
+      requestJSON<FetchJobSummary[]>(`/api/captures/${captureId}/jobs`),
       getCachedSettings(),
     ]);
     return {

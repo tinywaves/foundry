@@ -32,9 +32,8 @@ folder and returns its path.
       "captures": {
         "fetcher": null,
         "maxAttempts": 1,
-        "scrapeConcurrency": 2,
-        "firecrawl": { "apiKey": "" },
-        "deepseek": { "apiKey": "" }
+        "fetchConcurrency": 2,
+        "firecrawl": { "apiKey": "" }
       }
     }
   },
@@ -56,11 +55,10 @@ Allowed fields:
 | `language` | `system`, `en-US`, `zh-CN`, `zh-TW`, `ja-JP` |
 | `timeFormat` | `YYYY-MM-DD HH:mm:ss`, `YYYY-MM-DD`, `YYYY/MM/DD HH:mm:ss`, `DD/MM/YYYY HH:mm:ss`, `MM/DD/YYYY hh:mm:ss A`, `HH:mm:ss` |
 | `timezone` | `America/Los_Angeles`, `America/New_York`, `Asia/Shanghai`, `Asia/Taipei`, `Asia/Tokyo`, `UTC` |
-| `captures.fetcher` | `firecrawl`, `deepseek`, or `null` |
+| `captures.fetcher` | `firecrawl` or `null` |
 | `captures.maxAttempts` | integer `1..10` |
-| `captures.scrapeConcurrency` | integer `1..5` |
+| `captures.fetchConcurrency` | integer `1..5` |
 | `captures.firecrawlApiKey` | string, trimmed |
-| `captures.deepseekApiKey` | string, trimmed |
 
 The nested patch object is:
 
@@ -69,9 +67,8 @@ The nested patch object is:
   "captures": {
     "fetcher": "firecrawl",
     "maxAttempts": 2,
-    "scrapeConcurrency": 2,
-    "firecrawlApiKey": "<key>",
-    "deepseekApiKey": "<key>"
+    "fetchConcurrency": 2,
+    "firecrawlApiKey": "<key>"
   }
 }
 ```
@@ -90,7 +87,7 @@ may be ignored, so verify the returned settings after a mutation.
 - The update response contains the complete resulting settings plus
   `configFolder`.
 - Appearance, language, and display-time settings affect the Web UI rendering.
-- Capture fetcher, retry count, and concurrency affect newly scheduled scrape
+- Capture fetcher, retry count, and concurrency affect newly scheduled fetch
   jobs.
 
 ## Examples
@@ -113,7 +110,7 @@ foundry settings update --input '{
     "fetcher": "firecrawl",
     "firecrawlApiKey": "<key>",
     "maxAttempts": 2,
-    "scrapeConcurrency": 2
+    "fetchConcurrency": 2
   }
 }'
 ```

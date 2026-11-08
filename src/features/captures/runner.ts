@@ -1,6 +1,6 @@
 import { readStoredSettings } from '../settings/repository';
 import type { CaptureJobChangedEvent } from './events';
-import { scrapePage } from './fetchers';
+import { fetchCapture } from './fetchers';
 import { normalizeFetcherError } from './fetchers/error';
 import type { StoredJobConfig } from './contracts';
 import type { CaptureRepository } from './repository';
@@ -8,7 +8,7 @@ import type { CaptureRepository } from './repository';
 const RETRY_BASE_DELAY_MS = 1000;
 const RETRY_MAX_DELAY_MS = 30_000;
 
-export class ScrapeJobRunner {
+export class FetchJobRunner {
   private readonly queue: string[] = [];
   private readonly knownJobIDs = new Set<string>();
   private runningCount = 0;
@@ -27,7 +27,7 @@ export class ScrapeJobRunner {
 
     const concurrency = readStoredSettings(
       this.settingsPath,
-    ).features.library.captures.scrapeConcurrency;
+    ).features.library.captures.fetchConcurrency;
 
     while (this.runningCount < concurrency && this.queue.length > 0) {
       const jobId = this.queue.shift();
@@ -54,7 +54,7 @@ export class ScrapeJobRunner {
     try {
       config = parseStoredConfig(context.job.configSnapshot);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Invalid scrape job configuration';
+      const message = error instanceof Error ? error.message : 'Invalid fetch job configuration';
       this.failJob(jobId, context.job.captureId, 'invalid_config', message);
       return;
     }
@@ -68,7 +68,7 @@ export class ScrapeJobRunner {
 
     for (let attempt = 1; attempt <= config.maxAttempts; attempt += 1) {
       try {
-        const result = await scrapePage(context.capture.url, config);
+        const result = await fetchCapture(context.capture.url, config);
         this.repository.markSucceeded(
           jobId,
           context.capture.id,
@@ -159,12 +159,12 @@ function parseStoredConfig(value: string): StoredJobConfig {
   const parsed: unknown = JSON.parse(value);
   if (
     !isRecord(parsed)
-    || (parsed.fetcher !== 'firecrawl' && parsed.fetcher !== 'deepseek')
+    || parsed.fetcher !== 'firecrawl'
     || typeof parsed.apiKey !== 'string'
     || !parsed.apiKey
     || typeof parsed.maxAttempts !== 'number'
   ) {
-    throw new Error('Invalid scrape job configuration');
+    throw new Error('Invalid fetch job configuration');
   }
 
   return {

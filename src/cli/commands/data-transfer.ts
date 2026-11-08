@@ -23,7 +23,7 @@ import {
 const status = defineCommand({
   meta: {
     name: 'status',
-    description: 'Read data-transfer and scrape-job status',
+    description: 'Read data-transfer and fetch-job status',
   },
   run() {
     return runCliAction(({ runtime }) =>

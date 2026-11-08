@@ -11,17 +11,18 @@ import { Table, pixel } from '@astryxdesign/core/Table';
 import type { TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
-import type { ScrapeJobStatus, ScrapeJobSummary } from './types';
+import type { FetchJobStatus, FetchJobSummary } from './types';
 import {
   captureKeys,
-  listScrapeJobs,
+  listFetchJobs,
   recapture,
 } from './api';
 import { captureErrorKey, useI18n } from '../../i18n';
+import { fetcherLabelKey } from '../../i18n/fetchers';
 import { useAppToast } from '../../lib/api';
 import { TitlebarActions } from '../../components/titlebar-actions';
 
-const statusVariant: Record<ScrapeJobStatus, 'neutral' | 'success' | 'error'> = {
+const statusVariant: Record<FetchJobStatus, 'neutral' | 'success' | 'error'> = {
   pending: 'neutral',
   running: 'neutral',
   succeeded: 'success',
@@ -35,7 +36,7 @@ export default function JobsPage() {
   const toast = useAppToast();
   const jobsQuery = useQuery({
     queryKey: captureKeys.jobs(captureId),
-    queryFn: () => listScrapeJobs(captureId),
+    queryFn: () => listFetchJobs(captureId),
     enabled: Boolean(captureId),
   });
   const recaptureMutation = useMutation({
@@ -62,7 +63,7 @@ export default function JobsPage() {
     void queryClient.invalidateQueries({ queryKey: captureKeys.jobs(captureId) });
   };
 
-  const columns = useMemo<Array<TableColumn<ScrapeJobSummary>>>(() => [
+  const columns = useMemo<Array<TableColumn<FetchJobSummary>>>(() => [
     {
       key: 'status',
       header: t('captures.jobStatus'),
@@ -79,7 +80,7 @@ export default function JobsPage() {
       header: t('captures.fetcher'),
       width: pixel(160),
       renderCell: (job) => (
-        <Text>{job.fetcher === 'firecrawl' ? 'Firecrawl' : 'DeepSeek Fetch'}</Text>
+        <Text>{t(fetcherLabelKey(job.fetcher))}</Text>
       ),
     },
     {
@@ -150,7 +151,7 @@ export default function JobsPage() {
               />
             )
           : (
-              <Table<ScrapeJobSummary>
+              <Table<FetchJobSummary>
                 data={jobs}
                 columns={columns}
                 idKey="id"

@@ -1,5 +1,14 @@
 # Captures
 
+A capture is an agent-facing bookmark. It records what a saved URL is about so
+an agent can decide whether the URL is relevant and then visit it or run a fresh
+web search for details.
+
+Foundry does not store a page copy as the primary capture result. It sends one
+capture-discovery request through the configured fetcher and stores the raw
+response. The response contains result titles, descriptions, metadata, and
+summaries that help identify the product, library, or resource.
+
 ## Commands
 
 ```bash
@@ -24,14 +33,18 @@ nested job `get` supports `show`.
 ```json
 {
   "id": "<capture-id>",
-  "url": "https://example.com/article",
-  "title": "Article title",
-  "userNote": "Read later",
+  "url": "https://ui.shadcn.com/",
+  "title": "shadcn/ui - The Foundation for your Design System",
+  "userNote": "Components for the next project",
   "latestSuccessfulJobId": "<job-id>",
   "createdAt": "<iso>",
   "updatedAt": "<iso>"
 }
 ```
+
+The title comes from the best matching fetcher result. Exact URL results are
+preferred, then the same site's homepage, then the first result on the same
+site.
 
 ## Capture Detail
 
@@ -41,22 +54,60 @@ nested job `get` supports `show`.
 {
   "capture": {
     "id": "<capture-id>",
-    "url": "https://example.com/article",
-    "title": "Article title",
-    "userNote": "Read later",
+    "url": "https://ui.shadcn.com/",
+    "title": "shadcn/ui - The Foundation for your Design System",
+    "userNote": "Components for the next project",
     "latestSuccessfulJobId": "<job-id>",
     "createdAt": "<iso>",
     "updatedAt": "<iso>"
   },
-  "content": {
-    "jobId": "<job-id>",
-    "markdown": "# Article"
+  "rawResponse": {
+    "success": true,
+    "data": {
+      "web": [
+        {
+          "url": "https://ui.shadcn.com/",
+          "title": "shadcn/ui - The Foundation for your Design System",
+          "description": "Composable, accessible components...",
+          "summary": "The fetcher's longer page summary...",
+          "metadata": {
+            "sourceURL": "https://ui.shadcn.com/",
+            "statusCode": 200
+          }
+        }
+      ]
+    },
+    "creditsUsed": 2
   }
 }
 ```
 
-`content` is the latest successful scrape content. It is `null` when no job has
-succeeded yet or the stored response has no usable Markdown/content string.
+`rawResponse` is the unmodified response from the configured fetcher. It is
+`null` until a job succeeds. The response shape depends on that fetcher; use
+result metadata and descriptions as supporting evidence rather than treating
+any generated summary as the canonical product description.
+
+## Fetcher Behavior
+
+The current fetcher implementation is Firecrawl Search. A fetch job sends one
+request to `POST https://api.firecrawl.dev/v2/search` with a query derived from
+the submitted URL:
+
+- Root URL: `site:<hostname> <brand-token>`
+- Path URL: `site:<hostname> <last-meaningful-path-segment>`
+
+Examples:
+
+| URL | Query |
+| --- | --- |
+| `https://ui.shadcn.com/` | `site:ui.shadcn.com shadcn` |
+| `https://ui.shadcn.com/docs` | `site:ui.shadcn.com docs` |
+| `https://models.dev/labs/apodex/` | `site:models.dev apodex` |
+| `https://github.com/vercel/next.js` | `site:github.com next.js` |
+
+The request uses five web results, `formats: ["summary"]`, main-content
+filtering, cache reuse, ad blocking, automatic proxy selection, and a
+two-day `maxAge`.
 
 ## Child Jobs
 
@@ -92,114 +143,51 @@ Job shape:
 Statuses:
 
 - `pending`: queued, not started.
-- `running`: scrape request in progress.
-- `succeeded`: scrape completed and latest successful job pointer may be set.
-- `failed`: scrape exhausted its attempt or failed non-retryably.
+- `running`: fetcher request in progress.
+- `succeeded`: fetch completed and raw response persisted.
+- `failed`: search exhausted its attempts or failed non-retryably.
 
-The job response does not include captured Markdown. Use
-`foundry captures get <capture-id>` for the latest successful content.
+The job response does not include the raw response. Use
+`foundry captures get <capture-id>` for the latest successful response.
 
-`jobs list` returns the capture's non-deleted jobs, newest first. This matches
-the Web UI Jobs page. An existing capture with no jobs returns `[]`.
+`jobs list` returns the capture's non-deleted jobs, newest first. An existing
+capture with no jobs returns `[]`.
 
 `jobs recapture` creates a new job with the current fetcher configuration, waits
 for it to reach `succeeded` or `failed`, and returns the final job summary.
-Preconditions are the same as capture recapture: the capture exists, no active
-job already exists, and the current fetcher/API key are configured.
-
-The Web UI Jobs page supports listing status, fetcher, created/updated time,
-and error details; refresh by rerunning `jobs list`; and recapture. It does not
-expose cancel, delete, retry-in-place, or a global job list. The CLI deliberately
-matches those capabilities.
-
-## List And Counts
-
-```bash
-foundry captures list
-foundry captures list --filter no-successful
-foundry captures counts
-```
-
-Filters:
-
-- `all`: every non-deleted capture.
-- `no-successful`: captures with no latest successful job.
-
-Counts shape:
-
-```json
-{
-  "all": 6,
-  "noSuccessful": 1
-}
-```
 
 ## Create
 
 ```bash
-foundry captures create https://example.com/article --note "Read later"
+foundry captures create https://ui.shadcn.com/ --note "Component library"
 ```
 
 Preconditions:
 
-- `settings.features.library.captures.fetcher` must be `firecrawl` or `deepseek`.
-- The selected fetcher's API key must be non-empty.
-- URL must be HTTP or HTTPS after trimming whitespace.
+- `settings.features.library.captures.fetcher` must be `firecrawl` or `null`.
+- The configured fetcher API key must be non-empty.
+- The URL must be HTTP or HTTPS after trimming whitespace.
 - The same normalized URL cannot already have an active capture.
 
-The command creates the capture, queues its first scrape job, waits until that
-job reaches `succeeded` or `failed`, and returns:
+The command creates the capture, queues its first fetch job, waits until that
+job reaches `succeeded` or `failed`, and returns `capture`, `rawResponse`, and
+`job`.
 
-```json
-{
-  "capture": {
-    "id": "<capture-id>",
-    "url": "https://example.com/article",
-    "title": "Article title",
-    "userNote": "Read later",
-    "latestSuccessfulJobId": "<job-id>",
-    "createdAt": "<iso>",
-    "updatedAt": "<iso>"
-  },
-  "content": {
-    "jobId": "<job-id>",
-    "markdown": "# Article"
-  },
-  "job": {
-    "id": "<job-id>",
-    "captureId": "<capture-id>",
-    "status": "succeeded",
-    "fetcher": "firecrawl",
-    "errorCode": null,
-    "errorMessage": null,
-    "createdAt": "<iso>",
-    "updatedAt": "<iso>"
-  }
-}
-```
-
-Important: a completed create command can return `job.status: "failed"` and
-`content: null`. That is a scrape failure, not a capture-create failure. Read
-`errorCode` and `errorMessage`.
+A completed create command can return `job.status: "failed"` and
+`rawResponse: null`. That is a discovery failure, not a capture-create failure.
+Read `errorCode` and `errorMessage`.
 
 ## Recapture
 
-```bash
-foundry captures recapture <capture-id>
-```
-
-This creates a new child job, waits for completion, and returns the same
-`capture`, `content`, and `job` structure as `captures create`.
+`foundry captures recapture <capture-id>` creates a new child job, waits for
+completion, and returns the same `capture`, `rawResponse`, and `job` structure
+as `captures create`.
 
 Preconditions:
 
 - The capture must exist.
 - No pending or running job may already exist for it.
-- The current capture fetcher and key must be configured.
-
-This is the capture-level equivalent of `captures jobs recapture`; it returns
-the capture detail along with the final job, while the nested jobs command
-returns only the final job.
+- The current fetcher and its API key must be configured.
 
 ## Update Note
 
@@ -212,10 +200,6 @@ Notes are trimmed. An empty string stores `null` and clears the note.
 
 ## Delete
 
-```bash
-foundry captures delete <capture-id>
-```
-
 Deletion is soft deletion of the capture and its jobs. It is blocked while a
 pending or running job exists. Response:
 
@@ -226,16 +210,14 @@ pending or running job exists. Response:
 }
 ```
 
-Deleting the capture also removes its job history from normal queries.
-
 ## Errors
 
 - `INVALID_URL`: URL is not HTTP or HTTPS.
 - `CAPTURE_ALREADY_EXISTS`: active capture with the same URL exists.
-- `FETCHER_NOT_CONFIGURED`: no capture fetcher/key configured.
+- `FETCHER_NOT_CONFIGURED`: no fetcher or fetcher API key is configured.
 - `ACTIVE_JOB_EXISTS`: capture already has pending/running work.
 - `CAPTURE_NOT_FOUND`: unknown or deleted capture.
 - `JOB_NOT_FOUND`: unknown job or a job owned by another capture.
 
 Job failures are returned as a valid final job with `status: "failed"`; do not
-assume a successful command means a successful scrape.
+assume a successful command means a successful fetcher response.

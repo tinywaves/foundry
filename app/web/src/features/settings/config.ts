@@ -84,7 +84,7 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
     icon: BugAntIcon,
   },
   {
-    id: 'scrape-concurrency',
+    id: 'fetch-concurrency',
     titleKey: 'settings.capturesConcurrency',
     descriptionKey: 'settings.capturesConcurrencyDescription',
     panel: 'library',

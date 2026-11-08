@@ -20,9 +20,8 @@ function settings(
         captures: {
           fetcher: null,
           maxAttempts: 1,
-          scrapeConcurrency: 1,
+          fetchConcurrency: 1,
           firecrawl: { apiKey: '' },
-          deepseek: { apiKey: '' },
         },
       },
     },

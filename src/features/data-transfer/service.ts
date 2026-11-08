@@ -18,10 +18,10 @@ import {
   readDatabaseSchemaVersion,
 } from '../../storage/database';
 import type { FoundryDatabase } from '../../storage/database';
-import { captures, providers, scrapeJobs } from '../../storage/schema';
+import { captures, fetchJobs, providers } from '../../storage/schema';
 import { parseProviderInput } from '../providers/contracts';
 import { readStoredSettings, writeSettings } from '../settings/repository';
-import type { ScrapeJobRunner } from '../captures/runner';
+import type { FetchJobRunner } from '../captures/runner';
 import {
   DATA_EXPORT_SETTINGS_VERSION,
 } from './contracts';
@@ -61,7 +61,7 @@ export class DataTransferService {
   constructor(
     private readonly database: FoundryDatabase,
     private readonly settingsPath: string,
-    private readonly runner: ScrapeJobRunner,
+    private readonly runner: FetchJobRunner,
     private readonly temporaryRoot: string,
     private readonly appVersion: string,
     readonly workspaceMutationGate: WorkspaceMutationGate,
@@ -318,13 +318,13 @@ export class DataTransferService {
 
           const providerRows = stagedDatabase.db.select().from(providers).all();
           const captureRows = stagedDatabase.db.select().from(captures).all();
-          const jobRows = stagedDatabase.db.select().from(scrapeJobs).all();
+          const jobRows = stagedDatabase.db.select().from(fetchJobs).all();
           const importedSettings = readStoredSettings(staged.settingsPath);
 
           writeSettings(importedSettings, this.settingsPath);
           isSettingsWritten = true;
           this.database.db.transaction((tx) => {
-            tx.delete(scrapeJobs).run();
+            tx.delete(fetchJobs).run();
             tx.delete(captures).run();
             tx.delete(providers).run();
             if (providerRows.length > 0) {
@@ -334,7 +334,7 @@ export class DataTransferService {
               tx.insert(captures).values(captureRows).run();
             }
             if (jobRows.length > 0) {
-              tx.insert(scrapeJobs).values(jobRows).run();
+              tx.insert(fetchJobs).values(jobRows).run();
             }
           });
         } finally {
@@ -372,10 +372,10 @@ function assertPassphrase(passphrase: string): void {
 function countActiveJobs(db: FoundryDatabase['db']): number {
   return db
     .select({ total: count() })
-    .from(scrapeJobs)
+    .from(fetchJobs)
     .where(and(
-      inArray(scrapeJobs.status, ['pending', 'running']),
-      isNull(scrapeJobs.deletedAt),
+      inArray(fetchJobs.status, ['pending', 'running']),
+      isNull(fetchJobs.deletedAt),
     ))
     .get()
     ?.total ?? 0;
@@ -385,7 +385,7 @@ function assertNoActiveJobs(db: FoundryDatabase['db']): void {
   if (countActiveJobs(db) > 0) {
     throw new DataTransferError(
       'ACTIVE_JOBS',
-      'Finish active scrape jobs before transferring data',
+      'Finish active fetch jobs before transferring data',
     );
   }
 }
@@ -394,7 +394,7 @@ function countRecords(db: FoundryDatabase['db']) {
   return {
     providers: db.select({ total: count() }).from(providers).get()?.total ?? 0,
     captures: db.select({ total: count() }).from(captures).get()?.total ?? 0,
-    jobs: db.select({ total: count() }).from(scrapeJobs).get()?.total ?? 0,
+    jobs: db.select({ total: count() }).from(fetchJobs).get()?.total ?? 0,
   };
 }
 
@@ -458,16 +458,16 @@ function validateCapturePointers(db: FoundryDatabase['db']): void {
     }
     const job = db
       .select({
-        captureId: scrapeJobs.captureId,
-        status: scrapeJobs.status,
+        captureId: fetchJobs.captureId,
+        status: fetchJobs.status,
       })
-      .from(scrapeJobs)
-      .where(eq(scrapeJobs.id, capture.latestSuccessfulJobId))
+      .from(fetchJobs)
+      .where(eq(fetchJobs.id, capture.latestSuccessfulJobId))
       .get();
     if (job?.captureId !== capture.id || job.status !== 'succeeded') {
       throw new DataTransferError(
         'INVALID_ARCHIVE',
-        'A capture points to an invalid successful scrape job',
+        'A capture points to an invalid successful fetch job',
       );
     }
   }
@@ -476,7 +476,7 @@ function validateCapturePointers(db: FoundryDatabase['db']): void {
 function validateArchiveRows(db: FoundryDatabase['db']): void {
   const statuses = new Set(['active', 'disabled', 'deleted']);
   const jobStatuses = new Set(['pending', 'running', 'succeeded', 'failed']);
-  const fetchers = new Set(['firecrawl', 'deepseek']);
+  const fetchers = new Set(['firecrawl']);
 
   for (const provider of db.select().from(providers).all()) {
     if (!statuses.has(provider.status)) {
@@ -508,9 +508,9 @@ function validateArchiveRows(db: FoundryDatabase['db']): void {
     }
   }
 
-  for (const job of db.select().from(scrapeJobs).all()) {
+  for (const job of db.select().from(fetchJobs).all()) {
     if (!jobStatuses.has(job.status) || !fetchers.has(job.fetcher)) {
-      throw new DataTransferError('INVALID_ARCHIVE', 'A scrape job record is invalid');
+      throw new DataTransferError('INVALID_ARCHIVE', 'A fetch job record is invalid');
     }
   }
 }

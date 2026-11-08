@@ -41,9 +41,8 @@ export const INITIAL_SETTINGS: SettingsState = {
     captures: {
       fetcher: null,
       maxAttempts: 1,
-      scrapeConcurrency: 2,
+      fetchConcurrency: 2,
       firecrawl: { apiKey: '' },
-      deepseek: { apiKey: '' },
     },
   },
 };

@@ -1,5 +1,4 @@
 import type { StoredJobConfig } from '../contracts';
-import { fetchWithDeepSeek } from './deepseek';
 import { fetchWithFirecrawl } from './firecrawl';
 
 export interface FetcherResult {
@@ -7,12 +6,10 @@ export interface FetcherResult {
   rawResponse: unknown;
 }
 
-export function scrapePage(
+export function fetchCapture(
   url: string,
   config: StoredJobConfig,
   fetchImplementation: typeof fetch = fetch,
 ): Promise<FetcherResult> {
-  return config.fetcher === 'firecrawl'
-    ? fetchWithFirecrawl(url, config.apiKey, fetchImplementation)
-    : fetchWithDeepSeek(url, config.apiKey, fetchImplementation);
+  return fetchWithFirecrawl(url, config.apiKey, fetchImplementation);
 }

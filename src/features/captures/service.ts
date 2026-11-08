@@ -5,18 +5,18 @@ import type {
   CaptureFilter,
   CaptureSummary,
   CreateCaptureInput,
-  ScrapeJobSummary,
+  FetchJobSummary,
   StoredJobConfig,
 } from './contracts';
 import { CaptureError } from './errors';
 import type { CaptureRepository } from './repository';
-import type { ScrapeJobRunner } from './runner';
+import type { FetchJobRunner } from './runner';
 
 export class CaptureService {
   constructor(
     private readonly repository: CaptureRepository,
     private readonly settingsPath: string,
-    private readonly runner: ScrapeJobRunner,
+    private readonly runner: FetchJobRunner,
   ) {}
 
   private executionConfig(): StoredJobConfig | null {
@@ -87,12 +87,12 @@ export class CaptureService {
     }
   }
 
-  recapture(captureId: string): ScrapeJobSummary {
+  recapture(captureId: string): FetchJobSummary {
     this.get(captureId);
     if (this.repository.hasActiveJob(captureId)) {
       throw new CaptureError(
         'ACTIVE_JOB_EXISTS',
-        'This capture already has an active scrape job',
+        'This capture already has an active fetch job',
       );
     }
 
@@ -114,7 +114,7 @@ export class CaptureService {
     if (this.repository.hasActiveJob(captureId)) {
       throw new CaptureError(
         'ACTIVE_JOB_EXISTS',
-        'This capture already has an active scrape job',
+        'This capture already has an active fetch job',
       );
     }
     if (!this.repository.delete(captureId)) {
@@ -131,12 +131,12 @@ export class CaptureService {
     return capture;
   }
 
-  listJobs(captureId: string): ScrapeJobSummary[] {
+  listJobs(captureId: string): FetchJobSummary[] {
     this.get(captureId);
     return this.repository.listJobs(captureId);
   }
 
-  getJob(captureId: string, jobId: string): ScrapeJobSummary | null {
+  getJob(captureId: string, jobId: string): FetchJobSummary | null {
     this.get(captureId);
     return this.repository.getJob(captureId, jobId);
   }

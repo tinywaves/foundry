@@ -1,7 +1,7 @@
 import type { FetcherType } from '../settings/contracts';
 
 export type CaptureFilter = 'all' | 'no-successful';
-export type ScrapeJobStatus = 'pending' | 'running' | 'succeeded' | 'failed';
+export type FetchJobStatus = 'pending' | 'running' | 'succeeded' | 'failed';
 
 export interface CaptureSummary {
   id: string;
@@ -13,14 +13,9 @@ export interface CaptureSummary {
   updatedAt: string;
 }
 
-export interface CaptureContent {
-  jobId: string;
-  markdown: string;
-}
-
 export interface CaptureDetail {
   capture: CaptureSummary;
-  content: CaptureContent | null;
+  rawResponse: unknown;
 }
 
 export interface CaptureCounts {
@@ -33,10 +28,10 @@ export interface CreateCaptureInput {
   userNote?: string;
 }
 
-export interface ScrapeJobSummary {
+export interface FetchJobSummary {
   id: string;
   captureId: string;
-  status: ScrapeJobStatus;
+  status: FetchJobStatus;
   fetcher: FetcherType;
   errorCode: string | null;
   errorMessage: string | null;

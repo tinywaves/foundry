@@ -16,7 +16,7 @@ export const TIME_ZONES = [
   'Asia/Tokyo',
   'UTC',
 ] as const;
-export const FETCHER_TYPES = ['firecrawl', 'deepseek'] as const;
+export const FETCHER_TYPES = ['firecrawl'] as const;
 
 export type ThemeMode = (typeof THEME_MODES)[number];
 export type LanguageMode = (typeof LANGUAGE_MODES)[number];
@@ -27,11 +27,8 @@ export type FetcherType = (typeof FETCHER_TYPES)[number];
 export interface CaptureSettings {
   fetcher: FetcherType | null;
   maxAttempts: number;
-  scrapeConcurrency: number;
+  fetchConcurrency: number;
   firecrawl: {
-    apiKey: string;
-  };
-  deepseek: {
     apiKey: string;
   };
 }
@@ -60,10 +57,7 @@ export interface PublicSettings {
   workspace: FoundrySettings['workspace'];
   features: {
     library: {
-      captures: Omit<CaptureSettings, 'firecrawl' | 'deepseek'> & {
-        firecrawl: { apiKey: string };
-        deepseek: { apiKey: string };
-      };
+      captures: CaptureSettings;
       [key: string]: unknown;
     };
     [key: string]: unknown;
@@ -78,9 +72,8 @@ export interface SettingsPatch {
   captures?: {
     fetcher?: FetcherType | null;
     maxAttempts?: number;
-    scrapeConcurrency?: number;
+    fetchConcurrency?: number;
     firecrawlApiKey?: string;
-    deepseekApiKey?: string;
   };
 }
 
@@ -98,9 +91,8 @@ export const DEFAULT_SETTINGS: FoundrySettings = {
       captures: {
         fetcher: null,
         maxAttempts: 1,
-        scrapeConcurrency: 2,
+        fetchConcurrency: 2,
         firecrawl: { apiKey: '' },
-        deepseek: { apiKey: '' },
       },
     },
   },
@@ -117,7 +109,6 @@ export function normalizeSettings(value: unknown): FoundrySettings {
   const library = isRecord(features.library) ? features.library : {};
   const captures = isRecord(library.captures) ? library.captures : {};
   const firecrawl = isRecord(captures.firecrawl) ? captures.firecrawl : {};
-  const deepseek = isRecord(captures.deepseek) ? captures.deepseek : {};
 
   return {
     workspace: {
@@ -153,12 +144,9 @@ export function normalizeSettings(value: unknown): FoundrySettings {
         captures: {
           fetcher: readFetcher(captures.fetcher),
           maxAttempts: readInteger(captures.maxAttempts, 10, 1),
-          scrapeConcurrency: readInteger(captures.scrapeConcurrency, 5, 2),
+          fetchConcurrency: readInteger(captures.fetchConcurrency, 5, 2),
           firecrawl: {
             apiKey: readString(firecrawl.apiKey),
-          },
-          deepseek: {
-            apiKey: readString(deepseek.apiKey),
           },
         },
       },
@@ -222,13 +210,10 @@ export function applySettingsPatch(
             ? captures.fetcher
             : capturePatch.fetcher,
           maxAttempts: capturePatch?.maxAttempts ?? captures.maxAttempts,
-          scrapeConcurrency:
-            capturePatch?.scrapeConcurrency ?? captures.scrapeConcurrency,
+          fetchConcurrency:
+            capturePatch?.fetchConcurrency ?? captures.fetchConcurrency,
           firecrawl: {
             apiKey: capturePatch?.firecrawlApiKey ?? captures.firecrawl.apiKey,
-          },
-          deepseek: {
-            apiKey: capturePatch?.deepseekApiKey ?? captures.deepseek.apiKey,
           },
         },
       },
@@ -248,12 +233,9 @@ export function toPublicSettings(settings: FoundrySettings): PublicSettings {
         captures: {
           fetcher: captures.fetcher,
           maxAttempts: captures.maxAttempts,
-          scrapeConcurrency: captures.scrapeConcurrency,
+          fetchConcurrency: captures.fetchConcurrency,
           firecrawl: {
             apiKey: captures.firecrawl.apiKey,
-          },
-          deepseek: {
-            apiKey: captures.deepseek.apiKey,
           },
         },
       },
@@ -285,11 +267,11 @@ function parseCapturePatch(value: unknown): NonNullable<SettingsPatch['captures'
   if ('maxAttempts' in value) {
     patch.maxAttempts = readRequiredInteger(value.maxAttempts, 10, 'captures.maxAttempts');
   }
-  if ('scrapeConcurrency' in value) {
-    patch.scrapeConcurrency = readRequiredInteger(
-      value.scrapeConcurrency,
+  if ('fetchConcurrency' in value) {
+    patch.fetchConcurrency = readRequiredInteger(
+      value.fetchConcurrency,
       5,
-      'captures.scrapeConcurrency',
+      'captures.fetchConcurrency',
     );
   }
   if ('firecrawlApiKey' in value) {
@@ -298,13 +280,6 @@ function parseCapturePatch(value: unknown): NonNullable<SettingsPatch['captures'
       'captures.firecrawlApiKey',
     );
   }
-  if ('deepseekApiKey' in value) {
-    patch.deepseekApiKey = readTrimmedString(
-      value.deepseekApiKey,
-      'captures.deepseekApiKey',
-    );
-  }
-
   return patch;
 }
 

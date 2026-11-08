@@ -21,9 +21,9 @@ The manifest records the archive version, application version, database schema v
 
 ## Import behavior
 
-Import replaces all Providers, Captures, Scrape Jobs, and application settings. It is not a merge operation.
+Import replaces all Providers, Captures, Fetch Jobs, and application settings. It is not a merge operation.
 
-Export and import are both blocked while a Scrape Job is `pending` or `running`. The decrypted archive is also rejected if it contains an active Scrape Job, preventing an imported snapshot from unexpectedly starting paid work.
+Export and import are both blocked while a Fetch Job is `pending` or `running`. The decrypted archive is also rejected if it contains an active Fetch Job, preventing an imported snapshot from unexpectedly starting paid work.
 
 The renderer displays a blocking modal during import. The Electron main process owns the actual maintenance lock, pauses the runner, rechecks active jobs, writes the imported settings, and replaces all database rows in one SQLite transaction. The current process remains locked after a successful import and requires a restart.
 

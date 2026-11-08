@@ -84,6 +84,16 @@ export default function JobsPage() {
       ),
     },
     {
+      key: 'creditsUsed',
+      header: t('captures.creditsUsed'),
+      width: pixel(96),
+      renderCell: (job) => (
+        <Text color={job.creditsUsed === null ? 'secondary' : 'primary'}>
+          {job.creditsUsed ?? '—'}
+        </Text>
+      ),
+    },
+    {
       key: 'createdAt',
       header: t('captures.createdAt'),
       width: pixel(200),

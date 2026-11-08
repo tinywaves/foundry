@@ -53,6 +53,7 @@ export const fetchJobs = sqliteTable(
     fetcher: text('fetcher').notNull(),
     configSnapshot: text('config_snapshot').notNull(),
     rawResponseJson: text('raw_response_json'),
+    creditsUsed: integer('credits_used'),
     status: text('status').notNull().default('pending'),
     errorCode: text('error_code'),
     errorMessage: text('error_message'),

@@ -89,9 +89,8 @@ any generated summary as the canonical product description.
 
 ## Fetcher Behavior
 
-The current fetcher implementation is Firecrawl Search. A fetch job sends one
-request to `POST https://api.firecrawl.dev/v2/search` with a query derived from
-the submitted URL:
+The current fetcher implementation uses the official Firecrawl Node SDK to call
+`POST /v2/search`. A fetch job uses a query derived from the submitted URL:
 
 - Root URL: `site:<hostname> <brand-token>`
 - Path URL: `site:<hostname> <last-meaningful-path-segment>`
@@ -107,7 +106,17 @@ Examples:
 
 The request uses five web results, `formats: ["summary"]`, main-content
 filtering, cache reuse, ad blocking, automatic proxy selection, and a
-two-day `maxAge`.
+two-day `maxAge`. `captures.maxAttempts` is passed to the SDK as its total
+request-attempt limit; Foundry does not run a separate retry loop. In the
+current Firecrawl SDK, automatic retries apply only to HTTP `502` responses.
+Other retryable Firecrawl errors, including `408`, `429`, and other `5xx`
+responses, are returned immediately.
+
+Foundry records the final SDK response only. A job succeeds when Firecrawl
+returns a valid successful response with a numeric `creditsUsed` value,
+including when the search has zero results or no result on the requested site.
+The job fails when the SDK request fails, Firecrawl reports an error, or the
+response does not contain `creditsUsed`.
 
 ## Child Jobs
 
@@ -133,6 +142,7 @@ Job shape:
   "captureId": "<capture-id>",
   "status": "succeeded",
   "fetcher": "firecrawl",
+  "creditsUsed": 2,
   "errorCode": null,
   "errorMessage": null,
   "createdAt": "<iso>",
@@ -144,11 +154,15 @@ Statuses:
 
 - `pending`: queued, not started.
 - `running`: fetcher request in progress.
-- `succeeded`: fetch completed and raw response persisted.
-- `failed`: search exhausted its attempts or failed non-retryably.
+- `succeeded`: Firecrawl returned a valid response with `creditsUsed`, and the
+  raw response was persisted. Zero search results still count as success.
+- `failed`: the SDK request failed, Firecrawl reported an error, or the
+  response did not report `creditsUsed`.
 
 The job response does not include the raw response. Use
 `foundry captures get <capture-id>` for the latest successful response.
+`creditsUsed` is the authoritative per-job Firecrawl charge; `null` means no
+charge was reported.
 
 `jobs list` returns the capture's non-deleted jobs, newest first. An existing
 capture with no jobs returns `[]`.

@@ -4,7 +4,6 @@ import path from 'node:path';
 import { expect, it, vi } from 'vitest';
 import type { FoundryEvent } from '../src/events/contracts';
 import { FoundryEventHub } from '../src/events/hub';
-import { FIRECRAWL_WIRE_PAGE_OPTIONS_KEY } from '../src/features/captures/fetchers/firecrawl';
 import { createCaptureRuntime } from '../src/features/captures/runtime';
 import { updateSettings } from '../src/features/settings/repository';
 import { createApiApp } from '../src/server/api';
@@ -48,8 +47,11 @@ it('captures a link through Firecrawl Search', async () => {
     },
     creditsUsed: 2,
   };
-  const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(Response.json(rawResponse)));
-  vi.stubGlobal('fetch', fetchMock);
+  const fetchCapture = vi.fn(() => Promise.resolve({
+    title: 'Example page',
+    rawResponse,
+    creditsUsed: 2,
+  }));
 
   try {
     const eventHub = new FoundryEventHub();
@@ -57,7 +59,12 @@ it('captures a link through Firecrawl Search', async () => {
     eventHub.subscribe((event) => {
       events.push(event);
     });
-    const runtime = createCaptureRuntime(database, settingsPath, eventHub);
+    const runtime = createCaptureRuntime(
+      database,
+      settingsPath,
+      eventHub,
+      fetchCapture,
+    );
     const app = createApiApp(database, {
       settingsPath,
       captureService: runtime.service,
@@ -92,26 +99,28 @@ it('captures a link through Firecrawl Search', async () => {
     });
 
     expect(detail.capture.title).toBe('Example page');
-    expect(fetchMock).toHaveBeenCalledOnce();
-    expect(fetchMock).toHaveBeenCalledWith(
-      'https://api.firecrawl.dev/v2/search',
-      expect.objectContaining({ method: 'POST' }),
+    expect(fetchCapture).toHaveBeenCalledOnce();
+    expect(fetchCapture).toHaveBeenCalledWith(
+      'https://example.com/article',
+      expect.objectContaining({
+        fetcher: 'firecrawl',
+        apiKey: 'secret',
+        maxAttempts: 1,
+      }),
     );
-    const requestInit = fetchMock.mock.calls[0]?.[1];
-    const requestBodyText = requestInit?.body;
-    if (typeof requestBodyText !== 'string') {
-      throw new TypeError('Expected the Firecrawl request body to be JSON text');
-    }
-    const requestBody = JSON.parse(requestBodyText) as Record<string, unknown>;
-    expect(requestBody).toMatchObject({
-      query: 'site:example.com article',
-      limit: 5,
-      sources: ['web'],
-      highlights: false,
-    });
-    expect(requestBody[FIRECRAWL_WIRE_PAGE_OPTIONS_KEY]).toMatchObject({
-      formats: ['summary'],
-    });
+
+    const jobsResponse = await app.request(`/api/captures/${created.id}/jobs`);
+    expect(jobsResponse.status).toBe(200);
+    const jobs = await jobsResponse.json() as Array<{
+      status: string;
+      creditsUsed: number | null;
+    }>;
+    expect(jobs).toMatchObject([
+      {
+        status: 'succeeded',
+        creditsUsed: 2,
+      },
+    ]);
 
     const noteResponse = await app.request(`/api/captures/${created.id}/note`, {
       method: 'PATCH',
@@ -135,7 +144,6 @@ it('captures a link through Firecrawl Search', async () => {
     ];
     expect(events).toEqual(expect.arrayContaining(expectedEvents));
   } finally {
-    vi.unstubAllGlobals();
     database.client.close();
     await rm(directory, { recursive: true, force: true });
   }

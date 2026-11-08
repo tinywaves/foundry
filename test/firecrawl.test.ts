@@ -1,10 +1,22 @@
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { expect, it, vi } from 'vitest';
+import type { FirecrawlSearchTransport } from '../src/features/captures/fetchers/firecrawl';
 import {
   buildSearchQuery,
+  createFirecrawlSearchTransport,
   createSearchRequest,
   FIRECRAWL_WIRE_PAGE_OPTIONS_KEY,
   fetchWithFirecrawl,
 } from '../src/features/captures/fetchers/firecrawl';
+
+function createTransport(payload: unknown): FirecrawlSearchTransport & {
+  search: ReturnType<typeof vi.fn>;
+} {
+  return {
+    search: vi.fn(() => Promise.resolve(payload)),
+  };
+}
 
 it('builds focused site queries from URL context', () => {
   expect(buildSearchQuery('https://ui.shadcn.com/'))
@@ -60,26 +72,23 @@ it('selects the exact URL result and keeps the full response', async () => {
     },
     creditsUsed: 3,
   };
-  const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(Response.json(payload)));
+  const transport = createTransport(payload);
 
   const result = await fetchWithFirecrawl(
     'https://ui.shadcn.com/docs',
     'secret',
-    fetchMock,
+    1,
+    transport,
   );
 
   expect(result).toEqual({
     title: 'Introduction - shadcn/ui',
     rawResponse: payload,
+    creditsUsed: 3,
   });
-  const requestInit = fetchMock.mock.calls[0]?.[1];
-  const requestBodyText = requestInit?.body;
-  if (typeof requestBodyText !== 'string') {
-    throw new TypeError('Expected the Firecrawl request body to be JSON text');
-  }
-  expect(JSON.parse(requestBodyText)).toHaveProperty(
-    FIRECRAWL_WIRE_PAGE_OPTIONS_KEY,
-  );
+  expect(transport.search).toHaveBeenCalledWith(expect.objectContaining({
+    [FIRECRAWL_WIRE_PAGE_OPTIONS_KEY]: expect.anything(),
+  }));
 });
 
 it('falls back to the site homepage when the submitted deep URL is absent', async () => {
@@ -99,19 +108,21 @@ it('falls back to the site homepage when the submitted deep URL is absent', asyn
         },
       ],
     },
+    creditsUsed: 1,
   };
-  const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(Response.json(payload)));
+  const transport = createTransport(payload);
 
   const result = await fetchWithFirecrawl(
     'https://models.dev/labs/apodex',
     'secret',
-    fetchMock,
+    1,
+    transport,
   );
 
   expect(result.title).toBe('Models.dev');
 });
 
-it('fails when search results do not belong to the submitted site', async () => {
+it('succeeds with no selected title when results do not belong to the submitted site', async () => {
   const payload = {
     success: true,
     data: {
@@ -123,14 +134,116 @@ it('fails when search results do not belong to the submitted site', async () => 
         },
       ],
     },
+    creditsUsed: 2,
   };
-  const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(Response.json(payload)));
+  const transport = createTransport(payload);
 
   await expect(fetchWithFirecrawl(
     'https://example.com/article',
     'secret',
-    fetchMock,
-  )).rejects.toMatchObject({
-    code: 'no_matching_results',
+    1,
+    transport,
+  )).resolves.toEqual({
+    title: null,
+    rawResponse: payload,
+    creditsUsed: 2,
   });
+});
+
+it('treats zero search results as a successful fetch when credits are reported', async () => {
+  const payload = {
+    success: true,
+    data: { web: [] },
+    creditsUsed: 0,
+  };
+  const transport = createTransport(payload);
+
+  await expect(fetchWithFirecrawl(
+    'https://example.com/article',
+    'secret',
+    1,
+    transport,
+  )).resolves.toEqual({
+    title: null,
+    rawResponse: payload,
+    creditsUsed: 0,
+  });
+});
+
+it('fails when a successful response does not report credits', async () => {
+  const transport = createTransport({
+    success: true,
+    data: { web: [] },
+  });
+
+  await expect(fetchWithFirecrawl(
+    'https://example.com/article',
+    'secret',
+    1,
+    transport,
+  )).rejects.toMatchObject({
+    code: 'missing_credits_used',
+  });
+});
+
+it('lets the SDK manage retries and consumes only the final response', async () => {
+  const payload = {
+    success: true,
+    data: {
+      web: [
+        {
+          url: 'https://example.com/article',
+          title: 'Example',
+          metadata: {},
+        },
+      ],
+    },
+    creditsUsed: 2,
+  };
+  let attempts = 0;
+  const server = createServer((_request, response) => {
+    attempts += 1;
+    response.setHeader('content-type', 'application/json');
+    if (attempts < 3) {
+      response.statusCode = 502;
+      response.end(JSON.stringify({ success: false, error: 'Bad gateway' }));
+      return;
+    }
+
+    response.statusCode = 200;
+    response.end(JSON.stringify(payload));
+  });
+  await new Promise<void>((resolve) => {
+    server.listen(0, '127.0.0.1', resolve);
+  });
+
+  try {
+    const address = server.address() as AddressInfo;
+    const transport = createFirecrawlSearchTransport('secret', 3, {
+      apiUrl: `http://127.0.0.1:${address.port}`,
+      backoffFactor: 0,
+    });
+
+    await expect(fetchWithFirecrawl(
+      'https://example.com/article',
+      'secret',
+      3,
+      transport,
+    )).resolves.toEqual({
+      title: 'Example',
+      rawResponse: payload,
+      creditsUsed: 2,
+    });
+    expect(attempts).toBe(3);
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    });
+  }
 });

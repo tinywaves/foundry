@@ -8,6 +8,17 @@ import { expect, it, vi } from 'vitest';
 import { createFoundryCommand } from '../src/cli/main';
 
 const { join } = path;
+const fetchCaptureMock = vi.hoisted(() => vi.fn());
+
+vi.mock('../src/features/captures/fetchers', async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import('../src/features/captures/fetchers')
+  >();
+  return {
+    ...actual,
+    fetchCapture: fetchCaptureMock,
+  };
+});
 
 it('prints root help without initializing storage', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-cli-help-'));
@@ -168,8 +179,11 @@ it('captures a URL and returns the Firecrawl Search response', async () => {
     },
     creditsUsed: 2,
   };
-  const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(Response.json(rawResponse)));
-  vi.stubGlobal('fetch', fetchMock);
+  fetchCaptureMock.mockResolvedValue({
+    title: 'Captured from CLI',
+    rawResponse,
+    creditsUsed: 2,
+  });
 
   try {
     await runJsonCommand([
@@ -193,7 +207,7 @@ it('captures a URL and returns the Firecrawl Search response', async () => {
     ]) as {
       capture: { id: string; title: string; userNote: string };
       rawResponse: typeof rawResponse;
-      job: { id: string; status: string };
+      job: { id: string; status: string; creditsUsed: number | null };
     };
     expect(captured).toMatchObject({
       capture: {
@@ -203,6 +217,7 @@ it('captures a URL and returns the Firecrawl Search response', async () => {
       rawResponse,
       job: {
         status: 'succeeded',
+        creditsUsed: 2,
       },
     });
 
@@ -211,12 +226,18 @@ it('captures a URL and returns the Firecrawl Search response', async () => {
       'jobs',
       'list',
       captured.capture.id,
-    ]) as Array<{ id: string; captureId: string; status: string }>;
+    ]) as Array<{
+      id: string;
+      captureId: string;
+      status: string;
+      creditsUsed: number | null;
+    }>;
     expect(listedJobs).toMatchObject([
       {
         id: captured.job.id,
         captureId: captured.capture.id,
         status: 'succeeded',
+        creditsUsed: 2,
       },
     ]);
 
@@ -226,10 +247,11 @@ it('captures a URL and returns the Firecrawl Search response', async () => {
       'get',
       captured.capture.id,
       captured.job.id,
-    ]) as { id: string; status: string };
+    ]) as { id: string; status: string; creditsUsed: number | null };
     expect(fetchedJob).toMatchObject({
       id: captured.job.id,
       status: 'succeeded',
+      creditsUsed: 2,
     });
 
     const recaptured = await runJsonCommand([
@@ -240,9 +262,8 @@ it('captures a URL and returns the Firecrawl Search response', async () => {
     ]) as { id: string; status: string };
     expect(recaptured).toMatchObject({ status: 'succeeded' });
     expect(recaptured.id).not.toBe(captured.job.id);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchCaptureMock).toHaveBeenCalledTimes(2);
   } finally {
-    vi.unstubAllGlobals();
     vi.unstubAllEnvs();
     await rm(directory, { recursive: true, force: true });
   }

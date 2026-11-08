@@ -44,6 +44,7 @@ export type FetchJobSummary = {
   captureId: string;
   status: FetchJobStatus;
   fetcher: FetcherType;
+  creditsUsed: number | null;
   errorCode: string | null;
   errorMessage: string | null;
   /**

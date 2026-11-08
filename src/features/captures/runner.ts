@@ -1,12 +1,10 @@
 import { readStoredSettings } from '../settings/repository';
 import type { CaptureJobChangedEvent } from './events';
 import { fetchCapture } from './fetchers';
+import type { CaptureFetcher } from './fetchers';
 import { normalizeFetcherError } from './fetchers/error';
 import type { StoredJobConfig } from './contracts';
 import type { CaptureRepository } from './repository';
-
-const RETRY_BASE_DELAY_MS = 1000;
-const RETRY_MAX_DELAY_MS = 30_000;
 
 export class FetchJobRunner {
   private readonly queue: string[] = [];
@@ -18,6 +16,7 @@ export class FetchJobRunner {
     private readonly repository: CaptureRepository,
     private readonly settingsPath: string,
     private readonly onChanged: (event: CaptureJobChangedEvent) => void = () => {},
+    private readonly fetchCaptureImplementation: CaptureFetcher = fetchCapture,
   ) {}
 
   private schedule(): void {
@@ -66,36 +65,31 @@ export class FetchJobRunner {
       status: 'running',
     });
 
-    for (let attempt = 1; attempt <= config.maxAttempts; attempt += 1) {
-      try {
-        const result = await fetchCapture(context.capture.url, config);
-        this.repository.markSucceeded(
-          jobId,
-          context.capture.id,
-          result.title,
-          result.rawResponse,
-        );
-        this.onChanged({
-          captureId: context.capture.id,
-          jobId,
-          status: 'succeeded',
-        });
-        return;
-      } catch (error) {
-        const fetchError = normalizeFetcherError(error);
-        const isLastAttempt = attempt >= config.maxAttempts;
-        if (isLastAttempt || !fetchError.isRetryable) {
-          this.failJob(
-            jobId,
-            context.capture.id,
-            fetchError.code,
-            fetchError.message,
-          );
-          return;
-        }
-
-        await wait(retryDelay(attempt));
-      }
+    try {
+      const result = await this.fetchCaptureImplementation(
+        context.capture.url,
+        config,
+      );
+      this.repository.markSucceeded(
+        jobId,
+        context.capture.id,
+        result.title,
+        result.rawResponse,
+        result.creditsUsed,
+      );
+      this.onChanged({
+        captureId: context.capture.id,
+        jobId,
+        status: 'succeeded',
+      });
+    } catch (error) {
+      const fetchError = normalizeFetcherError(error);
+      this.failJob(
+        jobId,
+        context.capture.id,
+        fetchError.code,
+        fetchError.message,
+      );
     }
   }
 
@@ -172,17 +166,6 @@ function parseStoredConfig(value: string): StoredJobConfig {
     apiKey: parsed.apiKey,
     maxAttempts: Math.min(10, Math.max(1, Math.trunc(parsed.maxAttempts))),
   };
-}
-
-function retryDelay(attempt: number): number {
-  const exponential = RETRY_BASE_DELAY_MS * (2 ** (attempt - 1));
-  return Math.min(RETRY_MAX_DELAY_MS, exponential) + Math.floor(Math.random() * 250);
-}
-
-function wait(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, milliseconds);
-  });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

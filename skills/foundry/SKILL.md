@@ -31,7 +31,8 @@ Read only the references needed for the current request.
 - A **fetch job** is a child of exactly one capture. Its canonical command path
   is `foundry captures jobs ...`; there is no global jobs command.
 - A successful capture command returns `capture.id`, `job.id`,
-  `job.status`, and the raw fetcher response in `rawResponse`.
+  `job.status`, `job.creditsUsed`, and the raw fetcher response in
+  `rawResponse`.
 - CLI timestamps are ISO-8601 strings. The CLI does not apply the user's display
   time format or timezone; that formatting belongs to the Web UI.
 - Capture and provider records intentionally expose stored API keys in JSON

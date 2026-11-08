@@ -1,9 +1,8 @@
+import { FirecrawlClient } from 'firecrawl';
 import { parse as parseDomain } from 'tldts';
 import type { FetcherResult } from './index';
-import { FetcherError, isRetryableStatus, normalizeFetcherError } from './error';
+import { FetcherError, normalizeFetcherError } from './error';
 
-const FIRECRAWL_SEARCH_URL = 'https://api.firecrawl.dev/v2/search';
-const FETCH_TIMEOUT_MS = 125_000;
 const SEARCH_RESULT_LIMIT = 5;
 const MAX_QUERY_TERM_LENGTH = 200;
 
@@ -32,9 +31,27 @@ export interface FirecrawlSearchRequest {
   pageOptions: FirecrawlPageOptions;
 }
 
-interface FirecrawlWireSearchRequest
+export interface FirecrawlWireSearchRequest
   extends Omit<FirecrawlSearchRequest, 'pageOptions'> {
   [FIRECRAWL_WIRE_PAGE_OPTIONS_KEY]: FirecrawlPageOptions;
+}
+
+interface FirecrawlSearchEnvelope {
+  success?: boolean;
+  data?: unknown;
+  creditsUsed?: unknown;
+  error?: string;
+  warning?: string;
+  id?: string;
+}
+
+export interface FirecrawlSearchTransport {
+  search: (request: FirecrawlWireSearchRequest) => Promise<unknown>;
+}
+
+export interface FirecrawlSearchTransportOptions {
+  apiUrl?: string;
+  backoffFactor?: number;
 }
 
 interface WebSearchResult {
@@ -43,68 +60,84 @@ interface WebSearchResult {
   metadata: Record<string, unknown>;
 }
 
+class FoundryFirecrawlClient extends FirecrawlClient {
+  async searchEnvelope(
+    request: FirecrawlWireSearchRequest,
+  ): Promise<unknown> {
+    const response = await this.http.post<FirecrawlSearchEnvelope>(
+      '/v2/search',
+      { ...request },
+      { timeoutMs: request.timeout + 5000 },
+    );
+    return response.data;
+  }
+}
+
+export function createFirecrawlSearchTransport(
+  apiKey: string,
+  maxAttempts: number,
+  options: FirecrawlSearchTransportOptions = {},
+): FirecrawlSearchTransport {
+  const client = new FoundryFirecrawlClient({
+    apiKey,
+    maxRetries: Math.max(1, Math.trunc(maxAttempts)),
+    ...(options.apiUrl && { apiUrl: options.apiUrl }),
+    ...(options.backoffFactor !== undefined && {
+      backoffFactor: options.backoffFactor,
+    }),
+  });
+
+  return {
+    search: (request) => client.searchEnvelope(request),
+  };
+}
+
 export async function fetchWithFirecrawl(
   url: string,
   apiKey: string,
-  fetchImplementation: typeof fetch = fetch,
+  maxAttempts = 1,
+  transport: FirecrawlSearchTransport = createFirecrawlSearchTransport(
+    apiKey,
+    maxAttempts,
+  ),
 ): Promise<FetcherResult> {
   try {
     const request = createSearchRequest(url);
-    const response = await fetchImplementation(FIRECRAWL_SEARCH_URL, {
-      method: 'POST',
-      headers: {
-        'authorization': `Bearer ${apiKey}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(toWireRequest(request)),
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
-
-    const payload: unknown = await readResponseJSON(response);
-    if (!response.ok) {
-      throw new FetcherError(
-        `http_${response.status}`,
-        readFirecrawlError(payload) ?? `The configured fetcher returned ${response.status}`,
-        isRetryableStatus(response.status),
-        response.status,
-      );
-    }
+    const payload = await transport.search(toWireRequest(request));
     if (!isRecord(payload)) {
       throw new FetcherError(
         'invalid_response',
         'The configured fetcher returned an invalid response',
-        false,
       );
     }
     if (payload.success === false) {
       throw new FetcherError(
         'fetcher_error',
         readFirecrawlError(payload) ?? 'The configured fetcher reported an error',
-        false,
+      );
+    }
+    if (payload.success !== true) {
+      throw new FetcherError(
+        'invalid_response',
+        'The configured fetcher returned an invalid response',
+      );
+    }
+
+    const creditsUsed = readCreditsUsed(payload);
+    if (creditsUsed === null) {
+      throw new FetcherError(
+        'missing_credits_used',
+        'The configured fetcher response did not report credit usage',
       );
     }
 
     const results = readWebResults(payload);
-    if (results.length === 0) {
-      throw new FetcherError(
-        'no_results',
-        'The configured fetcher returned no search results',
-        false,
-      );
-    }
-
     const result = selectSearchResult(url, results);
-    if (!result) {
-      throw new FetcherError(
-        'no_matching_results',
-        'The configured fetcher returned no results for this website',
-        false,
-      );
-    }
 
     return {
-      title: readResultTitle(result),
+      title: result ? readResultTitle(result) : null,
       rawResponse: payload,
+      creditsUsed,
     };
   } catch (error) {
     throw normalizeFetcherError(error);
@@ -313,17 +346,12 @@ function readMetadataString(
   return typeof value === 'string' && value ? value : null;
 }
 
-async function readResponseJSON(response: Response): Promise<unknown> {
-  const text = await response.text();
-  if (!text) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return null;
-  }
+function readCreditsUsed(payload: Record<string, unknown>): number | null {
+  return typeof payload.creditsUsed === 'number'
+    && Number.isSafeInteger(payload.creditsUsed)
+    && payload.creditsUsed >= 0
+    ? payload.creditsUsed
+    : null;
 }
 
 function readFirecrawlError(payload: unknown): string | null {

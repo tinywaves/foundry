@@ -129,6 +129,7 @@ export class CaptureRepository {
         fetcher: config.fetcher,
         configSnapshot: JSON.stringify(config),
         rawResponseJson: null,
+        creditsUsed: null,
         status: 'pending',
         errorCode: null,
         errorMessage: null,
@@ -176,6 +177,7 @@ export class CaptureRepository {
       fetcher: config.fetcher,
       configSnapshot: JSON.stringify(config),
       rawResponseJson: null,
+      creditsUsed: null,
       status: 'pending',
       errorCode: null,
       errorMessage: null,
@@ -267,6 +269,7 @@ export class CaptureRepository {
     captureId: string,
     title: string | null,
     rawResponse: unknown,
+    creditsUsed: number | null,
   ): void {
     const timestamp = new Date();
 
@@ -275,6 +278,7 @@ export class CaptureRepository {
         .set({
           status: 'succeeded',
           rawResponseJson: JSON.stringify(rawResponse),
+          creditsUsed,
           errorCode: null,
           errorMessage: null,
           updatedAt: timestamp,
@@ -302,6 +306,7 @@ export class CaptureRepository {
       .update(fetchJobs)
       .set({
         status: 'failed',
+        creditsUsed: null,
         errorCode,
         errorMessage,
         updatedAt: new Date(),
@@ -357,6 +362,7 @@ function toJobSummary(row: FetchJobRow): FetchJobSummary {
     captureId: row.captureId,
     status: row.status as FetchJobSummary['status'],
     fetcher: row.fetcher as FetchJobSummary['fetcher'],
+    creditsUsed: row.creditsUsed,
     errorCode: row.errorCode,
     errorMessage: row.errorMessage,
     createdAt: row.createdAt.toISOString(),

@@ -9,7 +9,7 @@ import { ensureFoundryHome, getFoundryDatabasePath } from './paths';
 
 const DATABASE_BUSY_TIMEOUT_MS = 5000;
 // Increment whenever the persisted SQLite structure changes.
-export const CURRENT_DATABASE_SCHEMA_VERSION = 2;
+export const CURRENT_DATABASE_SCHEMA_VERSION = 3;
 
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
 

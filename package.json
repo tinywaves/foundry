@@ -87,6 +87,7 @@
     "better-sqlite3": "^13.0.3",
     "citty": "^0.2.2",
     "drizzle-orm": "^0.45.4",
+    "firecrawl": "^4.52.0",
     "hono": "^4.13.14",
     "tldts": "^7.4.19",
     "yauzl": "^3.4.0",

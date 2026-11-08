@@ -137,6 +137,7 @@ export type TranslationKey
     | 'captures.jobStatus.succeeded'
     | 'captures.jobStatus.failed'
     | 'captures.fetcher'
+    | 'captures.creditsUsed'
     | 'captures.createdAt'
     | 'captures.updatedAt'
     | 'captures.error'
@@ -342,6 +343,7 @@ const english: TranslationTable = {
   'captures.jobStatus.succeeded': 'Succeeded',
   'captures.jobStatus.failed': 'Failed',
   'captures.fetcher': 'Fetcher',
+  'captures.creditsUsed': 'Credits',
   'captures.createdAt': 'Created at',
   'captures.updatedAt': 'Updated at',
   'captures.error': 'Error',
@@ -538,6 +540,7 @@ const simplifiedChinese: TranslationTable = {
   'captures.jobStatus.succeeded': '已成功',
   'captures.jobStatus.failed': '已失败',
   'captures.fetcher': '抓取服务',
+  'captures.creditsUsed': '消耗额度',
   'captures.createdAt': '创建时间',
   'captures.updatedAt': '更新时间',
   'captures.error': '错误',
@@ -742,6 +745,7 @@ const traditionalChinese: TranslationTable = {
   'captures.jobStatus.succeeded': '已成功',
   'captures.jobStatus.failed': '已失敗',
   'captures.fetcher': '抓取服務',
+  'captures.creditsUsed': '消耗額度',
   'captures.createdAt': '建立時間',
   'captures.updatedAt': '更新時間',
   'captures.error': '錯誤',
@@ -946,6 +950,7 @@ const japanese: TranslationTable = {
   'captures.jobStatus.succeeded': '成功',
   'captures.jobStatus.failed': '失敗',
   'captures.fetcher': 'フェッチャー',
+  'captures.creditsUsed': 'クレジット',
   'captures.createdAt': '作成日時',
   'captures.updatedAt': '更新日時',
   'captures.error': 'エラー',

@@ -18,11 +18,13 @@ import {
   readDatabaseSchemaVersion,
 } from '../../storage/database';
 import type { FoundryDatabase } from '../../storage/database';
-import { captures, fetchJobs, providers } from '../../storage/schema';
+import { captures, fetchJobs, providers, settings } from '../../storage/schema';
 import { parseProviderInput } from '../providers/contracts';
+import { normalizeSettings } from '../settings/contracts';
 import { readStoredSettings, writeSettings } from '../settings/repository';
 import type { FetchJobRunner } from '../captures/runner';
 import {
+  DATA_EXPORT_ARCHIVE_VERSION,
   DATA_EXPORT_SETTINGS_VERSION,
 } from './contracts';
 import type {
@@ -46,7 +48,6 @@ interface StagedImport {
   databasePath: string;
   directory: string;
   preview: ImportPreview;
-  settingsPath: string;
 }
 
 export interface DataTransferUploadTarget {
@@ -60,7 +61,6 @@ export class DataTransferService {
 
   constructor(
     private readonly database: FoundryDatabase,
-    private readonly settingsPath: string,
     private readonly runner: FetchJobRunner,
     private readonly temporaryRoot: string,
     private readonly appVersion: string,
@@ -132,7 +132,6 @@ export class DataTransferService {
     return this.runExclusive(async () => {
       const workDirectory = await this.createWorkDirectory('export');
       const databaseSnapshotPath = path.join(workDirectory, 'foundry.sqlite');
-      const settingsSnapshotPath = path.join(workDirectory, SETTINGS_ENTRY_PATH);
       const manifestPath = path.join(workDirectory, MANIFEST_ENTRY_PATH);
       const archivePath = path.join(workDirectory, 'foundry.zip');
       const destinationPath = path.join(
@@ -145,8 +144,6 @@ export class DataTransferService {
         assertNoActiveJobs(this.database.db);
         await this.database.client.backup(databaseSnapshotPath);
         await ensureFileMode(databaseSnapshotPath);
-        writeSettings(readStoredSettings(this.settingsPath), settingsSnapshotPath);
-        await ensureFileMode(settingsSnapshotPath);
 
         const recordCounts = countRecords(this.database.db);
         const schemaVersion = readDatabaseSchemaVersion(databaseSnapshotPath);
@@ -159,16 +156,12 @@ export class DataTransferService {
 
         const manifest: ExportManifest = {
           format: 'foundry.snapshot',
-          archiveVersion: 1,
+          archiveVersion: DATA_EXPORT_ARCHIVE_VERSION,
           appVersion: this.appVersion,
           createdAt: new Date().toISOString(),
           database: {
             ...await fileRecord(databaseSnapshotPath, DATABASE_ENTRY_PATH),
             schemaVersion,
-          },
-          settings: {
-            ...await fileRecord(settingsSnapshotPath, SETTINGS_ENTRY_PATH),
-            version: DATA_EXPORT_SETTINGS_VERSION,
           },
         };
         await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, {
@@ -177,7 +170,6 @@ export class DataTransferService {
         await createFoundryArchive([
           { entryPath: MANIFEST_ENTRY_PATH, filePath: manifestPath },
           { entryPath: DATABASE_ENTRY_PATH, filePath: databaseSnapshotPath },
-          { entryPath: SETTINGS_ENTRY_PATH, filePath: settingsSnapshotPath },
         ], archivePath);
         await encryptExportFile(archivePath, destinationPath, passphrase);
         await ensureFileMode(destinationPath);
@@ -228,9 +220,12 @@ export class DataTransferService {
         }
 
         const databasePath = extracted[DATABASE_ENTRY_PATH];
-        const importedSettingsPath = extracted[SETTINGS_ENTRY_PATH];
         await assertFileRecord(databasePath, manifest.database);
-        await assertFileRecord(importedSettingsPath, manifest.settings);
+        if (manifest.settings) {
+          await assertFileRecord(extracted[SETTINGS_ENTRY_PATH], manifest.settings);
+        } else if (Object.hasOwn(extracted, SETTINGS_ENTRY_PATH)) {
+          throw new DataTransferError('INVALID_ARCHIVE', 'Unexpected settings file');
+        }
 
         const storedSchemaVersion = readDatabaseSchemaVersion(databasePath);
         if (storedSchemaVersion !== manifest.database.schemaVersion) {
@@ -241,8 +236,11 @@ export class DataTransferService {
         }
 
         assertDatabaseIntegrity(databasePath);
-        readStoredSettings(importedSettingsPath);
         stagedDatabase = openFoundryDatabase(databasePath);
+        if (manifest.settings) {
+          const value: unknown = JSON.parse(await readFile(extracted[SETTINGS_ENTRY_PATH], 'utf8'));
+          writeSettings(normalizeSettings(value), stagedDatabase.db);
+        }
         assertNoActiveJobs(stagedDatabase.db);
         validateCapturePointers(stagedDatabase.db);
         validateArchiveRows(stagedDatabase.db);
@@ -254,7 +252,7 @@ export class DataTransferService {
           exportedAt: manifest.createdAt,
           appVersion: manifest.appVersion,
           databaseSchemaVersion: manifest.database.schemaVersion,
-          settingsVersion: manifest.settings.version,
+          settingsVersion: manifest.settings?.version ?? DATA_EXPORT_SETTINGS_VERSION,
           providerCount: recordCounts.providers,
           captureCount: recordCounts.captures,
           jobCount: recordCounts.jobs,
@@ -263,7 +261,6 @@ export class DataTransferService {
           databasePath,
           directory,
           preview,
-          settingsPath: importedSettingsPath,
         });
         await rm(zipPath, { force: true });
         return preview;
@@ -304,8 +301,6 @@ export class DataTransferService {
 
     return this.runExclusive(async () => {
       this.runner.pause();
-      const previousSettings = readStoredSettings(this.settingsPath);
-      let isSettingsWritten = false;
 
       try {
         assertNoActiveJobs(this.database.db);
@@ -319,14 +314,16 @@ export class DataTransferService {
           const providerRows = stagedDatabase.db.select().from(providers).all();
           const captureRows = stagedDatabase.db.select().from(captures).all();
           const jobRows = stagedDatabase.db.select().from(fetchJobs).all();
-          const importedSettings = readStoredSettings(staged.settingsPath);
+          const settingsRows = stagedDatabase.db.select().from(settings).all();
 
-          writeSettings(importedSettings, this.settingsPath);
-          isSettingsWritten = true;
           this.database.db.transaction((tx) => {
             tx.delete(fetchJobs).run();
             tx.delete(captures).run();
             tx.delete(providers).run();
+            tx.delete(settings).run();
+            if (settingsRows.length > 0) {
+              tx.insert(settings).values(settingsRows).run();
+            }
             if (providerRows.length > 0) {
               tx.insert(providers).values(providerRows).run();
             }
@@ -343,11 +340,6 @@ export class DataTransferService {
 
         this.stagedImports.delete(importId);
         await this.removeQuietly(staged.directory);
-      } catch (error) {
-        if (isSettingsWritten) {
-          writeSettings(previousSettings, this.settingsPath);
-        }
-        throw error;
       } finally {
         this.runner.resume();
         this.runner.notifySettingsChanged();
@@ -474,6 +466,7 @@ function validateCapturePointers(db: FoundryDatabase['db']): void {
 }
 
 function validateArchiveRows(db: FoundryDatabase['db']): void {
+  readStoredSettings(db);
   const statuses = new Set(['active', 'disabled', 'deleted']);
   const jobStatuses = new Set(['pending', 'running', 'succeeded', 'failed']);
   const fetchers = new Set(['firecrawl']);

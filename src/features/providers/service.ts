@@ -1,4 +1,3 @@
-import { getFoundrySettingsPath } from '../../storage/paths';
 import type { FoundryDatabase } from '../../storage/database';
 import type {
   ProviderConnection,
@@ -21,14 +20,13 @@ export class ProviderService {
   private readonly repository: ProviderRepository;
 
   constructor(
-    database: FoundryDatabase,
-    private readonly settingsPath = getFoundrySettingsPath(),
+    private readonly database: FoundryDatabase,
   ) {
     this.repository = new ProviderRepository(database.db);
   }
 
   list(): ProviderListItem[] {
-    return this.repository.list(getCurrentUsedProviderIds(this.settingsPath));
+    return this.repository.list(getCurrentUsedProviderIds(this.database.db));
   }
 
   get(id: string): ProviderSummary | null {
@@ -56,7 +54,7 @@ export class ProviderService {
     return this.repository.setStatus(
       id,
       status,
-      getCurrentUsedProviderIds(this.settingsPath),
+      getCurrentUsedProviderIds(this.database.db),
     );
   }
 }

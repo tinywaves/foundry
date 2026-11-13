@@ -128,4 +128,4 @@ foundry settings update --input '{"captures":{"fetcher":null}}'
 - `INPUT_REQUIRED`, `CONFLICTING_INPUT`, `INVALID_JSON`: JSON input transport
   errors described in `cli-conventions.md`.
 
-Do not edit `settings.json` directly. Read current settings and issue a patch.
+Settings are stored in the Foundry SQLite database. Read current settings and issue a patch; do not edit database files directly.

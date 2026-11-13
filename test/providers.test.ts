@@ -14,9 +14,8 @@ const { join } = path;
 
 it('creates, updates, and preserves provider credentials', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-providers-'));
-  const settingsPath = join(directory, 'settings.json');
   const database = openFoundryDatabase(join(directory, 'foundry.sqlite'));
-  writeSettings(DEFAULT_SETTINGS, settingsPath);
+  writeSettings(DEFAULT_SETTINGS, database.db);
 
   try {
     const eventHub = new FoundryEventHub();
@@ -24,7 +23,7 @@ it('creates, updates, and preserves provider credentials', async () => {
     eventHub.subscribe((event) => {
       events.push(event.type);
     });
-    const app = createApiApp(database, { eventHub, settingsPath });
+    const app = createApiApp(database, { eventHub });
     const postResponse = await app.request('/api/providers', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -93,8 +92,8 @@ it('creates, updates, and preserves provider credentials', async () => {
         ...DEFAULT_SETTINGS.features,
         agent: { provider: created.id },
       },
-    }, settingsPath);
-    expect(getCurrentUsedProviderIds(settingsPath)).toEqual(new Set([created.id]));
+    }, database.db);
+    expect(getCurrentUsedProviderIds(database.db)).toEqual(new Set([created.id]));
 
     const inUseResponse = await app.request('/api/providers');
     expect(await inUseResponse.json()).toMatchObject([{ id: created.id, isInUse: true }]);
@@ -119,7 +118,7 @@ it('creates, updates, and preserves provider credentials', async () => {
       error: { code: 'PROVIDER_IN_USE' },
     });
 
-    writeSettings(DEFAULT_SETTINGS, settingsPath);
+    writeSettings(DEFAULT_SETTINGS, database.db);
     const disableUnusedResponse = await app.request(`/api/providers/${created.id}/status`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },

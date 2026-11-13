@@ -120,14 +120,20 @@ production server and static assets.
 Foundry keeps user data outside the repository in `<home>/.foundry`. `<home>` is
 `~` on macOS/Linux and `%USERPROFILE%` on Windows:
 
-- `foundry.sqlite`: providers and their credentials, captures, and fetch jobs
-- `settings.json`: application settings and capture-fetcher credentials
+- `foundry.sqlite`: application settings, providers and credentials, captures,
+  and fetch jobs
 - `.data-transfer/`: temporary export and import files
 
 Feature commands initialize the directory, open the SQLite database, and apply
 Drizzle migrations before running. `foundry web` does the same before the server
 starts. A database created by a newer schema version is rejected instead of
 being modified.
+
+Existing `settings.json` files are moved into SQLite on first startup after
+upgrading, then removed after the settings transaction commits.
+Settings are stored as individual `key` / `value` rows. Keys use JSON Pointer
+paths such as `/workspace/appearance/color-theme`; values preserve their JSON
+types. Updating a setting writes only the affected entries.
 
 On POSIX systems, Foundry creates the data directory with `0700` permissions and
 sensitive files with `0600` permissions.

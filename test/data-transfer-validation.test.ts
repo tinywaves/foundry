@@ -6,10 +6,7 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 import { createCaptureRuntime } from '../src/features/captures/runtime';
 import { createFoundryArchive } from '../src/features/data-transfer/archive';
-import {
-  DATA_EXPORT_ARCHIVE_VERSION,
-  DATA_EXPORT_SETTINGS_VERSION,
-} from '../src/features/data-transfer/contracts';
+import { DATA_EXPORT_ARCHIVE_VERSION } from '../src/features/data-transfer/contracts';
 import { encryptExportFile } from '../src/features/data-transfer/crypto';
 import {
   DATABASE_ENTRY_PATH,
@@ -20,21 +17,21 @@ import {
 import { DataTransferService } from '../src/features/data-transfer/service';
 import { WorkspaceMutationGate } from '../src/features/data-transfer/workspace-mutation';
 import { DEFAULT_SETTINGS } from '../src/features/settings/contracts';
-import { writeSettings } from '../src/features/settings/repository';
+import { readStoredSettings, writeSettings } from '../src/features/settings/repository';
 import { providers } from '../src/storage/schema';
 import {
   CURRENT_DATABASE_SCHEMA_VERSION,
   openFoundryDatabase,
 } from '../src/storage/database';
+import { createPreviousDatabase } from './helpers/previous-database';
 
 const { join } = path;
 
 it('rejects archives with invalid provider records during inspection', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-transfer-validation-'));
   const sourceDatabasePath = join(directory, 'source.sqlite');
-  const sourceSettingsPath = join(directory, 'source-settings.json');
   const sourceDatabase = openFoundryDatabase(sourceDatabasePath);
-  writeSettings(DEFAULT_SETTINGS, sourceSettingsPath);
+  writeSettings(DEFAULT_SETTINGS, sourceDatabase.db);
 
   const timestamp = new Date();
   sourceDatabase.db.insert(providers).values({
@@ -65,25 +62,18 @@ it('rejects archives with invalid provider records during inspection', async () 
       ...await fileRecord(sourceDatabasePath, DATABASE_ENTRY_PATH),
       schemaVersion: CURRENT_DATABASE_SCHEMA_VERSION,
     },
-    settings: {
-      ...await fileRecord(sourceSettingsPath, SETTINGS_ENTRY_PATH),
-      version: DATA_EXPORT_SETTINGS_VERSION,
-    },
   };
   await writeFile(manifestPath, JSON.stringify(manifest));
   await createFoundryArchive([
     { entryPath: MANIFEST_ENTRY_PATH, filePath: manifestPath },
     { entryPath: DATABASE_ENTRY_PATH, filePath: sourceDatabasePath },
-    { entryPath: SETTINGS_ENTRY_PATH, filePath: sourceSettingsPath },
   ], archivePath);
   await encryptExportFile(archivePath, backupPath, 'passphrase');
 
   const targetDatabase = openFoundryDatabase(join(directory, 'target.sqlite'));
-  const targetSettingsPath = join(directory, 'target-settings.json');
   const transfer = new DataTransferService(
     targetDatabase,
-    targetSettingsPath,
-    createCaptureRuntime(targetDatabase, targetSettingsPath).runner,
+    createCaptureRuntime(targetDatabase).runner,
     join(directory, '.data-transfer'),
     '0.0.0',
     new WorkspaceMutationGate(),
@@ -103,6 +93,54 @@ it('rejects archives with invalid provider records during inspection', async () 
     });
   } finally {
     targetDatabase.client.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+it('imports version 1 archives and moves their settings into the database', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'foundry-transfer-legacy-'));
+  const sourcePath = join(directory, 'source.sqlite');
+  const source = createPreviousDatabase(sourcePath, 3);
+  source.close();
+  const settingsPath = join(directory, 'legacy-settings.json');
+  const legacy = structuredClone(DEFAULT_SETTINGS);
+  legacy.workspace.appearance['color-theme'] = 'dark';
+  legacy.features.library.captures.firecrawl.apiKey = 'legacy-archive-key';
+  await writeFile(settingsPath, JSON.stringify(legacy));
+  const manifestPath = join(directory, MANIFEST_ENTRY_PATH);
+  await writeFile(manifestPath, JSON.stringify({
+    format: DATA_EXPORT_FORMAT,
+    archiveVersion: 1,
+    appVersion: '0.0.0',
+    createdAt: new Date().toISOString(),
+    database: { ...await fileRecord(sourcePath, DATABASE_ENTRY_PATH), schemaVersion: 3 },
+    settings: { ...await fileRecord(settingsPath, SETTINGS_ENTRY_PATH), version: 1 },
+  }));
+  const zipPath = join(directory, 'legacy.zip');
+  const backupPath = join(directory, 'legacy.foundry-backup');
+  await createFoundryArchive([
+    { entryPath: MANIFEST_ENTRY_PATH, filePath: manifestPath },
+    { entryPath: DATABASE_ENTRY_PATH, filePath: sourcePath },
+    { entryPath: SETTINGS_ENTRY_PATH, filePath: settingsPath },
+  ], zipPath);
+  await encryptExportFile(zipPath, backupPath, 'passphrase');
+
+  const target = openFoundryDatabase(join(directory, 'target.sqlite'));
+  const transfer = new DataTransferService(
+    target,
+    createCaptureRuntime(target).runner,
+    join(directory, '.data-transfer'),
+    '0.0.0',
+    new WorkspaceMutationGate(),
+  );
+  try {
+    const preview = await transfer.inspectImport(backupPath, 'passphrase');
+    expect(preview.databaseSchemaVersion).toBe(3);
+    expect(readStoredSettings(target.db).workspace.appearance['color-theme']).toBe('system');
+    await transfer.commitImport(preview.importId);
+    expect(readStoredSettings(target.db)).toEqual(legacy);
+  } finally {
+    target.client.close();
     await rm(directory, { recursive: true, force: true });
   }
 });

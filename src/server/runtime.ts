@@ -8,7 +8,7 @@ import { SettingsService } from '../features/settings/service';
 import { BundledSkillCopyService } from '../features/settings/skill-copy-service';
 import { FoundryEventHub } from '../events/hub';
 import type { FoundryDatabase } from '../storage/database';
-import { getFoundryDataTransferPath, getFoundrySettingsPath } from '../storage/paths';
+import { getFoundryDataTransferPath } from '../storage/paths';
 import type { ApiAppOptions } from './api';
 
 export interface FoundryFeatureServices {
@@ -26,21 +26,19 @@ export interface ServerRuntime {
 }
 
 export function createServerRuntime(database: FoundryDatabase): ServerRuntime {
-  const settingsPath = getFoundrySettingsPath();
   const eventHub = new FoundryEventHub();
   const workspaceMutationGate = new WorkspaceMutationGate();
-  const captureRuntime = createCaptureRuntime(database, settingsPath, eventHub);
+  const captureRuntime = createCaptureRuntime(database, eventHub);
   const dataTransferService = new DataTransferService(
     database,
-    settingsPath,
     captureRuntime.runner,
     getFoundryDataTransferPath(),
     packageJson.version,
     workspaceMutationGate,
     (status) => eventHub.publish(DATA_TRANSFER_STATUS_CHANGED_EVENT, status),
   );
-  const providerService = new ProviderService(database, settingsPath);
-  const settingsService = new SettingsService(settingsPath);
+  const providerService = new ProviderService(database);
+  const settingsService = new SettingsService(database);
   const settingsSkillCopyService = new BundledSkillCopyService();
   const services: FoundryFeatureServices = {
     captureRuntime,
@@ -53,7 +51,6 @@ export function createServerRuntime(database: FoundryDatabase): ServerRuntime {
   return {
     services,
     apiOptions: {
-      settingsPath,
       captureService: captureRuntime.service,
       dataTransferService,
       providerService,

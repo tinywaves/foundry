@@ -1,10 +1,10 @@
-import { getFoundrySettingsPath } from '../../storage/paths';
+import type { FoundryDatabase } from '../../storage/database';
 import { readStoredSettings } from '../settings/repository';
 
 export function getCurrentUsedProviderIds(
-  settingsPath = getFoundrySettingsPath(),
+  db: FoundryDatabase['db'],
 ): Set<string> {
-  const settings = readStoredSettings(settingsPath);
+  const settings = readStoredSettings(db);
   const usedProviderIds = new Set<string>();
 
   for (const feature of Object.values(settings.features)) {

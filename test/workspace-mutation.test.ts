@@ -12,20 +12,17 @@ const { join } = path;
 
 it('blocks workspace mutations while data transfer owns the workspace', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-workspace-mutation-'));
-  const settingsPath = join(directory, 'settings.json');
   const database = openFoundryDatabase(join(directory, 'foundry.sqlite'));
-  const captureRuntime = createCaptureRuntime(database, settingsPath);
+  const captureRuntime = createCaptureRuntime(database);
   const workspaceMutationGate = new WorkspaceMutationGate();
   const transfer = new DataTransferService(
     database,
-    settingsPath,
     captureRuntime.runner,
     join(directory, '.data-transfer'),
     '0.0.0',
     workspaceMutationGate,
   );
   const app = createApiApp(database, {
-    settingsPath,
     captureService: captureRuntime.service,
     dataTransferService: transfer,
     workspaceMutationGate,

@@ -20,14 +20,13 @@ function expectedEvent(type: string, data: Record<string, unknown>) {
 
 it('captures a link through Firecrawl Search', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-captures-'));
-  const settingsPath = join(directory, 'settings.json');
   const database = openFoundryDatabase(join(directory, 'foundry.sqlite'));
   updateSettings({
     captures: {
       fetcher: 'firecrawl',
       firecrawlApiKey: 'secret',
     },
-  }, settingsPath);
+  }, database.db);
 
   const rawResponse = {
     success: true,
@@ -61,12 +60,10 @@ it('captures a link through Firecrawl Search', async () => {
     });
     const runtime = createCaptureRuntime(
       database,
-      settingsPath,
       eventHub,
       fetchCapture,
     );
     const app = createApiApp(database, {
-      settingsPath,
       captureService: runtime.service,
       eventHub,
     });

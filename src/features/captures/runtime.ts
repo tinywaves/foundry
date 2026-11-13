@@ -15,18 +15,17 @@ export interface CaptureRuntime {
 
 export function createCaptureRuntime(
   database: FoundryDatabase,
-  settingsPath: string,
   eventHub?: FoundryEventHub,
   fetchCaptureImplementation?: CaptureFetcher,
 ): CaptureRuntime {
   const repository = new CaptureRepository(database.db);
   const runner = new FetchJobRunner(
     repository,
-    settingsPath,
+    database,
     (event) => eventHub?.publish(CAPTURE_JOB_CHANGED_EVENT, event),
     fetchCaptureImplementation,
   );
-  const service = new CaptureService(repository, settingsPath, runner);
+  const service = new CaptureService(repository, database, runner);
 
   return {
     service,

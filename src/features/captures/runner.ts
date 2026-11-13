@@ -1,4 +1,5 @@
 import { readStoredSettings } from '../settings/repository';
+import type { FoundryDatabase } from '../../storage/database';
 import type { CaptureJobChangedEvent } from './events';
 import { fetchCapture } from './fetchers';
 import type { CaptureFetcher } from './fetchers';
@@ -14,7 +15,7 @@ export class FetchJobRunner {
 
   constructor(
     private readonly repository: CaptureRepository,
-    private readonly settingsPath: string,
+    private readonly database: FoundryDatabase,
     private readonly onChanged: (event: CaptureJobChangedEvent) => void = () => {},
     private readonly fetchCaptureImplementation: CaptureFetcher = fetchCapture,
   ) {}
@@ -25,7 +26,7 @@ export class FetchJobRunner {
     }
 
     const concurrency = readStoredSettings(
-      this.settingsPath,
+      this.database.db,
     ).features.library.captures.fetchConcurrency;
 
     while (this.runningCount < concurrency && this.queue.length > 0) {

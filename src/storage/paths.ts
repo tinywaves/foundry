@@ -22,10 +22,6 @@ export function getFoundryDatabasePath(): string {
   return path.join(getFoundryHomePath(), 'foundry.sqlite');
 }
 
-export function getFoundrySettingsPath(): string {
-  return path.join(getFoundryHomePath(), 'settings.json');
-}
-
 export function getFoundryDataTransferPath(): string {
   return path.join(getFoundryHomePath(), '.data-transfer');
 }

@@ -13,13 +13,11 @@ const { join } = path;
 
 it('streams archive uploads with an explicit size limit', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-transfer-upload-'));
-  const settingsPath = join(directory, 'settings.json');
   const transferRoot = join(directory, '.data-transfer');
   const database = openFoundryDatabase(join(directory, 'foundry.sqlite'));
-  const captureRuntime = createCaptureRuntime(database, settingsPath);
+  const captureRuntime = createCaptureRuntime(database);
   const transfer = new DataTransferService(
     database,
-    settingsPath,
     captureRuntime.runner,
     transferRoot,
     '0.0.0',

@@ -37,6 +37,8 @@ foundry data-transfer export --output ./foundry.foundry-backup
 Behavior:
 
 - Produces an encrypted `.foundry-backup` archive.
+- Settings are included in the database snapshot. Device connection configuration
+  is not exported.
 - If `--output` is omitted, writes `foundry-<iso-timestamp>.foundry-backup` in
   the current directory.
 - Appends `.foundry-backup` when the destination lacks that extension.
@@ -103,9 +105,10 @@ Import performs inspection and commit in one process:
 
 1. Validate current state has no active jobs.
 2. Decrypt and validate the archive.
-3. Stage the imported database and settings.
-4. Replace current providers, captures, fetch jobs, and settings in a
-   transaction where applicable.
+3. Stage and migrate the imported database, including settings. Older archives
+   with a separate settings file are converted during staging.
+4. Replace current providers, captures, fetch jobs, and settings in one
+   SQLite transaction. Device connection configuration is left unchanged.
 
 This operation is destructive: the current Foundry database and settings are
 replaced by the archive. Run `inspect` first and summarize the preview unless

@@ -1,5 +1,5 @@
 export const DATA_EXPORT_EXTENSION = '.foundry-backup';
-export const DATA_EXPORT_ARCHIVE_VERSION = 1;
+export const DATA_EXPORT_ARCHIVE_VERSION = 2;
 export const DATA_EXPORT_SETTINGS_VERSION = 1;
 
 export type DataTransferErrorCode

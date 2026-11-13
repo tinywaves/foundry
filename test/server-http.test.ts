@@ -30,14 +30,10 @@ it('uses JSON error envelopes for API routes', async () => {
     expect(htmlMissingResponse.status).toBe(404);
     expect(htmlMissingResponse.headers.get('content-type')).toContain('application/json');
 
-    const settingsParent = join(directory, 'not-a-directory');
-    await writeFile(settingsParent, 'blocked');
-    const failingApp = createApiApp(database, {
-      settingsPath: join(settingsParent, 'settings.json'),
-    });
+    database.client.pragma('query_only = ON');
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
-      const errorResponse = await failingApp.request('/api/settings', {
+      const errorResponse = await app.request('/api/settings', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ theme: 'dark' }),
@@ -51,6 +47,7 @@ it('uses JSON error envelopes for API routes', async () => {
         },
       });
     } finally {
+      database.client.pragma('query_only = OFF');
       consoleError.mockRestore();
     }
   } finally {

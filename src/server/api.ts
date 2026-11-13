@@ -22,7 +22,6 @@ import { createEventRoutes } from '../events/routes';
 import type { FoundryDatabase } from '../storage/database';
 
 export interface ApiAppOptions {
-  settingsPath?: string;
   captureService?: CaptureService;
   dataTransferService?: DataTransferService;
   providerService?: ProviderService;
@@ -43,9 +42,9 @@ export function createApiApp(database: FoundryDatabase, options: ApiAppOptions =
     ?? options.dataTransferService?.workspaceMutationGate
     ?? new WorkspaceMutationGate();
   const providerService = options.providerService
-    ?? new ProviderService(database, options.settingsPath);
+    ?? new ProviderService(database);
   const settingsService = options.settingsService
-    ?? new SettingsService(options.settingsPath);
+    ?? new SettingsService(database);
   const settingsSkillCopyService = options.settingsSkillCopyService
     ?? new BundledSkillCopyService();
 

@@ -91,7 +91,7 @@ export async function extractFoundryArchive(
     zip.close();
   }
 
-  for (const requiredEntry of ALLOWED_ENTRIES) {
+  for (const requiredEntry of [MANIFEST_ENTRY_PATH, DATABASE_ENTRY_PATH]) {
     if (!extractedPaths.has(requiredEntry)) {
       await rm(outputDirectory, { recursive: true, force: true });
       throw new Error('The Foundry archive is incomplete');

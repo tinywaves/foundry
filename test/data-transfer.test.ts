@@ -1,8 +1,11 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, it } from 'vitest';
 import { createCaptureRuntime } from '../src/features/captures/runtime';
+import { extractFoundryArchive } from '../src/features/data-transfer/archive';
+import { decryptExportFile } from '../src/features/data-transfer/crypto';
+import { DATABASE_ENTRY_PATH, MANIFEST_ENTRY_PATH } from '../src/features/data-transfer/format';
 import { DataTransferService } from '../src/features/data-transfer/service';
 import type { DataTransferStatus } from '../src/features/data-transfer/contracts';
 import { WorkspaceMutationGate } from '../src/features/data-transfer/workspace-mutation';
@@ -14,15 +17,13 @@ const { join } = path;
 
 it('exports and restores an encrypted Foundry snapshot', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-transfer-'));
-  const settingsPath = join(directory, 'settings.json');
   const database = openFoundryDatabase(join(directory, 'foundry.sqlite'));
   const providers = new ProviderRepository(database.db);
-  const captureRuntime = createCaptureRuntime(database, settingsPath);
+  const captureRuntime = createCaptureRuntime(database);
   const statusEvents: DataTransferStatus[] = [];
   const workspaceMutationGate = new WorkspaceMutationGate();
   const transfer = new DataTransferService(
     database,
-    settingsPath,
     captureRuntime.runner,
     join(directory, '.data-transfer'),
     '0.0.0',
@@ -36,7 +37,7 @@ it('exports and restores an encrypted Foundry snapshot', async () => {
     updateSettings({
       theme: 'dark',
       captures: { fetcher: 'firecrawl', firecrawlApiKey: 'capture-secret' },
-    }, settingsPath);
+    }, database.db);
     providers.save({
       name: 'Exported provider',
       protocol: 'openai-responses',
@@ -48,19 +49,43 @@ it('exports and restores an encrypted Foundry snapshot', async () => {
     transfer.cleanupStaleTransfers();
     const exported = await transfer.createExport('correct horse battery staple');
     expect(exported.providerCount).toBe(1);
+    const decryptedPath = join(directory, 'backup.zip');
+    const extractedPath = join(directory, 'extracted');
+    await mkdir(extractedPath);
+    await decryptExportFile(exported.filePath, decryptedPath, 'correct horse battery staple');
+    const extracted = await extractFoundryArchive(decryptedPath, extractedPath);
+    expect(Object.keys(extracted).toSorted((a, b) => a.localeCompare(b)))
+      .toEqual([DATABASE_ENTRY_PATH, MANIFEST_ENTRY_PATH]);
+    const manifest = JSON.parse(await readFile(extracted[MANIFEST_ENTRY_PATH], 'utf8')) as Record<string, unknown>;
+    expect(manifest.archiveVersion).toBe(2);
+    expect(manifest).not.toHaveProperty('settings');
+
+    const configPath = join(directory, 'config.json');
+    const configContent = JSON.stringify({ storage: { type: 'local' } });
+    await writeFile(configPath, configContent);
 
     providers.setStatus(providers.list()[0].id, 'deleted');
-    updateSettings({ theme: 'light' }, settingsPath);
+    updateSettings({ theme: 'light' }, database.db);
 
     const preview = await transfer.inspectImport(
       exported.filePath,
       'correct horse battery staple',
     );
     expect(preview.providerCount).toBe(1);
+    database.client.exec(`
+      CREATE TRIGGER reject_provider_import BEFORE INSERT ON providers
+      BEGIN SELECT RAISE(ABORT, 'simulated import failure'); END;
+    `);
+    await expect(transfer.commitImport(preview.importId)).rejects.toThrow('simulated import failure');
+    expect(readSettings(database.db).workspace.appearance['color-theme']).toBe('light');
+    expect(providers.list()).toHaveLength(0);
+    database.client.exec('DROP TRIGGER reject_provider_import');
     await transfer.commitImport(preview.importId);
 
     expect(providers.list()).toHaveLength(1);
-    expect(readSettings(settingsPath).workspace.appearance['color-theme']).toBe('dark');
+    expect(readSettings(database.db).workspace.appearance['color-theme']).toBe('dark');
+    expect(readSettings(database.db).features.library.captures.firecrawl.apiKey).toBe('capture-secret');
+    expect(await readFile(configPath, 'utf8')).toBe(configContent);
     expect(statusEvents[0]?.isBusy).toBe(true);
     expect(statusEvents.at(-1)?.isBusy).toBe(false);
   } finally {

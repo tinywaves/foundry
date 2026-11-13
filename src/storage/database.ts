@@ -5,11 +5,12 @@ import { chmodSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { migrateLegacySettings } from '../features/settings/legacy';
 import { ensureFoundryHome, getFoundryDatabasePath } from './paths';
 
 const DATABASE_BUSY_TIMEOUT_MS = 5000;
 // Increment whenever the persisted SQLite structure changes.
-export const CURRENT_DATABASE_SCHEMA_VERSION = 3;
+export const CURRENT_DATABASE_SCHEMA_VERSION = 5;
 
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
 
@@ -56,6 +57,7 @@ export function openFoundryDatabase(
 
   try {
     migrate(db, { migrationsFolder: migrationsRoot });
+    migrateLegacySettings(db, path.dirname(databasePath));
 
     if (storedSchemaVersion !== CURRENT_DATABASE_SCHEMA_VERSION) {
       client.pragma(`user_version = ${CURRENT_DATABASE_SCHEMA_VERSION}`);

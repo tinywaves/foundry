@@ -24,7 +24,7 @@ export interface ExportManifest {
   database: FileRecord & {
     schemaVersion: number;
   };
-  settings: FileRecord & {
+  settings?: FileRecord & {
     version: number;
   };
 }
@@ -35,7 +35,7 @@ export function parseExportManifest(value: unknown): ExportManifest {
   }
 
   const archiveVersion = readInteger(value.archiveVersion, 'archiveVersion');
-  if (archiveVersion !== DATA_EXPORT_ARCHIVE_VERSION) {
+  if (archiveVersion !== 1 && archiveVersion !== DATA_EXPORT_ARCHIVE_VERSION) {
     throw new DataTransferError(
       'UNSUPPORTED_ARCHIVE',
       'The archive version is not supported',
@@ -47,16 +47,28 @@ export function parseExportManifest(value: unknown): ExportManifest {
     throw new DataTransferError('INVALID_ARCHIVE', 'createdAt is invalid');
   }
 
-  if (!isRecord(value.database) || !isRecord(value.settings)) {
+  if (!isRecord(value.database)) {
     throw new DataTransferError('INVALID_ARCHIVE', 'Archive file metadata is missing');
   }
 
-  const settingsVersion = readInteger(value.settings.version, 'settings.version');
-  if (settingsVersion > DATA_EXPORT_SETTINGS_VERSION) {
-    throw new DataTransferError(
-      'UNSUPPORTED_ARCHIVE',
-      'The settings version is newer than this Foundry version',
-    );
+  let settings: ExportManifest['settings'];
+  if (archiveVersion === 1) {
+    if (!isRecord(value.settings)) {
+      throw new DataTransferError('INVALID_ARCHIVE', 'Settings metadata is missing');
+    }
+    const settingsVersion = readInteger(value.settings.version, 'settings.version');
+    if (settingsVersion > DATA_EXPORT_SETTINGS_VERSION) {
+      throw new DataTransferError(
+        'UNSUPPORTED_ARCHIVE',
+        'The settings version is newer than this Foundry version',
+      );
+    }
+    settings = {
+      ...readFileRecord(value.settings, SETTINGS_ENTRY_PATH),
+      version: settingsVersion,
+    };
+  } else if (value.settings !== undefined) {
+    throw new DataTransferError('INVALID_ARCHIVE', 'Settings must be stored in the database');
   }
 
   return {
@@ -68,10 +80,7 @@ export function parseExportManifest(value: unknown): ExportManifest {
       ...readFileRecord(value.database, DATABASE_ENTRY_PATH),
       schemaVersion: readInteger(value.database.schemaVersion, 'database.schemaVersion'),
     },
-    settings: {
-      ...readFileRecord(value.settings, SETTINGS_ENTRY_PATH),
-      version: settingsVersion,
-    },
+    settings,
   };
 }
 

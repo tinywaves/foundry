@@ -18,6 +18,8 @@ import { SETTINGS_CHANGED_EVENT } from '../features/settings/events';
 import { createSettingsRoutes } from '../features/settings/routes';
 import { SettingsService } from '../features/settings/service';
 import { BundledSkillCopyService } from '../features/settings/skill-copy-service';
+import { createSessionRoutes } from '../features/sessions/routes';
+import { SessionService } from '../features/sessions/service';
 import { createEventRoutes } from '../events/routes';
 import type { FoundryDatabase } from '../storage/database';
 
@@ -27,6 +29,7 @@ export interface ApiAppOptions {
   providerService?: ProviderService;
   settingsService?: SettingsService;
   settingsSkillCopyService?: BundledSkillCopyService;
+  sessionService?: SessionService;
   workspaceMutationGate?: WorkspaceMutationGate;
   eventHub?: FoundryEventHub;
   onSettingsChanged?: () => void;
@@ -47,6 +50,8 @@ export function createApiApp(database: FoundryDatabase, options: ApiAppOptions =
     ?? new SettingsService(database);
   const settingsSkillCopyService = options.settingsSkillCopyService
     ?? new BundledSkillCopyService();
+  const sessionService = options.sessionService
+    ?? new SessionService();
 
   app.use(
     '/api/*',
@@ -80,6 +85,10 @@ export function createApiApp(database: FoundryDatabase, options: ApiAppOptions =
       },
       settingsSkillCopyService,
     ),
+  );
+  app.route(
+    '/api/sessions',
+    createSessionRoutes(sessionService),
   );
   if (options.captureService) {
     app.route(

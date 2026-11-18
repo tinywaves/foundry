@@ -6,6 +6,7 @@ import { WorkspaceMutationGate } from '../features/data-transfer/workspace-mutat
 import { ProviderService } from '../features/providers/service';
 import { SettingsService } from '../features/settings/service';
 import { BundledSkillCopyService } from '../features/settings/skill-copy-service';
+import { SessionService } from '../features/sessions/service';
 import { FoundryEventHub } from '../events/hub';
 import type { FoundryDatabase } from '../storage/database';
 import { getFoundryDataTransferPath } from '../storage/paths';
@@ -17,6 +18,7 @@ export interface FoundryFeatureServices {
   providerService: ProviderService;
   settingsService: SettingsService;
   settingsSkillCopyService: BundledSkillCopyService;
+  sessionService: SessionService;
 }
 
 export interface ServerRuntime {
@@ -40,12 +42,14 @@ export function createServerRuntime(database: FoundryDatabase): ServerRuntime {
   const providerService = new ProviderService(database);
   const settingsService = new SettingsService(database);
   const settingsSkillCopyService = new BundledSkillCopyService();
+  const sessionService = new SessionService();
   const services: FoundryFeatureServices = {
     captureRuntime,
     dataTransferService,
     providerService,
     settingsService,
     settingsSkillCopyService,
+    sessionService,
   };
 
   return {
@@ -56,6 +60,7 @@ export function createServerRuntime(database: FoundryDatabase): ServerRuntime {
       providerService,
       settingsService,
       settingsSkillCopyService,
+      sessionService,
       workspaceMutationGate,
       eventHub,
       onSettingsChanged: captureRuntime.notifySettingsChanged,

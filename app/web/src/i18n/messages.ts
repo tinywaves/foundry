@@ -8,6 +8,8 @@ export type TranslationKey
     | 'navigation.jobs'
     | 'navigation.jobsDescription'
     | 'navigation.captures'
+    | 'navigation.sessions'
+    | 'navigation.sessionsDescription'
     | 'navigation.captureDetails'
     | 'navigation.captureDetailsDescription'
     | 'navigation.library'
@@ -148,6 +150,37 @@ export type TranslationKey
     | 'captures.rawResponse'
     | 'captures.detailUnavailable'
     | 'captures.addNote'
+    | 'sessions.source'
+    | 'sessions.codex'
+    | 'sessions.claudeCode'
+    | 'sessions.refresh'
+    | 'sessions.moveToFoundry'
+    | 'sessions.cloudSync'
+    | 'sessions.comingSoon'
+    | 'sessions.archived'
+    | 'sessions.subagents'
+    | 'sessions.subagent'
+    | 'sessions.thread'
+    | 'sessions.updated'
+    | 'sessions.size'
+    | 'sessions.tokens'
+    | 'sessions.model'
+    | 'sessions.threadsLabel'
+    | 'sessions.projectless'
+    | 'sessions.unassigned'
+    | 'sessions.emptyTitle'
+    | 'sessions.emptyDescription'
+    | 'sessions.claudeTitle'
+    | 'sessions.claudeDescription'
+    | 'sessions.unsupportedTitle'
+    | 'sessions.unsupportedDescription'
+    | 'sessions.errorTitle'
+    | 'sessions.errorDescription'
+    | 'sessions.noThreadsTitle'
+    | 'sessions.noThreadsDescription'
+    | 'sessions.warningTitle'
+    | 'sessions.warningProjectsUnavailable'
+    | 'sessions.filesUnreadable'
     | 'dataTransfer.exportTitle'
     | 'dataTransfer.exportSubtitle'
     | 'dataTransfer.passphrase'
@@ -200,6 +233,8 @@ const english: TranslationTable = {
   'navigation.captureDetailsDescription': 'Inspect the latest successful response from the configured fetcher.',
   'navigation.library': 'Library',
   'navigation.prompts': 'Prompts',
+  'navigation.sessions': 'Sessions',
+  'navigation.sessionsDescription': 'Inspect local agent conversation metadata.',
   'navigation.providers': 'Providers',
   'navigation.settings': 'Settings',
   'navigation.main': 'Main',
@@ -207,6 +242,37 @@ const english: TranslationTable = {
   'navigation.back': 'Back',
   'navigation.openNavigation': 'Open navigation',
   'navigation.windowTitlebar': 'Window titlebar',
+  'sessions.source': 'Session source',
+  'sessions.codex': 'Codex',
+  'sessions.claudeCode': 'Claude Code',
+  'sessions.refresh': 'Refresh',
+  'sessions.moveToFoundry': 'Move to Foundry',
+  'sessions.cloudSync': 'Cloud sync',
+  'sessions.comingSoon': 'Coming soon',
+  'sessions.archived': 'Archived',
+  'sessions.subagents': 'Subagents',
+  'sessions.subagent': 'Subagent',
+  'sessions.thread': 'Thread',
+  'sessions.updated': 'Updated',
+  'sessions.size': 'Size',
+  'sessions.tokens': 'Tokens',
+  'sessions.model': 'Model',
+  'sessions.threadsLabel': 'Threads',
+  'sessions.projectless': 'Projectless',
+  'sessions.unassigned': 'Unassigned',
+  'sessions.emptyTitle': 'No Codex data found',
+  'sessions.emptyDescription': 'Foundry reads Codex sessions from ~/.codex. Start a Codex conversation, then refresh.',
+  'sessions.claudeTitle': 'Claude Code is coming soon',
+  'sessions.claudeDescription': 'This tab will show Claude Code sessions once support is available.',
+  'sessions.unsupportedTitle': 'Unsupported Codex data',
+  'sessions.unsupportedDescription': 'Foundry could not recognize the local Codex database schema.',
+  'sessions.errorTitle': 'Could not read Codex data',
+  'sessions.errorDescription': 'Foundry could not read the local Codex session metadata.',
+  'sessions.noThreadsTitle': 'No matching threads',
+  'sessions.noThreadsDescription': 'Try enabling Archived or Subagents.',
+  'sessions.warningTitle': 'Partial Codex data',
+  'sessions.warningProjectsUnavailable': 'Project assignments are unavailable; threads are shown as unassigned.',
+  'sessions.filesUnreadable': 'rollout files could not be read.',
   'overview.title': 'Good to see you',
   'overview.description': 'A summary of the local workspace.',
   'prompts.description': 'Reusable text fragments for agent conversations.',
@@ -403,6 +469,8 @@ const simplifiedChinese: TranslationTable = {
   'navigation.captureDetailsDescription': '查看已配置抓取服务最近一次成功的响应。',
   'navigation.library': '资料库',
   'navigation.prompts': '提示词',
+  'navigation.sessions': '会话',
+  'navigation.sessionsDescription': '查看本地智能体会话元数据。',
   'navigation.providers': '服务提供商',
   'navigation.settings': '设置',
   'navigation.main': '主要功能',
@@ -410,6 +478,37 @@ const simplifiedChinese: TranslationTable = {
   'navigation.back': '返回',
   'navigation.openNavigation': '打开导航',
   'navigation.windowTitlebar': '窗口标题栏',
+  'sessions.source': '会话来源',
+  'sessions.codex': 'Codex',
+  'sessions.claudeCode': 'Claude Code',
+  'sessions.refresh': '刷新',
+  'sessions.moveToFoundry': '移入 Foundry',
+  'sessions.cloudSync': '云端同步',
+  'sessions.comingSoon': '即将支持',
+  'sessions.archived': '已归档',
+  'sessions.subagents': '子代理',
+  'sessions.subagent': '子代理',
+  'sessions.thread': 'Thread',
+  'sessions.updated': '更新时间',
+  'sessions.size': '大小',
+  'sessions.tokens': 'Token',
+  'sessions.model': '模型',
+  'sessions.threadsLabel': 'Threads',
+  'sessions.projectless': 'Projectless',
+  'sessions.unassigned': 'Unassigned',
+  'sessions.emptyTitle': '未找到 Codex 数据',
+  'sessions.emptyDescription': 'Foundry 从 ~/.codex 读取 Codex 会话。请先创建 Codex 对话，然后刷新。',
+  'sessions.claudeTitle': 'Claude Code 即将支持',
+  'sessions.claudeDescription': '支持后会在这里显示 Claude Code 会话。',
+  'sessions.unsupportedTitle': '不支持的 Codex 数据',
+  'sessions.unsupportedDescription': 'Foundry 无法识别本地 Codex 数据库结构。',
+  'sessions.errorTitle': '无法读取 Codex 数据',
+  'sessions.errorDescription': 'Foundry 无法读取本地 Codex 会话元数据。',
+  'sessions.noThreadsTitle': '没有匹配的 Thread',
+  'sessions.noThreadsDescription': '试试打开 Archived 或 Subagents。',
+  'sessions.warningTitle': 'Codex 数据不完整',
+  'sessions.warningProjectsUnavailable': '项目归属不可用，Thread 暂时显示为 Unassigned。',
+  'sessions.filesUnreadable': '个 rollout 文件无法读取。',
   'overview.description': '本地工作区摘要。',
   'prompts.description': '可复用于智能体对话的文本片段。',
   'providers.add': '添加服务提供商',
@@ -608,6 +707,8 @@ const traditionalChinese: TranslationTable = {
   'navigation.captureDetailsDescription': '檢視已設定抓取服務最近一次成功的回應。',
   'navigation.library': '資料庫',
   'navigation.prompts': '提示詞',
+  'navigation.sessions': '會話',
+  'navigation.sessionsDescription': '檢視本機智慧體會話中繼資料。',
   'navigation.providers': '服務提供者',
   'navigation.settings': '設定',
   'navigation.main': '主要功能',
@@ -615,6 +716,37 @@ const traditionalChinese: TranslationTable = {
   'navigation.back': '返回',
   'navigation.openNavigation': '開啟導覽',
   'navigation.windowTitlebar': '視窗標題列',
+  'sessions.source': '會話來源',
+  'sessions.codex': 'Codex',
+  'sessions.claudeCode': 'Claude Code',
+  'sessions.refresh': '重新整理',
+  'sessions.moveToFoundry': '移入 Foundry',
+  'sessions.cloudSync': '雲端同步',
+  'sessions.comingSoon': '即將支援',
+  'sessions.archived': '已封存',
+  'sessions.subagents': '子代理',
+  'sessions.subagent': '子代理',
+  'sessions.thread': 'Thread',
+  'sessions.updated': '更新時間',
+  'sessions.size': '大小',
+  'sessions.tokens': 'Token',
+  'sessions.model': '模型',
+  'sessions.threadsLabel': 'Threads',
+  'sessions.projectless': 'Projectless',
+  'sessions.unassigned': 'Unassigned',
+  'sessions.emptyTitle': '找不到 Codex 資料',
+  'sessions.emptyDescription': 'Foundry 從 ~/.codex 讀取 Codex 會話。請先建立 Codex 對話，然後重新整理。',
+  'sessions.claudeTitle': 'Claude Code 即將支援',
+  'sessions.claudeDescription': '支援後會在這裡顯示 Claude Code 會話。',
+  'sessions.unsupportedTitle': '不支援的 Codex 資料',
+  'sessions.unsupportedDescription': 'Foundry 無法辨識本機 Codex 資料庫結構。',
+  'sessions.errorTitle': '無法讀取 Codex 資料',
+  'sessions.errorDescription': 'Foundry 無法讀取本機 Codex 會話中繼資料。',
+  'sessions.noThreadsTitle': '沒有符合的 Thread',
+  'sessions.noThreadsDescription': '試著開啟 Archived 或 Subagents。',
+  'sessions.warningTitle': 'Codex 資料不完整',
+  'sessions.warningProjectsUnavailable': '專案歸屬不可用，Thread 暫時顯示為 Unassigned。',
+  'sessions.filesUnreadable': '個 rollout 檔案無法讀取。',
   'overview.description': '本機工作區摘要。',
   'prompts.description': '可重複用於代理人對話的文字片段。',
   'providers.add': '新增服務提供者',
@@ -811,6 +943,8 @@ const japanese: TranslationTable = {
   'navigation.captures': 'キャプチャ',
   'navigation.library': 'ライブラリ',
   'navigation.prompts': 'プロンプト',
+  'navigation.sessions': 'セッション',
+  'navigation.sessionsDescription': 'ローカルエージェントの会話メタデータを確認します。',
   'navigation.providers': 'プロバイダー',
   'navigation.settings': '設定',
   'navigation.main': 'メイン',
@@ -818,6 +952,37 @@ const japanese: TranslationTable = {
   'navigation.back': '戻る',
   'navigation.openNavigation': 'ナビゲーションを開く',
   'navigation.windowTitlebar': 'ウィンドウタイトルバー',
+  'sessions.source': 'セッションソース',
+  'sessions.codex': 'Codex',
+  'sessions.claudeCode': 'Claude Code',
+  'sessions.refresh': '更新',
+  'sessions.moveToFoundry': 'Foundry に移動',
+  'sessions.cloudSync': 'クラウド同期',
+  'sessions.comingSoon': '近日対応',
+  'sessions.archived': 'アーカイブ済み',
+  'sessions.subagents': 'サブエージェント',
+  'sessions.subagent': 'サブエージェント',
+  'sessions.thread': 'Thread',
+  'sessions.updated': '更新日時',
+  'sessions.size': 'サイズ',
+  'sessions.tokens': 'Token',
+  'sessions.model': 'モデル',
+  'sessions.threadsLabel': 'Threads',
+  'sessions.projectless': 'Projectless',
+  'sessions.unassigned': 'Unassigned',
+  'sessions.emptyTitle': 'Codex データが見つかりません',
+  'sessions.emptyDescription': 'Foundry は ~/.codex から Codex セッションを読み取ります。Codex で会話を開始してから更新してください。',
+  'sessions.claudeTitle': 'Claude Code は近日対応',
+  'sessions.claudeDescription': '対応後、このタブに Claude Code セッションが表示されます。',
+  'sessions.unsupportedTitle': '未対応の Codex データ',
+  'sessions.unsupportedDescription': 'Foundry はローカル Codex データベースのスキーマを認識できませんでした。',
+  'sessions.errorTitle': 'Codex データを読み取れません',
+  'sessions.errorDescription': 'Foundry はローカル Codex セッションのメタデータを読み取れませんでした。',
+  'sessions.noThreadsTitle': '一致する Thread がありません',
+  'sessions.noThreadsDescription': 'Archived または Subagents を有効にしてみてください。',
+  'sessions.warningTitle': 'Codex データが不完全です',
+  'sessions.warningProjectsUnavailable': 'プロジェクトの割り当てを利用できないため、Thread は Unassigned として表示されます。',
+  'sessions.filesUnreadable': '個の rollout ファイルを読み取れませんでした。',
   'overview.description': 'ローカルワークスペースの概要。',
   'prompts.description': 'エージェントとの会話で再利用できるテキスト。',
   'providers.add': 'プロバイダーを追加',

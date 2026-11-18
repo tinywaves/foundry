@@ -28,6 +28,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { Theme } from '@astryxdesign/core/theme';
 import {
   ChatBubbleLeftIcon,
+  ChatBubbleLeftRightIcon,
   Cog6ToothIcon,
   DocumentTextIcon,
   FolderIcon,
@@ -52,6 +53,7 @@ import SettingsPage from './features/settings/settings-page';
 import ProvidersPage from './features/providers/provider-page';
 import ProviderFormPage from './features/providers/provider-form';
 import CapturesPage from './features/captures/capture-page';
+import SessionsPage from './features/sessions/sessions-page';
 import CaptureDetailDialog from './features/captures/capture-detail-dialog';
 import JobsPage from './features/captures/jobs-page';
 import { CaptureRealtimeBridge } from './features/captures/realtime';
@@ -108,6 +110,7 @@ const titlebarStyle = stylex.props(styles.titlebar);
 const appIcons = {
   overview: Squares2X2Icon,
   captures: LinkIcon,
+  sessions: ChatBubbleLeftRightIcon,
   prompts: DocumentTextIcon,
   library: FolderIcon,
   providers: Square3Stack3DIcon,
@@ -160,6 +163,13 @@ const sidebarNavigation: ReadonlyArray<NavigationItem | NavigationSection> = [
         label: 'Captures',
         href: '/library/captures',
         icon: appIcons.captures,
+      },
+      {
+        kind: 'item',
+        id: 'sessions',
+        label: 'Sessions',
+        href: '/library/sessions',
+        icon: appIcons.sessions,
       },
     ],
   },
@@ -332,6 +342,7 @@ function SidebarLayout() {
     const labels: Record<string, string> = {
       overview: t('navigation.overview'),
       captures: t('navigation.captures'),
+      sessions: t('navigation.sessions'),
       prompts: t('navigation.prompts'),
       providers: t('navigation.providers'),
       settings: t('navigation.settings'),
@@ -489,6 +500,11 @@ const router = createHashRouter([
             path: 'library/captures',
             element: <CapturesPage />,
             handle: routeHandle('navigation.captures', 'navigation.capturesDescription'),
+          },
+          {
+            path: 'library/sessions',
+            element: <SessionsPage />,
+            handle: routeHandle('navigation.sessions', 'navigation.sessionsDescription'),
           },
           {
             path: 'library/prompts',

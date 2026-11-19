@@ -1,9 +1,14 @@
 import { statSync } from 'node:fs';
 import type {
+  ClaudeSessionSnapshot,
   CodexSessionSnapshot,
+  SessionProject,
   SessionThread,
   SessionThreadBucket,
 } from './contracts';
+import { resolveClaudeHomePath } from './claude-home';
+import { readClaudeSessionState } from './claude-repository';
+import type { ClaudeSessionRecord } from './claude-repository';
 import { resolveCodexHomePath } from './codex-home';
 import {
   findCodexStateDatabase,
@@ -16,6 +21,7 @@ import type { CodexThreadRecord, RolloutFileUsage } from './codex-repository';
 export class SessionService {
   constructor(
     private readonly codexHome = resolveCodexHomePath(),
+    private readonly claudeHome = resolveClaudeHomePath(),
   ) {}
 
   getCodexSnapshot(): CodexSessionSnapshot {
@@ -47,6 +53,22 @@ export class SessionService {
             ]
           : []),
       ],
+    };
+  }
+
+  getClaudeSnapshot(): ClaudeSessionSnapshot {
+    const state = readClaudeSessionState(this.claudeHome);
+    const projects = new Map<string, SessionProject>();
+    const threads = state.sessions
+      .map((session) => toClaudeSessionThread(session, projects))
+      .toSorted((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+
+    return {
+      source: 'claude',
+      capturedAt: new Date().toISOString(),
+      projects: projects.values().toArray(),
+      threads,
+      warnings: [],
     };
   }
 }
@@ -105,6 +127,53 @@ function firstNonEmpty(values: Array<string | null>): string {
     }
   }
   return '';
+}
+
+function toClaudeSessionThread(
+  session: ClaudeSessionRecord,
+  projects: Map<string, SessionProject>,
+): SessionThread {
+  const projectId = projectIdForPath(session.projectPath);
+  if (projectId) {
+    const existing = projects.get(projectId);
+    if (existing) {
+      if (!existing.roots.includes(session.projectPath)) {
+        existing.roots.push(session.projectPath);
+      }
+    } else {
+      projects.set(projectId, {
+        id: projectId,
+        name: projectName(session.projectPath),
+        roots: [session.projectPath],
+      });
+    }
+  }
+
+  return {
+    id: session.id,
+    title: session.title,
+    projectId,
+    projectBucket: projectId ? 'assigned' : 'projectless',
+    archived: false,
+    subagent: session.subagent,
+    createdAt: new Date(session.createdAtMs).toISOString(),
+    updatedAt: new Date(session.updatedAtMs).toISOString(),
+    sizeBytes: session.sizeBytes,
+    segmentCount: 1,
+    tokensUsed: session.tokensUsed,
+    model: session.model,
+    cwd: session.cwd,
+    gitBranch: session.gitBranch,
+  };
+}
+
+function projectIdForPath(projectPath: string): string | null {
+  return projectPath ? `claude:${projectPath}` : null;
+}
+
+function projectName(projectPath: string): string {
+  const segments = projectPath.split(/[\\/]/u).filter(Boolean);
+  return segments.at(-1) ?? projectPath;
 }
 
 function fallbackRolloutUsage(rolloutPath: string | null): RolloutFileUsage | null {

@@ -14,6 +14,14 @@ export function createSessionRoutes(service: SessionService): Hono {
     }
   });
 
+  app.get('/claude', (c) => {
+    try {
+      return c.json(service.getClaudeSnapshot());
+    } catch (error) {
+      return sessionError(c, error);
+    }
+  });
+
   return app;
 }
 
@@ -27,6 +35,12 @@ function sessionError(c: Context, error: unknown) {
         return c.json({ error: { code: error.code, message: error.message } }, 422);
       }
       case 'CODEX_READ_FAILED': {
+        return c.json({ error: { code: error.code, message: error.message } }, 500);
+      }
+      case 'CLAUDE_DATA_NOT_FOUND': {
+        return c.json({ error: { code: error.code, message: error.message } }, 404);
+      }
+      case 'CLAUDE_READ_FAILED': {
         return c.json({ error: { code: error.code, message: error.message } }, 500);
       }
     }

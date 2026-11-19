@@ -1,6 +1,9 @@
 export type {
+  ClaudeSessionSnapshot,
   CodexSessionSnapshot,
   SessionProject,
+  SessionSnapshot,
+  SessionSource,
   SessionThread,
   SessionThreadBucket,
   SessionWarning,

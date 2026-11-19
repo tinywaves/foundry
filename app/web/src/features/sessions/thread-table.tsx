@@ -13,7 +13,8 @@ import * as stylex from '@stylexjs/stylex';
 import type { TranslationKey } from '../../i18n';
 import { useI18n } from '../../i18n';
 import type {
-  CodexSessionSnapshot,
+  SessionProject,
+  SessionSnapshot,
   SessionThread,
   SessionThreadBucket,
 } from './types';
@@ -51,7 +52,7 @@ export function ThreadTable({
   isShowingSubagents,
   formatUpdatedAt,
 }: {
-  snapshot: CodexSessionSnapshot;
+  snapshot: SessionSnapshot;
   isShowingArchived: boolean;
   isShowingSubagents: boolean;
   formatUpdatedAt: (value: string) => string;
@@ -225,7 +226,7 @@ export function ThreadTable({
 }
 
 function buildGroups(
-  snapshot: CodexSessionSnapshot,
+  snapshot: SessionSnapshot,
   isShowingArchived: boolean,
   isShowingSubagents: boolean,
   t: (key: TranslationKey) => string,
@@ -283,7 +284,7 @@ function buildGroups(
 
 function groupKey(
   thread: SessionThread,
-  project: CodexSessionSnapshot['projects'][number] | undefined,
+  project: SessionProject | undefined,
 ): string {
   if (project) {
     return `project:${project.id}`;
@@ -293,7 +294,7 @@ function groupKey(
 
 function groupName(
   thread: SessionThread,
-  project: CodexSessionSnapshot['projects'][number] | undefined,
+  project: SessionProject | undefined,
   t: (key: TranslationKey) => string,
 ): string {
   if (project) {

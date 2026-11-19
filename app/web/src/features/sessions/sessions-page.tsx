@@ -22,23 +22,27 @@ import { useI18n } from '../../i18n';
 import { FeatureEmptyState } from '../../components/feature-empty-state';
 import { TitlebarActions } from '../../components/titlebar-actions';
 import { getSettings, settingsKeys } from '../settings/api';
-import { getCodexSessions, sessionKeys } from './api';
-import type { CodexSessionSnapshot, SessionWarning } from './types';
+import { getSessions, sessionKeys } from './api';
+import type {
+  SessionSnapshot,
+  SessionSource,
+  SessionWarning,
+} from './types';
 import { ThreadTable } from './thread-table';
 import type { TranslationKey } from '../../i18n';
 
 export default function SessionsPage() {
   const { t } = useI18n();
-  const [source, setSource] = useState('codex');
+  const [source, setSource] = useState<SessionSource>('codex');
   const [isShowingArchived, setIsShowingArchived] = useState(false);
   const [isShowingSubagents, setIsShowingSubagents] = useState(false);
   const settingsQuery = useQuery({
     queryKey: settingsKeys.current(),
     queryFn: getSettings,
   });
-  const codexQuery = useQuery({
-    queryKey: sessionKeys.codex,
-    queryFn: getCodexSessions,
+  const sessionQuery = useQuery({
+    queryKey: sessionKeys.source(source),
+    queryFn: () => getSessions(source),
     staleTime: 0,
     refetchOnMount: 'always',
   });
@@ -54,9 +58,12 @@ export default function SessionsPage() {
     return Number.isNaN(date.getTime()) ? '' : date.toLocaleString();
   }, [settingsQuery.data]);
 
-  const snapshot = codexQuery.data;
+  const snapshot = sessionQuery.data;
   const archivedCount = snapshot?.threads.filter((thread) => thread.archived).length ?? 0;
   const subagentCount = snapshot?.threads.filter((thread) => thread.subagent).length ?? 0;
+  const sourceLabel = t(source === 'codex'
+    ? 'sessions.codex'
+    : 'sessions.claudeCode');
 
   return (
     <>
@@ -68,9 +75,9 @@ export default function SessionsPage() {
             icon={<ArrowPathIcon />}
             size="sm"
             variant="ghost"
-            isLoading={codexQuery.isFetching}
+            isLoading={sessionQuery.isFetching}
             onClick={() => {
-              void codexQuery.refetch();
+              void sessionQuery.refetch();
             }}
           />
         </HStack>
@@ -81,37 +88,40 @@ export default function SessionsPage() {
           label={t('sessions.source')}
           size="sm"
           value={source}
-          onChange={setSource}
+          onChange={(value) => {
+            if (value === 'codex' || value === 'claude') {
+              setSource(value);
+            }
+          }}
         >
           <SegmentedControlItem value="codex" label={t('sessions.codex')} />
           <SegmentedControlItem value="claude" label={t('sessions.claudeCode')} />
         </SegmentedControl>
 
-        {source === 'claude'
-          ? (
-              <SessionsEmptyState source={t('sessions.claudeCode')} />
-            )
-          : (
-              <CodexSessions
-                isPending={codexQuery.isPending}
-                isFetching={codexQuery.isFetching}
-                error={codexQuery.error}
-                snapshot={snapshot}
-                isShowingArchived={isShowingArchived}
-                isShowingSubagents={isShowingSubagents}
-                archivedCount={archivedCount}
-                subagentCount={subagentCount}
-                onShowArchivedChange={setIsShowingArchived}
-                onShowSubagentsChange={setIsShowingSubagents}
-                formatUpdatedAt={formatUpdatedAt}
-              />
-            )}
+        <SourceSessions
+          key={source}
+          source={source}
+          sourceLabel={sourceLabel}
+          isPending={sessionQuery.isPending}
+          isFetching={sessionQuery.isFetching}
+          error={sessionQuery.error}
+          snapshot={snapshot}
+          isShowingArchived={isShowingArchived}
+          isShowingSubagents={isShowingSubagents}
+          archivedCount={archivedCount}
+          subagentCount={subagentCount}
+          onShowArchivedChange={setIsShowingArchived}
+          onShowSubagentsChange={setIsShowingSubagents}
+          formatUpdatedAt={formatUpdatedAt}
+        />
       </VStack>
     </>
   );
 }
 
-function CodexSessions({
+function SourceSessions({
+  source,
+  sourceLabel,
   isPending,
   isFetching,
   error,
@@ -124,10 +134,12 @@ function CodexSessions({
   onShowSubagentsChange,
   formatUpdatedAt,
 }: {
+  source: SessionSource;
+  sourceLabel: string;
   isPending: boolean;
   isFetching: boolean;
   error: unknown;
-  snapshot: CodexSessionSnapshot | undefined;
+  snapshot: SessionSnapshot | undefined;
   isShowingArchived: boolean;
   isShowingSubagents: boolean;
   archivedCount: number;
@@ -144,12 +156,12 @@ function CodexSessions({
 
   const errorCode = error instanceof ApiError ? error.code : undefined;
 
-  if (!snapshot && errorCode === 'CODEX_DATA_NOT_FOUND') {
-    return <SessionsEmptyState source={t('sessions.codex')} />;
+  if (!snapshot && errorCode?.endsWith('_DATA_NOT_FOUND')) {
+    return <SessionsEmptyState source={sourceLabel} />;
   }
 
   if (!snapshot && error) {
-    const isUnsupported = errorCode === 'UNSUPPORTED_CODEX_SCHEMA';
+    const isUnsupported = errorCode?.startsWith('UNSUPPORTED_') ?? false;
     return (
       <Banner
         status="error"
@@ -168,7 +180,7 @@ function CodexSessions({
   }
 
   if (snapshot.threads.length === 0) {
-    return <SessionsEmptyState source={t('sessions.codex')} />;
+    return <SessionsEmptyState source={sourceLabel} />;
   }
 
   const hasVisibleThreads = snapshot.threads.some((thread) => (
@@ -196,12 +208,16 @@ function CodexSessions({
         />
       ))}
       <HStack gap={3} vAlign="center">
-        <CheckboxInput
-          label={`${t('sessions.archived')} (${archivedCount})`}
-          size="sm"
-          value={isShowingArchived}
-          onChange={onShowArchivedChange}
-        />
+        {source === 'codex' || archivedCount > 0
+          ? (
+              <CheckboxInput
+                label={`${t('sessions.archived')} (${archivedCount})`}
+                size="sm"
+                value={isShowingArchived}
+                onChange={onShowArchivedChange}
+              />
+            )
+          : null}
         <CheckboxInput
           label={`${t('sessions.subagents')} (${subagentCount})`}
           size="sm"
@@ -260,7 +276,9 @@ function SessionSkeleton() {
 
 function warningDescription(
   warning: SessionWarning,
-  t: (key: TranslationKey) => string,
+  t: (key: TranslationKey, values?: Record<string, string | number>) => string,
 ): string {
-  return warning.code === 'PROJECTS_UNAVAILABLE' ? t('sessions.warningProjectsUnavailable') : `${warning.count ?? 0} ${t('sessions.filesUnreadable')}`;
+  return warning.code === 'PROJECTS_UNAVAILABLE'
+    ? t('sessions.warningProjectsUnavailable')
+    : t('sessions.filesUnreadable', { count: warning.count ?? 0 });
 }

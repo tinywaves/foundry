@@ -1,5 +1,7 @@
 export type SessionThreadBucket = 'assigned' | 'projectless' | 'unassigned';
 
+export type SessionSource = 'codex' | 'claude';
+
 export interface SessionProject {
   id: string;
   name: string;
@@ -32,18 +34,28 @@ export interface SessionWarning {
   count?: number;
 }
 
-export interface CodexSessionSnapshot {
-  source: 'codex';
+export interface SessionSnapshot {
+  source: SessionSource;
   capturedAt: string;
   projects: SessionProject[];
   threads: SessionThread[];
   warnings: SessionWarning[];
 }
 
+export interface CodexSessionSnapshot extends SessionSnapshot {
+  source: 'codex';
+}
+
+export interface ClaudeSessionSnapshot extends SessionSnapshot {
+  source: 'claude';
+}
+
 export type SessionErrorCode
   = | 'CODEX_DATA_NOT_FOUND'
     | 'UNSUPPORTED_CODEX_SCHEMA'
-    | 'CODEX_READ_FAILED';
+    | 'CODEX_READ_FAILED'
+    | 'CLAUDE_DATA_NOT_FOUND'
+    | 'CLAUDE_READ_FAILED';
 
 export class SessionSourceError extends Error {
   constructor(

@@ -317,3 +317,203 @@ it('serves the Codex snapshot through the sessions API', async () => {
     await rm(codexHome, { recursive: true, force: true });
   }
 });
+
+it('builds a read-only Claude snapshot from indexed and orphaned transcripts', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'foundry-claude-'));
+  const claudeHome = join(root, '.claude');
+  const projectDirectory = join(claudeHome, 'projects', '-repo-one');
+  const orphanDirectory = join(claudeHome, 'projects', '-repo-two');
+  const indexedId = '66666666-6666-4666-8666-666666666666';
+  const orphanId = '77777777-7777-4777-8777-777777777777';
+  const missingId = '88888888-8888-4888-8888-888888888888';
+  await mkdir(projectDirectory, { recursive: true });
+  await mkdir(orphanDirectory, { recursive: true });
+
+  const indexedPath = join(projectDirectory, `${indexedId}.jsonl`);
+  await writeFile(indexedPath, [
+    {
+      type: 'user',
+      timestamp: '2026-05-01T10:00:01.000Z',
+      cwd: '/repo/one',
+      gitBranch: 'main',
+      message: { role: 'user', content: 'Indexed first prompt' },
+    },
+    {
+      type: 'assistant',
+      timestamp: '2026-05-01T10:30:00.000Z',
+      cwd: '/repo/one',
+      gitBranch: 'main',
+      message: {
+        role: 'assistant',
+        model: 'claude-sonnet-4-5',
+        usage: {
+          input_tokens: 10,
+          output_tokens: 5,
+          cache_creation_input_tokens: 2,
+          cache_read_input_tokens: 3,
+        },
+      },
+    },
+  ].map((record) => JSON.stringify(record)).join('\n'));
+
+  const orphanPath = join(orphanDirectory, `${orphanId}.jsonl`);
+  await writeFile(orphanPath, [
+    { type: 'custom-title', customTitle: 'Orphan custom title' },
+    {
+      type: 'user',
+      timestamp: '2026-05-02T09:00:00.000Z',
+      cwd: '/repo/two',
+      isSidechain: true,
+      message: { role: 'user', content: 'Orphan first prompt' },
+    },
+    {
+      type: 'assistant',
+      timestamp: '2026-05-02T09:05:00.000Z',
+      cwd: '/repo/two',
+      gitBranch: 'feature/claude',
+      message: {
+        role: 'assistant',
+        model: 'claude-opus-4-5',
+        usage: { input_tokens: 4, output_tokens: 3 },
+      },
+    },
+  ].map((record) => JSON.stringify(record)).join('\n'));
+
+  await writeFile(
+    join(projectDirectory, 'sessions-index.json'),
+    JSON.stringify({
+      version: 1,
+      originalPath: '/repo/one',
+      entries: [
+        {
+          sessionId: indexedId,
+          fullPath: indexedPath,
+          firstPrompt: 'Indexed first prompt',
+          summary: 'Indexed summary',
+          created: '2026-05-01T10:00:00.000Z',
+          modified: '2026-05-01T10:30:00.000Z',
+          gitBranch: 'main',
+          projectPath: '/repo/one',
+          isSidechain: false,
+        },
+        {
+          sessionId: missingId,
+          fullPath: join(projectDirectory, `${missingId}.jsonl`),
+          summary: 'Missing transcript',
+          projectPath: '/repo/one',
+          isSidechain: false,
+        },
+      ],
+    }),
+  );
+
+  try {
+    const snapshot = new SessionService(
+      join(root, '.codex'),
+      claudeHome,
+    ).getClaudeSnapshot();
+
+    expect(snapshot.source).toBe('claude');
+    expect(snapshot.threads).toHaveLength(2);
+    expect(snapshot.warnings).toEqual([]);
+    expect(snapshot.projects).toEqual(expect.arrayContaining([
+      { id: 'claude:/repo/one', name: 'one', roots: ['/repo/one'] },
+      { id: 'claude:/repo/two', name: 'two', roots: ['/repo/two'] },
+    ]));
+
+    const indexed = snapshot.threads.find((thread) => thread.id === indexedId);
+    expect(indexed).toMatchObject({
+      title: 'Indexed summary',
+      projectId: 'claude:/repo/one',
+      projectBucket: 'assigned',
+      archived: false,
+      subagent: false,
+      tokensUsed: 20,
+      model: 'claude-sonnet-4-5',
+      cwd: '/repo/one',
+      gitBranch: 'main',
+      createdAt: '2026-05-01T10:00:00.000Z',
+      updatedAt: '2026-05-01T10:30:00.000Z',
+    });
+    expect(indexed?.sizeBytes).toBeGreaterThan(0);
+
+    const orphan = snapshot.threads.find((thread) => thread.id === orphanId);
+    expect(orphan).toMatchObject({
+      title: 'Orphan custom title',
+      projectId: 'claude:/repo/two',
+      subagent: true,
+      tokensUsed: 7,
+      model: 'claude-opus-4-5',
+      cwd: '/repo/two',
+      gitBranch: 'feature/claude',
+    });
+    expect(snapshot.threads.map((thread) => thread.id))
+      .toEqual([orphanId, indexedId]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+it('reports missing Claude data', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'foundry-claude-missing-'));
+  try {
+    let error: unknown;
+    try {
+      new SessionService(
+        join(root, '.codex'),
+        join(root, '.claude'),
+      ).getClaudeSnapshot();
+    } catch (error_) {
+      error = error_;
+    }
+    expect(error).toMatchObject({ code: 'CLAUDE_DATA_NOT_FOUND' });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+it('serves the Claude snapshot through the sessions API', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'foundry-claude-api-'));
+  const claudeHome = join(root, '.claude');
+  const projectDirectory = join(claudeHome, 'projects', '-repo-api');
+  const sessionId = '99999999-9999-4999-8999-999999999999';
+  await mkdir(projectDirectory, { recursive: true });
+  await writeFile(
+    join(projectDirectory, `${sessionId}.jsonl`),
+    JSON.stringify({
+      type: 'user',
+      timestamp: '2026-05-03T09:00:00.000Z',
+      cwd: '/repo/api',
+      message: { role: 'user', content: 'Claude API thread' },
+    }),
+  );
+
+  const foundryHome = await mkdtemp(join(tmpdir(), 'foundry-sessions-api-'));
+  const database = openFoundryDatabase(join(foundryHome, 'foundry.sqlite'));
+  const app = createApiApp(database, {
+    sessionService: new SessionService(
+      join(root, '.codex'),
+      claudeHome,
+    ),
+  });
+
+  try {
+    const response = await app.request('/api/sessions/claude');
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      source: 'claude',
+      threads: [
+        {
+          id: sessionId,
+          title: 'Claude API thread',
+          projectId: 'claude:/repo/api',
+        },
+      ],
+      warnings: [],
+    });
+  } finally {
+    database.client.close();
+    await rm(foundryHome, { recursive: true, force: true });
+    await rm(root, { recursive: true, force: true });
+  }
+});

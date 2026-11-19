@@ -1,5 +1,7 @@
 export type SessionThreadBucket = 'assigned' | 'projectless' | 'unassigned';
 
+export type SessionSource = 'codex' | 'claude';
+
 export type SessionProject = {
   id: string;
   name: string;
@@ -32,10 +34,18 @@ export type SessionWarning = {
   count?: number;
 };
 
-export type CodexSessionSnapshot = {
-  source: 'codex';
+export type SessionSnapshot = {
+  source: SessionSource;
   capturedAt: string;
   projects: SessionProject[];
   threads: SessionThread[];
   warnings: SessionWarning[];
+};
+
+export type CodexSessionSnapshot = SessionSnapshot & {
+  source: 'codex';
+};
+
+export type ClaudeSessionSnapshot = SessionSnapshot & {
+  source: 'claude';
 };

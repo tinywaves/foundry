@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import {
   ChatBubbleLeftRightIcon,
   CommandLineIcon,
@@ -33,7 +34,10 @@ import type { TranslationKey } from '../../i18n';
 
 export default function SessionsPage() {
   const { t } = useI18n();
-  const [source, setSource] = useState<SessionSource>('codex');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const source: SessionSource = searchParams.get('source') === 'claude'
+    ? 'claude'
+    : 'codex';
   const [isShowingArchived, setIsShowingArchived] = useState(false);
   const [isShowingSubagents, setIsShowingSubagents] = useState(false);
   const settingsQuery = useQuery({
@@ -89,9 +93,16 @@ export default function SessionsPage() {
           size="sm"
           value={source}
           onChange={(value) => {
-            if (value === 'codex' || value === 'claude') {
-              setSource(value);
+            if (value !== 'codex' && value !== 'claude') {
+              return;
             }
+            const nextSearchParams = new URLSearchParams(searchParams);
+            if (value === 'claude') {
+              nextSearchParams.set('source', 'claude');
+            } else {
+              nextSearchParams.delete('source');
+            }
+            setSearchParams(nextSearchParams);
           }}
         >
           <SegmentedControlItem value="codex" label={t('sessions.codex')} />

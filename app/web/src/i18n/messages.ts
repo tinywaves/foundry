@@ -154,9 +154,6 @@ export type TranslationKey
     | 'sessions.codex'
     | 'sessions.claudeCode'
     | 'sessions.refresh'
-    | 'sessions.moveToFoundry'
-    | 'sessions.cloudSync'
-    | 'sessions.comingSoon'
     | 'sessions.archived'
     | 'sessions.subagents'
     | 'sessions.subagent'
@@ -170,8 +167,6 @@ export type TranslationKey
     | 'sessions.unassigned'
     | 'sessions.emptyTitle'
     | 'sessions.emptyDescription'
-    | 'sessions.claudeTitle'
-    | 'sessions.claudeDescription'
     | 'sessions.unsupportedTitle'
     | 'sessions.unsupportedDescription'
     | 'sessions.errorTitle'
@@ -246,9 +241,6 @@ const english: TranslationTable = {
   'sessions.codex': 'Codex',
   'sessions.claudeCode': 'Claude Code',
   'sessions.refresh': 'Refresh',
-  'sessions.moveToFoundry': 'Move to Foundry',
-  'sessions.cloudSync': 'Cloud sync',
-  'sessions.comingSoon': 'Coming soon',
   'sessions.archived': 'Archived',
   'sessions.subagents': 'Subagents',
   'sessions.subagent': 'Subagent',
@@ -260,10 +252,8 @@ const english: TranslationTable = {
   'sessions.threadsLabel': 'Threads',
   'sessions.projectless': 'Projectless',
   'sessions.unassigned': 'Unassigned',
-  'sessions.emptyTitle': 'No Codex data found',
-  'sessions.emptyDescription': 'Foundry reads Codex sessions from ~/.codex. Start a Codex conversation, then refresh.',
-  'sessions.claudeTitle': 'Claude Code is coming soon',
-  'sessions.claudeDescription': 'This tab will show Claude Code sessions once support is available.',
+  'sessions.emptyTitle': 'No {{source}} sessions',
+  'sessions.emptyDescription': 'No {{source}} sessions were found. Start a conversation in {{source}}, then refresh.',
   'sessions.unsupportedTitle': 'Unsupported Codex data',
   'sessions.unsupportedDescription': 'Foundry could not recognize the local Codex database schema.',
   'sessions.errorTitle': 'Could not read Codex data',
@@ -482,9 +472,6 @@ const simplifiedChinese: TranslationTable = {
   'sessions.codex': 'Codex',
   'sessions.claudeCode': 'Claude Code',
   'sessions.refresh': '刷新',
-  'sessions.moveToFoundry': '移入 Foundry',
-  'sessions.cloudSync': '云端同步',
-  'sessions.comingSoon': '即将支持',
   'sessions.archived': '已归档',
   'sessions.subagents': '子代理',
   'sessions.subagent': '子代理',
@@ -496,10 +483,8 @@ const simplifiedChinese: TranslationTable = {
   'sessions.threadsLabel': 'Threads',
   'sessions.projectless': 'Projectless',
   'sessions.unassigned': 'Unassigned',
-  'sessions.emptyTitle': '未找到 Codex 数据',
-  'sessions.emptyDescription': 'Foundry 从 ~/.codex 读取 Codex 会话。请先创建 Codex 对话，然后刷新。',
-  'sessions.claudeTitle': 'Claude Code 即将支持',
-  'sessions.claudeDescription': '支持后会在这里显示 Claude Code 会话。',
+  'sessions.emptyTitle': '暂无 {{source}} 会话',
+  'sessions.emptyDescription': '没有找到 {{source}} 会话。先在 {{source}} 中开始对话，然后刷新。',
   'sessions.unsupportedTitle': '不支持的 Codex 数据',
   'sessions.unsupportedDescription': 'Foundry 无法识别本地 Codex 数据库结构。',
   'sessions.errorTitle': '无法读取 Codex 数据',
@@ -720,9 +705,6 @@ const traditionalChinese: TranslationTable = {
   'sessions.codex': 'Codex',
   'sessions.claudeCode': 'Claude Code',
   'sessions.refresh': '重新整理',
-  'sessions.moveToFoundry': '移入 Foundry',
-  'sessions.cloudSync': '雲端同步',
-  'sessions.comingSoon': '即將支援',
   'sessions.archived': '已封存',
   'sessions.subagents': '子代理',
   'sessions.subagent': '子代理',
@@ -734,10 +716,8 @@ const traditionalChinese: TranslationTable = {
   'sessions.threadsLabel': 'Threads',
   'sessions.projectless': 'Projectless',
   'sessions.unassigned': 'Unassigned',
-  'sessions.emptyTitle': '找不到 Codex 資料',
-  'sessions.emptyDescription': 'Foundry 從 ~/.codex 讀取 Codex 會話。請先建立 Codex 對話，然後重新整理。',
-  'sessions.claudeTitle': 'Claude Code 即將支援',
-  'sessions.claudeDescription': '支援後會在這裡顯示 Claude Code 會話。',
+  'sessions.emptyTitle': '暫無 {{source}} 工作階段',
+  'sessions.emptyDescription': '沒有找到 {{source}} 工作階段。先在 {{source}} 中開始對話，然後重新整理。',
   'sessions.unsupportedTitle': '不支援的 Codex 資料',
   'sessions.unsupportedDescription': 'Foundry 無法辨識本機 Codex 資料庫結構。',
   'sessions.errorTitle': '無法讀取 Codex 資料',
@@ -956,9 +936,6 @@ const japanese: TranslationTable = {
   'sessions.codex': 'Codex',
   'sessions.claudeCode': 'Claude Code',
   'sessions.refresh': '更新',
-  'sessions.moveToFoundry': 'Foundry に移動',
-  'sessions.cloudSync': 'クラウド同期',
-  'sessions.comingSoon': '近日対応',
   'sessions.archived': 'アーカイブ済み',
   'sessions.subagents': 'サブエージェント',
   'sessions.subagent': 'サブエージェント',
@@ -970,10 +947,8 @@ const japanese: TranslationTable = {
   'sessions.threadsLabel': 'Threads',
   'sessions.projectless': 'Projectless',
   'sessions.unassigned': 'Unassigned',
-  'sessions.emptyTitle': 'Codex データが見つかりません',
-  'sessions.emptyDescription': 'Foundry は ~/.codex から Codex セッションを読み取ります。Codex で会話を開始してから更新してください。',
-  'sessions.claudeTitle': 'Claude Code は近日対応',
-  'sessions.claudeDescription': '対応後、このタブに Claude Code セッションが表示されます。',
+  'sessions.emptyTitle': '{{source}} のセッションはありません',
+  'sessions.emptyDescription': '{{source}} のセッションが見つかりませんでした。{{source}} で会話を開始してから更新してください。',
   'sessions.unsupportedTitle': '未対応の Codex データ',
   'sessions.unsupportedDescription': 'Foundry はローカル Codex データベースのスキーマを認識できませんでした。',
   'sessions.errorTitle': 'Codex データを読み取れません',

@@ -152,6 +152,13 @@ const sidebarNavigation: ReadonlyArray<NavigationItem | NavigationSection> = [
     items: [
       {
         kind: 'item',
+        id: 'sessions',
+        label: 'Sessions',
+        href: '/library/sessions',
+        icon: appIcons.sessions,
+      },
+      {
+        kind: 'item',
         id: 'prompts',
         label: 'Prompts',
         href: '/library/prompts',
@@ -163,13 +170,6 @@ const sidebarNavigation: ReadonlyArray<NavigationItem | NavigationSection> = [
         label: 'Captures',
         href: '/library/captures',
         icon: appIcons.captures,
-      },
-      {
-        kind: 'item',
-        id: 'sessions',
-        label: 'Sessions',
-        href: '/library/sessions',
-        icon: appIcons.sessions,
       },
     ],
   },

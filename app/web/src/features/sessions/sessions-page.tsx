@@ -1,15 +1,13 @@
 import { useCallback, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  CodeBracketIcon,
+  ChatBubbleLeftRightIcon,
   CommandLineIcon,
   InboxStackIcon,
   SparklesIcon,
   ArrowPathIcon,
-  CloudIcon,
 } from '@heroicons/react/24/outline';
 import { Banner } from '@astryxdesign/core/Banner';
-import { Button } from '@astryxdesign/core/Button';
 import { CheckboxInput } from '@astryxdesign/core/CheckboxInput';
 import { IconButton } from '@astryxdesign/core/IconButton';
 import {
@@ -18,7 +16,6 @@ import {
 } from '@astryxdesign/core/SegmentedControl';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
-import { useSearchParams } from 'react-router-dom';
 import { ApiError } from '../../lib/api';
 import { formatTimestamp } from '../../lib/format-time';
 import { useI18n } from '../../i18n';
@@ -31,12 +28,8 @@ import { ThreadTable } from './thread-table';
 import type { TranslationKey } from '../../i18n';
 
 export default function SessionsPage() {
-  type SessionSource = 'codex' | 'claude';
   const { t } = useI18n();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const source: SessionSource = searchParams.get('source') === 'claude'
-    ? 'claude'
-    : 'codex';
+  const [source, setSource] = useState('codex');
   const [isShowingArchived, setIsShowingArchived] = useState(false);
   const [isShowingSubagents, setIsShowingSubagents] = useState(false);
   const settingsQuery = useQuery({
@@ -46,7 +39,6 @@ export default function SessionsPage() {
   const codexQuery = useQuery({
     queryKey: sessionKeys.codex,
     queryFn: getCodexSessions,
-    enabled: source === 'codex',
     staleTime: 0,
     refetchOnMount: 'always',
   });
@@ -68,46 +60,28 @@ export default function SessionsPage() {
 
   return (
     <>
-      {source === 'codex' && (
-        <TitlebarActions>
-          <HStack gap={2} vAlign="center">
-            <IconButton
-              label={t('sessions.refresh')}
-              tooltip={t('sessions.refresh')}
-              icon={<ArrowPathIcon />}
-              size="sm"
-              variant="ghost"
-              isLoading={codexQuery.isFetching}
-              onClick={() => {
-                void codexQuery.refetch();
-              }}
-            />
-            <Button
-              label={t('sessions.moveToFoundry')}
-              size="sm"
-              variant="primary"
-              isDisabled
-              tooltip={t('sessions.comingSoon')}
-            />
-            <Button
-              label={t('sessions.cloudSync')}
-              size="sm"
-              variant="secondary"
-              isDisabled
-              tooltip={t('sessions.comingSoon')}
-            />
-          </HStack>
-        </TitlebarActions>
-      )}
+      <TitlebarActions>
+        <HStack gap={2} vAlign="center">
+          <IconButton
+            label={t('sessions.refresh')}
+            tooltip={t('sessions.refresh')}
+            icon={<ArrowPathIcon />}
+            size="sm"
+            variant="ghost"
+            isLoading={codexQuery.isFetching}
+            onClick={() => {
+              void codexQuery.refetch();
+            }}
+          />
+        </HStack>
+      </TitlebarActions>
 
       <VStack gap={4}>
         <SegmentedControl
           label={t('sessions.source')}
           size="sm"
           value={source}
-          onChange={(nextSource) => {
-            setSearchParams({ source: nextSource });
-          }}
+          onChange={setSource}
         >
           <SegmentedControlItem value="codex" label={t('sessions.codex')} />
           <SegmentedControlItem value="claude" label={t('sessions.claudeCode')} />
@@ -115,13 +89,7 @@ export default function SessionsPage() {
 
         {source === 'claude'
           ? (
-              <FeatureEmptyState
-                startIcon={SparklesIcon}
-                centerIcon={CodeBracketIcon}
-                endIcon={CloudIcon}
-                title={t('sessions.claudeTitle')}
-                description={t('sessions.claudeDescription')}
-              />
+              <SessionsEmptyState source={t('sessions.claudeCode')} />
             )
           : (
               <CodexSessions
@@ -177,15 +145,7 @@ function CodexSessions({
   const errorCode = error instanceof ApiError ? error.code : undefined;
 
   if (!snapshot && errorCode === 'CODEX_DATA_NOT_FOUND') {
-    return (
-      <FeatureEmptyState
-        startIcon={CommandLineIcon}
-        centerIcon={CodeBracketIcon}
-        endIcon={InboxStackIcon}
-        title={t('sessions.emptyTitle')}
-        description={t('sessions.emptyDescription')}
-      />
-    );
+    return <SessionsEmptyState source={t('sessions.codex')} />;
   }
 
   if (!snapshot && error) {
@@ -205,6 +165,10 @@ function CodexSessions({
 
   if (!snapshot) {
     return <SessionSkeleton />;
+  }
+
+  if (snapshot.threads.length === 0) {
+    return <SessionsEmptyState source={t('sessions.codex')} />;
   }
 
   const hasVisibleThreads = snapshot.threads.some((thread) => (
@@ -265,6 +229,20 @@ function CodexSessions({
             />
           )}
     </VStack>
+  );
+}
+
+function SessionsEmptyState({ source }: { source: string }) {
+  const { t } = useI18n();
+
+  return (
+    <FeatureEmptyState
+      startIcon={SparklesIcon}
+      centerIcon={ChatBubbleLeftRightIcon}
+      endIcon={InboxStackIcon}
+      title={t('sessions.emptyTitle', { source })}
+      description={t('sessions.emptyDescription', { source })}
+    />
   );
 }
 

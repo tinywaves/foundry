@@ -4,13 +4,13 @@ import path from 'node:path';
 import { expect, it, vi } from 'vitest';
 import { createApp } from '../src/server/app';
 import { createApiApp } from '../src/server/api';
-import { openFoundryDatabase } from '../src/storage/database';
+import { openFoundryStorage } from '../src/storage/index';
 
 const { join } = path;
 
 it('uses JSON error envelopes for API routes', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-api-errors-'));
-  const database = openFoundryDatabase(join(directory, 'foundry.sqlite'));
+  const database = openFoundryStorage(directory);
   const app = createApiApp(database);
 
   try {
@@ -30,7 +30,9 @@ it('uses JSON error envelopes for API routes', async () => {
     expect(htmlMissingResponse.status).toBe(404);
     expect(htmlMissingResponse.headers.get('content-type')).toContain('application/json');
 
-    database.client.pragma('query_only = ON');
+    const failure = vi.spyOn(database, 'transaction').mockImplementation(() => {
+      throw new Error('storage write failed');
+    });
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       const errorResponse = await app.request('/api/settings', {
@@ -47,11 +49,11 @@ it('uses JSON error envelopes for API routes', async () => {
         },
       });
     } finally {
-      database.client.pragma('query_only = OFF');
+      failure.mockRestore();
       consoleError.mockRestore();
     }
   } finally {
-    database.client.close();
+    database.close();
     await rm(directory, { recursive: true, force: true });
   }
 });
@@ -59,7 +61,7 @@ it('uses JSON error envelopes for API routes', async () => {
 it('serves the SPA only for navigation requests', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-static-'));
   const webRoot = join(directory, 'web');
-  const database = openFoundryDatabase(join(directory, 'foundry.sqlite'));
+  const database = openFoundryStorage(directory);
   await mkdir(join(webRoot, 'assets'), { recursive: true });
   await writeFile(join(webRoot, 'index.html'), '<!doctype html><title>Foundry</title>');
   await writeFile(join(webRoot, 'assets', 'existing.js'), 'console.log("ok")');
@@ -97,7 +99,7 @@ it('serves the SPA only for navigation requests', async () => {
     expect(existingAssetResponse.status).toBe(200);
     expect(await existingAssetResponse.text()).toBe('console.log("ok")');
   } finally {
-    database.client.close();
+    database.close();
     await rm(directory, { recursive: true, force: true });
   }
 });

@@ -1,5 +1,5 @@
 import { readStoredSettings } from '../settings/repository';
-import type { FoundryDatabase } from '../../storage/database';
+import type { FoundryStorage } from '../../storage/index';
 import type {
   CaptureCounts,
   CaptureDetail,
@@ -16,12 +16,12 @@ import type { FetchJobRunner } from './runner';
 export class CaptureService {
   constructor(
     private readonly repository: CaptureRepository,
-    private readonly database: FoundryDatabase,
+    private readonly storage: FoundryStorage,
     private readonly runner: FetchJobRunner,
   ) {}
 
   private executionConfig(): StoredJobConfig | null {
-    const settings = readStoredSettings(this.database.db).features.library.captures;
+    const settings = readStoredSettings(this.storage).features.library.captures;
     if (!settings.fetcher) {
       return null;
     }

@@ -8,14 +8,14 @@ import { getCurrentUsedProviderIds } from '../src/features/providers/usage';
 import { DEFAULT_SETTINGS } from '../src/features/settings/contracts';
 import { writeSettings } from '../src/features/settings/repository';
 import { createApiApp } from '../src/server/api';
-import { openFoundryDatabase } from '../src/storage/database';
+import { openFoundryStorage } from '../src/storage/index';
 
 const { join } = path;
 
 it('creates, updates, and preserves provider credentials', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-providers-'));
-  const database = openFoundryDatabase(join(directory, 'foundry.sqlite'));
-  writeSettings(DEFAULT_SETTINGS, database.db);
+  const database = openFoundryStorage(directory);
+  writeSettings(DEFAULT_SETTINGS, database);
 
   try {
     const eventHub = new FoundryEventHub();
@@ -92,8 +92,8 @@ it('creates, updates, and preserves provider credentials', async () => {
         ...DEFAULT_SETTINGS.features,
         agent: { provider: created.id },
       },
-    }, database.db);
-    expect(getCurrentUsedProviderIds(database.db)).toEqual(new Set([created.id]));
+    }, database);
+    expect(getCurrentUsedProviderIds(database)).toEqual(new Set([created.id]));
 
     const inUseResponse = await app.request('/api/providers');
     expect(await inUseResponse.json()).toMatchObject([{ id: created.id, isInUse: true }]);
@@ -118,7 +118,7 @@ it('creates, updates, and preserves provider credentials', async () => {
       error: { code: 'PROVIDER_IN_USE' },
     });
 
-    writeSettings(DEFAULT_SETTINGS, database.db);
+    writeSettings(DEFAULT_SETTINGS, database);
     const disableUnusedResponse = await app.request(`/api/providers/${created.id}/status`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
@@ -127,7 +127,7 @@ it('creates, updates, and preserves provider credentials', async () => {
     expect(disableUnusedResponse.status).toBe(200);
   } finally {
     vi.unstubAllGlobals();
-    database.client.close();
+    database.close();
     await rm(directory, { recursive: true, force: true });
   }
 });

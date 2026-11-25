@@ -1,1 +1,0 @@
-ALTER TABLE `fetch_jobs` ADD `credits_used` integer;

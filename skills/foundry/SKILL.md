@@ -47,7 +47,7 @@ Read only the references needed for the current request.
 4. Check `job.status` after capture operations. A command can exit successfully
    with a completed job whose status is `failed`.
 5. Run `data-transfer inspect` before `data-transfer import`; import replaces the
-   current database and settings.
+   current JSON records and settings.
 6. Prefer `FOUNDRY_PASSPHRASE` over `--passphrase` so backup secrets do not enter
    shell history.
 7. Use CLI commands instead of editing files under `<home>/.foundry` directly.

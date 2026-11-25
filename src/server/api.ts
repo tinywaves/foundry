@@ -21,7 +21,7 @@ import { BundledSkillCopyService } from '../features/settings/skill-copy-service
 import { createSessionRoutes } from '../features/sessions/routes';
 import { SessionService } from '../features/sessions/service';
 import { createEventRoutes } from '../events/routes';
-import type { FoundryDatabase } from '../storage/database';
+import type { FoundryStorage } from '../storage/index';
 
 export interface ApiAppOptions {
   captureService?: CaptureService;
@@ -39,15 +39,15 @@ export function isApiPath(path: string): boolean {
   return path === '/api' || path.startsWith('/api/');
 }
 
-export function createApiApp(database: FoundryDatabase, options: ApiAppOptions = {}): Hono {
+export function createApiApp(storage: FoundryStorage, options: ApiAppOptions = {}): Hono {
   const app = new Hono();
   const workspaceMutationGate = options.workspaceMutationGate
     ?? options.dataTransferService?.workspaceMutationGate
     ?? new WorkspaceMutationGate();
   const providerService = options.providerService
-    ?? new ProviderService(database);
+    ?? new ProviderService(storage);
   const settingsService = options.settingsService
-    ?? new SettingsService(database);
+    ?? new SettingsService(storage);
   const settingsSkillCopyService = options.settingsSkillCopyService
     ?? new BundledSkillCopyService();
   const sessionService = options.sessionService
@@ -61,8 +61,9 @@ export function createApiApp(database: FoundryDatabase, options: ApiAppOptions =
   app.get('/api/health', (c) => c.json({
     status: 'ok',
     version: packageJson.version,
-    database: {
-      schemaVersion: database.schemaVersion,
+    storage: {
+      format: 'json',
+      formatVersion: storage.formatVersion,
     },
   }));
 

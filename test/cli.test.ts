@@ -98,6 +98,10 @@ it('exposes settings and provider workflows through JSON commands', async () => 
     };
     expect(settings.configFolder).toBe(join(directory, '.foundry'));
     expect(settings.workspace.appearance['color-theme']).toBe('dark');
+    const storedSettings = JSON.parse(await readFile(join(directory, '.foundry', 'settings.json'), 'utf8')) as { workspace: { appearance: { 'color-theme': string } } };
+    expect(storedSettings.workspace.appearance['color-theme']).toBe('dark');
+    expect(existsSync(join(directory, '.foundry', 'manifest.json'))).toBe(false);
+    expect(existsSync(join(directory, '.foundry', 'data'))).toBe(false);
 
     const created = await runJsonCommand([
       'providers',

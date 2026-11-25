@@ -1,13 +1,11 @@
 import {
   DATA_EXPORT_ARCHIVE_VERSION,
   DATA_EXPORT_EXTENSION,
-  DATA_EXPORT_SETTINGS_VERSION,
 } from './contracts';
 import { DataTransferError } from './errors';
 
 export const DATA_EXPORT_FORMAT = 'foundry.snapshot';
-export const DATABASE_ENTRY_PATH = 'database/foundry.sqlite';
-export const SETTINGS_ENTRY_PATH = 'settings.json';
+export const DATA_ENTRY_PATH = 'data/foundry.json';
 export const MANIFEST_ENTRY_PATH = 'manifest.json';
 
 export interface FileRecord {
@@ -21,11 +19,8 @@ export interface ExportManifest {
   archiveVersion: number;
   appVersion: string;
   createdAt: string;
-  database: FileRecord & {
-    schemaVersion: number;
-  };
-  settings?: FileRecord & {
-    version: number;
+  data: FileRecord & {
+    formatVersion: number;
   };
 }
 
@@ -35,7 +30,7 @@ export function parseExportManifest(value: unknown): ExportManifest {
   }
 
   const archiveVersion = readInteger(value.archiveVersion, 'archiveVersion');
-  if (archiveVersion !== 1 && archiveVersion !== DATA_EXPORT_ARCHIVE_VERSION) {
+  if (archiveVersion !== DATA_EXPORT_ARCHIVE_VERSION) {
     throw new DataTransferError(
       'UNSUPPORTED_ARCHIVE',
       'The archive version is not supported',
@@ -47,40 +42,18 @@ export function parseExportManifest(value: unknown): ExportManifest {
     throw new DataTransferError('INVALID_ARCHIVE', 'createdAt is invalid');
   }
 
-  if (!isRecord(value.database)) {
-    throw new DataTransferError('INVALID_ARCHIVE', 'Archive file metadata is missing');
+  if (!isRecord(value.data) || value.database !== undefined || value.settings !== undefined) {
+    throw new DataTransferError('INVALID_ARCHIVE', 'JSON data metadata is invalid');
   }
-
-  let settings: ExportManifest['settings'];
-  if (archiveVersion === 1) {
-    if (!isRecord(value.settings)) {
-      throw new DataTransferError('INVALID_ARCHIVE', 'Settings metadata is missing');
-    }
-    const settingsVersion = readInteger(value.settings.version, 'settings.version');
-    if (settingsVersion > DATA_EXPORT_SETTINGS_VERSION) {
-      throw new DataTransferError(
-        'UNSUPPORTED_ARCHIVE',
-        'The settings version is newer than this Foundry version',
-      );
-    }
-    settings = {
-      ...readFileRecord(value.settings, SETTINGS_ENTRY_PATH),
-      version: settingsVersion,
-    };
-  } else if (value.settings !== undefined) {
-    throw new DataTransferError('INVALID_ARCHIVE', 'Settings must be stored in the database');
-  }
-
   return {
     format: DATA_EXPORT_FORMAT,
     archiveVersion,
     appVersion: readString(value.appVersion, 'appVersion'),
     createdAt,
-    database: {
-      ...readFileRecord(value.database, DATABASE_ENTRY_PATH),
-      schemaVersion: readInteger(value.database.schemaVersion, 'database.schemaVersion'),
+    data: {
+      ...readFileRecord(value.data, DATA_ENTRY_PATH),
+      formatVersion: readInteger(value.data.formatVersion, 'data.formatVersion'),
     },
-    settings,
   };
 }
 

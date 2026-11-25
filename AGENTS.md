@@ -24,8 +24,8 @@ browser.
 The `foundry web` startup sequence is part of the product contract:
 
 1. Parse CLI arguments with citty.
-2. Initialize `<home>/.foundry` and open the SQLite database.
-3. Apply packaged Drizzle migrations.
+2. Initialize JSON storage in `<home>/.foundry`.
+3. Recover interrupted JSON file transactions.
 4. Start capture and data-transfer services.
 5. Serve the API and bundled Web UI on `127.0.0.1:11111`.
 6. Print the URL and open the browser unless `--no-open` is used.
@@ -65,12 +65,14 @@ src/
 |   |-- start.ts           Production HTTP server
 |   `-- web-root.ts        Bundled Web UI resolution
 `-- storage/
-    |-- database.ts        SQLite connection, migrations, and schema version
-    |-- paths.ts           User-home Foundry paths and POSIX permissions
-    `-- schema.ts          Drizzle table definitions
+    |-- index.ts           Default JSON storage initialization
+    |-- store.ts           JSON records, process locking and redo recovery
+    |-- models.ts          JSON record contracts and format version
+    |-- validation.ts      Snapshot integrity validation
+    |-- files.ts           Atomic private file writes
+    `-- paths.ts           User-home Foundry paths and POSIX permissions
 
 skills/foundry/             Agent-facing Foundry CLI usage manual and references
-drizzle/                   Generated migration SQL and metadata
 test/                      Behavioral tests using temporary storage
 ```
 
@@ -106,7 +108,7 @@ Keep CLI and server responsibilities separate:
   POSIX and `%USERPROFILE%` on Windows). Do not expose arbitrary filesystem
   paths through the API or CLI for this feature.
 - Treat `.foundry-backup` archive versions and manifest validation as
-  compatibility contracts. Change them only with focused migration and
+  compatibility contracts. Change them only with focused validation and
   round-trip tests.
 
 ## Web UI Rules
@@ -154,38 +156,40 @@ API development servers. Rebuild `dist` to test production static serving.
 `pnpm build` must remain:
 
 1. Build and clean the CLI with `tsdown`.
-2. Copy Drizzle migrations into `dist/drizzle` and the agent skill into
-   `dist/skills` with `tsdown`.
+2. Copy the agent skill into `dist/skills` with `tsdown`.
 3. Build the Web UI directly to `dist/web` with Vite.
 
 - Do not add a manual Web UI copy step.
 - Keep `app/web/vite.config.ts` `build.outDir` pointed at `../../dist/web`.
 - Keep `tsdown.config.ts` `entry` pointed at `src/cli/index.ts`.
-- Keep migration copying in `tsdown.config.ts`; packaged CLI builds must not
-  depend on the repository `drizzle/` directory at runtime.
 - Keep skill copying in `tsdown.config.ts`; packaged CLI builds must not depend
   on the repository `skills/` directory at runtime.
 - Keep TypeScript and `@types/node` versions in the pnpm catalog.
 - `pnpm start` runs `node dist/index.mjs`; it does not build implicitly.
 - Verify packaging with `pnpm pack --dry-run`. The tarball must contain
-  `dist/index.mjs`, `dist/web`, `dist/drizzle`, and `dist/skills/foundry`.
+  `dist/index.mjs`, `dist/web`, and `dist/skills/foundry`.
 
-## Storage and Migrations
+## Storage
 
-- Runtime data belongs in `<home>/.foundry`, never in the repository or `dist`.
-  `<home>` is `os.homedir()`: `~` on macOS/Linux and `%USERPROFILE%` on Windows.
-- `src/storage/schema.ts` is the schema source of truth.
-- Generate migrations with `pnpm db:generate`; commit the SQL and `meta/`
-  files. Do not hand-edit generated migrations.
-- The CLI and API development server apply migrations automatically. Do not add
-  a second migration path with different behavior.
-- Increment `CURRENT_DATABASE_SCHEMA_VERSION` when the persisted SQLite
-  structure changes.
-- Keep `resolveMigrationsRoot()` compatible with packaged execution and local
-  development.
-- On POSIX, preserve the intended `0700` directory and `0600` file permissions.
-- Tests must use temporary directories. Never point tests or destructive
-  migration experiments at the developer's real `<home>/.foundry` data.
+- Runtime data belongs in `<home>/.foundry`, outside the repository and
+  `dist`. `<home>` is `os.homedir()` on every supported platform.
+- Store settings in `settings.json`; providers, captures and fetch jobs each
+  have one JSON file per record in their collection directories.
+- `src/storage/models.ts` owns record contracts and the JSON format version.
+- Use `FoundryStorage` transactions for writes. Keep process locking, atomic
+  replacement and redo recovery inside the storage module. Read JSON files
+  directly on each request; do not introduce cross-request caches or manifests.
+- Preserve active-URL uniqueness, one active job per capture and valid capture/job
+  references in repositories and snapshot validation.
+- Preserve POSIX `0700` directories and `0600` files.
+- New storage starts from default settings and empty JSON collections. Startup
+  does not import old SQLite databases.
+- Node's built-in SQLite is limited to the external, read-only Codex session
+  adapter. Foundry persists only JSON.
+- Export and import JSON snapshots only. Verify format changes with validation
+  and encrypted round-trip tests.
+- Tests use temporary directories; never run imports or mutating
+  commands against the developer's real `<home>/.foundry` data.
 
 ## Generated Files
 
@@ -197,7 +201,7 @@ editing files there.
 After changing active source files:
 
 ```bash
-pnpm exec eslint src app/web/src app/web/vite.config.ts vitest.config.ts tsdown.config.ts drizzle.config.ts package.json
+pnpm exec eslint src app/web/src app/web/vite.config.ts vitest.config.ts tsdown.config.ts package.json
 pnpm --filter web exec tsc --noEmit
 pnpm build
 pnpm test

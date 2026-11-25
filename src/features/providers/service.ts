@@ -1,4 +1,4 @@
-import type { FoundryDatabase } from '../../storage/database';
+import type { FoundryStorage } from '../../storage/index';
 import type {
   ProviderConnection,
   ProviderInput,
@@ -20,13 +20,13 @@ export class ProviderService {
   private readonly repository: ProviderRepository;
 
   constructor(
-    private readonly database: FoundryDatabase,
+    private readonly storage: FoundryStorage,
   ) {
-    this.repository = new ProviderRepository(database.db);
+    this.repository = new ProviderRepository(storage);
   }
 
   list(): ProviderListItem[] {
-    return this.repository.list(getCurrentUsedProviderIds(this.database.db));
+    return this.repository.list(getCurrentUsedProviderIds(this.storage));
   }
 
   get(id: string): ProviderSummary | null {
@@ -51,10 +51,10 @@ export class ProviderService {
   }
 
   setStatus(id: string, status: ProviderStatus): ProviderSummary {
-    return this.repository.setStatus(
+    return this.storage.transaction(() => this.repository.setStatus(
       id,
       status,
-      getCurrentUsedProviderIds(this.database.db),
-    );
+      getCurrentUsedProviderIds(this.storage),
+    ));
   }
 }

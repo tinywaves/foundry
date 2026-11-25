@@ -1,12 +1,14 @@
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import Database from 'better-sqlite3';
+// Node 24 provides this built-in for read-only compatibility and test fixtures.
+// eslint-disable-next-line n/no-unsupported-features/node-builtins
+import { DatabaseSync as Database } from 'node:sqlite';
 import { expect, it } from 'vitest';
 import { SessionSourceError } from '../src/features/sessions/contracts';
 import { SessionService } from '../src/features/sessions/service';
 import { createApiApp } from '../src/server/api';
-import { openFoundryDatabase } from '../src/storage/database';
+import { openFoundryStorage } from '../src/storage/index';
 
 const { join } = path;
 
@@ -291,7 +293,7 @@ it('serves the Codex snapshot through the sessions API', async () => {
   `);
   client.close();
   const foundryHome = await mkdtemp(join(tmpdir(), 'foundry-sessions-api-'));
-  const database = openFoundryDatabase(join(foundryHome, 'foundry.sqlite'));
+  const database = openFoundryStorage(foundryHome);
   const app = createApiApp(database, {
     sessionService: new SessionService(codexHome),
   });
@@ -312,7 +314,7 @@ it('serves the Codex snapshot through the sessions API', async () => {
       warnings: [{ code: 'PROJECTS_UNAVAILABLE' }],
     });
   } finally {
-    database.client.close();
+    database.close();
     await rm(foundryHome, { recursive: true, force: true });
     await rm(codexHome, { recursive: true, force: true });
   }
@@ -489,7 +491,7 @@ it('serves the Claude snapshot through the sessions API', async () => {
   );
 
   const foundryHome = await mkdtemp(join(tmpdir(), 'foundry-sessions-api-'));
-  const database = openFoundryDatabase(join(foundryHome, 'foundry.sqlite'));
+  const database = openFoundryStorage(foundryHome);
   const app = createApiApp(database, {
     sessionService: new SessionService(
       join(root, '.codex'),
@@ -512,7 +514,7 @@ it('serves the Claude snapshot through the sessions API', async () => {
       warnings: [],
     });
   } finally {
-    database.client.close();
+    database.close();
     await rm(foundryHome, { recursive: true, force: true });
     await rm(root, { recursive: true, force: true });
   }

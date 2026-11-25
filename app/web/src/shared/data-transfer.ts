@@ -30,7 +30,7 @@ export type ImportPreview = {
   fileName: string;
   exportedAt: string;
   appVersion: string;
-  databaseSchemaVersion: number;
+  dataFormatVersion: number;
   settingsVersion: number;
   providerCount: number;
   captureCount: number;

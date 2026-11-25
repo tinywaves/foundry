@@ -7,14 +7,14 @@ import { createCaptureRuntime } from '../src/features/captures/runtime';
 import { createDataTransferRoutes } from '../src/features/data-transfer/routes';
 import { DataTransferService } from '../src/features/data-transfer/service';
 import { WorkspaceMutationGate } from '../src/features/data-transfer/workspace-mutation';
-import { openFoundryDatabase } from '../src/storage/database';
+import { openFoundryStorage } from '../src/storage/index';
 
 const { join } = path;
 
 it('streams archive uploads with an explicit size limit', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-transfer-upload-'));
   const transferRoot = join(directory, '.data-transfer');
-  const database = openFoundryDatabase(join(directory, 'foundry.sqlite'));
+  const database = openFoundryStorage(directory);
   const captureRuntime = createCaptureRuntime(database);
   const transfer = new DataTransferService(
     database,
@@ -71,7 +71,7 @@ it('streams archive uploads with an explicit size limit', async () => {
     const entriesAfterOversizedUpload = await readdir(transferRoot);
     expect(entriesAfterOversizedUpload.some((entry) => entry.startsWith('upload-'))).toBe(false);
   } finally {
-    database.client.close();
+    database.close();
     await rm(directory, { recursive: true, force: true });
   }
 });

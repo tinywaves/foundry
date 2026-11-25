@@ -2,15 +2,15 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import type { Hono } from 'hono';
 import path from 'node:path';
 import type { ApiAppOptions } from './api';
-import type { FoundryDatabase } from '../storage/database';
+import type { FoundryStorage } from '../storage/index';
 import { createApiApp, isApiPath } from './api';
 
 export function createApp(
   webRoot: string,
-  database: FoundryDatabase,
+  storage: FoundryStorage,
   options?: ApiAppOptions,
 ): Hono {
-  const app = createApiApp(database, options);
+  const app = createApiApp(storage, options);
   const staticFiles = serveStatic({ root: webRoot });
 
   app.use(

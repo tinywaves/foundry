@@ -1,78 +1,39 @@
-import Database from 'better-sqlite3';
-import { and, count, eq, inArray, isNull } from 'drizzle-orm';
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream, mkdirSync, rmSync } from 'node:fs';
-import {
-  chmod,
-  mkdir,
-  readFile,
-  rm,
-  stat,
-  writeFile,
-} from 'node:fs/promises';
+import { chmod, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
-import {
-  CURRENT_DATABASE_SCHEMA_VERSION,
-  openFoundryDatabase,
-  readDatabaseSchemaVersion,
-} from '../../storage/database';
-import type { FoundryDatabase } from '../../storage/database';
-import { captures, fetchJobs, providers, settings } from '../../storage/schema';
-import { parseProviderInput } from '../providers/contracts';
-import { normalizeSettings } from '../settings/contracts';
-import { readStoredSettings, writeSettings } from '../settings/repository';
+import type { FoundryStorage } from '../../storage/store';
+import { STORAGE_FORMAT_VERSION } from '../../storage/models';
+import type { StorageSnapshot } from '../../storage/models';
+import { validateSnapshot } from '../../storage/validation';
 import type { FetchJobRunner } from '../captures/runner';
-import {
-  DATA_EXPORT_ARCHIVE_VERSION,
-  DATA_EXPORT_SETTINGS_VERSION,
-} from './contracts';
-import type {
-  DataTransferStatus,
-  ExportOutcome,
-  ImportPreview,
-} from './contracts';
+import { DATA_EXPORT_ARCHIVE_VERSION, DATA_EXPORT_SETTINGS_VERSION } from './contracts';
+import type { DataTransferStatus, ExportOutcome, ImportPreview } from './contracts';
 import { createFoundryArchive, extractFoundryArchive } from './archive';
 import { decryptExportFile, encryptExportFile } from './crypto';
 import { DataTransferError } from './errors';
 import type { WorkspaceMutationGate } from './workspace-mutation';
-import {
-  DATABASE_ENTRY_PATH,
-  MANIFEST_ENTRY_PATH,
-  parseExportManifest,
-  SETTINGS_ENTRY_PATH,
-} from './format';
+import { DATA_ENTRY_PATH, MANIFEST_ENTRY_PATH, parseExportManifest } from './format';
 import type { ExportManifest, FileRecord } from './format';
 
 interface StagedImport {
-  databasePath: string;
+  snapshotPath: string;
   directory: string;
   preview: ImportPreview;
 }
-
 export interface DataTransferUploadTarget {
   filePath: string;
   cleanup: () => Promise<void>;
 }
-
 export class DataTransferService {
   private busy = false;
   private readonly stagedImports = new Map<string, StagedImport>();
-
-  constructor(
-    private readonly database: FoundryDatabase,
-    private readonly runner: FetchJobRunner,
-    private readonly temporaryRoot: string,
-    private readonly appVersion: string,
-    readonly workspaceMutationGate: WorkspaceMutationGate,
-    private readonly onStatusChanged: (status: DataTransferStatus) => void = () => {},
-  ) {}
-
+  constructor(private readonly storage: FoundryStorage, private readonly runner: FetchJobRunner, private readonly temporaryRoot: string, private readonly appVersion: string, readonly workspaceMutationGate: WorkspaceMutationGate, private readonly onStatusChanged: (status: DataTransferStatus) => void = () => {}) {}
   private async runExclusive<T>(operation: () => Promise<T>): Promise<T> {
     if (this.busy || !this.workspaceMutationGate.tryBeginTransfer()) {
       throw new DataTransferError('BUSY', 'Another data transfer is in progress');
     }
-
     this.busy = true;
     try {
       this.onStatusChanged(this.getStatus());
@@ -88,15 +49,9 @@ export class DataTransferService {
     await mkdir(this.temporaryRoot, { recursive: true, mode: 0o700 });
     await ensureDirectoryMode(this.temporaryRoot);
     const directory = path.join(this.temporaryRoot, `${prefix}-${randomUUID()}`);
-    await mkdir(directory, { recursive: false, mode: 0o700 });
+    await mkdir(directory, { mode: 0o700 });
     await ensureDirectoryMode(directory);
     return directory;
-  }
-
-  private async clearStagedImports(): Promise<void> {
-    const staged = this.stagedImports.values().toArray();
-    this.stagedImports.clear();
-    await Promise.all(staged.map((item) => this.removeQuietly(item.directory)));
   }
 
   private async removeQuietly(targetPath: string): Promise<void> {
@@ -107,10 +62,7 @@ export class DataTransferService {
 
   async createUploadTarget(): Promise<DataTransferUploadTarget> {
     const directory = await this.createWorkDirectory('upload');
-    return {
-      filePath: path.join(directory, 'archive.foundry-backup'),
-      cleanup: () => this.removeQuietly(directory),
-    };
+    return { filePath: path.join(directory, 'archive.foundry-backup'), cleanup: () => this.removeQuietly(directory) };
   }
 
   cleanupStaleTransfers(): void {
@@ -120,162 +72,89 @@ export class DataTransferService {
   }
 
   getStatus(): DataTransferStatus {
-    return {
-      activeJobCount: countActiveJobs(this.database.db),
-      isBusy: this.busy,
-    };
+    return { activeJobCount: this.storage.all('fetchJobs').filter((job) => isActiveJob(job)).length, isBusy: this.busy };
   }
 
   async createExport(passphrase: string): Promise<ExportOutcome> {
     assertPassphrase(passphrase);
-
     return this.runExclusive(async () => {
-      const workDirectory = await this.createWorkDirectory('export');
-      const databaseSnapshotPath = path.join(workDirectory, 'foundry.sqlite');
-      const manifestPath = path.join(workDirectory, MANIFEST_ENTRY_PATH);
-      const archivePath = path.join(workDirectory, 'foundry.zip');
-      const destinationPath = path.join(
-        this.temporaryRoot,
-        `foundry-${Date.now()}.foundry-backup`,
-      );
-
+      const directory = await this.createWorkDirectory('export');
+      const snapshotPath = path.join(directory, 'foundry.json');
+      const manifestPath = path.join(directory, MANIFEST_ENTRY_PATH);
+      const archivePath = path.join(directory, 'foundry.zip');
+      const destinationPath = path.join(this.temporaryRoot, `foundry-${randomUUID()}.foundry-backup`);
       this.runner.pause();
       try {
-        assertNoActiveJobs(this.database.db);
-        await this.database.client.backup(databaseSnapshotPath);
-        await ensureFileMode(databaseSnapshotPath);
-
-        const recordCounts = countRecords(this.database.db);
-        const schemaVersion = readDatabaseSchemaVersion(databaseSnapshotPath);
-        if (schemaVersion !== CURRENT_DATABASE_SCHEMA_VERSION) {
-          throw new DataTransferError(
-            'IO_ERROR',
-            'The database snapshot has an unexpected schema version',
-          );
-        }
-
+        const snapshot = this.storage.snapshot();
+        assertNoActiveJobs(snapshot);
+        validateSnapshot(snapshot);
+        await writeFile(snapshotPath, JSON.stringify(snapshot), { mode: 0o600 });
         const manifest: ExportManifest = {
           format: 'foundry.snapshot',
           archiveVersion: DATA_EXPORT_ARCHIVE_VERSION,
           appVersion: this.appVersion,
           createdAt: new Date().toISOString(),
-          database: {
-            ...await fileRecord(databaseSnapshotPath, DATABASE_ENTRY_PATH),
-            schemaVersion,
-          },
+          data: { ...await fileRecord(snapshotPath, DATA_ENTRY_PATH), formatVersion: STORAGE_FORMAT_VERSION },
         };
-        await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, {
-          mode: 0o600,
-        });
-        await createFoundryArchive([
-          { entryPath: MANIFEST_ENTRY_PATH, filePath: manifestPath },
-          { entryPath: DATABASE_ENTRY_PATH, filePath: databaseSnapshotPath },
-        ], archivePath);
+        await writeFile(manifestPath, JSON.stringify(manifest, null, 2), { mode: 0o600 });
+        await createFoundryArchive([{ entryPath: MANIFEST_ENTRY_PATH, filePath: manifestPath }, { entryPath: DATA_ENTRY_PATH, filePath: snapshotPath }], archivePath);
         await encryptExportFile(archivePath, destinationPath, passphrase);
-        await ensureFileMode(destinationPath);
-
-        return {
-          filePath: destinationPath,
-          providerCount: recordCounts.providers,
-          captureCount: recordCounts.captures,
-          jobCount: recordCounts.jobs,
-        };
+        return { filePath: destinationPath, ...countRecords(snapshot) };
       } finally {
         this.runner.resume();
-        await this.removeQuietly(workDirectory);
+        await this.removeQuietly(directory);
       }
     });
   }
 
-  async inspectImport(
-    sourcePath: string,
-    passphrase: string,
-    originalFileName = path.basename(sourcePath),
-  ): Promise<ImportPreview> {
+  async inspectImport(sourcePath: string, passphrase: string, originalFileName = path.basename(sourcePath)): Promise<ImportPreview> {
     assertPassphrase(passphrase);
-
     return this.runExclusive(async () => {
-      assertNoActiveJobs(this.database.db);
-      await this.clearStagedImports();
-
+      assertNoActiveJobs(this.storage.snapshot());
+      const previous = this.stagedImports.values().toArray();
+      this.stagedImports.clear();
+      await Promise.all(previous.map((item) => this.removeQuietly(item.directory)));
       const importId = randomUUID();
       const directory = await this.createWorkDirectory(`import-${importId}`);
       const zipPath = path.join(directory, 'archive.zip');
-      const extractedDirectory = path.join(directory, 'extracted');
-      let stagedDatabase: FoundryDatabase | undefined;
-
       try {
-        await mkdir(extractedDirectory, { recursive: false, mode: 0o700 });
         await decryptExportFile(sourcePath, zipPath, passphrase);
-        const extracted = await extractFoundryArchive(zipPath, extractedDirectory);
-        const manifest = parseExportManifest(JSON.parse(
-          await readFile(extracted[MANIFEST_ENTRY_PATH], 'utf8'),
-        ) as unknown);
-
-        if (manifest.database.schemaVersion > CURRENT_DATABASE_SCHEMA_VERSION) {
-          throw new DataTransferError(
-            'NEWER_SCHEMA',
-            'The archive was created by a newer Foundry version',
-          );
+        const extracted = await extractFoundryArchive(zipPath, path.join(directory, 'extracted'));
+        const manifest = parseExportManifest(JSON.parse(await readFile(extracted[MANIFEST_ENTRY_PATH], 'utf8')) as unknown);
+        if (manifest.data.formatVersion > STORAGE_FORMAT_VERSION) {
+          throw new DataTransferError('NEWER_SCHEMA', 'The archive was created by a newer Foundry version');
         }
-
-        const databasePath = extracted[DATABASE_ENTRY_PATH];
-        await assertFileRecord(databasePath, manifest.database);
-        if (manifest.settings) {
-          await assertFileRecord(extracted[SETTINGS_ENTRY_PATH], manifest.settings);
-        } else if (Object.hasOwn(extracted, SETTINGS_ENTRY_PATH)) {
-          throw new DataTransferError('INVALID_ARCHIVE', 'Unexpected settings file');
+        const expected = new Set([MANIFEST_ENTRY_PATH, DATA_ENTRY_PATH]);
+        await assertFileRecord(extracted[DATA_ENTRY_PATH], manifest.data);
+        const snapshot: unknown = JSON.parse(await readFile(extracted[DATA_ENTRY_PATH], 'utf8'));
+        validateSnapshot(snapshot);
+        if (snapshot.formatVersion !== manifest.data.formatVersion) {
+          throw new DataTransferError('INVALID_ARCHIVE', 'The JSON data format does not match its manifest');
         }
-
-        const storedSchemaVersion = readDatabaseSchemaVersion(databasePath);
-        if (storedSchemaVersion !== manifest.database.schemaVersion) {
-          throw new DataTransferError(
-            'INVALID_ARCHIVE',
-            'The archived database schema does not match its manifest',
-          );
+        if (Object.keys(extracted).some((entry) => !expected.has(entry))) {
+          throw new DataTransferError('INVALID_ARCHIVE', 'Unexpected archive file');
         }
-
-        assertDatabaseIntegrity(databasePath);
-        stagedDatabase = openFoundryDatabase(databasePath);
-        if (manifest.settings) {
-          const value: unknown = JSON.parse(await readFile(extracted[SETTINGS_ENTRY_PATH], 'utf8'));
-          writeSettings(normalizeSettings(value), stagedDatabase.db);
-        }
-        assertNoActiveJobs(stagedDatabase.db);
-        validateCapturePointers(stagedDatabase.db);
-        validateArchiveRows(stagedDatabase.db);
-        const recordCounts = countRecords(stagedDatabase.db);
-
+        assertNoActiveJobs(snapshot);
+        const snapshotPath = path.join(directory, 'staged.json');
+        await writeFile(snapshotPath, JSON.stringify(snapshot), { mode: 0o600 });
         const preview: ImportPreview = {
           importId,
           fileName: path.basename(originalFileName),
           exportedAt: manifest.createdAt,
           appVersion: manifest.appVersion,
-          databaseSchemaVersion: manifest.database.schemaVersion,
-          settingsVersion: manifest.settings?.version ?? DATA_EXPORT_SETTINGS_VERSION,
-          providerCount: recordCounts.providers,
-          captureCount: recordCounts.captures,
-          jobCount: recordCounts.jobs,
+          dataFormatVersion: snapshot.formatVersion,
+          settingsVersion: DATA_EXPORT_SETTINGS_VERSION,
+          ...countRecords(snapshot),
         };
-        this.stagedImports.set(importId, {
-          databasePath,
-          directory,
-          preview,
-        });
+        this.stagedImports.set(importId, { snapshotPath, directory, preview });
         await rm(zipPath, { force: true });
         return preview;
       } catch (error) {
-        this.stagedImports.delete(importId);
         await this.removeQuietly(directory);
-        throw error instanceof DataTransferError
-          ? error
-          : new DataTransferError(
-              'INVALID_ARCHIVE',
-              'The Foundry export could not be inspected',
-              { cause: error },
-            );
-      } finally {
-        stagedDatabase?.client.close();
+        if (error instanceof DataTransferError) {
+          throw error;
+        }
+        throw new DataTransferError('INVALID_ARCHIVE', error instanceof Error ? error.message : 'The Foundry export could not be inspected', { cause: error });
       }
     });
   }
@@ -285,7 +164,6 @@ export class DataTransferService {
     if (!staged) {
       return;
     }
-
     this.stagedImports.delete(importId);
     await this.removeQuietly(staged.directory);
   }
@@ -293,51 +171,18 @@ export class DataTransferService {
   async commitImport(importId: string): Promise<void> {
     const staged = this.stagedImports.get(importId);
     if (!staged) {
-      throw new DataTransferError(
-        'IMPORT_NOT_FOUND',
-        'The import session has expired',
-      );
+      throw new DataTransferError('IMPORT_NOT_FOUND', 'The import session has expired');
     }
-
     return this.runExclusive(async () => {
       this.runner.pause();
-
       try {
-        assertNoActiveJobs(this.database.db);
-        const stagedDatabase = openFoundryDatabase(staged.databasePath);
-
-        try {
-          assertNoActiveJobs(stagedDatabase.db);
-          validateCapturePointers(stagedDatabase.db);
-          validateArchiveRows(stagedDatabase.db);
-
-          const providerRows = stagedDatabase.db.select().from(providers).all();
-          const captureRows = stagedDatabase.db.select().from(captures).all();
-          const jobRows = stagedDatabase.db.select().from(fetchJobs).all();
-          const settingsRows = stagedDatabase.db.select().from(settings).all();
-
-          this.database.db.transaction((tx) => {
-            tx.delete(fetchJobs).run();
-            tx.delete(captures).run();
-            tx.delete(providers).run();
-            tx.delete(settings).run();
-            if (settingsRows.length > 0) {
-              tx.insert(settings).values(settingsRows).run();
-            }
-            if (providerRows.length > 0) {
-              tx.insert(providers).values(providerRows).run();
-            }
-            if (captureRows.length > 0) {
-              tx.insert(captures).values(captureRows).run();
-            }
-            if (jobRows.length > 0) {
-              tx.insert(fetchJobs).values(jobRows).run();
-            }
-          });
-        } finally {
-          stagedDatabase.client.close();
-        }
-
+        const snapshot: unknown = JSON.parse(await readFile(staged.snapshotPath, 'utf8'));
+        validateSnapshot(snapshot);
+        assertNoActiveJobs(snapshot);
+        this.storage.transaction(() => {
+          assertNoActiveJobs(this.storage.snapshot());
+          this.storage.replace(snapshot);
+        });
         this.stagedImports.delete(importId);
         await this.removeQuietly(staged.directory);
       } finally {
@@ -348,170 +193,45 @@ export class DataTransferService {
   }
 
   async removeExportFile(filePath: string): Promise<void> {
-    if (path.dirname(filePath) !== this.temporaryRoot) {
-      return;
+    if (path.dirname(filePath) === this.temporaryRoot) {
+      await rm(filePath, { force: true });
     }
-    await rm(filePath, { force: true });
   }
 }
-
-function assertPassphrase(passphrase: string): void {
-  if (passphrase.length === 0) {
+function assertPassphrase(value: string): void {
+  if (!value) {
     throw new DataTransferError('PASSPHRASE_REQUIRED', 'Enter a passphrase');
   }
 }
-
-function countActiveJobs(db: FoundryDatabase['db']): number {
-  return db
-    .select({ total: count() })
-    .from(fetchJobs)
-    .where(and(
-      inArray(fetchJobs.status, ['pending', 'running']),
-      isNull(fetchJobs.deletedAt),
-    ))
-    .get()
-    ?.total ?? 0;
+function isActiveJob(job: StorageSnapshot['fetchJobs'][number]): boolean {
+  return !job.deletedAt && ['pending', 'running'].includes(job.status);
 }
-
-function assertNoActiveJobs(db: FoundryDatabase['db']): void {
-  if (countActiveJobs(db) > 0) {
-    throw new DataTransferError(
-      'ACTIVE_JOBS',
-      'Finish active fetch jobs before transferring data',
-    );
+function assertNoActiveJobs(snapshot: StorageSnapshot): void {
+  if (snapshot.fetchJobs.some((job) => isActiveJob(job))) {
+    throw new DataTransferError('ACTIVE_JOBS', 'Finish active fetch jobs before transferring data');
   }
 }
-
-function countRecords(db: FoundryDatabase['db']) {
+function countRecords(snapshot: StorageSnapshot) {
   return {
-    providers: db.select({ total: count() }).from(providers).get()?.total ?? 0,
-    captures: db.select({ total: count() }).from(captures).get()?.total ?? 0,
-    jobs: db.select({ total: count() }).from(fetchJobs).get()?.total ?? 0,
+    providerCount: snapshot.providers.length,
+    captureCount: snapshot.captures.length,
+    jobCount: snapshot.fetchJobs.length,
   };
 }
-
-async function sha256File(filePath: string): Promise<string> {
+async function fileRecord(filename: string, entryPath: string): Promise<FileRecord> {
   const hash = createHash('sha256');
-  for await (const chunk of createReadStream(filePath)) {
+  for await (const chunk of createReadStream(filename)) {
     hash.update(chunk);
   }
-  return hash.digest('hex');
+  const stats = await stat(filename);
+  return { path: entryPath, bytes: stats.size, sha256: hash.digest('hex') };
 }
-
-async function fileRecord(filePath: string, entryPath: string): Promise<FileRecord> {
-  const fileStats = await stat(filePath);
-  return {
-    path: entryPath,
-    bytes: fileStats.size,
-    sha256: await sha256File(filePath),
-  };
-}
-
-async function assertFileRecord(filePath: string, record: FileRecord): Promise<void> {
-  const fileStats = await stat(filePath);
-  if (
-    fileStats.size !== record.bytes
-    || await sha256File(filePath) !== record.sha256
-  ) {
-    throw new DataTransferError(
-      'INVALID_ARCHIVE',
-      'An archived file failed its integrity validation',
-    );
+async function assertFileRecord(filename: string, record: FileRecord): Promise<void> {
+  const actual = await fileRecord(filename, record.path);
+  if (actual.bytes !== record.bytes || actual.sha256 !== record.sha256) {
+    throw new DataTransferError('INVALID_ARCHIVE', 'An archived file failed its integrity validation');
   }
 }
-
-function assertDatabaseIntegrity(databasePath: string): void {
-  const client = new Database(databasePath, {
-    fileMustExist: true,
-    readonly: true,
-  });
-  try {
-    if (client.pragma('integrity_check', { simple: true }) !== 'ok') {
-      throw new DataTransferError(
-        'INVALID_ARCHIVE',
-        'The archived database failed its integrity check',
-      );
-    }
-    if ((client.pragma('foreign_key_check') as unknown[]).length > 0) {
-      throw new DataTransferError(
-        'INVALID_ARCHIVE',
-        'The archived database contains invalid references',
-      );
-    }
-  } finally {
-    client.close();
-  }
-}
-
-function validateCapturePointers(db: FoundryDatabase['db']): void {
-  for (const capture of db.select().from(captures).all()) {
-    if (!capture.latestSuccessfulJobId || capture.deletedAt) {
-      continue;
-    }
-    const job = db
-      .select({
-        captureId: fetchJobs.captureId,
-        status: fetchJobs.status,
-      })
-      .from(fetchJobs)
-      .where(eq(fetchJobs.id, capture.latestSuccessfulJobId))
-      .get();
-    if (job?.captureId !== capture.id || job.status !== 'succeeded') {
-      throw new DataTransferError(
-        'INVALID_ARCHIVE',
-        'A capture points to an invalid successful fetch job',
-      );
-    }
-  }
-}
-
-function validateArchiveRows(db: FoundryDatabase['db']): void {
-  readStoredSettings(db);
-  const statuses = new Set(['active', 'disabled', 'deleted']);
-  const jobStatuses = new Set(['pending', 'running', 'succeeded', 'failed']);
-  const fetchers = new Set(['firecrawl']);
-
-  for (const provider of db.select().from(providers).all()) {
-    if (!statuses.has(provider.status)) {
-      throw new DataTransferError('INVALID_ARCHIVE', 'A provider record is invalid');
-    }
-    try {
-      parseProviderInput({
-        name: provider.name,
-        protocol: provider.protocol,
-        baseURL: provider.baseURL,
-        customModels: JSON.parse(provider.customModels),
-      });
-    } catch {
-      throw new DataTransferError(
-        'INVALID_ARCHIVE',
-        'A provider record is invalid',
-      );
-    }
-  }
-
-  for (const capture of db.select().from(captures).all()) {
-    try {
-      const url = new URL(capture.url);
-      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-        throw new Error('Unsupported URL protocol');
-      }
-    } catch {
-      throw new DataTransferError('INVALID_ARCHIVE', 'A capture URL is invalid');
-    }
-  }
-
-  for (const job of db.select().from(fetchJobs).all()) {
-    if (!jobStatuses.has(job.status) || !fetchers.has(job.fetcher)) {
-      throw new DataTransferError('INVALID_ARCHIVE', 'A fetch job record is invalid');
-    }
-  }
-}
-
 function ensureDirectoryMode(directory: string): Promise<void> {
   return process.platform === 'win32' ? Promise.resolve() : chmod(directory, 0o700);
-}
-
-function ensureFileMode(filePath: string): Promise<void> {
-  return process.platform === 'win32' ? Promise.resolve() : chmod(filePath, 0o600);
 }

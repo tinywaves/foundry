@@ -5,8 +5,8 @@ import { createServerRuntime } from '../server/runtime';
 import type { ServerRuntime } from '../server/runtime';
 import {
   initializeFoundryStorage,
-} from '../storage/database';
-import type { FoundryDatabase } from '../storage/database';
+} from '../storage/index';
+import type { FoundryStorage } from '../storage/index';
 
 export const JSON_INPUT_ARGS = {
   'input': {
@@ -22,7 +22,7 @@ export const JSON_INPUT_ARGS = {
 } satisfies ArgsDef;
 
 export interface CliSession {
-  database: FoundryDatabase;
+  storage: FoundryStorage;
   runtime: ServerRuntime;
 }
 
@@ -32,9 +32,9 @@ export async function runCliAction(
   let session: CliSession | undefined;
 
   try {
-    const database = initializeFoundryStorage();
-    const runtime = createServerRuntime(database);
-    session = { database, runtime };
+    const storage = initializeFoundryStorage();
+    const runtime = createServerRuntime(storage);
+    session = { storage, runtime };
 
     writeJson(await action(session));
   } catch (error) {
@@ -42,7 +42,7 @@ export async function runCliAction(
     console.error(JSON.stringify({ error: details }, null, 2));
     process.exitCode = 1;
   } finally {
-    session?.database.client.close();
+    session?.storage.close();
   }
 }
 

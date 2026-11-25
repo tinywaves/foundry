@@ -367,7 +367,7 @@ export function ImportDataDialog({
                   <VStack gap={2}>
                     <PreviewRow label={t('dataTransfer.exportedAt')} value={exportedAt} />
                     <PreviewRow label={t('dataTransfer.appVersion')} value={preview.appVersion} />
-                    <PreviewRow label={t('dataTransfer.schemaVersion')} value={preview.databaseSchemaVersion} />
+                    <PreviewRow label={t('dataTransfer.schemaVersion')} value={preview.dataFormatVersion} />
                     <PreviewRow label={t('dataTransfer.providers')} value={preview.providerCount} />
                     <PreviewRow label={t('dataTransfer.captures')} value={preview.captureCount} />
                     <PreviewRow label={t('dataTransfer.jobs')} value={preview.jobCount} />

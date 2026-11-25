@@ -1,4 +1,4 @@
-import type { FoundryDatabase } from '../../storage/database';
+import type { FoundryStorage } from '../../storage/index';
 import type { FoundryEventHub } from '../../events/hub';
 import { CAPTURE_JOB_CHANGED_EVENT } from './events';
 import type { CaptureFetcher } from './fetchers';
@@ -14,18 +14,18 @@ export interface CaptureRuntime {
 }
 
 export function createCaptureRuntime(
-  database: FoundryDatabase,
+  storage: FoundryStorage,
   eventHub?: FoundryEventHub,
   fetchCaptureImplementation?: CaptureFetcher,
 ): CaptureRuntime {
-  const repository = new CaptureRepository(database.db);
+  const repository = new CaptureRepository(storage);
   const runner = new FetchJobRunner(
     repository,
-    database,
+    storage,
     (event) => eventHub?.publish(CAPTURE_JOB_CHANGED_EVENT, event),
     fetchCaptureImplementation,
   );
-  const service = new CaptureService(repository, database, runner);
+  const service = new CaptureService(repository, storage, runner);
 
   return {
     service,

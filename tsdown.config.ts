@@ -7,11 +7,6 @@ export default defineConfig({
   clean: true,
   copy: [
     {
-      from: 'drizzle',
-      to: 'dist',
-      flatten: false,
-    },
-    {
       from: 'skills',
       to: 'dist',
       flatten: false,

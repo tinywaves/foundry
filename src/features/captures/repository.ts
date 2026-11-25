@@ -1,244 +1,146 @@
 import { randomUUID } from 'node:crypto';
-import { and, count, desc, eq, inArray, isNull } from 'drizzle-orm';
-import type { FoundryDatabase } from '../../storage/database';
-import { captures, fetchJobs } from '../../storage/schema';
-import type {
-  CaptureCounts,
-  CaptureDetail,
-  CaptureFilter,
-  CaptureSummary,
-  FetchJobSummary,
-  StoredJobConfig,
-} from './contracts';
-
-type Database = FoundryDatabase['db'];
-type CaptureRow = typeof captures.$inferSelect;
-type FetchJobRow = typeof fetchJobs.$inferSelect;
+import type { FoundryStorage } from '../../storage/store';
+import type { CaptureRecord, FetchJobRecord } from '../../storage/models';
+import type { CaptureCounts, CaptureDetail, CaptureFilter, CaptureSummary, FetchJobSummary, StoredJobConfig } from './contracts';
+import { CaptureError } from './errors';
 
 export interface JobContext {
-  job: FetchJobRow;
-  capture: CaptureRow;
+  job: FetchJobRecord;
+  capture: CaptureRecord;
 }
-
 export class CaptureRepository {
-  constructor(private readonly db: Database) {}
-
-  private findCapture(captureId: string): CaptureRow | null {
-    return this.db
-      .select()
-      .from(captures)
-      .where(and(eq(captures.id, captureId), isNull(captures.deletedAt)))
-      .get() ?? null;
+  constructor(private readonly storage: FoundryStorage) {}
+  private findCapture(id: string): CaptureRecord | null {
+    const row = this.storage.get('captures', id);
+    return row && !row.deletedAt ? row : null;
   }
 
-  private findJob(jobId: string): FetchJobRow | null {
-    return this.db
-      .select()
-      .from(fetchJobs)
-      .where(eq(fetchJobs.id, jobId))
-      .get() ?? null;
-  }
-
-  list(filter: CaptureFilter): CaptureSummary[] {
-    const condition = filter === 'no-successful'
-      ? and(isNull(captures.deletedAt), isNull(captures.latestSuccessfulJobId))
-      : isNull(captures.deletedAt);
-
-    return this.db
-      .select()
-      .from(captures)
-      .where(condition)
-      .orderBy(desc(captures.createdAt))
-      .all()
-      .map((row) => toCaptureSummary(row));
-  }
-
-  counts(): CaptureCounts {
-    const active = isNull(captures.deletedAt);
-    const all = this.db
-      .select({ value: count() })
-      .from(captures)
-      .where(active)
-      .get()
-      ?.value ?? 0;
-    const noSuccessful = this.db
-      .select({ value: count() })
-      .from(captures)
-      .where(and(active, isNull(captures.latestSuccessfulJobId)))
-      .get()
-      ?.value ?? 0;
-
-    return { all, noSuccessful };
-  }
-
-  get(captureId: string): CaptureDetail | null {
-    const capture = this.findCapture(captureId);
-    if (!capture) {
-      return null;
-    }
-
-    const successfulJob = capture.latestSuccessfulJobId
-      ? this.db
-          .select()
-          .from(fetchJobs)
-          .where(and(
-            eq(fetchJobs.id, capture.latestSuccessfulJobId),
-            eq(fetchJobs.captureId, captureId),
-            isNull(fetchJobs.deletedAt),
-          ))
-          .get()
-      : undefined;
-
+  private newJob(captureId: string, config: StoredJobConfig): FetchJobRecord {
+    const now = new Date().toISOString();
     return {
-      capture: toCaptureSummary(capture),
-      rawResponse: successfulJob ? parseRawResponse(successfulJob.rawResponseJson) : null,
+      id: randomUUID(),
+      captureId,
+      fetcher: config.fetcher,
+      configSnapshot: config,
+      rawResponse: null,
+      creditsUsed: null,
+      status: 'pending',
+      errorCode: null,
+      errorMessage: null,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
     };
   }
 
-  findActiveByURL(url: string): CaptureRow | null {
-    return this.db
-      .select()
-      .from(captures)
-      .where(and(eq(captures.url, url), isNull(captures.deletedAt)))
-      .get() ?? null;
+  list(filter: CaptureFilter): CaptureSummary[] {
+    return this.storage.all('captures').filter((row) => !row.deletedAt && (filter !== 'no-successful' || !row.latestSuccessfulJobId)).toSorted((a, b) => b.createdAt.localeCompare(a.createdAt)).map((row) => toCaptureSummary(row));
+  }
+
+  counts(): CaptureCounts {
+    const rows = this.storage.all('captures').filter((row) => !row.deletedAt);
+    return { all: rows.length, noSuccessful: rows.filter((row) => !row.latestSuccessfulJobId).length };
+  }
+
+  get(captureId: string): CaptureDetail | null {
+    return this.storage.transaction(() => {
+      const row = this.findCapture(captureId);
+      if (!row) {
+        return null;
+      }
+      const job = row.latestSuccessfulJobId ? this.storage.get('fetchJobs', row.latestSuccessfulJobId) : undefined;
+      return {
+        capture: toCaptureSummary(row),
+        rawResponse: job?.captureId === captureId && !job.deletedAt ? job.rawResponse : null,
+      };
+    });
+  }
+
+  findActiveByURL(url: string): CaptureRecord | null {
+    return this.storage.all('captures').find((row) => row.url === url && !row.deletedAt) ?? null;
   }
 
   createWithJob(url: string, userNote: string | null, config: StoredJobConfig): {
     capture: CaptureSummary;
     jobId: string;
   } {
-    const timestamp = new Date();
-    const captureId = randomUUID();
-    const jobId = randomUUID();
-
-    this.db.transaction((tx) => {
-      tx.insert(captures).values({
-        id: captureId,
+    return this.storage.transaction(() => {
+      if (this.findActiveByURL(url)) {
+        throw new CaptureError('CAPTURE_ALREADY_EXISTS', 'This link is already captured');
+      }
+      const now = new Date().toISOString();
+      const capture: CaptureRecord = {
+        id: randomUUID(),
         url,
         title: null,
         userNote,
         latestSuccessfulJobId: null,
-        createdAt: timestamp,
-        updatedAt: timestamp,
+        createdAt: now,
+        updatedAt: now,
         deletedAt: null,
-      }).run();
-
-      tx.insert(fetchJobs).values({
-        id: jobId,
-        captureId,
-        fetcher: config.fetcher,
-        configSnapshot: JSON.stringify(config),
-        rawResponseJson: null,
-        creditsUsed: null,
-        status: 'pending',
-        errorCode: null,
-        errorMessage: null,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        deletedAt: null,
-      }).run();
+      };
+      const job = this.newJob(capture.id, config);
+      this.storage.put('captures', capture);
+      this.storage.put('fetchJobs', job);
+      return { capture: toCaptureSummary(capture), jobId: job.id };
     });
-
-    const capture = this.findCapture(captureId);
-    if (!capture) {
-      throw new Error('Capture was not created');
-    }
-
-    return {
-      capture: toCaptureSummary(capture),
-      jobId,
-    };
   }
 
   hasActiveJob(captureId: string): boolean {
-    const row = this.db
-      .select({ id: fetchJobs.id })
-      .from(fetchJobs)
-      .where(and(
-        eq(fetchJobs.captureId, captureId),
-        inArray(fetchJobs.status, ['pending', 'running']),
-        isNull(fetchJobs.deletedAt),
-      ))
-      .get();
-
-    return Boolean(row);
+    return this.storage.all('fetchJobs').some((job) => job.captureId === captureId && !job.deletedAt && ['pending', 'running'].includes(job.status));
   }
 
   createJob(captureId: string, config: StoredJobConfig): {
     job: FetchJobSummary;
     jobId: string;
   } {
-    const timestamp = new Date();
-    const jobId = randomUUID();
-
-    this.db.insert(fetchJobs).values({
-      id: jobId,
-      captureId,
-      fetcher: config.fetcher,
-      configSnapshot: JSON.stringify(config),
-      rawResponseJson: null,
-      creditsUsed: null,
-      status: 'pending',
-      errorCode: null,
-      errorMessage: null,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      deletedAt: null,
-    }).run();
-
-    const job = this.findJob(jobId);
-    if (!job) {
-      throw new Error('Fetch job was not created');
-    }
-
-    return {
-      job: toJobSummary(job),
-      jobId,
-    };
+    return this.storage.transaction(() => {
+      if (!this.findCapture(captureId)) {
+        throw new CaptureError('CAPTURE_NOT_FOUND', 'Capture not found');
+      }
+      if (this.hasActiveJob(captureId)) {
+        throw new CaptureError('ACTIVE_JOB_EXISTS', 'This capture already has an active fetch job');
+      }
+      const job = this.newJob(captureId, config);
+      this.storage.put('fetchJobs', job);
+      return { job: toJobSummary(job), jobId: job.id };
+    });
   }
 
   delete(captureId: string): boolean {
-    const timestamp = new Date();
-    const rows = this.db
-      .update(captures)
-      .set({ deletedAt: timestamp, updatedAt: timestamp })
-      .where(and(eq(captures.id, captureId), isNull(captures.deletedAt)))
-      .returning()
-      .all();
-
-    if (rows.length === 0) {
-      return false;
-    }
-
-    this.db
-      .update(fetchJobs)
-      .set({ deletedAt: timestamp, updatedAt: timestamp })
-      .where(and(eq(fetchJobs.captureId, captureId), isNull(fetchJobs.deletedAt)))
-      .run();
-
-    return true;
+    return this.storage.transaction(() => {
+      const row = this.findCapture(captureId);
+      if (!row) {
+        return false;
+      }
+      if (this.hasActiveJob(captureId)) {
+        throw new CaptureError('ACTIVE_JOB_EXISTS', 'This capture already has an active fetch job');
+      }
+      const now = new Date().toISOString();
+      this.storage.put('captures', { ...row, deletedAt: now, updatedAt: now });
+      for (const job of this.storage.all('fetchJobs')) {
+        if (job.captureId === captureId && !job.deletedAt) {
+          this.storage.put('fetchJobs', { ...job, deletedAt: now, updatedAt: now });
+        }
+      }
+      return true;
+    });
   }
 
   updateNote(captureId: string, userNote: string): CaptureSummary | null {
-    const note = userNote.trim() || null;
-    const rows = this.db
-      .update(captures)
-      .set({ userNote: note, updatedAt: new Date() })
-      .where(and(eq(captures.id, captureId), isNull(captures.deletedAt)))
-      .returning()
-      .all();
-
-    return rows.length === 0 ? null : toCaptureSummary(rows[0]);
+    return this.storage.transaction(() => {
+      const row = this.findCapture(captureId);
+      if (!row) {
+        return null;
+      }
+      const updated = { ...row, userNote: userNote.trim() || null, updatedAt: new Date().toISOString() };
+      this.storage.put('captures', updated);
+      return toCaptureSummary(updated);
+    });
   }
 
   listJobs(captureId: string): FetchJobSummary[] {
-    return this.db
-      .select()
-      .from(fetchJobs)
-      .where(and(eq(fetchJobs.captureId, captureId), isNull(fetchJobs.deletedAt)))
-      .orderBy(desc(fetchJobs.createdAt))
-      .all()
-      .map((row) => toJobSummary(row));
+    return this.storage.all('fetchJobs').filter((job) => job.captureId === captureId && !job.deletedAt).toSorted((a, b) => b.createdAt.localeCompare(a.createdAt)).map((row) => toJobSummary(row));
   }
 
   getJob(captureId: string, jobId: string): FetchJobSummary | null {
@@ -247,116 +149,86 @@ export class CaptureRepository {
   }
 
   getJobContext(jobId: string): JobContext | null {
-    const job = this.findJob(jobId);
-    if (!job || job.deletedAt) {
-      return null;
-    }
-
-    const capture = this.findCapture(job.captureId);
-    return capture ? { job, capture } : null;
-  }
-
-  markRunning(jobId: string): void {
-    this.db
-      .update(fetchJobs)
-      .set({ status: 'running', updatedAt: new Date() })
-      .where(and(eq(fetchJobs.id, jobId), eq(fetchJobs.status, 'pending')))
-      .run();
-  }
-
-  markSucceeded(
-    jobId: string,
-    captureId: string,
-    title: string | null,
-    rawResponse: unknown,
-    creditsUsed: number | null,
-  ): void {
-    const timestamp = new Date();
-
-    this.db.transaction((tx) => {
-      tx.update(fetchJobs)
-        .set({
-          status: 'succeeded',
-          rawResponseJson: JSON.stringify(rawResponse),
-          creditsUsed,
-          errorCode: null,
-          errorMessage: null,
-          updatedAt: timestamp,
-        })
-        .where(eq(fetchJobs.id, jobId))
-        .run();
-
-      tx.update(captures)
-        .set({
-          ...(title && { title }),
-          latestSuccessfulJobId: jobId,
-          updatedAt: timestamp,
-        })
-        .where(eq(captures.id, captureId))
-        .run();
+    return this.storage.transaction(() => {
+      const job = this.storage.get('fetchJobs', jobId);
+      if (!job || job.deletedAt) {
+        return null;
+      }
+      const capture = this.findCapture(job.captureId);
+      return capture ? { job, capture } : null;
     });
   }
 
-  markFailed(
-    jobId: string,
-    errorCode: string,
-    errorMessage: string,
-  ): void {
-    this.db
-      .update(fetchJobs)
-      .set({
-        status: 'failed',
-        creditsUsed: null,
-        errorCode,
-        errorMessage,
-        updatedAt: new Date(),
-      })
-      .where(eq(fetchJobs.id, jobId))
-      .run();
+  markRunning(jobId: string): void {
+    this.storage.transaction(() => {
+      const job = this.storage.get('fetchJobs', jobId);
+      if (job?.status === 'pending') {
+        this.storage.put('fetchJobs', { ...job, status: 'running', updatedAt: new Date().toISOString() });
+      }
+    });
+  }
+
+  markSucceeded(jobId: string, captureId: string, title: string | null, rawResponse: unknown, creditsUsed: number | null): void {
+    this.storage.transaction(() => {
+      const job = this.storage.get('fetchJobs', jobId);
+      const capture = this.findCapture(captureId);
+      if (!job || !capture || job.captureId !== captureId) {
+        throw new Error('Invalid capture job');
+      }
+      const now = new Date().toISOString();
+      this.storage.put('fetchJobs', {
+        ...job,
+        status: 'succeeded',
+        rawResponse,
+        creditsUsed,
+        errorCode: null,
+        errorMessage: null,
+        updatedAt: now,
+      });
+      this.storage.put('captures', {
+        ...capture,
+        ...(title && { title }),
+        latestSuccessfulJobId: jobId,
+        updatedAt: now,
+      });
+    });
+  }
+
+  markFailed(jobId: string, errorCode: string, errorMessage: string): void {
+    this.storage.transaction(() => {
+      const job = this.storage.get('fetchJobs', jobId);
+      if (job) {
+        this.storage.put('fetchJobs', {
+          ...job,
+          status: 'failed',
+          creditsUsed: null,
+          errorCode,
+          errorMessage,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    });
   }
 
   recoverRunningJobs(): number {
-    const rows = this.db
-      .select({ id: fetchJobs.id })
-      .from(fetchJobs)
-      .where(and(eq(fetchJobs.status, 'running'), isNull(fetchJobs.deletedAt)))
-      .all();
-
-    if (rows.length > 0) {
-      this.db
-        .update(fetchJobs)
-        .set({ status: 'pending' })
-        .where(and(eq(fetchJobs.status, 'running'), isNull(fetchJobs.deletedAt)))
-        .run();
-    }
-
-    return rows.length;
+    return this.storage.transaction(() => {
+      const jobs = this.storage.all('fetchJobs').filter((job) => job.status === 'running' && !job.deletedAt);
+      for (const job of jobs) {
+        this.storage.put('fetchJobs', { ...job, status: 'pending' });
+      }
+      return jobs.length;
+    });
   }
 
   pendingJobIDs(): string[] {
-    return this.db
-      .select({ id: fetchJobs.id })
-      .from(fetchJobs)
-      .where(and(eq(fetchJobs.status, 'pending'), isNull(fetchJobs.deletedAt)))
-      .orderBy(fetchJobs.createdAt)
-      .all()
-      .map((row) => row.id);
+    return this.storage.all('fetchJobs').filter((job) => job.status === 'pending' && !job.deletedAt).toSorted((a, b) => a.createdAt.localeCompare(b.createdAt)).map((job) => job.id);
   }
 }
-
-function toCaptureSummary(row: CaptureRow): CaptureSummary {
-  return {
-    id: row.id,
-    url: row.url,
-    title: row.title,
-    userNote: row.userNote,
-    latestSuccessfulJobId: row.latestSuccessfulJobId,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  };
+function toCaptureSummary(row: CaptureRecord): CaptureSummary {
+  const { deletedAt: _deletedAt, ...summary } = row;
+  return summary;
 }
-
-function toJobSummary(row: FetchJobRow): FetchJobSummary {
+function toJobSummary(row: FetchJobRecord): FetchJobSummary {
   return {
     id: row.id,
     captureId: row.captureId,
@@ -365,19 +237,7 @@ function toJobSummary(row: FetchJobRow): FetchJobSummary {
     creditsUsed: row.creditsUsed,
     errorCode: row.errorCode,
     errorMessage: row.errorMessage,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   };
-}
-
-function parseRawResponse(value: string | null): unknown {
-  if (!value) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(value) as unknown;
-  } catch {
-    return null;
-  }
 }

@@ -1,5 +1,5 @@
 import { readStoredSettings } from '../settings/repository';
-import type { FoundryDatabase } from '../../storage/database';
+import type { FoundryStorage } from '../../storage/index';
 import type { CaptureJobChangedEvent } from './events';
 import { fetchCapture } from './fetchers';
 import type { CaptureFetcher } from './fetchers';
@@ -15,7 +15,7 @@ export class FetchJobRunner {
 
   constructor(
     private readonly repository: CaptureRepository,
-    private readonly database: FoundryDatabase,
+    private readonly storage: FoundryStorage,
     private readonly onChanged: (event: CaptureJobChangedEvent) => void = () => {},
     private readonly fetchCaptureImplementation: CaptureFetcher = fetchCapture,
   ) {}
@@ -26,7 +26,7 @@ export class FetchJobRunner {
     }
 
     const concurrency = readStoredSettings(
-      this.database.db,
+      this.storage,
     ).features.library.captures.fetchConcurrency;
 
     while (this.runningCount < concurrency && this.queue.length > 0) {
@@ -150,8 +150,8 @@ export class FetchJobRunner {
   }
 }
 
-function parseStoredConfig(value: string): StoredJobConfig {
-  const parsed: unknown = JSON.parse(value);
+function parseStoredConfig(value: unknown): StoredJobConfig {
+  const parsed: unknown = value;
   if (
     !isRecord(parsed)
     || parsed.fetcher !== 'firecrawl'

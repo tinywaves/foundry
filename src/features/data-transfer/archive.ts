@@ -6,17 +6,15 @@ import yauzl from 'yauzl';
 import type { Entry } from 'yauzl';
 import yazl from 'yazl';
 import {
-  DATABASE_ENTRY_PATH,
+  DATA_ENTRY_PATH,
   MANIFEST_ENTRY_PATH,
-  SETTINGS_ENTRY_PATH,
 } from './format';
 
 export const MAXIMUM_ARCHIVE_BYTES = 4 * 1024 * 1024 * 1024;
 const MAXIMUM_MANIFEST_BYTES = 1024 * 1024;
 const ALLOWED_ENTRIES = new Set([
   MANIFEST_ENTRY_PATH,
-  DATABASE_ENTRY_PATH,
-  SETTINGS_ENTRY_PATH,
+  DATA_ENTRY_PATH,
 ]);
 
 export interface ArchiveInputFile {
@@ -91,11 +89,9 @@ export async function extractFoundryArchive(
     zip.close();
   }
 
-  for (const requiredEntry of [MANIFEST_ENTRY_PATH, DATABASE_ENTRY_PATH]) {
-    if (!extractedPaths.has(requiredEntry)) {
-      await rm(outputDirectory, { recursive: true, force: true });
-      throw new Error('The Foundry archive is incomplete');
-    }
+  if (!extractedPaths.has(MANIFEST_ENTRY_PATH) || !extractedPaths.has(DATA_ENTRY_PATH)) {
+    await rm(outputDirectory, { recursive: true, force: true });
+    throw new Error('The Foundry archive is incomplete');
   }
 
   return Object.fromEntries(extractedPaths);

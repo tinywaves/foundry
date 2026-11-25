@@ -4,7 +4,7 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 import { BundledSkillCopyService } from '../src/features/settings/skill-copy-service';
 import { createApiApp } from '../src/server/api';
-import { openFoundryDatabase } from '../src/storage/database';
+import { openFoundryStorage } from '../src/storage/index';
 
 const { join } = path;
 
@@ -79,7 +79,7 @@ it('replaces only the selected existing target', async () => {
 it('copies selected targets through the API', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-skill-http-'));
   const skillRoot = await createSkillSource(directory);
-  const database = openFoundryDatabase(join(directory, 'foundry.sqlite'));
+  const database = openFoundryStorage(directory);
   const service = new BundledSkillCopyService({
     skillRoot,
     homeDirectory: directory,
@@ -121,7 +121,7 @@ it('copies selected targets through the API', async () => {
       ],
     });
   } finally {
-    database.client.close();
+    database.close();
     await rm(directory, { recursive: true, force: true });
   }
 });

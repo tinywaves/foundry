@@ -2,7 +2,7 @@ import { defineCommand } from 'citty';
 import process from 'node:process';
 import { startServer } from '../../server/start';
 import { assertPortAvailable } from '../../server/port';
-import { initializeFoundryStorage } from '../../storage/database';
+import { initializeFoundryStorage } from '../../storage/index';
 import { openInBrowser } from '../open-browser';
 
 const HOSTNAME = '127.0.0.1';
@@ -29,10 +29,10 @@ export const webCommand = defineCommand({
       return;
     }
 
-    const database = initializeFoundryStorage();
+    const storage = initializeFoundryStorage();
 
     startServer({
-      database,
+      storage,
       onListening({ url }) {
         console.info(`Foundry is running at ${url}`);
 

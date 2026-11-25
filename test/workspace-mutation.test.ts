@@ -6,13 +6,13 @@ import { createCaptureRuntime } from '../src/features/captures/runtime';
 import { DataTransferService } from '../src/features/data-transfer/service';
 import { WorkspaceMutationGate } from '../src/features/data-transfer/workspace-mutation';
 import { createApiApp } from '../src/server/api';
-import { openFoundryDatabase } from '../src/storage/database';
+import { openFoundryStorage } from '../src/storage/index';
 
 const { join } = path;
 
 it('blocks workspace mutations while data transfer owns the workspace', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-workspace-mutation-'));
-  const database = openFoundryDatabase(join(directory, 'foundry.sqlite'));
+  const database = openFoundryStorage(directory);
   const captureRuntime = createCaptureRuntime(database);
   const workspaceMutationGate = new WorkspaceMutationGate();
   const transfer = new DataTransferService(
@@ -97,7 +97,7 @@ it('blocks workspace mutations while data transfer owns the workspace', async ()
     } catch {
       // Preserve the original assertion failure if export failed.
     }
-    database.client.close();
+    database.close();
     await rm(directory, { recursive: true, force: true });
   }
 });

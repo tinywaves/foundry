@@ -18,7 +18,7 @@ entry point.
   run background jobs with retries, and inspect the raw fetcher response.
 - Configure appearance, language and region, capture behavior, and concurrency.
 - Export and import an encrypted `.foundry-backup` snapshot containing the
-  database and application settings.
+  JSON records and application settings.
 - Copy the bundled agent skill into `<home>/.agents/skills/foundry`,
   `<home>/.claude/skills/foundry`, or both from the CLI or Settings > Advanced.
 
@@ -27,9 +27,7 @@ entry point.
 - Node.js 24.22.1 or newer
 - pnpm 12.15 or newer
 
-The project uses `better-sqlite3`, so pnpm must be allowed to run native package
-build scripts. The required allowlist is already declared in
-`pnpm-workspace.yaml`.
+Foundry stores its own data as JSON files. No native SQLite package is required.
 
 ## Run From Source
 
@@ -86,7 +84,7 @@ foundry settings download-skill --target .agents,.claude
 
 Use `--input-file <path>` or `--input -` for large JSON payloads. Data-transfer
 passphrases can be passed with `--passphrase` or `FOUNDRY_PASSPHRASE`.
-`data-transfer import` validates and replaces the local database and settings in
+`data-transfer import` validates and replaces local JSON records and settings in
 one command.
 
 Skill targets are fixed relative to the user home directory. Here `<home>` is
@@ -120,20 +118,29 @@ production server and static assets.
 Foundry keeps user data outside the repository in `<home>/.foundry`. `<home>` is
 `~` on macOS/Linux and `%USERPROFILE%` on Windows:
 
-- `foundry.sqlite`: application settings, providers and credentials, captures,
-  and fetch jobs
+- `settings.json`: application settings
+- `providers/<record-key>.json`: providers and credentials
+- `captures/<record-key>.json`: captures
+- `fetch-jobs/<record-key>.json`: fetch jobs, configuration snapshots and responses
 - `.data-transfer/`: temporary export and import files
 
-Feature commands initialize the directory, open the SQLite database, and apply
-Drizzle migrations before running. `foundry web` does the same before the server
-starts. A database created by a newer schema version is rejected instead of
-being modified.
+Record filenames use a SHA-256 key of the record ID for portable, collision-safe
+paths; the original ID is preserved inside each document.
 
-Existing `settings.json` files are moved into SQLite on first startup after
-upgrading, then removed after the settings transaction commits.
-Settings are stored as individual `key` / `value` rows. Keys use JSON Pointer
-paths such as `/workspace/appearance/color-theme`; values preserve their JSON
-types. Updating a setting writes only the affected entries.
+Feature commands initialize JSON storage before running. `foundry web` does the
+same before the server starts. A process lock serializes writers and protects
+consistent reads. Writes use temporary-file replacement and a durable redo
+journal; interrupted committed writes are completed on the next open. Each read
+loads the requested JSON files directly; no cross-request cache or manifest is
+required.
+
+A new installation starts directly with default JSON settings and empty
+collections directly under `.foundry`, without a `data/` subdirectory. Startup
+does not inspect or import old SQLite databases. Unrelated files are left alone.
+Node's built-in SQLite reader is used only by the read-only Codex session view.
+
+Encrypted exports and imports use JSON snapshots in `data/foundry.json`.
+SQLite-based backup archives are not supported.
 
 On POSIX systems, Foundry creates the data directory with `0700` permissions and
 sensitive files with `0600` permissions.
@@ -154,9 +161,6 @@ The build produces:
 ```text
 dist/
 |-- index.mjs
-|-- drizzle/
-|   |-- *.sql
-|   `-- meta/
 |-- skills/
 |   `-- foundry/
 |       |-- SKILL.md
@@ -167,7 +171,7 @@ dist/
     `-- favicon.png
 ```
 
-`tsdown` cleans `dist`, bundles the CLI, and copies the Drizzle migrations and
+`tsdown` cleans `dist`, bundles the CLI, and copies the bundled
 agent skill. Vite then writes the Web UI directly to `dist/web`. Do not add a
 manual copy step for the Web UI.
 
@@ -182,8 +186,6 @@ manual copy step for the Web UI.
 | `pnpm start` | Print the built CLI help |
 | `pnpm test` | Run behavioral tests |
 | `pnpm test:coverage` | Run tests with V8 coverage |
-| `pnpm db:generate` | Generate a Drizzle migration after schema changes |
-| `pnpm db:migrate` | Apply migrations manually to the local database |
 
 Run the project scripts with the Node.js version declared in `package.json`.
 Older Node.js versions cannot run the installed pnpm or project toolchain.
@@ -197,9 +199,8 @@ src/
 |-- features/             Feature services, validation, repositories, and routes
 |-- lib/                  Small server-side utilities
 |-- server/               Hono API, static serving, and server entry points
-`-- storage/              SQLite, Drizzle schema, paths, and migrations
+`-- storage/              JSON records, process locking, and transaction recovery
 skills/foundry/           Agent-facing CLI usage skill and references
-drizzle/                  Generated migration SQL and metadata
 test/                     Behavioral API and feature tests
 ```
 
@@ -221,7 +222,7 @@ Verify package contents with:
 pnpm pack --dry-run
 ```
 
-The tarball must include the CLI, Web assets, Drizzle migrations, and bundled
+The tarball must include the CLI, Web assets, and bundled
 agent skill.
 
 ## License

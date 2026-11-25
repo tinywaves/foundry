@@ -1,36 +1,27 @@
 # Encrypted data export and import
 
-Foundry remains local-first and does not provide synchronization. Data portability and disaster recovery use a full encrypted snapshot with the `.foundry-backup` extension.
+Status: accepted. Updated for JSON file storage.
 
-## Archive format
+Foundry exports an authenticated encrypted `.foundry-backup` envelope containing
+an archive version 3 ZIP with `manifest.json` and `data/foundry.json`. The JSON
+snapshot includes settings, providers, captures and fetch jobs. The manifest
+records the app version, data format version, file size and SHA-256 checksum.
+Device connection configuration is excluded.
 
-The outer file is an authenticated encrypted container. It uses a versioned plaintext header containing the KDF parameters and nonce, followed by an AES-256-GCM encrypted ZIP. The passphrase is processed with scrypt and is never stored. The ZIP contains:
+Only JSON snapshots are accepted. There is no SQLite conversion path or
+compatibility importer for earlier SQLite backup formats.
 
-- `manifest.json`
-- `database/foundry.sqlite`
+Inspect validates the envelope, allowed ZIP entries, checksums, format version,
+record shapes, active uniqueness rules, references and successful-job pointers.
+It returns a preview without changing live records. Newer formats are rejected.
+Pending/running jobs block export, inspect and import.
 
-The manifest records the archive version, application version, database schema version, file size, and SHA-256 checksum. Settings are stored in and exported with the database. Device connection configuration is not part of the archive.
+Import replaces settings and all records under the workspace maintenance gate.
+The runner pauses and active jobs are rechecked under the storage process lock.
+A durable redo journal records the replacement before record files are changed;
+recovery completes an interrupted committed replacement before serving reads.
+A failure before the journal commits leaves the previous records intact. The
+runner resumes and settings changes are announced when the operation finishes.
 
-## Compatibility
-
-- A newer envelope, archive, or database schema is rejected.
-- An older database schema is migrated on the staged snapshot before import.
-- Archive version 2 stores settings in SQLite. Version 1 archives remain importable:
-  their separate `settings.json` is validated and copied into the staged database.
-- `appVersion` is shown in the import preview only.
-
-## Import behavior
-
-Import replaces all Providers, Captures, Fetch Jobs, and application settings stored in the database. It is not a merge operation.
-
-Export and import are both blocked while a Fetch Job is `pending` or `running`. The decrypted archive is also rejected if it contains an active Fetch Job, preventing an imported snapshot from unexpectedly starting paid work.
-
-The renderer displays a blocking modal during import. The server owns the maintenance lock, pauses the runner, rechecks active jobs, and replaces all database rows, including settings, in one SQLite transaction. The lock is released and the runner resumes after the operation completes.
-
-## Consequences
-
-- The archive includes credentials and must remain encrypted.
-- Forgetting the passphrase makes the archive unrecoverable.
-- Logs, caches, and other device-local state are not exported.
-- The device-local connection configuration is never imported or replaced.
-- Merge import, selective import, and passphrase recovery are intentionally out of scope.
+Backups preserve the existing AES-256-GCM envelope and passphrase handling.
+Data format changes require validation and encrypted round-trip tests.

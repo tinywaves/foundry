@@ -1,6 +1,9 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
-import Database from 'better-sqlite3';
+import { createRequire } from 'node:module';
+// Codex owns this external database; the session adapter only reads it.
+// eslint-disable-next-line n/no-unsupported-features/node-builtins
+import type { DatabaseSync } from 'node:sqlite';
 import type {
   SessionProject,
   SessionWarning,
@@ -56,7 +59,7 @@ export function findCodexStateDatabase(codexHome: string): string {
 
   const valid: Array<{ path: string; modifiedAt: number }> = [];
   for (const candidate of candidates) {
-    let client: Database.Database | null = null;
+    let client: DatabaseSync | null = null;
     try {
       client = openReadonly(candidate);
       if (hasTable(client, 'threads')) {
@@ -290,15 +293,14 @@ function collectRolloutFiles(directory: string, files: string[]): number {
   return unreadable;
 }
 
-function openReadonly(databasePath: string): Database.Database {
-  return new Database(databasePath, {
-    readonly: true,
-    fileMustExist: true,
-    timeout: 5000,
-  });
+function openReadonly(databasePath: string): DatabaseSync {
+  const { DatabaseSync: Sqlite } = createRequire(import.meta.url)('node:sqlite') as typeof import('node:sqlite');
+  const client = new Sqlite(databasePath, { readOnly: true });
+  client.exec('PRAGMA busy_timeout = 5000');
+  return client;
 }
 
-function hasTable(client: Database.Database, name: string): boolean {
+function hasTable(client: DatabaseSync, name: string): boolean {
   return client.prepare(
     'SELECT 1 FROM sqlite_master WHERE type = \'table\' AND name = ?',
   ).get(name) !== undefined;

@@ -8,7 +8,7 @@ import { SettingsService } from '../features/settings/service';
 import { BundledSkillCopyService } from '../features/settings/skill-copy-service';
 import { SessionService } from '../features/sessions/service';
 import { FoundryEventHub } from '../events/hub';
-import type { FoundryDatabase } from '../storage/database';
+import type { FoundryStorage } from '../storage/index';
 import { getFoundryDataTransferPath } from '../storage/paths';
 import type { ApiAppOptions } from './api';
 
@@ -27,20 +27,20 @@ export interface ServerRuntime {
   start: () => void;
 }
 
-export function createServerRuntime(database: FoundryDatabase): ServerRuntime {
+export function createServerRuntime(storage: FoundryStorage): ServerRuntime {
   const eventHub = new FoundryEventHub();
   const workspaceMutationGate = new WorkspaceMutationGate();
-  const captureRuntime = createCaptureRuntime(database, eventHub);
+  const captureRuntime = createCaptureRuntime(storage, eventHub);
   const dataTransferService = new DataTransferService(
-    database,
+    storage,
     captureRuntime.runner,
     getFoundryDataTransferPath(),
     packageJson.version,
     workspaceMutationGate,
     (status) => eventHub.publish(DATA_TRANSFER_STATUS_CHANGED_EVENT, status),
   );
-  const providerService = new ProviderService(database);
-  const settingsService = new SettingsService(database);
+  const providerService = new ProviderService(storage);
+  const settingsService = new SettingsService(storage);
   const settingsSkillCopyService = new BundledSkillCopyService();
   const sessionService = new SessionService();
   const services: FoundryFeatureServices = {

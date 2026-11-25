@@ -18,10 +18,6 @@ export function ensureFoundryHome(): string {
   return foundryHome;
 }
 
-export function getFoundryDatabasePath(): string {
-  return path.join(getFoundryHomePath(), 'foundry.sqlite');
-}
-
 export function getFoundryDataTransferPath(): string {
   return path.join(getFoundryHomePath(), '.data-transfer');
 }

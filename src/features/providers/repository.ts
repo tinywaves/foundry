@@ -1,133 +1,74 @@
 import { randomUUID } from 'node:crypto';
-import { desc, eq, ne } from 'drizzle-orm';
-import type { FoundryDatabase } from '../../storage/database';
-import { providers } from '../../storage/schema';
-import { parseCustomModels, ProviderInUseError } from './contracts';
-import type {
-  ProviderConnection,
-  ProviderInput,
-  ProviderListItem,
-  ProviderStatus,
-  ProviderSummary,
-} from './contracts';
-
-type Database = FoundryDatabase['db'];
-type ProviderRow = typeof providers.$inferSelect;
+import type { FoundryStorage } from '../../storage/store';
+import type { ProviderRecord } from '../../storage/models';
+import { ProviderInUseError } from './contracts';
+import type { ProviderConnection, ProviderInput, ProviderListItem, ProviderStatus, ProviderSummary } from './contracts';
 
 export class ProviderNotFoundError extends Error {
   readonly code = 'PROVIDER_NOT_FOUND';
-
   constructor() {
     super('Provider not found');
     this.name = 'ProviderNotFoundError';
   }
 }
-
 export class ProviderRepository {
-  constructor(private readonly db: Database) {}
-
+  constructor(private readonly storage: FoundryStorage) {}
   list(usedProviderIds: ReadonlySet<string> = new Set()): ProviderListItem[] {
-    return this.db
-      .select()
-      .from(providers)
-      .where(ne(providers.status, 'deleted'))
-      .orderBy(desc(providers.updatedAt))
-      .all()
-      .map((row) => ({
-        ...toProviderSummary(row),
-        isInUse: usedProviderIds.has(row.id),
-      }));
+    return this.storage.all('providers').filter((row) => row.status !== 'deleted').toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt)).map((row) => ({ ...toSummary(row), isInUse: usedProviderIds.has(row.id) }));
   }
 
   get(id: string): ProviderSummary | null {
-    const row = this.db.select().from(providers).where(eq(providers.id, id)).get();
-    return row ? toProviderSummary(row) : null;
+    const row = this.storage.get('providers', id);
+    return row ? toSummary(row) : null;
   }
 
   getConnection(id: string): ProviderConnection | null {
-    const row = this.db.select().from(providers).where(eq(providers.id, id)).get();
-    if (!row || row.status === 'deleted') {
-      return null;
-    }
-
-    return {
-      protocol: row.protocol as ProviderConnection['protocol'],
-      baseURL: row.baseURL,
-      apiKey: row.apiKey,
-    };
+    const row = this.storage.get('providers', id);
+    return row && row.status !== 'deleted' ? { protocol: row.protocol, baseURL: row.baseURL, apiKey: row.apiKey } : null;
   }
 
   save(input: ProviderInput, id?: string): ProviderSummary {
-    const existing = id
-      ? this.db.select().from(providers).where(eq(providers.id, id)).get()
-      : undefined;
-
-    if (id && !existing) {
-      throw new ProviderNotFoundError();
-    }
-
-    const timestamp = new Date();
-    const values = {
-      name: input.name,
-      protocol: input.protocol,
-      baseURL: input.baseURL,
-      apiKey: input.apiKey,
-      customModels: JSON.stringify(input.customModels),
-      updatedAt: timestamp,
-    };
-
-    const row = existing && id
-      ? this.db.update(providers).set(values).where(eq(providers.id, id)).returning().get()
-      : this.db.insert(providers).values({
-          id: randomUUID(),
-          ...values,
-          status: 'active',
-          createdAt: timestamp,
-          deletedAt: null,
-        }).returning().get();
-
-    return toProviderSummary(row);
+    return this.storage.transaction(() => {
+      const existing = id ? this.storage.get('providers', id) : undefined;
+      if (id && !existing) {
+        throw new ProviderNotFoundError();
+      }
+      const now = new Date().toISOString();
+      const row: ProviderRecord = {
+        id: id ?? randomUUID(),
+        status: 'active',
+        createdAt: now,
+        deletedAt: null,
+        ...existing,
+        ...input,
+        updatedAt: now,
+      };
+      this.storage.put('providers', row);
+      return toSummary(row);
+    });
   }
 
-  setStatus(
-    id: string,
-    status: ProviderStatus,
-    usedProviderIds: ReadonlySet<string> = new Set(),
-  ): ProviderSummary {
-    if (usedProviderIds.has(id) && (status === 'disabled' || status === 'deleted')) {
-      throw new ProviderInUseError();
-    }
-
-    const rows = this.db
-      .update(providers)
-      .set({
+  setStatus(id: string, status: ProviderStatus, usedProviderIds: ReadonlySet<string> = new Set()): ProviderSummary {
+    return this.storage.transaction(() => {
+      if (usedProviderIds.has(id) && (status === 'disabled' || status === 'deleted')) {
+        throw new ProviderInUseError();
+      }
+      const existing = this.storage.get('providers', id);
+      if (!existing) {
+        throw new ProviderNotFoundError();
+      }
+      const now = new Date().toISOString();
+      const row = {
+        ...existing,
         status,
-        deletedAt: status === 'deleted' ? new Date() : null,
-        updatedAt: new Date(),
-      })
-      .where(eq(providers.id, id))
-      .returning()
-      .all();
-
-    if (rows.length === 0) {
-      throw new ProviderNotFoundError();
-    }
-
-    return toProviderSummary(rows[0]);
+        deletedAt: status === 'deleted' ? now : null,
+        updatedAt: now,
+      };
+      this.storage.put('providers', row);
+      return toSummary(row);
+    });
   }
 }
-
-function toProviderSummary(row: ProviderRow): ProviderSummary {
-  return {
-    id: row.id,
-    name: row.name,
-    protocol: row.protocol as ProviderSummary['protocol'],
-    baseURL: row.baseURL,
-    apiKey: row.apiKey,
-    customModels: parseCustomModels(JSON.parse(row.customModels)),
-    status: row.status as ProviderSummary['status'],
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-    deletedAt: row.deletedAt?.toISOString() ?? null,
-  };
+function toSummary(row: ProviderRecord): ProviderSummary {
+  return { ...row, status: row.status as ProviderStatus };
 }

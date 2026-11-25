@@ -1,12 +1,12 @@
 import { serve } from '@hono/node-server';
-import { initializeFoundryStorage } from '../storage/database';
+import { initializeFoundryStorage } from '../storage/index';
 import { createApiApp } from './api';
 import { createServerRuntime } from './runtime';
 
 const hostname = '127.0.0.1';
-const database = initializeFoundryStorage();
-const runtime = createServerRuntime(database);
-const app = createApiApp(database, runtime.apiOptions);
+const storage = initializeFoundryStorage();
+const runtime = createServerRuntime(storage);
+const app = createApiApp(storage, runtime.apiOptions);
 runtime.start();
 
 serve(

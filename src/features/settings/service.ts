@@ -1,5 +1,5 @@
 import { openPath } from '../../lib/open-path';
-import type { FoundryDatabase } from '../../storage/database';
+import type { FoundryStorage } from '../../storage/index';
 import { getFoundryHomePath } from '../../storage/paths';
 import type { PublicSettings, SettingsPatch } from './contracts';
 import { readSettings, updateSettings } from './repository';
@@ -10,21 +10,21 @@ export interface SettingsPayload extends PublicSettings {
 
 export class SettingsService {
   constructor(
-    private readonly database: FoundryDatabase,
+    private readonly storage: FoundryStorage,
     private readonly configFolder = getFoundryHomePath(),
     private readonly openFolder: (path: string) => void = openPath,
   ) {}
 
   read(): SettingsPayload {
     return {
-      ...readSettings(this.database.db),
+      ...readSettings(this.storage),
       configFolder: this.configFolder,
     };
   }
 
   update(patch: SettingsPatch): SettingsPayload {
     return {
-      ...updateSettings(patch, this.database.db),
+      ...updateSettings(patch, this.storage),
       configFolder: this.configFolder,
     };
   }

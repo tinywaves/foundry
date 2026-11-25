@@ -1,13 +1,13 @@
 import process from 'node:process';
 import { serve } from '@hono/node-server';
 import type { ServerType } from '@hono/node-server';
-import type { FoundryDatabase } from '../storage/database';
+import type { FoundryStorage } from '../storage/index';
 import { createApp } from './app';
 import { createServerRuntime } from './runtime';
 import { resolveWebRoot } from './web-root';
 
 export interface StartServerOptions {
-  database: FoundryDatabase;
+  storage: FoundryStorage;
   webRoot?: string;
   onListening?: (address: {
     url: string;
@@ -16,13 +16,13 @@ export interface StartServerOptions {
 }
 
 export function startServer({
-  database,
+  storage,
   webRoot = resolveWebRoot(),
   onListening,
 }: StartServerOptions): ServerType {
   const hostname = '127.0.0.1';
-  const runtime = createServerRuntime(database);
-  const app = createApp(webRoot, database, runtime.apiOptions);
+  const runtime = createServerRuntime(storage);
+  const app = createApp(webRoot, storage, runtime.apiOptions);
   runtime.start();
   const server = serve(
     {

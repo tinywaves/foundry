@@ -7,7 +7,7 @@ import { FoundryEventHub } from '../src/events/hub';
 import { createCaptureRuntime } from '../src/features/captures/runtime';
 import { updateSettings } from '../src/features/settings/repository';
 import { createApiApp } from '../src/server/api';
-import { openFoundryDatabase } from '../src/storage/database';
+import { openFoundryStorage } from '../src/storage/index';
 
 const { join } = path;
 
@@ -20,13 +20,13 @@ function expectedEvent(type: string, data: Record<string, unknown>) {
 
 it('captures a link through Firecrawl Search', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-captures-'));
-  const database = openFoundryDatabase(join(directory, 'foundry.sqlite'));
+  const database = openFoundryStorage(directory);
   updateSettings({
     captures: {
       fetcher: 'firecrawl',
       firecrawlApiKey: 'secret',
     },
-  }, database.db);
+  }, database);
 
   const rawResponse = {
     success: true,
@@ -141,7 +141,7 @@ it('captures a link through Firecrawl Search', async () => {
     ];
     expect(events).toEqual(expect.arrayContaining(expectedEvents));
   } finally {
-    database.client.close();
+    database.close();
     await rm(directory, { recursive: true, force: true });
   }
 });

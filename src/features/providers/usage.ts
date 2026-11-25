@@ -1,10 +1,10 @@
-import type { FoundryDatabase } from '../../storage/database';
+import type { FoundryStorage } from '../../storage/index';
 import { readStoredSettings } from '../settings/repository';
 
 export function getCurrentUsedProviderIds(
-  db: FoundryDatabase['db'],
+  storage: FoundryStorage,
 ): Set<string> {
-  const settings = readStoredSettings(db);
+  const settings = readStoredSettings(storage);
   const usedProviderIds = new Set<string>();
 
   for (const feature of Object.values(settings.features)) {

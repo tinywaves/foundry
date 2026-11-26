@@ -291,6 +291,9 @@ importers:
       '@heroicons/react':
         specifier: ^2.2.0
         version: 2.2.0(react@19.3.1)
+      '@lobehub/icons-static-svg':
+        specifier: ^1.106.0
+        version: 1.106.0
       '@microlink/react-json-view':
         specifier: ^1.31.48
         version: 1.31.48(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -1052,6 +1055,9 @@ packages:
 
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
+
+  '@lobehub/icons-static-svg@1.106.0':
+    resolution: {integrity: sha512-yRLkEGfCsOh6ZDSIPsA6HrI1ynh9gI1LECZaeFIzpuEHv9ON2i+SzwLnE2iYfW/agsms54QL+OhPde9WpEi/uA==}
 
   '@manypkg/find-root@3.1.0':
     resolution: {integrity: sha512-BcSqCyKhBVZ5YkSzOiheMCV41kqAFptW6xGqYSTjkVTl9XQpr+pqHhwgGCOHQtjDCv7Is6EFyA14Sm5GVbVABA==}
@@ -5057,6 +5063,8 @@ snapshots:
       keyv: 5.6.0
 
   '@keyv/serialize@1.1.1': {}
+
+  '@lobehub/icons-static-svg@1.106.0': {}
 
   '@manypkg/find-root@3.1.0':
     dependencies:

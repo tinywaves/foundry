@@ -18,6 +18,8 @@ import {
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import * as stylex from '@stylexjs/stylex';
+import chatgptIcon from '@lobehub/icons-static-svg/icons/openai.svg';
+import claudeCodeIcon from '@lobehub/icons-static-svg/icons/claudecode.svg';
 import { ApiError } from '../../lib/api';
 import { formatTimestamp } from '../../lib/format-time';
 import { useI18n } from '../../i18n';
@@ -34,6 +36,15 @@ import { ThreadTable } from './thread-table';
 import type { TranslationKey } from '../../i18n';
 
 const styles = stylex.create({
+  sourceIcon: (icon: string) => ({
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'currentColor',
+    maskImage: `url("${icon}")`,
+    maskPosition: 'center',
+    maskRepeat: 'no-repeat',
+    maskSize: 'contain',
+  }),
   filters: {
     flexWrap: 'wrap',
   },
@@ -112,8 +123,16 @@ export default function SessionsPage() {
             setSearchParams(nextSearchParams);
           }}
         >
-          <SegmentedControlItem value="codex" label={t('sessions.codex')} />
-          <SegmentedControlItem value="claude" label={t('sessions.claudeCode')} />
+          <SegmentedControlItem
+            value="codex"
+            label={t('sessions.codex')}
+            icon={<span aria-hidden="true" {...stylex.props(styles.sourceIcon(chatgptIcon))} />}
+          />
+          <SegmentedControlItem
+            value="claude"
+            label={t('sessions.claudeCode')}
+            icon={<span aria-hidden="true" {...stylex.props(styles.sourceIcon(claudeCodeIcon))} />}
+          />
         </SegmentedControl>
 
         <SourceSessions

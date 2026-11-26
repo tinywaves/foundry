@@ -140,3 +140,6 @@ dist
 .pnp.*
 .DS_Store
 .pnpm-store
+
+# Local Web UI rewrite reference
+app/web/legacy-src/

@@ -32,7 +32,7 @@ import type {
   SessionSource,
   SessionWarning,
 } from './types';
-import { ThreadTable } from './thread-table';
+import { ThreadGroups } from './thread-groups';
 import type { TranslationKey } from '../../i18n';
 
 const styles = stylex.create({
@@ -244,7 +244,7 @@ function SourceSessions({
       ))}
       {hasVisibleThreads
         ? (
-            <ThreadTable
+            <ThreadGroups
               key={isShowingArchived ? 'archived' : 'active'}
               snapshot={snapshot}
               isShowingArchived={isShowingArchived}

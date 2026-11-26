@@ -1,6 +1,6 @@
 # Web UI Guidance
 
-Use shadcn/ui preset `b27GcrRo`: Base UI Rhea, neutral colors, Inter, and Lucide.
+Use shadcn/ui preset `b1D0dv72`: Base UI Mira, neutral colors, Inter, and Lucide.
 Preserve page layouts, responsive rules, content, and behavior while allowing
 components to use their preset appearance.
 

@@ -3,8 +3,8 @@
 Foundry is an operational local workbench. Preserve its existing routes, page
 composition, responsive behavior, content, and business interactions.
 
-Use shadcn/ui preset `b27GcrRo`, generated with the official CLI. The resolved
-preset is `base-rhea`, neutral base and theme, neutral charts, Inter Variable,
+Use shadcn/ui preset `b1D0dv72`, generated with the official CLI. The resolved
+preset is `base-mira`, neutral base and theme, neutral charts, Inter Variable,
 Lucide icons, default radius, subtle menu accent, and default menu color.
 `components.json` records the generator configuration. Component appearance
 follows the preset rather than the previous Astryx implementation.

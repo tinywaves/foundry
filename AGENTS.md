@@ -114,7 +114,7 @@ Keep CLI and server responsibilities separate:
 ## Web UI Rules
 
 - The active Web UI lives in `app/web` and uses React, Vite, Tailwind CSS v4,
-  and shadcn/ui with preset `b27GcrRo` (`base-rhea`, neutral, Inter, Lucide).
+  and shadcn/ui with preset `b1D0dv72` (`base-mira`, neutral, Inter, Lucide).
 - Keep feature code under `app/web/src/features`; each feature owns its pages,
   dialogs, adapters, and types.
 - Keep the shell, navigation, titlebar, and hash router in `app/web/src/app.tsx`.

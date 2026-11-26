@@ -2,7 +2,7 @@
 
 React Web UI for the Foundry CLI, built with Vite, Tailwind CSS v4, and shadcn/ui.
 
-The UI uses preset `b27GcrRo` (Base UI Rhea, neutral, Inter, Lucide). Existing
+The UI uses preset `b1D0dv72` (Base UI Mira, neutral, Inter, Lucide). Existing
 page layouts, responsive rules, and business interactions remain intact. Features live
 under `src/features`; each feature owns its page, dialogs, local styles, types,
 and browser-facing API adapter. The shell and router live in `src/app.tsx`.

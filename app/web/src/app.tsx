@@ -1,3 +1,10 @@
+import Page from './app/page';
+import { TooltipProvider } from './components/ui/tooltip';
+
 export default function App() {
-  return <div className="p-6 text-2xl font-semibold">Hello World</div>;
+  return (
+    <TooltipProvider>
+      <Page />
+    </TooltipProvider>
+  );
 }

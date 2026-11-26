@@ -20,6 +20,7 @@ interface CodexSegment {
   model: string | null;
   gitBranch: string | null;
   subagent: boolean;
+  parentThreadId: string | null;
   archived: boolean;
   createdAt: number;
   updatedAt: number;
@@ -75,6 +76,7 @@ async function readSegment(file: string, isArchived: boolean): Promise<{
     model: null,
     gitBranch: null,
     subagent: false,
+    parentThreadId: null,
     archived: isArchived,
     createdAt: Infinity,
     updatedAt: 0,
@@ -95,6 +97,14 @@ async function readSegment(file: string, isArchived: boolean): Promise<{
       segment.model ??= text(payload.model_provider) || null;
       const git = isRecord(payload.git) ? payload.git : {};
       segment.gitBranch ??= text(git.branch) || null;
+      const source = isRecord(payload.source) ? payload.source : {};
+      const threadSource = isRecord(payload.thread_source) ? payload.thread_source : {};
+      const subagent = isRecord(source.subagent) ? source.subagent : {};
+      const threadSubagent = isRecord(threadSource.subagent) ? threadSource.subagent : {};
+      segment.parentThreadId ??= text(payload.parent_thread_id)
+        || text(subagent.parent_thread_id)
+        || text(threadSubagent.parent_thread_id)
+        || null;
       segment.subagent ||= Boolean(payload.parent_thread_id)
         || (isRecord(payload.source) && 'subagent' in payload.source)
         || (isRecord(payload.thread_source) && 'subagent' in payload.thread_source);
@@ -136,6 +146,7 @@ function mergeSegments(segments: CodexSegment[]): SessionThread {
     gitBranch: segments.findLast((segment) => segment.gitBranch)?.gitBranch ?? null,
     archived: segments.every((segment) => segment.archived),
     subagent: segments.some((segment) => segment.subagent),
+    parentThreadId: segments.findLast((segment) => segment.parentThreadId)?.parentThreadId ?? null,
     createdAt: new Date(Math.min(...segments.map((segment) => segment.createdAt))).toISOString(),
     updatedAt: new Date(Math.max(...segments.map((segment) => segment.updatedAt))).toISOString(),
     sizeBytes: segments.reduce((sum, segment) => sum + segment.sizeBytes, 0),

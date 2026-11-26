@@ -174,11 +174,8 @@ export type TranslationKey
     | 'sessions.sessionCount_one'
     | 'sessions.sessionCount_other'
     | 'sessions.includeArchived'
-    | 'sessions.includeSubagents'
     | 'sessions.loading'
     | 'sessions.showArchivedHint'
-    | 'sessions.showSubagentsHint'
-    | 'sessions.showBothHint'
     | 'sessions.noReadableTitle'
     | 'sessions.noReadableDescription'
     | 'sessions.filesUnreadable_one'
@@ -269,11 +266,8 @@ const english: TranslationTable = {
   'sessions.sessionCount_one': '{{count}} session',
   'sessions.sessionCount_other': '{{count}} sessions',
   'sessions.includeArchived': 'Include archived',
-  'sessions.includeSubagents': 'Include subagents',
   'sessions.loading': 'Reading local session records…',
   'sessions.showArchivedHint': 'Select “Include archived” to show archived sessions.',
-  'sessions.showSubagentsHint': 'Select “Include subagents” to show subagent sessions.',
-  'sessions.showBothHint': 'Try selecting “Include archived” or “Include subagents”.',
   'sessions.noReadableTitle': 'No sessions could be read',
   'sessions.noReadableDescription': 'Refresh to try reading the session records again.',
   'sessions.filesUnreadable_one': '{{count}} session file could not be fully read. Try refreshing.',
@@ -515,11 +509,8 @@ const simplifiedChinese: TranslationTable = {
   'sessions.sessionCount_one': '{{count}} 个会话',
   'sessions.sessionCount_other': '{{count}} 个会话',
   'sessions.includeArchived': '包含已归档',
-  'sessions.includeSubagents': '包含子代理',
   'sessions.loading': '正在读取本地会话记录…',
   'sessions.showArchivedHint': '勾选“包含已归档”以显示已归档会话。',
-  'sessions.showSubagentsHint': '勾选“包含子代理”以显示子代理会话。',
-  'sessions.showBothHint': '试试勾选“包含已归档”或“包含子代理”。',
   'sessions.noReadableTitle': '未能读取到会话',
   'sessions.noReadableDescription': '请刷新，重新尝试读取会话记录。',
   'sessions.filesUnreadable_one': '{{count}} 个会话文件未能完整读取，请刷新重试。',
@@ -763,11 +754,8 @@ const traditionalChinese: TranslationTable = {
   'sessions.sessionCount_one': '{{count}} 個對話',
   'sessions.sessionCount_other': '{{count}} 個對話',
   'sessions.includeArchived': '包含已封存',
-  'sessions.includeSubagents': '包含子代理',
   'sessions.loading': '正在讀取本機對話紀錄…',
   'sessions.showArchivedHint': '勾選「包含已封存」以顯示已封存的對話。',
-  'sessions.showSubagentsHint': '勾選「包含子代理」以顯示子代理的對話。',
-  'sessions.showBothHint': '試著勾選「包含已封存」或「包含子代理」。',
   'sessions.noReadableTitle': '未能讀取任何對話',
   'sessions.noReadableDescription': '請重新整理，再次嘗試讀取對話紀錄。',
   'sessions.filesUnreadable_one': '{{count}} 個對話檔案未能完整讀取，請重新整理後再試一次。',
@@ -1009,11 +997,8 @@ const japanese: TranslationTable = {
   'sessions.sessionCount_one': '{{count}} 件のセッション',
   'sessions.sessionCount_other': '{{count}} 件のセッション',
   'sessions.includeArchived': 'アーカイブ済みを含める',
-  'sessions.includeSubagents': 'サブエージェントを含める',
   'sessions.loading': 'セッション記録を読み込み中…',
   'sessions.showArchivedHint': '「アーカイブ済みを含める」を選択すると、アーカイブ済みのセッションが表示されます。',
-  'sessions.showSubagentsHint': '「サブエージェントを含める」を選択すると、サブエージェントのセッションが表示されます。',
-  'sessions.showBothHint': '「アーカイブ済みを含める」または「サブエージェントを含める」を選択してください。',
   'sessions.noReadableTitle': 'セッションを読み込めませんでした',
   'sessions.noReadableDescription': '再読み込みして、セッション記録の読み込みをやり直してください。',
   'sessions.filesUnreadable_one': '{{count}} 件のセッションファイルを完全に読み込めませんでした。再読み込みしてください。',

@@ -5,6 +5,7 @@ export interface SessionThread {
   title: string;
   archived: boolean;
   subagent: boolean;
+  parentThreadId: string | null;
   createdAt: string;
   updatedAt: string;
   sizeBytes: number;

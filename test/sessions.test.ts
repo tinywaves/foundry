@@ -95,10 +95,11 @@ it('discovers Codex transcripts without databases and merges compressed continua
       segmentCount: 2,
       archived: false,
       subagent: false,
+      parentThreadId: null,
     });
     expect(snapshot.threads[0]).not.toHaveProperty('projectBucket');
     expect(snapshot.threads.find((thread) => thread.id === ARCHIVED_ID)).toMatchObject({ archived: true, title: 'Archived work' });
-    expect(snapshot.threads.find((thread) => thread.id === CHILD_ID)).toMatchObject({ subagent: true, model: 'fallback-provider' });
+    expect(snapshot.threads.find((thread) => thread.id === CHILD_ID)).toMatchObject({ subagent: true, parentThreadId: ID, model: 'fallback-provider' });
   } finally {
     await rm(home, { recursive: true, force: true });
   }
@@ -168,7 +169,34 @@ it('reads Claude JSONL directly, ignores indexes and discovers nested compressed
     expect(snapshot.warnings).toEqual([]);
     expect(snapshot.threads).toHaveLength(2);
     expect(snapshot.threads.find((thread) => thread.id === ID)).toMatchObject({ title: 'My title', cwd: '/repo/one', createdAt: START, updatedAt: END, gitBranch: 'main', tokensUsed: 20, subagent: false });
-    expect(snapshot.threads.find((thread) => thread.id === 'agent-child')).toMatchObject({ title: 'Child task', subagent: true, tokensUsed: 7, sizeBytes: childBytes });
+    expect(snapshot.threads.find((thread) => thread.id === 'agent-child')).toMatchObject({ title: 'Child task', subagent: true, parentThreadId: ID, tokensUsed: 7, sizeBytes: childBytes });
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+it.each([
+  { parent_thread_id: ID },
+  { source: { subagent: { parent_thread_id: ID } } },
+  { thread_source: { subagent: { parent_thread_id: ID } } },
+])('preserves Codex parent relationships across continuation segments: %j', async (source) => {
+  const home = await mkdtemp(path.join(tmpdir(), 'foundry-codex-parent-'));
+  try {
+    await transcript(path.join(home, 'sessions', `${CHILD_ID}.jsonl`), [meta(CHILD_ID, source), prompt('Child work')]);
+    await transcript(path.join(home, 'sessions', `later-${CHILD_ID}.jsonl.zst`), [codexUsage(10)], true);
+    const snapshot = await new SessionService(home).getCodexSnapshot();
+    expect(snapshot.threads).toMatchObject([{ id: CHILD_ID, subagent: true, parentThreadId: ID, segmentCount: 2 }]);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+it('uses the Claude subagent directory when sessionId is absent', async () => {
+  const home = await mkdtemp(path.join(tmpdir(), 'foundry-claude-parent-'));
+  try {
+    await transcript(path.join(home, 'projects/repo', ID, 'subagents/agent-child.jsonl'), [{ type: 'user', timestamp: START, message: { role: 'user', content: 'Child task' } }]);
+    const snapshot = await new SessionService('/missing', home).getClaudeSnapshot();
+    expect(snapshot.threads).toMatchObject([{ id: 'agent-child', subagent: true, parentThreadId: ID }]);
   } finally {
     await rm(home, { recursive: true, force: true });
   }

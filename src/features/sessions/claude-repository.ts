@@ -61,13 +61,18 @@ async function readSession(file: string): Promise<{
   let createdAt = Infinity;
   let updatedAt = 0;
   const isNestedSubagent = file.split(path.sep).includes('subagents');
+  let parentThreadId: string | null = isNestedSubagent
+    ? path.basename(path.dirname(path.dirname(file)))
+    : null;
   let isSubagent = isNestedSubagent;
   const usages = new Map<string, number>();
   let anonymousUsage = 0;
   const { hasMalformedLines } = await readTranscript(file, (record) => {
     // Nested subagent transcripts use their filename as their own identity;
     // sessionId there identifies the owning conversation.
-    if (!isNestedSubagent) {
+    if (isNestedSubagent) {
+      parentThreadId = text(record.sessionId) || parentThreadId;
+    } else {
       id ||= text(record.sessionId);
     }
     cwd = text(record.cwd) || cwd;
@@ -118,6 +123,7 @@ async function readSession(file: string): Promise<{
       model,
       archived: false,
       subagent: isSubagent,
+      parentThreadId,
       createdAt: new Date(createdAt).toISOString(),
       updatedAt: new Date(updatedAt).toISOString(),
       sizeBytes: fileStat.size,

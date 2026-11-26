@@ -45,9 +45,6 @@ const styles = stylex.create({
     maskRepeat: 'no-repeat',
     maskSize: 'contain',
   }),
-  filters: {
-    flexWrap: 'wrap',
-  },
 });
 
 export default function SessionsPage() {
@@ -57,7 +54,6 @@ export default function SessionsPage() {
     ? 'claude'
     : 'codex';
   const [isShowingArchived, setIsShowingArchived] = useState(false);
-  const [isShowingSubagents, setIsShowingSubagents] = useState(false);
   const settingsQuery = useQuery({
     queryKey: settingsKeys.current(),
     queryFn: getSettings,
@@ -82,7 +78,6 @@ export default function SessionsPage() {
 
   const snapshot = sessionQuery.data;
   const archivedCount = snapshot?.threads.filter((thread) => thread.archived).length ?? 0;
-  const subagentCount = snapshot?.threads.filter((thread) => thread.subagent).length ?? 0;
   const sourceLabel = t(source === 'codex'
     ? 'sessions.codex'
     : 'sessions.claudeCode');
@@ -144,11 +139,8 @@ export default function SessionsPage() {
           error={sessionQuery.error}
           snapshot={snapshot}
           isShowingArchived={isShowingArchived}
-          isShowingSubagents={isShowingSubagents}
           archivedCount={archivedCount}
-          subagentCount={subagentCount}
           onShowArchivedChange={setIsShowingArchived}
-          onShowSubagentsChange={setIsShowingSubagents}
           formatUpdatedAt={formatUpdatedAt}
         />
       </VStack>
@@ -164,11 +156,8 @@ function SourceSessions({
   error,
   snapshot,
   isShowingArchived,
-  isShowingSubagents,
   archivedCount,
-  subagentCount,
   onShowArchivedChange,
-  onShowSubagentsChange,
   formatUpdatedAt,
 }: {
   source: SessionSource;
@@ -178,11 +167,8 @@ function SourceSessions({
   error: unknown;
   snapshot: SessionSnapshot | undefined;
   isShowingArchived: boolean;
-  isShowingSubagents: boolean;
   archivedCount: number;
-  subagentCount: number;
   onShowArchivedChange: (isChecked: boolean) => void;
-  onShowSubagentsChange: (isChecked: boolean) => void;
   formatUpdatedAt: (value: string) => string;
 }) {
   const { t } = useI18n();
@@ -217,19 +203,13 @@ function SourceSessions({
 
   const hasVisibleThreads = snapshot.threads.some((thread) => (
     (isShowingArchived || !thread.archived)
-    && (isShowingSubagents || !thread.subagent)
   ));
   const hasHiddenArchived = archivedCount > 0 && !isShowingArchived;
-  const hasHiddenSubagents = subagentCount > 0 && !isShowingSubagents;
   let emptyDescription: TranslationKey = 'sessions.noThreadsDescription';
   if (snapshot.threads.length === 0) {
     emptyDescription = 'sessions.noReadableDescription';
-  } else if (hasHiddenArchived && hasHiddenSubagents) {
-    emptyDescription = 'sessions.showBothHint';
   } else if (hasHiddenArchived) {
     emptyDescription = 'sessions.showArchivedHint';
-  } else if (hasHiddenSubagents) {
-    emptyDescription = 'sessions.showSubagentsHint';
   }
 
   return (
@@ -251,31 +231,22 @@ function SourceSessions({
           description={warningDescription(warning, t)}
         />
       ))}
-      <HStack gap={3} vAlign="center" xstyle={styles.filters}>
-        {source === 'codex' || archivedCount > 0
-          ? (
-              <CheckboxInput
-                label={`${t('sessions.includeArchived')} (${archivedCount})`}
-                size="sm"
-                value={isShowingArchived}
-                onChange={onShowArchivedChange}
-              />
-            )
-          : null}
-        <CheckboxInput
-          label={`${t('sessions.includeSubagents')} (${subagentCount})`}
-          size="sm"
-          value={isShowingSubagents}
-          onChange={onShowSubagentsChange}
-        />
-      </HStack>
+      {source === 'codex' || archivedCount > 0
+        ? (
+            <CheckboxInput
+              label={`${t('sessions.includeArchived')} (${archivedCount})`}
+              size="sm"
+              value={isShowingArchived}
+              onChange={onShowArchivedChange}
+            />
+          )
+        : null}
       {hasVisibleThreads
         ? (
             <ThreadTable
-              key={`${isShowingArchived ? 'archived' : 'active'}-${isShowingSubagents ? 'subagents' : 'user'}`}
+              key={isShowingArchived ? 'archived' : 'active'}
               snapshot={snapshot}
               isShowingArchived={isShowingArchived}
-              isShowingSubagents={isShowingSubagents}
               formatUpdatedAt={formatUpdatedAt}
             />
           )

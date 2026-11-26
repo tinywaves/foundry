@@ -7,8 +7,10 @@ import {
   useTableGroupedRows,
   useTableStickyColumns,
 } from '@astryxdesign/core/Table';
-import type { TableColumn } from '@astryxdesign/core/Table';
+import type { TableColumn, TablePlugin } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
+import { Collapsible } from '@astryxdesign/core/Collapsible';
+import { VisuallyHidden } from '@astryxdesign/core/VisuallyHidden';
 import * as stylex from '@stylexjs/stylex';
 import type { TranslationKey } from '../../i18n';
 import { useI18n } from '../../i18n';
@@ -17,12 +19,16 @@ import type {
   SessionThread,
 } from './types';
 import { formatBytes, formatTokens } from './format';
+import { buildThreadTree } from './thread-tree';
+import type { ThreadNode } from './thread-tree';
+import { subagentPanelMarker } from './thread-table.stylex';
 
 type ThreadGroup = {
   key: string;
   name: string;
   roots: string[];
-  threads: SessionThread[];
+  threads: ThreadNode[];
+  count: number;
   totalBytes: number;
   lastUpdatedAt: string;
 };
@@ -41,39 +47,70 @@ const styles = stylex.create({
   title: {
     minWidth: 0,
   },
+  subagentCell: {
+    padding: 0,
+    borderBottomWidth: {
+      default: 'var(--border-width)',
+      [stylex.when.ancestor(':last-child', subagentPanelMarker)]: 0,
+    },
+    borderBottomStyle: 'solid',
+    borderBottomColor: 'var(--color-border)',
+  },
+  subagentContent: {
+    // Nested tables own their inset; inheriting the page's bleed creates
+    // overflow that switches the outer scroll container and shifts sticky cells.
+    '--container-padding-inline-start': '0px',
+    '--container-padding-inline-end': '0px',
+    '--container-padding-block-start': '0px',
+    '--container-padding-block-end': '0px',
+    'paddingBlockStart': 'var(--spacing-2)',
+  },
+  subagentSection: {
+    'paddingInlineStart': 'var(--spacing-6)',
+    'paddingInlineEnd': 'var(--spacing-2)',
+    'paddingBlock': 'var(--spacing-2)',
+    '@media (max-width: 600px)': {
+      paddingInlineStart: 'var(--spacing-2)',
+    },
+  },
 });
+
+const subagentHeaders: TablePlugin<ThreadNode> = {
+  transformHeaderCell: (props) => ({
+    ...props,
+    content: <VisuallyHidden>{props.content}</VisuallyHidden>,
+    htmlProps: {
+      ...props.htmlProps,
+      style: { ...props.htmlProps.style, paddingBlock: 0, height: 0, borderBottomWidth: 0 },
+    },
+  }),
+};
 
 export function ThreadTable({
   snapshot,
   isShowingArchived,
-  isShowingSubagents,
   formatUpdatedAt,
 }: {
   snapshot: SessionSnapshot;
   isShowingArchived: boolean;
-  isShowingSubagents: boolean;
   formatUpdatedAt: (value: string) => string;
 }) {
-  type ThreadRow = SessionThread & {
-    groupKey: string;
-    secondary: string;
-  };
+  type ThreadRow = ThreadNode & { groupKey: string };
   const { t } = useI18n();
   const groups = useMemo(
-    () => buildGroups(snapshot, isShowingArchived, isShowingSubagents, t),
-    [snapshot, isShowingArchived, isShowingSubagents, t],
+    () => buildGroups(snapshot, isShowingArchived, t),
+    [snapshot, isShowingArchived, t],
   );
   const groupsByKey = useMemo(
     () => new Map(groups.map((group) => [group.key, group])),
     [groups],
   );
-  const rows = useMemo<ThreadRow[]>(
+  const rows = useMemo(
     () => groups.flatMap((group) => group.threads.map((thread) => ({
       ...thread,
       groupKey: group.key,
-      secondary: secondaryLine(thread, t),
     }))),
-    [groups, t],
+    [groups],
   );
 
   const defaultCollapsedGroups = useMemo(
@@ -106,7 +143,7 @@ export function ThreadTable({
         return next;
       });
     },
-    renderGroupHeader: (groupKey, count) => {
+    renderGroupHeader: (groupKey) => {
       const group = groupsByKey.get(groupKey);
       if (!group) {
         return null;
@@ -120,7 +157,7 @@ export function ThreadTable({
             </Text>
           </span>
           <Text type="supporting">
-            {t('sessions.sessionCount', { count })}
+            {t('sessions.sessionCount', { count: group.count })}
           </Text>
           <StackItem size="fill" />
           <Text type="supporting">{formatBytes(group.totalBytes)}</Text>
@@ -134,8 +171,27 @@ export function ThreadTable({
   const stickyColumns = useTableStickyColumns<ThreadRow>({
     startKeys: ['thread'],
   });
+  const columns = useThreadColumns<ThreadRow>(formatUpdatedAt);
+  const subagents = useSubagentRows(columns, formatUpdatedAt);
 
-  const columns = useMemo<Array<TableColumn<ThreadRow>>>(() => [
+  return (
+    <Table<ThreadRow>
+      data={groupedRows.data}
+      columns={columns}
+      idKey={groupedRows.idKey}
+      hasHover
+      plugins={{
+        groupedRows: groupedRows.plugin,
+        stickyColumns,
+        subagents,
+      }}
+    />
+  );
+}
+
+function useThreadColumns<T extends ThreadNode = ThreadNode>(formatUpdatedAt: (value: string) => string) {
+  const { t } = useI18n();
+  return useMemo<Array<TableColumn<T>>>(() => [
     {
       key: 'thread',
       header: t('sessions.thread'),
@@ -143,9 +199,9 @@ export function ThreadTable({
       renderCell: (thread) => (
         <VStack gap={0} xstyle={styles.title}>
           <Text maxLines={1}>{thread.title}</Text>
-          {thread.secondary && (
+          {secondaryLine(thread, t) && (
             <Text type="supporting" maxLines={1}>
-              {thread.secondary}
+              {secondaryLine(thread, t)}
             </Text>
           )}
         </VStack>
@@ -189,37 +245,87 @@ export function ThreadTable({
       ),
     },
   ], [formatUpdatedAt, t]);
+}
 
+function SubagentSection({ threads, formatUpdatedAt }: {
+  threads: ThreadNode[];
+  formatUpdatedAt: (value: string) => string;
+}) {
+  const { t } = useI18n();
+  const columns = useThreadColumns(formatUpdatedAt);
+  const subagents = useSubagentRows(columns, formatUpdatedAt);
   return (
-    <Table<ThreadRow>
-      data={groupedRows.data}
-      columns={columns}
-      idKey={groupedRows.idKey}
-      hasHover
-      plugins={{
-        groupedRows: groupedRows.plugin,
-        stickyColumns,
-      }}
-    />
+    <Collapsible
+      trigger={(
+        <Text type="supporting">
+          {t('sessions.subagents')}
+          {' '}
+          (
+          {threads.length}
+          )
+        </Text>
+      )}
+      defaultIsOpen={false}
+      chevronPosition="start"
+      xstyle={styles.subagentSection}
+    >
+      <div {...stylex.props(styles.subagentContent)}>
+        <Table<ThreadNode>
+          data={threads}
+          columns={columns}
+          idKey="id"
+          hasHover
+          plugins={{ subagentHeaders, subagents }}
+        />
+      </div>
+    </Collapsible>
   );
+}
+
+function useSubagentRows<T extends ThreadNode>(
+  columns: Array<TableColumn<T>>,
+  formatUpdatedAt: (value: string) => string,
+): TablePlugin<T> {
+  return useMemo(() => ({
+    transformBodyCell: (props, _column, thread) => !('children' in thread) || thread.children.length === 0
+      ? props
+      : {
+          ...props,
+          htmlProps: {
+            ...props.htmlProps,
+            style: { ...props.htmlProps.style, borderBottomWidth: 0 },
+          },
+        },
+    transformBodyRow: (props, thread) => {
+      if (!('children' in thread) || thread.children.length === 0) {
+        return props;
+      }
+      return {
+        ...props,
+        afterRow: (
+          <>
+            {props.afterRow}
+            <tr data-expansion-panel="" {...stylex.props(subagentPanelMarker)}>
+              <td colSpan={columns.length} {...stylex.props(styles.subagentCell)}>
+                <SubagentSection threads={thread.children} formatUpdatedAt={formatUpdatedAt} />
+              </td>
+            </tr>
+          </>
+        ),
+      };
+    },
+  }), [columns, formatUpdatedAt]);
 }
 
 function buildGroups(
   snapshot: SessionSnapshot,
   isShowingArchived: boolean,
-  isShowingSubagents: boolean,
   t: (key: TranslationKey) => string,
 ): ThreadGroup[] {
   const groups = new Map<string, ThreadGroup>();
 
-  for (const thread of snapshot.threads) {
-    if (!isShowingArchived && thread.archived) {
-      continue;
-    }
-    if (!isShowingSubagents && thread.subagent) {
-      continue;
-    }
-
+  const visibleThreads = snapshot.threads.filter((thread) => isShowingArchived || !thread.archived);
+  for (const thread of buildThreadTree(visibleThreads)) {
     const key = thread.cwd;
     let group = groups.get(key);
     if (!group) {
@@ -228,6 +334,7 @@ function buildGroups(
         name: thread.cwd.split(/[\\/]/u).findLast(Boolean) || thread.cwd || t('sessions.unknownDirectory'),
         roots: thread.cwd ? [thread.cwd] : [],
         threads: [],
+        count: 0,
         totalBytes: 0,
         lastUpdatedAt: thread.updatedAt,
       };
@@ -235,9 +342,15 @@ function buildGroups(
     }
 
     group.threads.push(thread);
-    group.totalBytes += thread.sizeBytes;
-    if (thread.updatedAt > group.lastUpdatedAt) {
-      group.lastUpdatedAt = thread.updatedAt;
+    const descendants = [thread];
+    while (descendants.length > 0) {
+      const descendant = descendants.pop()!;
+      group.count += 1;
+      group.totalBytes += descendant.sizeBytes;
+      if (descendant.updatedAt > group.lastUpdatedAt) {
+        group.lastUpdatedAt = descendant.updatedAt;
+      }
+      descendants.push(...descendant.children);
     }
   }
 

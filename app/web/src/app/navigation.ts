@@ -5,13 +5,15 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
+import type { TranslationKey } from '@/i18n/resources';
+
 export type NavSubItem = {
-  title: string;
+  titleKey: TranslationKey;
   url: string;
 };
 
 export type NavItem = {
-  title: string;
+  titleKey: TranslationKey;
   url?: string;
   icon: LucideIcon;
   items?: NavSubItem[];
@@ -19,61 +21,55 @@ export type NavItem = {
 
 export const mainNavigation: NavItem[] = [
   {
-    title: 'Dashboard',
+    titleKey: 'nav.dashboard',
     url: '/dashboard',
     icon: LayoutDashboardIcon,
   },
   {
-    title: 'Library',
+    titleKey: 'nav.library',
     icon: LibraryBigIcon,
     items: [
       {
-        title: 'Skills',
+        titleKey: 'nav.skills',
         url: '/library/skills',
       },
       {
-        title: 'Starred',
+        titleKey: 'nav.starred',
         url: '/library/starred',
       },
     ],
   },
   {
-    title: 'Models',
+    titleKey: 'nav.models',
     icon: BotIcon,
     items: [
       {
-        title: 'Genesis',
+        titleKey: 'nav.genesis',
         url: '/models/genesis',
       },
       {
-        title: 'Explorer',
+        titleKey: 'nav.explorer',
         url: '/models/explorer',
       },
       {
-        title: 'Quantum',
+        titleKey: 'nav.quantum',
         url: '/models/quantum',
       },
     ],
   },
 ];
 
-const pageTitles = new Map<string, string>([
-  ['/settings', 'Settings'],
+const pageTitleKeys = new Map<string, TranslationKey>([
+  ['/settings', 'nav.settings'],
   ...mainNavigation.flatMap((item) => [
-    ...(item.url ? [[item.url, item.title] as const] : []),
-    ...(item.items?.map((subItem) => [subItem.url, subItem.title] as const)
+    ...(item.url ? [[item.url, item.titleKey] as const] : []),
+    ...(item.items?.map((subItem) => [subItem.url, subItem.titleKey] as const)
       ?? []),
   ]),
 ]);
 
-export function getPageTitle(pathname: string) {
-  const exactTitle = pageTitles.get(pathname);
-  if (exactTitle) {
-    return exactTitle;
-  }
-
-  const lastSegment = pathname.split('/').findLast(Boolean);
-  return lastSegment ? lastSegment.charAt(0).toUpperCase() + lastSegment.slice(1) : 'Dashboard';
+export function getPageTitleKey(pathname: string): TranslationKey {
+  return pageTitleKeys.get(pathname) ?? 'nav.dashboard';
 }
 
 const navigationPaths = mainNavigation.flatMap((item) => [

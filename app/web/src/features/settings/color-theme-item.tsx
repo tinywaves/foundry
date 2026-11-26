@@ -1,14 +1,18 @@
 import type { ThemeMode } from '@dhzh/foundry-shared';
+import { useTranslation } from 'react-i18next';
 
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 
 import { SettingsItem } from './settings-item';
 
-const themeOptions: Array<{ value: ThemeMode; label: string }> = [
-  { value: 'system', label: 'System' },
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
+const themeOptions: Array<{
+  value: ThemeMode;
+  labelKey: 'common.system' | 'theme.light' | 'theme.dark';
+}> = [
+  { value: 'system', labelKey: 'common.system' },
+  { value: 'light', labelKey: 'theme.light' },
+  { value: 'dark', labelKey: 'theme.dark' },
 ];
 
 interface ColorThemeItemProps {
@@ -22,10 +26,12 @@ export function ColorThemeItem({
   onValueChange,
   disabled = false,
 }: ColorThemeItemProps) {
+  const { t } = useTranslation();
+
   return (
-    <SettingsItem label="Color theme">
+    <SettingsItem label={t('settings.colorTheme')}>
       <RadioGroup<ThemeMode>
-        aria-label="Color theme"
+        aria-label={t('settings.colorTheme')}
         value={value}
         onValueChange={onValueChange}
         disabled={disabled}
@@ -42,7 +48,7 @@ export function ColorThemeItem({
             )}
           >
             <RadioGroupItem value={option.value} disabled={disabled} />
-            <span>{option.label}</span>
+            <span>{t(option.labelKey)}</span>
           </label>
         ))}
       </RadioGroup>

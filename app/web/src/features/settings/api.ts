@@ -1,4 +1,4 @@
-import type { SettingsPayload, ThemeMode } from '@dhzh/foundry-shared';
+import type { SettingsPatch, SettingsPayload } from '@dhzh/foundry-shared';
 
 const settingsPath = '/api/settings';
 
@@ -6,11 +6,11 @@ export function getSettings(signal?: AbortSignal): Promise<SettingsPayload> {
   return requestSettings<SettingsPayload>({ signal });
 }
 
-export function setTheme(theme: ThemeMode): Promise<SettingsPayload> {
+export function updateSettings(patch: SettingsPatch): Promise<SettingsPayload> {
   return requestSettings<SettingsPayload>({
     method: 'PATCH',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ theme }),
+    body: JSON.stringify(patch),
   });
 }
 

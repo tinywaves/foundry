@@ -22,11 +22,13 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { ChevronRightIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { NavLink, useLocation } from 'react-router-dom';
 
 import type { NavItem } from '@/app/navigation';
 
 export function NavMain({ items }: { items: NavItem[] }) {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const { isMobile, state } = useSidebar();
   const isIconCollapsed = state === 'collapsed' && !isMobile;
@@ -41,14 +43,14 @@ export function NavMain({ items }: { items: NavItem[] }) {
 
           if (!item.items) {
             return (
-              <SidebarMenuItem key={item.title}>
+              <SidebarMenuItem key={item.titleKey}>
                 <SidebarMenuButton
-                  tooltip={item.title}
+                  tooltip={t(item.titleKey)}
                   isActive={pathname === item.url}
                   render={<NavLink to={item.url ?? '/dashboard'} />}
                 >
                   <Icon />
-                  <span>{item.title}</span>
+                  <span>{t(item.titleKey)}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             );
@@ -56,18 +58,18 @@ export function NavMain({ items }: { items: NavItem[] }) {
 
           if (isIconCollapsed) {
             return (
-              <SidebarMenuItem key={item.title}>
+              <SidebarMenuItem key={item.titleKey}>
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     render={(
                       <SidebarMenuButton
-                        tooltip={item.title}
+                        tooltip={t(item.titleKey)}
                         isActive={hasActiveChild}
                       />
                     )}
                   >
                     <Icon />
-                    <span>{item.title}</span>
+                    <span>{t(item.titleKey)}</span>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     className="w-40"
@@ -76,14 +78,16 @@ export function NavMain({ items }: { items: NavItem[] }) {
                     sideOffset={4}
                   >
                     <DropdownMenuGroup>
-                      <DropdownMenuLabel>{item.title}</DropdownMenuLabel>
+                      <DropdownMenuLabel>
+                        {t(item.titleKey)}
+                      </DropdownMenuLabel>
                       {item.items.map((subItem) => (
                         <DropdownMenuItem
-                          key={subItem.title}
+                          key={subItem.titleKey}
                           className="cursor-pointer"
                           render={<NavLink to={subItem.url} />}
                         >
-                          <span>{subItem.title}</span>
+                          <span>{t(subItem.titleKey)}</span>
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuGroup>
@@ -95,7 +99,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
 
           return (
             <Collapsible
-              key={`${item.title}-${hasActiveChild ? 'active' : 'inactive'}`}
+              key={`${item.titleKey}-${hasActiveChild ? 'active' : 'inactive'}`}
               defaultOpen={hasActiveChild}
               className="group/collapsible"
               render={<SidebarMenuItem />}
@@ -103,24 +107,24 @@ export function NavMain({ items }: { items: NavItem[] }) {
               <CollapsibleTrigger
                 render={(
                   <SidebarMenuButton
-                    tooltip={item.title}
+                    tooltip={t(item.titleKey)}
                     isActive={hasActiveChild}
                   />
                 )}
               >
                 <Icon />
-                <span>{item.title}</span>
+                <span>{t(item.titleKey)}</span>
                 <ChevronRightIcon className="ml-auto transition-transform duration-200 group-data-open/collapsible:rotate-90" />
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <SidebarMenuSub>
                   {item.items.map((subItem) => (
-                    <SidebarMenuSubItem key={subItem.title}>
+                    <SidebarMenuSubItem key={subItem.titleKey}>
                       <SidebarMenuSubButton
                         isActive={pathname === subItem.url}
                         render={<NavLink to={subItem.url} />}
                       >
-                        <span>{subItem.title}</span>
+                        <span>{t(subItem.titleKey)}</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   ))}

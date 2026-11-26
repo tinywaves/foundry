@@ -5,11 +5,13 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
+import { useTranslation } from 'react-i18next';
 import { Outlet, useLocation } from 'react-router-dom';
 
-import { getPageTitle } from './navigation';
+import { getPageTitleKey } from './navigation';
 
 export function MainLayout() {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
 
   return (
@@ -23,7 +25,9 @@ export function MainLayout() {
               orientation="vertical"
               className="mr-2 data-vertical:h-4 data-vertical:self-auto"
             />
-            <span className="text-sm font-medium">{getPageTitle(pathname)}</span>
+            <span className="text-sm font-medium">
+              {t(getPageTitleKey(pathname))}
+            </span>
           </div>
         </header>
         <Outlet />

@@ -15,46 +15,17 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar';
 import { mainNavigation } from '@/app/navigation';
-import {
-  AudioLinesIcon,
-  GalleryVerticalEndIcon,
-  SettingsIcon,
-  TerminalIcon,
-} from 'lucide-react';
+import { SettingsIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 
-// This is sample data.
-const data = {
-  teams: [
-    {
-      name: 'Acme Inc',
-      logo: (
-        <GalleryVerticalEndIcon />
-      ),
-      plan: 'Enterprise',
-    },
-    {
-      name: 'Acme Corp.',
-      logo: (
-        <AudioLinesIcon />
-      ),
-      plan: 'Startup',
-    },
-    {
-      name: 'Evil Corp.',
-      logo: (
-        <TerminalIcon />
-      ),
-      plan: 'Free',
-    },
-  ],
-};
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { t } = useTranslation();
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <TeamSwitcher />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={mainNavigation} />
@@ -63,11 +34,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              tooltip="Settings"
+              tooltip={t('nav.settings')}
               render={<NavLink to="/settings" />}
             >
               <SettingsIcon />
-              <span>Settings</span>
+              <span>{t('nav.settings')}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

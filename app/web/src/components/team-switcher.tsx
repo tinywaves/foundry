@@ -18,24 +18,53 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { ChevronsUpDownIcon, PlusIcon } from 'lucide-react';
+import {
+  AudioLinesIcon,
+  ChevronsUpDownIcon,
+  GalleryVerticalEndIcon,
+  PlusIcon,
+  TerminalIcon,
+} from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
-export function TeamSwitcher({
-  teams,
-}: {
-  teams: Array<{
-    name: string;
-    logo: React.ReactNode;
-    plan: string;
-  }>;
-}) {
+import type { TranslationKey } from '@/i18n/resources';
+
+const teams: Array<{
+  id: string;
+  nameKey: TranslationKey;
+  logo: React.ReactNode;
+  planKey: TranslationKey;
+}> = [
+  {
+    id: 'acme-inc',
+    nameKey: 'sidebar.team.acmeInc',
+    logo: <GalleryVerticalEndIcon />,
+    planKey: 'sidebar.plan.enterprise',
+  },
+  {
+    id: 'acme-corp',
+    nameKey: 'sidebar.team.acmeCorp',
+    logo: <AudioLinesIcon />,
+    planKey: 'sidebar.plan.startup',
+  },
+  {
+    id: 'evil-corp',
+    nameKey: 'sidebar.team.evilCorp',
+    logo: <TerminalIcon />,
+    planKey: 'sidebar.plan.free',
+  },
+];
+
+export function TeamSwitcher() {
+  const { t } = useTranslation();
   const { isMobile } = useSidebar();
-  const [activeTeam, setActiveTeam] = React.useState<
-    (typeof teams)[number] | undefined
-  >(teams[0]);
+  const [activeTeamId, setActiveTeamId] = React.useState(teams[0]?.id);
+  const activeTeam = teams.find((team) => team.id === activeTeamId);
+
   if (!activeTeam) {
     return null;
   }
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -52,8 +81,12 @@ export function TeamSwitcher({
               {activeTeam.logo}
             </div>
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-medium">{activeTeam.name}</span>
-              <span className="truncate text-xs">{activeTeam.plan}</span>
+              <span className="truncate font-medium">
+                {t(activeTeam.nameKey)}
+              </span>
+              <span className="truncate text-xs">
+                {t(activeTeam.planKey)}
+              </span>
             </div>
             <ChevronsUpDownIcon className="ml-auto" />
           </DropdownMenuTrigger>
@@ -65,18 +98,18 @@ export function TeamSwitcher({
           >
             <DropdownMenuGroup>
               <DropdownMenuLabel className="text-xs text-muted-foreground">
-                Teams
+                {t('sidebar.teams')}
               </DropdownMenuLabel>
               {teams.map((team, index) => (
                 <DropdownMenuItem
-                  key={team.name}
-                  onClick={() => setActiveTeam(team)}
+                  key={team.id}
+                  onClick={() => setActiveTeamId(team.id)}
                   className="gap-2 p-2"
                 >
                   <div className="flex size-6 items-center justify-center rounded-md border">
                     {team.logo}
                   </div>
-                  {team.name}
+                  {t(team.nameKey)}
                   <DropdownMenuShortcut>
                     ⌘
                     {index + 1}
@@ -91,7 +124,7 @@ export function TeamSwitcher({
                   <PlusIcon className="size-4" />
                 </div>
                 <div className="font-medium text-muted-foreground">
-                  Add team
+                  {t('sidebar.addTeam')}
                 </div>
               </DropdownMenuItem>
             </DropdownMenuGroup>

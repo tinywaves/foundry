@@ -1,33 +1,17 @@
+import type { DataColumn } from '@/components/workbench';
+import { Button } from '@/components/ui/button';
+import { Hint, EmptyMessage, DataTable } from '@/components/workbench';
+import { Badge } from '@/components/ui/badge';
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { ArrowPathIcon } from '@heroicons/react/24/outline';
-import { Badge } from '@astryxdesign/core/Badge';
-import { Button } from '@astryxdesign/core/Button';
-import { EmptyState } from '@astryxdesign/core/EmptyState';
-import { HStack, VStack } from '@astryxdesign/core/Stack';
-import { IconButton } from '@astryxdesign/core/IconButton';
-import { Table, pixel } from '@astryxdesign/core/Table';
-import type { TableColumn } from '@astryxdesign/core/Table';
-import { Text } from '@astryxdesign/core/Text';
-import { Tooltip } from '@astryxdesign/core/Tooltip';
-import type { FetchJobStatus, FetchJobSummary } from './types';
-import {
-  captureKeys,
-  listFetchJobs,
-  recapture,
-} from './api';
+import { RefreshCw as ArrowPathIcon } from 'lucide-react';
+import type { FetchJobSummary } from './types';
+import { captureKeys, listFetchJobs, recapture } from './api';
 import { captureErrorKey, useI18n } from '../../i18n';
 import { fetcherLabelKey } from '../../i18n/fetchers';
 import { useAppToast } from '../../lib/api';
 import { TitlebarActions } from '../../components/titlebar-actions';
-
-const statusVariant: Record<FetchJobStatus, 'neutral' | 'success' | 'error'> = {
-  pending: 'neutral',
-  running: 'neutral',
-  succeeded: 'success',
-  failed: 'error',
-};
 
 export default function JobsPage() {
   const { captureId = '' } = useParams();
@@ -57,118 +41,87 @@ export default function JobsPage() {
       });
     },
   });
-
   const jobs = jobsQuery.data?.ok ? jobsQuery.data.data : [];
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: captureKeys.jobs(captureId) });
   };
-
-  const columns = useMemo<Array<TableColumn<FetchJobSummary>>>(() => [
+  const columns = useMemo<Array<DataColumn<FetchJobSummary>>>(() => [
     {
       key: 'status',
       header: t('captures.jobStatus'),
-      width: pixel(120),
+      width: 120,
       renderCell: (job) => (
-        <Badge
-          label={t(`captures.jobStatus.${job.status}`)}
-          variant={statusVariant[job.status]}
-        />
+        <Badge variant={job.status === 'failed' ? 'destructive' : 'secondary'}>
+          <span>{t(`captures.jobStatus.${job.status}`)}</span>
+        </Badge>
       ),
     },
     {
       key: 'fetcher',
       header: t('captures.fetcher'),
-      width: pixel(160),
-      renderCell: (job) => (
-        <Text>{t(fetcherLabelKey(job.fetcher))}</Text>
-      ),
+      width: 160,
+      renderCell: (job) => (<span>{t(fetcherLabelKey(job.fetcher))}</span>),
     },
     {
       key: 'creditsUsed',
       header: t('captures.creditsUsed'),
-      width: pixel(96),
+      width: 96,
       renderCell: (job) => (
-        <Text color={job.creditsUsed === null ? 'secondary' : 'primary'}>
+        <span>
           {job.creditsUsed ?? '—'}
-        </Text>
+        </span>
       ),
     },
     {
       key: 'createdAt',
       header: t('captures.createdAt'),
-      width: pixel(200),
-      renderCell: (job) => (
-        <Text color="secondary">{job.createdAt}</Text>
-      ),
+      width: 200,
+      renderCell: (job) => (<span className="text-muted-foreground">{job.createdAt}</span>),
     },
     {
       key: 'updatedAt',
       header: t('captures.updatedAt'),
-      width: pixel(200),
-      renderCell: (job) => (
-        <Text color="secondary">{job.updatedAt}</Text>
-      ),
+      width: 200,
+      renderCell: (job) => (<span className="text-muted-foreground">{job.updatedAt}</span>),
     },
     {
       key: 'error',
       header: t('captures.error'),
-      width: pixel(220),
+      width: 220,
       renderCell: (job) => (job.errorMessage
         ? (
-            <Tooltip content={job.errorMessage}>
-              <Text
-                color="primary"
-                display="block"
-                maxLines={2}
-                textWrap="wrap"
-              >
+            <Hint content={job.errorMessage}>
+              <span className="line-clamp-2 whitespace-normal block">
                 {job.errorMessage}
-              </Text>
-            </Tooltip>
+              </span>
+            </Hint>
           )
-        : <Text color="secondary">—</Text>),
+        : <span className="text-muted-foreground">—</span>),
     },
   ], [t]);
-
   return (
     <>
       <TitlebarActions>
-        <HStack gap={2} vAlign="center">
-          <IconButton
-            label={t('captures.refresh')}
-            tooltip={t('captures.refresh')}
-            icon={<ArrowPathIcon />}
-            size="sm"
-            variant="ghost"
-            onClick={refresh}
-          />
+        <div className="flex flex-row items-center gap-2">
+          <Button onClick={refresh} variant="ghost" size="icon-sm" aria-label={t('captures.refresh')} title={t('captures.refresh')}>
+            <ArrowPathIcon />
+          </Button>
           <Button
-            label={t('captures.recapture')}
-            size="sm"
-            variant="primary"
             onClick={() => {
               recaptureMutation.mutate(captureId);
             }}
-          />
-        </HStack>
+            variant="default"
+            size="sm"
+          >
+            <span>{t('captures.recapture')}</span>
+          </Button>
+        </div>
       </TitlebarActions>
-      <VStack gap={5}>
+      <div className="flex flex-col gap-5">
         {jobs.length === 0
-          ? (
-              <EmptyState
-                title={t('captures.noJobsTitle')}
-                description={t('captures.noJobsDescription')}
-              />
-            )
-          : (
-              <Table<FetchJobSummary>
-                data={jobs}
-                columns={columns}
-                idKey="id"
-                textOverflow="truncate"
-              />
-            )}
-      </VStack>
+          ? (<EmptyMessage title={t('captures.noJobsTitle')} description={t('captures.noJobsDescription')} />)
+          : (<DataTable<FetchJobSummary> data={jobs} columns={columns} idKey="id" />)}
+      </div>
     </>
   );
 }

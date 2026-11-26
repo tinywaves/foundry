@@ -1,79 +1,23 @@
+import { RecordRow, ActionPopover, Hint, ToggleField } from '@/components/workbench';
+import { Spinner } from '@/components/ui/spinner';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Button } from '@astryxdesign/core/Button';
-import { IconButton } from '@astryxdesign/core/IconButton';
-import { List, ListItem } from '@astryxdesign/core/List';
-import { Text } from '@astryxdesign/core/Text';
-import { Switch } from '@astryxdesign/core/Switch';
-import { Token } from '@astryxdesign/core/Token';
-import { Tooltip } from '@astryxdesign/core/Tooltip';
-import { Popover } from '@astryxdesign/core/Popover';
-import { HStack, VStack } from '@astryxdesign/core/Stack';
-import * as stylex from '@stylexjs/stylex';
-import {
-  CloudIcon,
-  CpuChipIcon,
-  PencilSquareIcon,
-  PlusIcon,
-  Square3Stack3DIcon,
-  TrashIcon,
-} from '@heroicons/react/24/outline';
+import { Cloud as CloudIcon, Cpu as CpuChipIcon, Pencil as PencilSquareIcon, Plus as PlusIcon, Layers as Square3Stack3DIcon, Trash2 as TrashIcon } from 'lucide-react';
 import type { ProviderListItem } from './types';
 import { FeatureEmptyState } from '../../components/feature-empty-state';
-import {
-  listProviders,
-  providerKeys,
-  setProviderStatus,
-} from './api';
+import { listProviders, providerKeys, setProviderStatus } from './api';
 import { useI18n } from '../../i18n';
 import { TitlebarActions } from '../../components/titlebar-actions';
 import { ProviderAvatar } from './provider-avatar';
-
-const styles = stylex.create({
-  providerList: {
-    gap: 'var(--spacing-2)',
-  },
-  providerItem: {
-    borderWidth: 'var(--border-width)',
-    borderStyle: 'solid',
-    borderColor: 'var(--color-border-emphasized)',
-    borderRadius: 'var(--radius-container)',
-    backgroundColor: 'var(--color-background-surface)',
-  },
-  providerDescription: {
-    minWidth: 0,
-    overflow: 'hidden',
-  },
-  providerProtocol: {
-    minWidth: 0,
-    flexShrink: 1,
-  },
-  providerBaseURLGroup: {
-    minWidth: 0,
-    flex: '1 1 auto',
-    flexShrink: 1,
-  },
-  providerCustomModelsGroup: {
-    flexShrink: 0,
-  },
-  providerBaseURL: {
-    maxWidth: 'min(34rem, 42vw)',
-  },
-  providerActions: {
-    flexShrink: 0,
-  },
-  providerPopover: {
-    boxShadow: 'inset 0 0 0 var(--border-width) var(--color-border-emphasized), var(--shadow-med)',
-  },
-});
 
 const protocolLabels = {
   'openai-responses': 'OpenAI Responses',
   'anthropic-messages': 'Anthropic Messages',
   'openai-compatible-chat-completions': 'OpenAI-compatible Chat Completions',
 } as const;
-
 export default function ProvidersPage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
@@ -83,8 +27,10 @@ export default function ProvidersPage() {
     queryFn: listProviders,
   });
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'active' | 'disabled' | 'deleted' }) =>
-      setProviderStatus(id, status),
+    mutationFn: ({ id, status }: {
+      id: string;
+      status: 'active' | 'disabled' | 'deleted';
+    }) => setProviderStatus(id, status),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: providerKeys.list() });
     },
@@ -97,27 +43,26 @@ export default function ProvidersPage() {
     },
   });
   const providers: ProviderListItem[] = providersQuery.data ?? [];
-
   function setStatus(provider: ProviderListItem, isChecked: boolean) {
     if (provider.status === 'deleted' || provider.isInUse) {
       return;
     }
     statusMutation.mutate({ id: provider.id, status: isChecked ? 'active' : 'disabled' });
   }
-
   function getToggleTooltip(provider: ProviderListItem) {
     if (provider.isInUse) {
       return t('providers.inUse');
     }
     return t(provider.status === 'active' ? 'providers.disable' : 'providers.enable');
   }
-
   return (
     <>
       <TitlebarActions>
-        <Button label={t('providers.add')} size="sm" variant="primary" href="/providers/new" as={Link} />
+        <Button variant="default" size="sm" render={<Link to="/providers/new" />}>
+          <span>{t('providers.add')}</span>
+        </Button>
       </TitlebarActions>
-      <VStack gap={5}>
+      <div className="flex flex-col gap-5">
         {providers.length === 0
           ? (
               <FeatureEmptyState
@@ -127,97 +72,83 @@ export default function ProvidersPage() {
                 title={t('providers.emptyTitle')}
                 description={t('providers.empty')}
                 actions={(
-                  <Button
-                    label={t('providers.addFirst')}
-                    size="sm"
-                    variant="primary"
-                    icon={<PlusIcon />}
-                    href="/providers/new"
-                    as={Link}
-                  />
+                  <Button variant="default" size="sm" render={<Link to="/providers/new" />}>
+                    <PlusIcon />
+                    <span>{t('providers.addFirst')}</span>
+                  </Button>
                 )}
               />
             )
           : (
-              <List density="balanced" hasDividers={false} xstyle={styles.providerList}>
+              <div className="flex flex-col gap-2">
                 {providers.map((provider) => (
-                  <ListItem
+                  <RecordRow
                     key={provider.id}
                     label={provider.name}
-                    xstyle={styles.providerItem}
                     startContent={<ProviderAvatar avatar={provider.avatar} name={provider.name} />}
                     description={(
-                      <HStack gap={1} wrap="nowrap" xstyle={styles.providerDescription}>
-                        <Token size="sm" label={protocolLabels[provider.protocol]} xstyle={styles.providerProtocol} />
-                        <HStack gap={1} vAlign="center" xstyle={styles.providerBaseURLGroup}>
-                          <Text type="supporting">·</Text>
-                          <Text type="supporting" maxLines={1} xstyle={styles.providerBaseURL}>{provider.baseURL}</Text>
-                        </HStack>
-                        <HStack gap={1} vAlign="center" xstyle={styles.providerCustomModelsGroup}>
-                          <Text type="supporting">·</Text>
-                          <Text type="supporting" maxLines={1}>{`${provider.customModels.length} ${t('providers.customModels')}`}</Text>
-                        </HStack>
-                      </HStack>
+                      <div className="min-w-0 overflow-hidden flex flex-row flex-nowrap gap-1">
+                        <Badge variant="secondary" className="min-w-0 shrink">
+                          <span>{protocolLabels[provider.protocol]}</span>
+                        </Badge>
+                        <div className="min-w-0 flex-1 flex flex-row items-center gap-1">
+                          <span className="text-xs text-muted-foreground">·</span>
+                          <span className="max-w-[min(34rem,42vw)] text-xs text-muted-foreground truncate">{provider.baseURL}</span>
+                        </div>
+                        <div className="shrink-0 flex flex-row items-center gap-1">
+                          <span className="text-xs text-muted-foreground">·</span>
+                          <span className="text-xs text-muted-foreground truncate">{`${provider.customModels.length} ${t('providers.customModels')}`}</span>
+                        </div>
+                      </div>
                     )}
                     endContent={(
-                      <HStack gap={2} vAlign="center" xstyle={styles.providerActions}>
-                        <IconButton
-                          label={`${t('providers.edit')} ${provider.name}`}
-                          tooltip={t('providers.edit')}
-                          icon={<PencilSquareIcon />}
-                          variant="ghost"
-                          size="sm"
-                          href={`/providers/${provider.id}`}
-                          as={Link}
-                        />
-                        <Popover
+                      <div className="shrink-0 flex flex-row items-center gap-2">
+                        <Button variant="ghost" size="icon-sm" aria-label={`${t('providers.edit')} ${provider.name}`} title={t('providers.edit')} render={<Link to={`/providers/${provider.id}`} />}>
+                          <PencilSquareIcon />
+                        </Button>
+                        <ActionPopover
                           label={`${t('providers.deleteLabel')} ${provider.name}`}
-                          xstyle={styles.providerPopover}
                           isOpen={providerToDelete?.id === provider.id}
                           isEnabled={!provider.isInUse}
                           onOpenChange={(isOpen) => {
                             setProviderToDelete(isOpen ? provider : null);
                           }}
                           content={(
-                            <VStack gap={3}>
-                              <VStack gap={1}>
-                                <Text type="label">{t('providers.deleteQuestion')}</Text>
-                              </VStack>
-                              <HStack gap={2} hAlign="end">
+                            <div className="flex flex-col gap-3">
+                              <div className="flex flex-col gap-1">
+                                <span className="text-sm font-medium">{t('providers.deleteQuestion')}</span>
+                              </div>
+                              <div className="flex flex-row justify-end gap-2">
                                 <Button
-                                  label={t('providers.cancel')}
-                                  variant="ghost"
-                                  size="sm"
                                   onClick={() => {
                                     setProviderToDelete(null);
                                   }}
-                                />
-                                <Button
-                                  label={t('providers.delete')}
-                                  variant="destructive"
+                                  variant="ghost"
                                   size="sm"
-                                  isLoading={providerRemoval.isPending && providerToDelete?.id === provider.id}
+                                >
+                                  <span>{t('providers.cancel')}</span>
+                                </Button>
+                                <Button
                                   onClick={() => {
                                     providerRemoval.mutate(provider.id);
                                   }}
-                                />
-                              </HStack>
-                            </VStack>
+                                  variant="destructive"
+                                  size="sm"
+                                  disabled={providerRemoval.isPending && providerToDelete?.id === provider.id}
+                                >
+                                  {providerRemoval.isPending && providerToDelete?.id === provider.id && <Spinner />}
+                                  <span>{t('providers.delete')}</span>
+                                </Button>
+                              </div>
+                            </div>
                           )}
                         >
-                          <IconButton
-                            label={`${t('providers.deleteLabel')} ${provider.name}`}
-                            tooltip={t('providers.deleteLabel')}
-                            icon={<TrashIcon />}
-                            variant="ghost"
-                            size="sm"
-                            isDisabled={provider.isInUse}
-                          />
-                        </Popover>
-                        <Tooltip
-                          content={getToggleTooltip(provider)}
-                        >
-                          <Switch
+                          <Button variant="ghost" size="icon-sm" disabled={provider.isInUse} aria-label={`${t('providers.deleteLabel')} ${provider.name}`} title={t('providers.deleteLabel')}>
+                            <TrashIcon />
+                          </Button>
+                        </ActionPopover>
+                        <Hint content={getToggleTooltip(provider)}>
+                          <ToggleField
                             label={`${provider.name} ${t('providers.enabled')}`}
                             isLabelHidden
                             value={provider.status === 'active'}
@@ -227,14 +158,15 @@ export default function ProvidersPage() {
                             isDisabled={provider.isInUse}
                             size="sm"
                           />
-                        </Tooltip>
-                      </HStack>
+                        </Hint>
+                      </div>
                     )}
+                    className="rounded-lg border bg-card"
                   />
                 ))}
-              </List>
+              </div>
             )}
-      </VStack>
+      </div>
     </>
   );
 }

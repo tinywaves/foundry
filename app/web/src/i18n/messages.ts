@@ -3,7 +3,9 @@ import type { LanguageMode } from '../features/settings/api';
 export type Locale = Exclude<LanguageMode, 'system'>;
 
 export type TranslationKey
-  = | 'navigation.overview'
+  = | 'common.clear'
+    | 'common.close'
+    | 'navigation.overview'
     | 'navigation.capturesDescription'
     | 'navigation.jobs'
     | 'navigation.jobsDescription'
@@ -231,6 +233,8 @@ export type TranslationKey
 type TranslationTable = Record<TranslationKey, string>;
 
 const english: TranslationTable = {
+  'common.clear': 'Clear',
+  'common.close': 'Close',
   'navigation.overview': 'Overview',
   'navigation.capturesDescription': 'Collect links first, then organize them later.',
   'navigation.jobs': 'Jobs',
@@ -477,6 +481,8 @@ const english: TranslationTable = {
 
 const simplifiedChinese: TranslationTable = {
   ...english,
+  'common.clear': '清空',
+  'common.close': '关闭',
   'navigation.overview': '概览',
   'navigation.captures': '收藏',
   'navigation.captureDetails': '收藏详情',
@@ -722,6 +728,8 @@ const simplifiedChinese: TranslationTable = {
 
 const traditionalChinese: TranslationTable = {
   ...simplifiedChinese,
+  'common.clear': '清空',
+  'common.close': '關閉',
   'navigation.overview': '總覽',
   'navigation.captures': '收藏',
   'navigation.captureDetails': '收藏詳情',
@@ -967,6 +975,8 @@ const traditionalChinese: TranslationTable = {
 
 const japanese: TranslationTable = {
   ...english,
+  'common.clear': 'クリア',
+  'common.close': '閉じる',
   'navigation.overview': '概要',
   'navigation.captures': 'キャプチャ',
   'navigation.library': 'ライブラリ',

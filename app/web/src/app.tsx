@@ -1,52 +1,19 @@
 import { useState } from 'react';
-import type { ComponentProps, ReactNode, Ref } from 'react';
+import type { ReactNode, CSSProperties } from 'react';
 import { QueryClientProvider, useQuery } from '@tanstack/react-query';
-import {
-  NavLink,
-  Navigate,
-  Outlet,
-  createHashRouter,
-  useLocation,
-  useMatches,
-  useNavigate,
-  RouterProvider,
-} from 'react-router-dom';
-import { AppShell, useAppShellMobile } from '@astryxdesign/core/AppShell';
-import { Icon } from '@astryxdesign/core/Icon';
-import { IconButton } from '@astryxdesign/core/IconButton';
-import { Layout, LayoutContent } from '@astryxdesign/core/Layout';
-import { MobileNav, MobileNavToggle } from '@astryxdesign/core/MobileNav';
-import {
-  SideNav,
-  SideNavCollapseButton,
-  SideNavItem,
-  SideNavSection,
-} from '@astryxdesign/core/SideNav';
-import type { SideNavCollapseButtonProps } from '@astryxdesign/core/SideNav';
-import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
-import { Text } from '@astryxdesign/core/Text';
-import { Theme } from '@astryxdesign/core/theme';
-import {
-  ChatBubbleLeftIcon,
-  ChatBubbleLeftRightIcon,
-  Cog6ToothIcon,
-  DocumentTextIcon,
-  FolderIcon,
-  LinkIcon,
-  Square3Stack3DIcon,
-  Squares2X2Icon,
-} from '@heroicons/react/24/outline';
-import * as stylex from '@stylexjs/stylex';
-import { foundryTheme } from './astryx-themes';
-import {
-  TitlebarActionsProvider,
-} from './components/titlebar-actions';
+import { NavLink, Navigate, Outlet, createHashRouter, useLocation, useMatches, useNavigate, RouterProvider } from 'react-router-dom';
+import { ArrowLeft, PanelLeft, ChevronRight, MessagesSquare, Settings, FileText, Folder, Link, Layers, LayoutGrid } from 'lucide-react';
+import { ThemeProvider } from 'next-themes';
+import { Button } from './components/ui/button';
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarMenuAction, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton, SidebarInset, SidebarProvider, useSidebar } from './components/ui/sidebar';
+import { TooltipProvider } from './components/ui/tooltip';
+import { Toaster } from './components/ui/sonner';
+import { TitlebarActionsProvider } from './components/titlebar-actions';
 import { useTitlebarActionsTarget } from './components/titlebar-actions-context';
 import { I18nProvider, useI18n } from './i18n';
 import type { TranslationKey } from './i18n';
 import { FoundryEventsProvider } from './lib/foundry-events';
 import { queryClient } from './lib/query-client';
-import mobileNavStyles from './styles/mobile-nav.module.css';
 import OverviewPage from './features/overview/overview-page';
 import PromptsPage from './features/prompts/prompts-page';
 import SettingsPage from './features/settings/settings-page';
@@ -62,419 +29,169 @@ import { ProvidersRealtimeBridge } from './features/providers/realtime';
 import { SettingsRealtimeBridge } from './features/settings/realtime';
 import { getSettings, settingsKeys } from './features/settings/api';
 
-const styles = stylex.create({
-  appShell: {
-    fontFamily: 'Poppins, sans-serif',
-  },
-  sideNav: { width: 'calc(var(--spacing-4) * 12.5) !important' },
-  mobileSideNav: { width: '100% !important' },
-  sideNavCollapsed: { width: 'var(--spacing-12) !important' },
-  compactNavItems: {
-    rowGap: 'calc(var(--spacing-0-5) / 2)',
-  },
-  titlebar: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 'var(--spacing-2)',
-    height: 'calc(var(--spacing-4) * 2.5)',
-    minHeight: 'calc(var(--spacing-4) * 2.5)',
-    paddingInlineStart: 'var(--spacing-4)',
-    paddingInlineEnd: 'var(--spacing-4)',
-    userSelect: 'none',
-  },
-  titlebarContent: {
-    minWidth: 0,
-  },
-  title: {
-    'flex': '0 1 auto',
-    'minWidth': 0,
-    'maxWidth': '35%',
-    '@media (max-width: 840px)': {
-      maxWidth: '30%',
-    },
-  },
-  description: {
-    'minWidth': 0,
-    'flexShrink': 1,
-    '@media (max-width: 840px)': {
-      display: 'none',
-    },
-  },
-  actions: {
-    flexShrink: 0,
-  },
-});
+const navigation = [
+  { id: 'overview', href: '/overview', icon: LayoutGrid, key: 'navigation.overview' },
+  { id: 'sessions', href: '/library/sessions', icon: MessagesSquare, key: 'navigation.sessions' },
+  { id: 'prompts', href: '/library/prompts', icon: FileText, key: 'navigation.prompts' },
+  { id: 'captures', href: '/library/captures', icon: Link, key: 'navigation.captures' },
+  { id: 'providers', href: '/providers', icon: Layers, key: 'navigation.providers' },
+] as const;
 
-const titlebarStyle = stylex.props(styles.titlebar);
-
-const appIcons = {
-  overview: Squares2X2Icon,
-  captures: LinkIcon,
-  sessions: ChatBubbleLeftRightIcon,
-  prompts: DocumentTextIcon,
-  library: FolderIcon,
-  providers: Square3Stack3DIcon,
-  chat: ChatBubbleLeftIcon,
-  settings: Cog6ToothIcon,
-} as const;
-
-type AppIconName = keyof typeof appIcons;
-
-type NavigationItem = {
-  kind: 'item';
-  id: string;
-  label: string;
-  href: string;
-  icon: (typeof appIcons)[AppIconName];
-};
-
-type NavigationSection = {
-  kind: 'section';
-  id: string;
-  title: string;
-  icon: (typeof appIcons)[AppIconName];
-  items: readonly NavigationItem[];
-};
-
-const sidebarNavigation: ReadonlyArray<NavigationItem | NavigationSection> = [
-  {
-    kind: 'item',
-    id: 'overview',
-    label: 'Overview',
-    href: '/overview',
-    icon: appIcons.overview,
-  },
-  {
-    kind: 'section',
-    id: 'library',
-    title: 'Library',
-    icon: appIcons.library,
-    items: [
-      {
-        kind: 'item',
-        id: 'sessions',
-        label: 'Sessions',
-        href: '/library/sessions',
-        icon: appIcons.sessions,
-      },
-      {
-        kind: 'item',
-        id: 'prompts',
-        label: 'Prompts',
-        href: '/library/prompts',
-        icon: appIcons.prompts,
-      },
-      {
-        kind: 'item',
-        id: 'captures',
-        label: 'Captures',
-        href: '/library/captures',
-        icon: appIcons.captures,
-      },
-    ],
-  },
-  {
-    kind: 'item',
-    id: 'providers',
-    label: 'Providers',
-    href: '/providers',
-    icon: appIcons.providers,
-  },
-];
-
-const settingsNavigationItem: NavigationItem = {
-  kind: 'item',
-  id: 'settings',
-  label: 'Settings',
-  href: '/settings',
-  icon: appIcons.settings,
-};
-
-function RouterLink({
-  href = '/',
-  ref,
-  ...props
-}: Omit<ComponentProps<typeof NavLink>, 'to'> & {
-  href?: string;
-  ref?: Ref<HTMLAnchorElement>;
-}) {
-  return <NavLink ref={ref} to={href} {...props} />;
+function isRouteHandle(value: unknown): value is { titleKey: TranslationKey; descriptionKey?: TranslationKey } {
+  return typeof value === 'object' && value !== null && 'titleKey' in value && typeof value.titleKey === 'string';
 }
-
-function RoutedSideNavItem({
-  label,
-  icon,
-  href,
-}: Pick<NavigationItem, 'label' | 'icon' | 'href'>) {
-  const { pathname } = useLocation();
-  const { isMobile, closeMobileNav } = useAppShellMobile();
-
-  return (
-    <SideNavItem
-      label={label}
-      icon={icon}
-      href={href}
-      as={RouterLink}
-      isSelected={pathname === href}
-      size="sm"
-      onClick={isMobile ? closeMobileNav : undefined}
-    />
-  );
-}
-
-function MenuGroup({
-  title,
-  icon,
-  items,
-  getLabel,
-}: {
-  title: string;
-  icon: NavigationItem['icon'];
-  items: readonly NavigationItem[];
-  getLabel: (id: string, fallback: string) => string;
-}) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const { isMobile, closeMobileNav } = useAppShellMobile();
-  const firstItem = items[0];
-
-  return (
-    <SideNavItem
-      label={title}
-      icon={icon}
-      href={firstItem.href}
-      as={RouterLink}
-      collapsible={{
-        isCollapsed,
-        onCollapsedChange: setIsCollapsed,
-      }}
-      onClick={() => {
-        setIsCollapsed(false);
-        if (isMobile) {
-          closeMobileNav();
-        }
-      }}
-      size="sm"
-    >
-      <VStack gap={0} xstyle={styles.compactNavItems}>
-        {items.map((item) => (
-          <RoutedSideNavItem
-            key={item.id}
-            label={getLabel(item.id, item.label)}
-            icon={item.icon}
-            href={item.href}
-          />
-        ))}
-      </VStack>
-    </SideNavItem>
-  );
-}
-
-function isRouteHandle(value: unknown): value is {
-  titleKey: TranslationKey;
-  descriptionKey?: TranslationKey;
-} {
-  return typeof value === 'object'
-    && value !== null
-    && 'titleKey' in value
-    && typeof value.titleKey === 'string';
-}
-
-function WindowTitlebar({
-  collapsible,
-  showBackButton = false,
-}: Partial<Pick<SideNavCollapseButtonProps, 'collapsible'>> & {
-  showBackButton?: boolean;
-}) {
+function WindowTitlebar({ standalone = false }: { standalone?: boolean }) {
   const matches = useMatches();
   const navigate = useNavigate();
   const { t } = useI18n();
-  const { isMobile } = useAppShellMobile();
+  const sidebar = useSidebar();
   const setTitlebarActionsTarget = useTitlebarActionsTarget();
-  const titleHandle = matches.findLast((match) => isRouteHandle(match.handle))?.handle;
-
+  const handle = matches.findLast((match) => isRouteHandle(match.handle))?.handle;
   return (
-    <header {...titlebarStyle} aria-label={t('navigation.windowTitlebar')}>
-      {showBackButton && (
-        <IconButton
-          label={t('navigation.back')}
-          icon={<Icon icon="chevronLeft" />}
-          variant="ghost"
-          size="sm"
-          tooltip={t('navigation.back')}
-          onClick={() => navigate(-1)}
-        />
-      )}
-      <MobileNavToggle label={t('navigation.openNavigation')} />
-      {!isMobile && collapsible && (
-        <SideNavCollapseButton
-          collapsible={collapsible}
-          size="sm"
-        >
-          <Icon icon={collapsible.isCollapsed ? 'chevronsRight' : 'chevronsLeft'} size="sm" />
-        </SideNavCollapseButton>
-      )}
-      {isRouteHandle(titleHandle) && (
-        <HStack gap={2} vAlign="center" width="100%" xstyle={styles.titlebarContent}>
-          <Text type="large" weight="semibold" maxLines={1} textWrap="nowrap" xstyle={styles.title}>
-            {t(titleHandle.titleKey)}
-          </Text>
-          {titleHandle.descriptionKey && (
-            <Text type="supporting" maxLines={1} textWrap="nowrap" xstyle={styles.description}>
-              {t(titleHandle.descriptionKey)}
-            </Text>
+    <header className="flex h-10 min-h-10 items-center gap-2 px-4 select-none" aria-label={t('navigation.windowTitlebar')}>
+      {standalone
+        ? (
+            <Button variant="ghost" size="icon-sm" aria-label={t('navigation.back')} onClick={() => navigate(-1)}>
+              <ArrowLeft />
+            </Button>
+          )
+        : (
+            <Button variant="ghost" size="icon-sm" aria-label={t('navigation.openNavigation')} onClick={sidebar.toggleSidebar}>
+              <PanelLeft />
+            </Button>
           )}
-          <StackItem size="fill" />
-          <HStack
-            ref={setTitlebarActionsTarget}
-            vAlign="center"
-            xstyle={styles.actions}
-          />
-        </HStack>
+      {isRouteHandle(handle) && (
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="min-w-0 max-w-[35%] shrink truncate text-base font-semibold max-[840px]:max-w-[30%]">{t(handle.titleKey)}</span>
+          {handle.descriptionKey && <span className="min-w-0 shrink truncate text-xs text-muted-foreground max-[840px]:hidden">{t(handle.descriptionKey)}</span>}
+          <div ref={setTitlebarActionsTarget} className="ml-auto flex shrink-0 items-center gap-2" />
+        </div>
       )}
     </header>
   );
 }
-
-function SidebarLayout() {
-  const [isSideNavCollapsed, setIsSideNavCollapsed] = useState(false);
+function Navigation() {
   const { t } = useI18n();
-  const navigationLabel = (id: string, fallback: string) => {
-    const labels: Record<string, string> = {
-      overview: t('navigation.overview'),
-      captures: t('navigation.captures'),
-      sessions: t('navigation.sessions'),
-      prompts: t('navigation.prompts'),
-      providers: t('navigation.providers'),
-      settings: t('navigation.settings'),
-      library: t('navigation.library'),
-    };
-    return labels[id] ?? fallback;
+  const { pathname } = useLocation();
+  const { isMobile, setOpenMobile, state } = useSidebar();
+  const [libraryOpen, setLibraryOpen] = useState(true);
+  const closeMobile = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
   };
-  const collapsible = {
-    isCollapsed: isSideNavCollapsed,
-    onCollapsedChange: setIsSideNavCollapsed,
-  };
-  const navigationFooter = (
-    <SideNavSection title={t('navigation.account')} isHeaderHidden>
-      <RoutedSideNavItem
-        {...settingsNavigationItem}
-        label={navigationLabel(settingsNavigationItem.id, settingsNavigationItem.label)}
-      />
-    </SideNavSection>
+  const overview = navigation[0];
+  const providers = navigation[4];
+  const item = (node: typeof navigation[number]) => (
+    <SidebarMenuItem key={node.id}>
+      <SidebarMenuButton aria-label={t(node.key)} size="sm" isActive={pathname === node.href} tooltip={t(node.key)} render={<NavLink to={node.href} onClick={closeMobile} />}>
+        <node.icon />
+        <span>{t(node.key)}</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
   );
-  const navigationContent = (
-    <SideNavSection title={t('navigation.main')} isHeaderHidden>
-      <VStack gap={0} xstyle={styles.compactNavItems}>
-        {sidebarNavigation.map((node) => (
-          node.kind === 'item'
-            ? <RoutedSideNavItem key={node.id} {...node} label={navigationLabel(node.id, node.label)} />
-            : (
-                <MenuGroup
-                  key={node.id}
-                  title={navigationLabel(node.id, node.title)}
-                  icon={node.icon}
-                  items={node.items}
-                  getLabel={navigationLabel}
-                />
-              )
-        ))}
-      </VStack>
-    </SideNavSection>
-  );
-  const sideNav = (
-    <SideNav
-      collapsible={{ ...collapsible, hasButton: false }}
-      xstyle={isSideNavCollapsed ? styles.sideNavCollapsed : styles.sideNav}
-      footer={navigationFooter}
-    >
-      {navigationContent}
-    </SideNav>
-  );
-  const mobileSideNav = (
-    <SideNav footer={navigationFooter} xstyle={styles.mobileSideNav}>
-      {navigationContent}
-    </SideNav>
-  );
-
   return (
-    <AppShell
-      height="fill"
-      variant="surface"
-      contentPadding={0}
-      mobileNav={{
-        content: (
-          <MobileNav
-            className={mobileNavStyles.drawer}
-            label={t('navigation.main')}
-            side="start"
-          >
-            {mobileSideNav}
-          </MobileNav>
-        ),
-      }}
-      xstyle={styles.appShell}
-      topNav={<WindowTitlebar collapsible={collapsible} />}
-      sideNav={sideNav}
-    >
-      <Layout
-        height="fill"
-        content={(
-          <LayoutContent padding={4}>
-            <Outlet />
-          </LayoutContent>
-        )}
-      />
-    </AppShell>
+    <Sidebar collapsible="icon">
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {item(overview)}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  aria-label={t('navigation.library')}
+                  size="sm"
+                  tooltip={t('navigation.library')}
+                  render={(
+                    <NavLink
+                      to="/library/sessions"
+                      onClick={() => {
+                        setLibraryOpen(true);
+                        closeMobile();
+                      }}
+                    />
+                  )}
+                >
+                  <Folder />
+                  <span>{t('navigation.library')}</span>
+                </SidebarMenuButton>
+                <SidebarMenuAction aria-label={t('navigation.library')} aria-expanded={libraryOpen} onClick={() => setLibraryOpen(!libraryOpen)}>
+                  <ChevronRight className={libraryOpen ? 'rotate-90' : ''} />
+                </SidebarMenuAction>
+                {state === 'collapsed' && !isMobile
+                  ? <SidebarMenu>{navigation.slice(1, 4).map((node) => item(node))}</SidebarMenu>
+                  : libraryOpen && (
+                    <SidebarMenuSub>
+                      {navigation.slice(1, 4).map((node) => (
+                        <SidebarMenuSubItem key={node.id}>
+                          <SidebarMenuSubButton isActive={pathname === node.href} render={<NavLink to={node.href} onClick={closeMobile} />}>
+                            <node.icon className="size-4" />
+                            <span>{t(node.key)}</span>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  )}
+              </SidebarMenuItem>
+              {item(providers)}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton aria-label={t('navigation.settings')} size="sm" tooltip={t('navigation.settings')} render={<NavLink to="/settings" onClick={closeMobile} />}>
+              <Settings />
+              <span>{t('navigation.settings')}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
   );
 }
-
+function SidebarLayout() {
+  return (
+    <SidebarProvider className="h-dvh min-h-0" style={{ '--sidebar-width': '200px', '--sidebar-width-icon': '48px' } as CSSProperties}>
+      <Navigation />
+      <SidebarInset className="min-h-0 min-w-0 overflow-hidden">
+        <WindowTitlebar />
+        <main className="min-h-0 flex-1 overflow-auto p-4">
+          <Outlet />
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
+  );
+}
 function StandaloneLayout() {
   const { pathname } = useLocation();
-  const isSettingsPage = pathname === '/settings';
-
   return (
-    <AppShell
-      height="fill"
-      variant="surface"
-      contentPadding={0}
-      mobileNav={false}
-      xstyle={styles.appShell}
-      topNav={<WindowTitlebar showBackButton />}
-    >
-      <Layout
-        height="fill"
-        content={(
-          <LayoutContent
-            padding={isSettingsPage ? 0 : 4}
-            isScrollable={!isSettingsPage}
-          >
-            <Outlet />
-          </LayoutContent>
-        )}
-      />
-    </AppShell>
+    <SidebarProvider className="h-dvh min-h-0">
+      <div className="flex h-full min-w-0 flex-1 flex-col">
+        <WindowTitlebar standalone />
+        <main className={pathname === '/settings' ? 'min-h-0 flex-1 overflow-hidden' : 'min-h-0 flex-1 overflow-auto p-4'}>
+          <Outlet />
+        </main>
+      </div>
+    </SidebarProvider>
   );
 }
-
 function NotFoundPage() {
   const { pathname } = useLocation();
   const { t } = useI18n();
-
   return (
-    <VStack gap={2}>
-      <Text type="supporting">
-        {t('navigation.notFound')}
-        :
-        {pathname}
-      </Text>
-    </VStack>
+    <p className="text-sm text-muted-foreground">
+      {t('navigation.notFound')}
+      :
+      {' '}
+      {pathname}
+    </p>
   );
 }
-
 function RootLayout() {
   return <Outlet />;
 }
-
 function routeHandle(titleKey: TranslationKey, descriptionKey?: TranslationKey) {
   return { titleKey, descriptionKey };
 }
@@ -561,19 +278,10 @@ const router = createHashRouter([
 ]);
 
 function AppTheme({ children }: { children: ReactNode }) {
-  const settingsQuery = useQuery({
-    queryKey: settingsKeys.current(),
-    queryFn: getSettings,
-  });
+  const settingsQuery = useQuery({ queryKey: settingsKeys.current(), queryFn: getSettings });
   const mode = settingsQuery.data?.workspace.appearance['color-theme'] ?? 'system';
-
-  return (
-    <Theme theme={foundryTheme} mode={mode}>
-      {children}
-    </Theme>
-  );
+  return <ThemeProvider attribute="class" forcedTheme={mode === 'system' ? undefined : mode} defaultTheme="system" enableSystem disableTransitionOnChange>{children}</ThemeProvider>;
 }
-
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -584,9 +292,12 @@ export default function App() {
           <ProvidersRealtimeBridge />
           <SettingsRealtimeBridge />
           <AppTheme>
-            <I18nProvider>
-              <RouterProvider router={router} />
-            </I18nProvider>
+            <TooltipProvider>
+              <I18nProvider>
+                <RouterProvider router={router} />
+              </I18nProvider>
+              <Toaster />
+            </TooltipProvider>
           </AppTheme>
         </TitlebarActionsProvider>
       </FoundryEventsProvider>

@@ -1,7 +1,8 @@
 # Web UI Guidance
 
-The Electron renderer is the visual source of truth. Keep its layout, StyleX
-rules, translations, and Astryx component usage when adapting the Web UI.
+Use shadcn/ui preset `b27GcrRo`: Base UI Rhea, neutral colors, Inter, and Lucide.
+Preserve page layouts, responsive rules, content, and behavior while allowing
+components to use their preset appearance.
 
 ## Boundaries
 
@@ -11,10 +12,10 @@ rules, translations, and Astryx component usage when adapting the Web UI.
 - Keep `src/components` limited to shared feature-level UI.
 - Keep browser helpers under `src/lib` and translations under `src/i18n`.
 - Keep shared renderer contracts in `src/shared`.
-- Keep `src/layer-order.css` as the first CSS import in `src/index.tsx`; it
-  preserves Astryx and StyleX layer precedence.
-- Keep StyleX integration in `vite.config.ts`; do not add a custom StyleX
-  runtime or bundler compatibility layer.
+- Generate shadcn components into `src/components/ui`. Keep generated components
+  and `src/hooks/use-mobile.ts` excluded from ESLint; lint application code.
+- Use Tailwind CSS v4 through `@tailwindcss/vite`; keep preset tokens and global
+  CSS in `src/styles/globals.css`. Do not reintroduce Astryx or StyleX.
 - Do not add a `@renderer` alias. Use relative imports within the Web app.
 
 ## Commands
@@ -30,7 +31,7 @@ the standalone API server at `http://localhost:22222`.
 
 ## Verification
 
-Compare renderer changes against the Electron app at `900x670`. Check the
+Check the Web UI at `900x670` and narrow viewports. Check the
 overview, providers, provider form, captures, prompts, settings panels, capture
 dialog, collapsed sidebar, and a narrow viewport.
 

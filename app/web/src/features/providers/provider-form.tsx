@@ -1,84 +1,32 @@
+import { X, RefreshCw as ArrowPathIcon, Eye as EyeIcon, EyeOff as EyeSlashIcon, CircleHelp as QuestionMarkCircleIcon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { FormInput, SelectField, FieldGroup, FieldAddon, ActionPopover, IconGlyph } from '@/components/workbench';
+import { Spinner } from '@/components/ui/spinner';
+import { Button } from '@/components/ui/button';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button } from '@astryxdesign/core/Button';
-import { IconButton } from '@astryxdesign/core/IconButton';
-import { Icon } from '@astryxdesign/core/Icon';
-import { Text } from '@astryxdesign/core/Text';
-import { TextInput } from '@astryxdesign/core/TextInput';
-import { Selector } from '@astryxdesign/core/Selector';
-import { Token } from '@astryxdesign/core/Token';
-import { InputGroup, InputGroupText } from '@astryxdesign/core/InputGroup';
-import { HStack, VStack } from '@astryxdesign/core/Stack';
-import { Popover } from '@astryxdesign/core/Popover';
 import { useAppToast } from '../../lib/api';
-import { ArrowPathIcon, EyeIcon, EyeSlashIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
-import * as stylex from '@stylexjs/stylex';
 import type { CustomModel, ProviderInput, ProviderProtocol, RemoteModel } from './types';
-import {
-  fetchModelsForInput,
-  getProvider,
-  providerKeys,
-  saveProvider,
-} from './api';
+import { fetchModelsForInput, getProvider, providerKeys, saveProvider } from './api';
 import { useI18n } from '../../i18n';
 import { TitlebarActions } from '../../components/titlebar-actions';
 import { ProviderAvatarField } from './provider-avatar-field';
 
-const styles = stylex.create({
-  formFieldRow: {
-    width: '100%',
-  },
-  formNameField: {
-    flex: '1 1 14rem',
-    minWidth: 'min(100%, 14rem)',
-  },
-  formProtocolField: {
-    flex: '1 1 18rem',
-    minWidth: 'min(100%, 18rem)',
-  },
-  formApiKeyField: {
-    width: '100%',
-  },
-  formModelInput: {
-    minWidth: 'min(100%, 18rem)',
-    flex: '1 1 18rem',
-  },
-  formModelNameInput: {
-    minWidth: 'min(100%, 14rem)',
-    flex: '1 1 14rem',
-  },
-  apiKeyVisibilityAddon: {
-    backgroundColor: 'var(--color-background-surface)',
-  },
-  modelHelpTrigger: {
-    'display': 'inline-flex',
-    'alignItems': 'center',
-    'justifyContent': 'center',
-    'padding': 0,
-    'border': 0,
-    'borderRadius': 'var(--radius-full)',
-    'backgroundColor': 'transparent',
-    'color': 'var(--color-icon-secondary)',
-    'cursor': 'pointer',
-    ':hover': {
-      color: 'var(--color-icon-primary)',
-    },
-    ':focus-visible': {
-      outline: '2px solid var(--color-accent)',
-      outlineOffset: '2px',
-    },
-  },
-});
-
-const protocols: Array<{ value: ProviderProtocol; label: string }> = [
+const protocols: Array<{
+  value: ProviderProtocol;
+  label: string;
+}> = [
   { value: 'openai-responses', label: 'OpenAI Responses' },
   { value: 'anthropic-messages', label: 'Anthropic Messages' },
   { value: 'openai-compatible-chat-completions', label: 'OpenAI-compatible Chat Completions' },
 ];
-
 export default function ProviderFormPage() {
-  type FormModel = (RemoteModel & { source: 'remote' }) | (CustomModel & { source: 'custom' });
+  type FormModel = (RemoteModel & {
+    source: 'remote';
+  }) | (CustomModel & {
+    source: 'custom';
+  });
   const { providerId } = useParams();
   const { t } = useI18n();
   const navigate = useNavigate();
@@ -114,11 +62,11 @@ export default function ProviderFormPage() {
       setModels(provider.customModels.map((model) => ({ ...model, source: 'custom' as const })));
     });
   }, [providerId]);
-
   const canFetch = Boolean(baseURL.trim() && (protocol === 'openai-compatible-chat-completions' || apiKey.trim()));
   const canSave = models.length > 0 && !isFetching && !isSaving && !isReadingAvatar && Boolean(name.trim() && baseURL.trim());
-  const customModels = useMemo(() => models.filter((model): model is CustomModel & { source: 'custom' } => model.source === 'custom'), [models]);
-
+  const customModels = useMemo(() => models.filter((model): model is CustomModel & {
+    source: 'custom';
+  } => model.source === 'custom'), [models]);
   const fetchModels = useCallback(async () => {
     if (!canFetch) {
       return;
@@ -140,7 +88,6 @@ export default function ProviderFormPage() {
       setIsFetching(false);
     }
   }, [apiKey, baseURL, canFetch, protocol, t, toast]);
-
   useEffect(() => {
     if (!canFetch) {
       return;
@@ -150,7 +97,6 @@ export default function ProviderFormPage() {
     }, 500);
     return () => clearTimeout(timer);
   }, [canFetch, fetchModels]);
-
   function addCustomModel() {
     const id = modelID.trim();
     if (!id || customModels.some((model) => model.id === id)) {
@@ -160,7 +106,6 @@ export default function ProviderFormPage() {
     setModelID('');
     setModelName('');
   }
-
   const save = useCallback(async () => {
     if (!canSave) {
       return;
@@ -197,7 +142,6 @@ export default function ProviderFormPage() {
     t,
     toast,
   ]);
-
   const cancel = useCallback(() => {
     void navigate('/providers');
   }, [navigate]);
@@ -218,66 +162,41 @@ export default function ProviderFormPage() {
   return (
     <>
       <TitlebarActions>
-        <HStack gap={2}>
-          <Button label={t('providers.cancel')} variant="ghost" size="sm" onClick={cancel} />
-          <Button
-            label={t('providers.save')}
-            variant="primary"
-            size="sm"
-            isDisabled={!canSave}
-            isLoading={isSaving}
-            onClick={submit}
-          />
-        </HStack>
+        <div className="flex flex-row gap-2">
+          <Button onClick={cancel} variant="ghost" size="sm">
+            <span>{t('providers.cancel')}</span>
+          </Button>
+          <Button onClick={submit} variant="default" size="sm" disabled={!canSave || isSaving}>
+            {isSaving && <Spinner />}
+            <span>{t('providers.save')}</span>
+          </Button>
+        </div>
       </TitlebarActions>
-      <VStack gap={5}>
-        <VStack gap={4}>
-          <ProviderAvatarField
-            value={avatar}
-            onChange={setAvatar}
-            isDisabled={isSaving}
-            isReading={isReadingAvatar}
-            onReadingChange={setIsReadingAvatar}
-          />
-          <HStack gap={3} wrap="wrap" xstyle={styles.formFieldRow}>
-            <TextInput containerXstyle={styles.formNameField} size="sm" label={t('providers.name')} value={name} onChange={setName} isRequired />
-            <Selector containerXstyle={styles.formProtocolField} size="sm" label={t('providers.protocol')} options={protocols} value={protocol} onChange={(value) => setProtocol(value as ProviderProtocol)} isDisabled={Boolean(providerId)} isRequired />
-          </HStack>
-          <TextInput size="sm" label={t('providers.baseUrl')} value={baseURL} onChange={setBaseURL} placeholder="https://api.example.com/v1" isRequired />
-          <InputGroup
-            label={t('providers.apiKey')}
-            size="sm"
-            isRequired={protocol !== 'openai-compatible-chat-completions'}
-            xstyle={styles.formApiKeyField}
-          >
-            <TextInput
-              size="sm"
-              label={t('providers.apiKey')}
-              isLabelHidden
-              type={isApiKeyVisible ? 'text' : 'password'}
-              value={apiKey}
-              onChange={setApiKey}
-            />
-            <InputGroupText xstyle={styles.apiKeyVisibilityAddon}>
-              <IconButton
-                label={t(isApiKeyVisible ? 'providers.hideApiKey' : 'providers.showApiKey')}
-                tooltip={t(isApiKeyVisible ? 'providers.hideApiKey' : 'providers.showApiKey')}
-                icon={isApiKeyVisible ? <EyeSlashIcon /> : <EyeIcon />}
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsApiKeyVisible((visible) => !visible)}
-              />
-            </InputGroupText>
-          </InputGroup>
-        </VStack>
-        <VStack gap={3}>
-          <HStack gap={1} vAlign="center">
-            <Text type="label" color="secondary">{t('providers.models')}</Text>
-            <Text type="supporting">
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-4">
+          <ProviderAvatarField value={avatar} onChange={setAvatar} isDisabled={isSaving} isReading={isReadingAvatar} onReadingChange={setIsReadingAvatar} />
+          <div className="w-full flex flex-row flex-wrap gap-3">
+            <FormInput size="sm" label={t('providers.name')} value={name} onChange={setName} isRequired className="min-w-[min(100%,14rem)] flex-[1_1_14rem]" />
+            <SelectField size="sm" label={t('providers.protocol')} options={protocols} value={protocol} onChange={(value) => setProtocol(value as ProviderProtocol)} isDisabled={Boolean(providerId)} isRequired className="min-w-[min(100%,18rem)] flex-[1_1_18rem]" />
+          </div>
+          <FormInput size="sm" label={t('providers.baseUrl')} value={baseURL} onChange={setBaseURL} placeholder="https://api.example.com/v1" isRequired />
+          <FieldGroup label={t('providers.apiKey')} size="sm" isRequired={protocol !== 'openai-compatible-chat-completions'} className="w-full">
+            <FormInput size="sm" label={t('providers.apiKey')} isLabelHidden type={isApiKeyVisible ? 'text' : 'password'} value={apiKey} onChange={setApiKey} />
+            <FieldAddon className="bg-background">
+              <Button onClick={() => setIsApiKeyVisible((visible) => !visible)} variant="ghost" size="icon-sm" aria-label={t(isApiKeyVisible ? 'providers.hideApiKey' : 'providers.showApiKey')} title={t(isApiKeyVisible ? 'providers.hideApiKey' : 'providers.showApiKey')}>
+                <span>{isApiKeyVisible ? <EyeSlashIcon /> : <EyeIcon />}</span>
+              </Button>
+            </FieldAddon>
+          </FieldGroup>
+        </div>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-row items-center gap-1">
+            <span className="text-sm font-medium text-muted-foreground">{t('providers.models')}</span>
+            <span className="text-xs text-muted-foreground">
               ·
               {t('providers.required')}
-            </Text>
-            <Popover
+            </span>
+            <ActionPopover
               label={t('providers.modelSources')}
               placement="below"
               alignment="start"
@@ -285,72 +204,52 @@ export default function ProviderFormPage() {
               isEnabled={false}
               onOpenChange={setIsModelHelpOpen}
               content={(
-                <VStack gap={1} onMouseEnter={openModelHelp} onMouseLeave={closeModelHelp}>
-                  <Text type="supporting">{t('providers.modelsTemporary')}</Text>
-                </VStack>
+                <div onMouseEnter={openModelHelp} onMouseLeave={closeModelHelp} className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">{t('providers.modelsTemporary')}</span>
+                </div>
               )}
             >
-              <button
-                type="button"
-                aria-label={t('providers.aboutModelSources')}
-                {...stylex.props(styles.modelHelpTrigger)}
-                onMouseEnter={openModelHelp}
-                onMouseLeave={closeModelHelp}
-              >
-                <Icon icon={QuestionMarkCircleIcon} size="sm" />
+              <button type="button" aria-label={t('providers.aboutModelSources')} onMouseEnter={openModelHelp} onMouseLeave={closeModelHelp} className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+                <IconGlyph icon={QuestionMarkCircleIcon} className="size-4 shrink-0" />
               </button>
-            </Popover>
-            <IconButton
-              label={t('providers.fetchModels')}
-              tooltip={t('providers.fetchModels')}
-              icon={<ArrowPathIcon />}
-              variant="ghost"
-              size="sm"
-              isDisabled={!canFetch}
-              isLoading={isFetching}
+            </ActionPopover>
+            <Button
               onClick={() => {
                 void fetchModels();
               }}
-            />
-          </HStack>
+              variant="ghost"
+              size="icon-sm"
+              disabled={!canFetch || isFetching}
+              aria-label={t('providers.fetchModels')}
+              title={t('providers.fetchModels')}
+            >
+              {isFetching && <Spinner />}
+              <ArrowPathIcon />
+            </Button>
+          </div>
           {models.length > 0 && (
-            <HStack gap={1} wrap="wrap">
+            <div className="flex flex-row flex-wrap gap-1">
               {models.map((model) => (
-                <Token
-                  size="sm"
-                  key={`${model.source}-${model.id}`}
-                  label={model.displayName || model.id}
-                  color={model.source === 'custom' ? 'blue' : 'default'}
-                  onRemove={model.source === 'custom' ? () => setModels((current) => current.filter((candidate) => candidate !== model)) : undefined}
-                />
+                <Badge key={`${model.source}-${model.id}`} variant="secondary">
+                  <span>{model.displayName || model.id}</span>
+                  {model.source === 'custom' && (
+                    <button type="button" aria-label={`${t('providers.delete')} ${model.displayName || model.id}`} onClick={() => setModels((current) => current.filter((candidate) => candidate !== model))}>
+                      <X className="size-3" />
+                    </button>
+                  )}
+                </Badge>
               ))}
-            </HStack>
+            </div>
           )}
-          <HStack gap={2} wrap="wrap">
-            <TextInput
-              size="sm"
-              containerXstyle={styles.formModelInput}
-              label={t('providers.modelId')}
-              isLabelHidden
-              value={modelID}
-              onChange={setModelID}
-              placeholder={t('providers.customModelId')}
-              isRequired
-            />
-            <TextInput
-              size="sm"
-              containerXstyle={styles.formModelNameInput}
-              label={t('providers.displayName')}
-              isLabelHidden
-              value={modelName}
-              onChange={setModelName}
-              isOptional
-              placeholder={t('providers.displayNameOptional')}
-            />
-            <Button label={t('providers.addCustomModel')} variant="secondary" size="sm" isDisabled={!modelID.trim()} onClick={addCustomModel} />
-          </HStack>
-        </VStack>
-      </VStack>
+          <div className="flex flex-row flex-wrap gap-2">
+            <FormInput size="sm" label={t('providers.modelId')} isLabelHidden value={modelID} onChange={setModelID} placeholder={t('providers.customModelId')} isRequired className="min-w-[min(100%,18rem)] flex-[1_1_18rem]" />
+            <FormInput size="sm" label={t('providers.displayName')} isLabelHidden value={modelName} onChange={setModelName} isOptional placeholder={t('providers.displayNameOptional')} className="min-w-[min(100%,14rem)] flex-[1_1_14rem]" />
+            <Button onClick={addCustomModel} variant="secondary" size="sm" disabled={!modelID.trim()}>
+              <span>{t('providers.addCustomModel')}</span>
+            </Button>
+          </div>
+        </div>
+      </div>
     </>
   );
 }

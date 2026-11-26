@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
-import { useToast } from '@astryxdesign/core/Toast';
-import type { ToastOptions } from '@astryxdesign/core/Toast';
+import { toast } from 'sonner';
 
 export class ApiError extends Error {
   constructor(
@@ -87,13 +86,8 @@ export function errorResult(error: unknown): {
 }
 
 export function useAppToast() {
-  const toast = useToast();
-
-  return useCallback((options: Omit<ToastOptions, 'isAutoHide' | 'autoHideDuration'>) => (
-    toast({
-      ...options,
-      isAutoHide: true,
-      autoHideDuration: 2500,
-    })
-  ), [toast]);
+  return useCallback((options: { body: string; type?: string; uniqueID?: string }) => {
+    const show = options.type === 'error' ? toast.error : toast;
+    return show(options.body, { id: options.uniqueID, duration: 2500 });
+  }, []);
 }

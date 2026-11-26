@@ -199,7 +199,7 @@ Older Node.js versions cannot run the installed pnpm or project toolchain.
 ## Project Structure
 
 ```text
-app/web/                  React, Vite, Astryx, and StyleX Web UI
+app/web/                  React, Vite, Tailwind CSS, and shadcn/ui Web UI
 src/
 |-- cli/                  CLI commands, JSON I/O, and browser opening
 |-- features/             Feature services, validation, repositories, and routes

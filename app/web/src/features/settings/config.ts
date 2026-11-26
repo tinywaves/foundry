@@ -1,15 +1,4 @@
-import {
-  AdjustmentsHorizontalIcon,
-  ArrowDownTrayIcon,
-  ArrowUpTrayIcon,
-  BarsArrowUpIcon,
-  BugAntIcon,
-  ClockIcon,
-  CommandLineIcon,
-  FolderIcon,
-  GlobeAltIcon,
-  PaintBrushIcon,
-} from '@heroicons/react/24/outline';
+import { SlidersHorizontal as AdjustmentsHorizontalIcon, Download as ArrowDownTrayIcon, Upload as ArrowUpTrayIcon, ArrowUpWideNarrow as BarsArrowUpIcon, Bug as BugAntIcon, Clock as ClockIcon, Terminal as CommandLineIcon, Folder as FolderIcon, Globe as GlobeAltIcon, Paintbrush as PaintBrushIcon } from 'lucide-react';
 import type { TranslationKey } from '../../i18n/messages';
 import type { PanelConfig, PanelId, SearchableSetting } from './types';
 

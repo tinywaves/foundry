@@ -1,58 +1,13 @@
+import { Kbd } from '@/components/ui/kbd';
+import { Card } from '@/components/ui/card';
+import { Modal } from '@/components/workbench';
 import { useEffect, useRef, useState } from 'react';
 import type { ClipboardEvent, KeyboardEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card } from '@astryxdesign/core/Card';
-import { Dialog } from '@astryxdesign/core/Dialog';
-import { Kbd } from '@astryxdesign/core/Kbd';
-import { Link } from '@astryxdesign/core/Link';
-import { HStack, VStack } from '@astryxdesign/core/Stack';
-import { Text } from '@astryxdesign/core/Text';
-import * as stylex from '@stylexjs/stylex';
 import type { CreateCaptureResult } from './types';
 import { captureKeys, createCapture } from './api';
 import { captureErrorKey, useI18n } from '../../i18n';
 import { useAppToast } from '../../lib/api';
-
-const enterPulse = stylex.keyframes({
-  '0%, 100%': {
-    opacity: 1,
-    transform: 'scale(1)',
-  },
-  '50%': {
-    opacity: 0.65,
-    transform: 'scale(1.08)',
-  },
-});
-
-const styles = stylex.create({
-  dropZone: {
-    'minHeight': 'calc(var(--spacing-10) * 3)',
-    'borderStyle': 'dashed',
-    'borderWidth': 'var(--border-width)',
-    'borderColor': 'var(--color-border-emphasized)',
-    'backgroundColor': 'var(--color-background-muted)',
-    'cursor': 'text',
-    'outline': 'none',
-    ':focus-visible': {
-      outline: 'var(--border-width) solid var(--color-accent)',
-      outlineOffset: 'var(--spacing-0-5)',
-    },
-  },
-  content: {
-    minHeight: 'calc(var(--spacing-10) * 2)',
-  },
-  urlLink: {
-    justifyContent: 'center',
-    width: '100%',
-    textAlign: 'center',
-  },
-  enterKey: {
-    animationName: enterPulse,
-    animationDuration: '1.4s',
-    animationIterationCount: 'infinite',
-    animationTimingFunction: 'ease-in-out',
-  },
-});
 
 function isValidHttpUrl(value: string): boolean {
   try {
@@ -62,12 +17,7 @@ function isValidHttpUrl(value: string): boolean {
     return false;
   }
 }
-
-export function CaptureDialog({
-  isOpen,
-  onOpenChange,
-  onCreated,
-}: {
+export function CaptureDialog({ isOpen, onOpenChange, onCreated }: {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onCreated: (result: CreateCaptureResult) => void;
@@ -77,7 +27,6 @@ export function CaptureDialog({
   const queryClient = useQueryClient();
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const [url, setUrl] = useState('');
-
   const mutation = useMutation({
     mutationFn: createCapture,
     onSuccess: (result) => {
@@ -93,7 +42,6 @@ export function CaptureDialog({
         dropZoneRef.current?.focus();
         return;
       }
-
       void queryClient.invalidateQueries({ queryKey: captureKeys.all });
       toast({
         body: t('captures.captureAdded'),
@@ -102,7 +50,6 @@ export function CaptureDialog({
       onCreated(result.data);
     },
   });
-
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -113,7 +60,6 @@ export function CaptureDialog({
       dropZoneRef.current?.focus();
     });
   }, [isOpen]);
-
   const handlePaste = (event: ClipboardEvent<HTMLDivElement>) => {
     const pasted = event.clipboardData.getData('text/plain').trim();
     event.preventDefault();
@@ -122,7 +68,6 @@ export function CaptureDialog({
     }
     setUrl(pasted);
   };
-
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Enter' || mutation.isPending) {
       return;
@@ -141,64 +86,45 @@ export function CaptureDialog({
     }
     mutation.mutate({ url });
   };
-
   return (
-    <Dialog
-      isOpen={isOpen}
-      onOpenChange={onOpenChange}
-      width={620}
-      padding={4}
-      purpose="form"
-      aria-label={t('captures.addCapture')}
-    >
+    <Modal isOpen={isOpen} onOpenChange={onOpenChange} width={620} padding={4} purpose="form" aria-label={t('captures.addCapture')}>
       <Card
         ref={dropZoneRef}
         role="button"
         tabIndex={0}
         aria-label={t('captures.pasteLink')}
-        padding={8}
-        variant="transparent"
-        xstyle={styles.dropZone}
         onClick={() => {
           dropZoneRef.current?.focus();
         }}
         onPaste={handlePaste}
         onKeyDown={handleKeyDown}
+        className="min-h-30 border border-dashed bg-muted cursor-text outline-none focus-visible:outline-2 focus-visible:outline-ring p-8"
       >
-        <VStack hAlign="center" vAlign="center" gap={4} xstyle={styles.content}>
+        <div className="min-h-20 flex flex-col items-center justify-center gap-4">
           {url
             ? (
                 <>
-                  <Link
-                    href={url}
-                    isStandalone
-                    size="lg"
-                    display="block"
-                    weight="semibold"
-                    maxLines={3}
-                    target="_blank"
-                    xstyle={styles.urlLink}
-                  >
+                  <a href={url} target="_blank" rel="noreferrer" className="w-full justify-center text-center text-primary underline-offset-4 hover:underline break-all">
                     {url}
-                  </Link>
+                  </a>
                   {mutation.isPending
-                    ? <Text type="supporting">{t('captures.capturing')}</Text>
+                    ? <span className="text-xs text-muted-foreground">{t('captures.capturing')}</span>
                     : (
-                        <HStack gap={2} vAlign="center" hAlign="center">
-                          <Kbd keys="enter" xstyle={styles.enterKey} />
-                          <Text type="supporting">{t('captures.enterToCapture')}</Text>
-                        </HStack>
+                        <div className="flex flex-row items-center justify-center gap-2">
+                          <Kbd className="motion-safe:animate-pulse">Enter</Kbd>
+                          <span className="text-xs text-muted-foreground">{t('captures.enterToCapture')}</span>
+                        </div>
                       )}
                 </>
               )
             : (
-                <HStack gap={2} vAlign="center" hAlign="center" wrap="wrap">
-                  <Kbd keys="mod+v" />
-                  <Text type="supporting">{t('captures.toPaste')}</Text>
-                </HStack>
+                <div className="flex flex-row flex-wrap items-center justify-center gap-2">
+                  <Kbd>⌘ / Ctrl + V</Kbd>
+                  <span className="text-xs text-muted-foreground">{t('captures.toPaste')}</span>
+                </div>
               )}
-        </VStack>
+        </div>
       </Card>
-    </Dialog>
+    </Modal>
   );
 }

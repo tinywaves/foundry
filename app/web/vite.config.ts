@@ -1,13 +1,14 @@
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
-import stylex from '@stylexjs/unplugin';
+import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [
-    stylex.vite({ devMode: 'full', useCSSLayers: true }),
+    tailwindcss(),
     react(),
   ],
+  resolve: { alias: { '@': path.resolve(import.meta.dirname, 'src') } },
   build: {
     outDir: path.resolve(import.meta.dirname, '../../dist/web'),
     emptyOutDir: true,

@@ -1,29 +1,14 @@
+import { Spinner } from '@/components/ui/spinner';
+import { Button } from '@/components/ui/button';
+import { Modal, PanelLayout, ModalHeader, ContentPane, CheckList, CheckListItem, Footer } from '@/components/workbench';
 import { useState } from 'react';
-import { Button } from '@astryxdesign/core/Button';
-import {
-  CheckboxList,
-  CheckboxListItem,
-} from '@astryxdesign/core/CheckboxList';
-import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
-import {
-  Layout,
-  LayoutContent,
-  LayoutFooter,
-} from '@astryxdesign/core/Layout';
-import { HStack } from '@astryxdesign/core/Stack';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useAppToast } from '../../lib/api';
 import { useI18n } from '../../i18n';
-import {
-  copyBundledSkill,
-  getBundledSkillTargets,
-} from './skill-copy-api';
+import { copyBundledSkill, getBundledSkillTargets } from './skill-copy-api';
 import type { BundledSkillTarget } from './skill-copy-api';
 
-export function DownloadSkillDialog({
-  isOpen,
-  onClose,
-}: {
+export function DownloadSkillDialog({ isOpen, onClose }: {
   isOpen: boolean;
   onClose: () => void;
 }) {
@@ -39,9 +24,7 @@ export function DownloadSkillDialog({
     mutationFn: () => copyBundledSkill(targets),
     onSuccess: (result) => {
       toast({
-        body: `${t('settings.skillDownloaded')} ${
-          result.installed.map((item) => item.destination).join(', ')
-        }`,
+        body: `${t('settings.skillDownloaded')} ${result.installed.map((item) => item.destination).join(', ')}`,
         uniqueID: 'skill-downloaded',
       });
       onClose();
@@ -54,9 +37,8 @@ export function DownloadSkillDialog({
       });
     },
   });
-
   return (
-    <Dialog
+    <Modal
       isOpen={isOpen}
       onOpenChange={(open) => {
         if (!open && !mutation.isPending) {
@@ -67,9 +49,9 @@ export function DownloadSkillDialog({
       padding={5}
       purpose="form"
     >
-      <Layout
+      <PanelLayout
         header={(
-          <DialogHeader
+          <ModalHeader
             title={t('settings.downloadSkill')}
             subtitle={t('settings.downloadSkillDescription')}
             onOpenChange={() => {
@@ -80,8 +62,8 @@ export function DownloadSkillDialog({
           />
         )}
         content={(
-          <LayoutContent>
-            <CheckboxList
+          <ContentPane>
+            <CheckList
               label={t('settings.downloadSkillTargets')}
               value={targets}
               onChange={(values) => {
@@ -90,60 +72,48 @@ export function DownloadSkillDialog({
               hasDividers
               width="100%"
             >
-              <CheckboxListItem
+              <CheckListItem
                 label=".agents"
                 value="agents"
-                description={
-                  targetDestination(targetsQuery.data, 'agents')
-                  ?? t('settings.downloadSkillResolvingPath')
-                }
+                description={targetDestination(targetsQuery.data, 'agents')
+                  ?? t('settings.downloadSkillResolvingPath')}
               />
-              <CheckboxListItem
+              <CheckListItem
                 label=".claude"
                 value="claude"
-                description={
-                  targetDestination(targetsQuery.data, 'claude')
-                  ?? t('settings.downloadSkillResolvingPath')
-                }
+                description={targetDestination(targetsQuery.data, 'claude')
+                  ?? t('settings.downloadSkillResolvingPath')}
               />
-            </CheckboxList>
-          </LayoutContent>
+            </CheckList>
+          </ContentPane>
         )}
         footer={(
-          <LayoutFooter>
-            <HStack gap={2} hAlign="end">
+          <Footer>
+            <div className="flex flex-row justify-end gap-2">
+              <Button onClick={onClose} variant="ghost" size="sm" disabled={mutation.isPending}>
+                <span>{t('settings.skillCancel')}</span>
+              </Button>
               <Button
-                label={t('settings.skillCancel')}
-                variant="ghost"
-                size="sm"
-                isDisabled={mutation.isPending}
-                onClick={onClose}
-              />
-              <Button
-                label={t('settings.downloadSkillAction')}
-                variant="primary"
-                size="sm"
-                isLoading={mutation.isPending}
-                isDisabled={targets.length === 0}
                 onClick={() => {
                   mutation.mutate();
                 }}
-              />
-            </HStack>
-          </LayoutFooter>
+                variant="default"
+                size="sm"
+                disabled={targets.length === 0 || mutation.isPending}
+              >
+                {mutation.isPending && <Spinner />}
+                <span>{t('settings.downloadSkillAction')}</span>
+              </Button>
+            </div>
+          </Footer>
         )}
       />
-    </Dialog>
+    </Modal>
   );
 }
-
 function isBundledSkillTarget(value: string): value is BundledSkillTarget {
   return value === 'agents' || value === 'claude';
 }
-
-function targetDestination(
-  result: Awaited<ReturnType<typeof getBundledSkillTargets>> | undefined,
-  target: BundledSkillTarget,
-): string | undefined {
+function targetDestination(result: Awaited<ReturnType<typeof getBundledSkillTargets>> | undefined, target: BundledSkillTarget): string | undefined {
   return result?.targets.find((item) => item.target === target)?.destination;
 }

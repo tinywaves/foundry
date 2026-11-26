@@ -1,126 +1,61 @@
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
+import { RecordRow, IconGlyph, FormInput, SettingsNav, SelectField, SettingsNavSection, SettingsNavItem, Modal, Ratio, NumberField, ContentPane } from '@/components/workbench';
+import { Spinner } from '@/components/ui/spinner';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { Card } from '@/components/ui/card';
 import { isValidElement, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Card } from '@astryxdesign/core/Card';
-import { Divider } from '@astryxdesign/core/Divider';
-import { Text } from '@astryxdesign/core/Text';
-import { VStack } from '@astryxdesign/core/VStack';
-import * as stylex from '@stylexjs/stylex';
-import { HStack } from '@astryxdesign/core/HStack';
-import { Icon } from '@astryxdesign/core/Icon';
-import { IconButton } from '@astryxdesign/core/IconButton';
-import { Dialog } from '@astryxdesign/core/Dialog';
-import { Stack, StackItem } from '@astryxdesign/core/Stack';
-import type {
-  IconComponent,
-  SearchableSetting,
-  PanelId,
-  PanelProps,
-  SettingsState,
-  TimeFormatPattern,
-  TimeZoneCode,
-  CaptureSettings,
-} from './types';
-import {
-  MagnifyingGlassIcon,
-  ChevronRightIcon,
-  CommandLineIcon,
-  ComputerDesktopIcon,
-  MoonIcon,
-  SparklesIcon,
-  SunIcon,
-  PaintBrushIcon,
-  ClockIcon,
-  GlobeAltIcon,
-  LanguageIcon,
-  ArrowPathRoundedSquareIcon,
-  BarsArrowUpIcon,
-  BugAntIcon,
-  KeyIcon,
-  ArrowDownTrayIcon,
-  ArrowUpTrayIcon,
-  FolderIcon,
-  FolderOpenIcon,
-  XMarkIcon,
-} from '@heroicons/react/24/outline';
-import { TextInput } from '@astryxdesign/core/TextInput';
+import type { IconComponent, SearchableSetting, PanelId, PanelProps, SettingsState, TimeFormatPattern, TimeZoneCode, CaptureSettings } from './types';
+import { Search as MagnifyingGlassIcon, ChevronRight as ChevronRightIcon, Terminal as CommandLineIcon, Monitor as ComputerDesktopIcon, Moon as MoonIcon, Sparkles as SparklesIcon, Sun as SunIcon, Paintbrush as PaintBrushIcon, Clock as ClockIcon, Globe as GlobeAltIcon, Languages as LanguageIcon, RefreshCcw as ArrowPathRoundedSquareIcon, ArrowUpWideNarrow as BarsArrowUpIcon, Bug as BugAntIcon, KeyRound as KeyIcon, Download as ArrowDownTrayIcon, Upload as ArrowUpTrayIcon, Folder as FolderIcon, FolderOpen as FolderOpenIcon, X as XMarkIcon } from 'lucide-react';
 import type { SettingsSearch } from './search';
 import { useI18n } from '../../i18n';
 import { fetcherLabelKey } from '../../i18n/fetchers';
 import { FETCHER_TYPES } from '../../shared/settings';
-import { ListItem } from '@astryxdesign/core/List';
 import { panelConfig, PANEL_GROUPS, DEFAULT_PANEL } from './config';
-import { SideNav, SideNavItem, SideNavSection } from '@astryxdesign/core/SideNav';
-import { Grid } from '@astryxdesign/core/Grid';
-import { SelectableCard } from '@astryxdesign/core/SelectableCard';
-import { Theme } from '@astryxdesign/core/theme';
-import { neutralTheme } from '@astryxdesign/theme-neutral/built';
-import { AspectRatio } from '@astryxdesign/core/AspectRatio';
-import { Selector } from '@astryxdesign/core/Selector';
-import { NumberInput } from '@astryxdesign/core/NumberInput';
-import { Button } from '@astryxdesign/core/Button';
 import { useQuery } from '@tanstack/react-query';
-import {
-  dataTransferKeys,
-  getDataTransferStatus,
-  selectImportFile,
-} from '../data-transfer/api';
+import { dataTransferKeys, getDataTransferStatus, selectImportFile } from '../data-transfer/api';
 import { useAppToast } from '../../lib/api';
-import {
-  ExportDataDialog,
-  ImportDataDialog,
-} from '../data-transfer/data-transfer-card';
-import { LayoutContent } from '@astryxdesign/core/Layout';
+import { ExportDataDialog, ImportDataDialog } from '../data-transfer/data-transfer-card';
 import { openConfigFolder } from './api';
 import { useSearchParams } from 'react-router-dom';
 import { useSettingsSearch } from './search';
 import { useSettings } from './use-settings';
 import { DownloadSkillDialog } from './download-skill-dialog';
-import responsive from './settings-page.module.css';
 
-function SettingsCard({
-  title,
-  children,
-}: {
+function SettingsCard({ title, children }: {
   title?: string;
   children: ReactNode;
 }) {
   const rows = (Array.isArray(children) ? children : [children])
     .filter((row): row is ReactNode => Boolean(row));
-
   return (
-    <VStack gap={1.5}>
+    <div className="flex flex-col gap-1.5">
       {title != null && (
-        <Text type="supporting" weight="semibold" color="secondary">
+        <span className="text-xs text-muted-foreground font-semibold">
           {title}
-        </Text>
+        </span>
       )}
-      <Card padding={0} width="100%" variant="muted">
-        <VStack as="ul" role="list" gap={0}>
+      <Card className="p-0 w-full">
+        <ul role="list" className="flex flex-col gap-0">
           {rows.map((row, index) => {
             const isNotFirstRow = index > 0;
             return (
-              <VStack key={isValidElement(row) ? row.key : undefined} as="li" gap={0}>
-                {isNotFirstRow && <Divider variant="subtle" />}
-                <VStack>{row}</VStack>
-              </VStack>
+              <li key={isValidElement(row) ? row.key : undefined} className="flex flex-col gap-0">
+                {isNotFirstRow && <Separator />}
+                <div className="flex flex-col">{row}</div>
+              </li>
             );
           })}
-        </VStack>
+        </ul>
       </Card>
-    </VStack>
+    </div>
   );
 }
 
-const ROW_PADDING = 4;
-
-function SettingsRow({
-  title,
-  titleAccessory,
-  description,
-  icon,
-  control,
-  detail,
-}: {
+function SettingsRow({ title, titleAccessory, description, icon, control, detail }: {
   title: string;
   titleAccessory?: ReactNode;
   description?: ReactNode;
@@ -129,43 +64,40 @@ function SettingsRow({
   detail?: ReactNode;
 }) {
   return (
-    <VStack padding={ROW_PADDING} gap={2}>
-      <Stack className={responsive.line} data-settings-line>
-        <StackItem size="fill">
-          <HStack gap={2} align="start">
-            <VStack paddingBlockStart={0.5}>
-              <Icon icon={icon} size="sm" color="secondary" />
-            </VStack>
-            <VStack gap={0.5} className={responsive.textColumn}>
+    <div className="flex flex-col gap-2 p-4">
+      <div data-settings-line className="flex flex-row items-center gap-3 max-[680px]:flex-col max-[680px]:items-stretch max-[680px]:gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-row items-start gap-2">
+            <div className="flex flex-col pt-0.5">
+              <IconGlyph icon={icon} className="size-4 shrink-0" />
+            </div>
+            <div className="min-w-0 max-w-[420px] wrap-anywhere max-[680px]:max-w-none flex flex-col gap-0.5">
               {titleAccessory == null
-                ? (
-                    <Text type="label">{title}</Text>
-                  )
+                ? (<span className="text-sm font-medium">{title}</span>)
                 : (
-                    <HStack gap={1.5} align="center">
-                      <Text type="label">{title}</Text>
+                    <div className="flex flex-row items-center gap-1.5">
+                      <span className="text-sm font-medium">{title}</span>
                       {titleAccessory}
-                    </HStack>
+                    </div>
                   )}
               {description != null && (
-                <Text type="supporting" color="secondary">
+                <span className="text-xs text-muted-foreground">
                   {description}
-                </Text>
+                </span>
               )}
-            </VStack>
-          </HStack>
-        </StackItem>
+            </div>
+          </div>
+        </div>
         {control != null && (
-          <VStack data-settings-control className={responsive.control}>
+          <div data-settings-control className="min-w-0 max-w-full shrink-0 items-start [--settings-control-width:260px] max-[680px]:w-full max-[680px]:self-start max-[680px]:[--settings-control-width:min(260px,100%)] flex flex-col">
             {control}
-          </VStack>
+          </div>
         )}
-      </Stack>
+      </div>
       {detail}
-    </VStack>
+    </div>
   );
 }
-
 function SettingsSearchInput({ search, hasAutoFocus = false, onClose }: {
   search: SettingsSearch;
   hasAutoFocus?: boolean;
@@ -173,7 +105,7 @@ function SettingsSearchInput({ search, hasAutoFocus = false, onClose }: {
 }) {
   const { t } = useI18n();
   return (
-    <TextInput
+    <FormInput
       hasAutoFocus={hasAutoFocus}
       label={t('settings.search')}
       isLabelHidden
@@ -203,13 +135,7 @@ function SettingsSearchInput({ search, hasAutoFocus = false, onClose }: {
     />
   );
 }
-
-function SettingsSearchResults({
-  results,
-  activeIndex,
-  onActiveIndexChange,
-  onSelect,
-}: {
+function SettingsSearchResults({ results, activeIndex, onActiveIndexChange, onSelect }: {
   results: SearchableSetting[];
   activeIndex: number;
   onActiveIndexChange: (index: number) => void;
@@ -218,45 +144,18 @@ function SettingsSearchResults({
   const { t } = useI18n();
   return results.length === 0
     ? (
-        <VStack id="settings-search-results" gap={0.5} padding={2}>
-          <Text type="label">{t('settings.noResults')}</Text>
-          <Text type="supporting" color="secondary">{t('settings.trySearch')}</Text>
-        </VStack>
+        <div id="settings-search-results" className="flex flex-col gap-0.5 p-2">
+          <span className="text-sm font-medium">{t('settings.noResults')}</span>
+          <span className="text-xs text-muted-foreground">{t('settings.trySearch')}</span>
+        </div>
       )
     : (
-        <VStack
-          as="ul"
-          gap={0}
-          id="settings-search-results"
-          role="listbox"
-          aria-label="Search results"
-          isScrollable
-        >
-          {results.map((setting, index) => (
-            <ListItem
-              key={setting.id}
-              id={`settings-search-result-${index}`}
-              role="option"
-              aria-selected={index === activeIndex}
-              label={t(setting.titleKey)}
-              description={`${t(panelConfig(setting.panel).labelKey)} · ${t(setting.descriptionKey)}`}
-              startContent={<Icon icon={setting.icon} size="sm" color="secondary" />}
-              endContent={<Icon icon={ChevronRightIcon} size="sm" color="secondary" />}
-              isSelected={index === activeIndex}
-              onMouseEnter={() => onActiveIndexChange(index)}
-              onClick={() => onSelect(setting)}
-            />
-          ))}
-        </VStack>
+        <ul id="settings-search-results" role="listbox" aria-label="Search results" className="flex flex-col gap-0 overflow-auto">
+          {results.map((setting, index) => (<RecordRow key={setting.id} id={`settings-search-result-${index}`} role="option" aria-selected={index === activeIndex} label={t(setting.titleKey)} description={t(panelConfig(setting.panel).labelKey)} startContent={<IconGlyph icon={setting.icon} className="size-4 shrink-0" />} endContent={<IconGlyph icon={ChevronRightIcon} className="size-4 shrink-0" />} isSelected={index === activeIndex} onMouseEnter={() => onActiveIndexChange(index)} onClick={() => onSelect(setting)} />))}
+        </ul>
       );
 }
-
-function SettingsSideNav({
-  search,
-  activePanel,
-  onSelectPanel,
-  onOpenSearch,
-}: {
+function SettingsSideNav({ search, activePanel, onSelectPanel, onOpenSearch }: {
   search: SettingsSearch;
   activePanel: PanelId;
   onSelectPanel: (panel: PanelId) => void;
@@ -264,14 +163,13 @@ function SettingsSideNav({
 }) {
   const { t } = useI18n();
   return (
-    <SideNav
+    <SettingsNav
       aria-label={t('settings.search')}
-      className={responsive.sideNav}
       topContent={(
-        <VStack gap={2}>
-          <HStack gap={1} className={responsive.mobilePanel}>
-            <StackItem size="fill">
-              <Selector
+        <div className="flex flex-col gap-2">
+          <div className="hidden w-full items-center max-[680px]:flex flex flex-row gap-1">
+            <div className="min-w-0 flex-1">
+              <SelectField
                 label={t('navigation.settings')}
                 isLabelHidden
                 variant="ghost"
@@ -288,63 +186,37 @@ function SettingsSideNav({
                   })),
                 }))}
                 renderValue={() => (
-                  <HStack gap={2} align="center">
-                    <Text type="supporting" color="secondary">
+                  <div className="flex flex-row items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
                       {t(PANEL_GROUPS.find((group) => group.panels.some((panel) => panel.id === activePanel))!.labelKey)}
-                    </Text>
-                    <Text type="supporting" color="secondary" aria-hidden="true">/</Text>
-                    <Text type="label">{t(panelConfig(activePanel).labelKey)}</Text>
-                  </HStack>
+                    </span>
+                    <span aria-hidden="true" className="text-xs text-muted-foreground">/</span>
+                    <span className="text-sm font-medium">{t(panelConfig(activePanel).labelKey)}</span>
+                  </div>
                 )}
               />
-            </StackItem>
-            <IconButton
-              label={t('settings.search')}
-              icon={<MagnifyingGlassIcon />}
-              variant="ghost"
-              size="sm"
-              className={responsive.searchToggle}
-              aria-haspopup="dialog"
-              onClick={onOpenSearch}
-            />
-          </HStack>
-          <VStack className={responsive.search}>
+            </div>
+            <Button aria-haspopup="dialog" onClick={onOpenSearch} variant="ghost" size="icon-sm" aria-label={t('settings.search')} className="shrink-0">
+              <MagnifyingGlassIcon />
+            </Button>
+          </div>
+          <div className="max-[680px]:hidden flex flex-col">
             <SettingsSearchInput search={search} />
-          </VStack>
-        </VStack>
+          </div>
+        </div>
       )}
+      className="h-full min-h-0 w-[260px] max-[680px]:h-auto max-[680px]:max-h-[50dvh] max-[680px]:w-full"
     >
       {search.isActive
-        ? (
-            <SettingsSearchResults
-              results={search.results}
-              activeIndex={search.activeIndex}
-              onActiveIndexChange={search.setActiveIndex}
-              onSelect={(setting) => onSelectPanel(setting.panel)}
-            />
-          )
+        ? (<SettingsSearchResults results={search.results} activeIndex={search.activeIndex} onActiveIndexChange={search.setActiveIndex} onSelect={(setting) => onSelectPanel(setting.panel)} />)
         : PANEL_GROUPS.map((group) => (
-            <SideNavSection
-              key={group.labelKey}
-              title={t(group.labelKey)}
-              className={responsive.sideNavSection}
-            >
-              {group.panels.map((panel) => (
-                <SideNavItem
-                  key={panel.id}
-                  label={t(panel.labelKey)}
-                  icon={<Icon icon={panel.icon} size="sm" color="primary" />}
-                  size="sm"
-                  isSelected={panel.id === activePanel}
-                  onClick={() => onSelectPanel(panel.id)}
-                />
-              ))}
-            </SideNavSection>
+            <SettingsNavSection key={group.labelKey} title={t(group.labelKey)} className="py-2 max-[680px]:hidden">
+              {group.panels.map((panel) => (<SettingsNavItem key={panel.id} label={t(panel.labelKey)} icon={<IconGlyph icon={panel.icon} className="size-4 shrink-0" />} size="sm" isSelected={panel.id === activePanel} onClick={() => onSelectPanel(panel.id)} />))}
+            </SettingsNavSection>
           ))}
-    </SideNav>
+    </SettingsNav>
   );
 }
-
 function SettingsSearchDialog({ isOpen, onSelectPanel, onClose }: {
   isOpen: boolean;
   onSelectPanel: (panel: PanelId) => void;
@@ -357,7 +229,7 @@ function SettingsSearchDialog({ isOpen, onSelectPanel, onClose }: {
     onClose();
   };
   return (
-    <Dialog
+    <Modal
       isOpen={isOpen}
       aria-label={t('settings.search')}
       onOpenChange={(open) => {
@@ -369,22 +241,18 @@ function SettingsSearchDialog({ isOpen, onSelectPanel, onClose }: {
       padding={3}
       purpose="info"
       position={{ top: 64, start: 16, end: 16 }}
-      className={responsive.searchDialog}
+      className="mx-auto"
     >
-      <VStack gap={3}>
-        <HStack gap={2} align="center">
-          <StackItem size="fill">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-row items-center gap-2">
+          <div className="min-w-0 flex-1">
             <SettingsSearchInput search={search} hasAutoFocus onClose={close} />
-          </StackItem>
-          <IconButton
-            label={t('settings.skillCancel')}
-            icon={<XMarkIcon />}
-            variant="ghost"
-            size="sm"
-            onClick={close}
-          />
-        </HStack>
-        <VStack className={responsive.searchResults}>
+          </div>
+          <Button onClick={close} variant="ghost" size="icon-sm" aria-label={t('settings.skillCancel')}>
+            <XMarkIcon />
+          </Button>
+        </div>
+        <div className="max-h-[calc(100dvh-200px)] overflow-y-auto overscroll-contain flex flex-col">
           {search.isActive
             ? (
                 <SettingsSearchResults
@@ -398,16 +266,15 @@ function SettingsSearchDialog({ isOpen, onSelectPanel, onClose }: {
                 />
               )
             : (
-                <VStack padding={2}>
-                  <Text type="supporting" color="secondary">{t('settings.trySearch')}</Text>
-                </VStack>
+                <div className="flex flex-col p-2">
+                  <span className="text-xs text-muted-foreground">{t('settings.trySearch')}</span>
+                </div>
               )}
-        </VStack>
-      </VStack>
-    </Dialog>
+        </div>
+      </div>
+    </Modal>
   );
 }
-
 const THEME_CHOICES: Array<{
   value: string;
   labelKey: 'settings.light' | 'settings.dark' | 'settings.system';
@@ -418,132 +285,77 @@ const THEME_CHOICES: Array<{
   { value: 'dark', labelKey: 'settings.dark', scheme: 'dark', icon: MoonIcon },
   { value: 'system', labelKey: 'settings.system', scheme: 'system', icon: ComputerDesktopIcon },
 ];
-
-function ThemeChoiceCards({
-  value,
-  onChange,
-}: {
+function ThemeChoiceCards({ value, onChange }: {
   value: string;
   onChange: (value: string) => void;
 }) {
   const { t } = useI18n();
   return (
-    <Grid
-      role="radiogroup"
-      aria-label="Color theme"
-      columns={3}
-      className={responsive.themeChoices}
-      gap={2}
-      maxWidth={480}
-    >
+    <RadioGroup value={value} onValueChange={(next) => onChange(String(next))} aria-label={t('settings.colorTheme')} className="grid max-w-[480px] grid-cols-3 gap-2 @max-[335px]/settings-panel:grid-cols-1">
       {THEME_CHOICES.map((choice) => {
-        const isSelected = choice.value === value;
-        const label = t(choice.labelKey);
+        const id = `theme-${choice.value}`;
         return (
-          <SelectableCard
-            key={choice.value}
-            label={label}
-            isSelected={isSelected}
-            padding={2}
-            onChange={() => {
-              if (!isSelected) {
-                onChange(choice.value);
-              }
-            }}
-          >
-            <VStack gap={1.5} className={responsive.themeChoiceBody}>
+          <Label key={choice.value} htmlFor={id} className={cn('relative block min-w-0 cursor-pointer rounded-2xl border p-2 has-focus-visible:ring-3 has-focus-visible:ring-ring/30', value === choice.value && 'border-primary ring-1 ring-primary')}>
+            <RadioGroupItem id={id} value={choice.value} className="sr-only" />
+            <div className="flex flex-col gap-1.5 @max-[335px]/settings-panel:grid @max-[335px]/settings-panel:grid-cols-[80px_minmax(0,1fr)] @max-[335px]/settings-panel:items-center @max-[335px]/settings-panel:gap-3">
               <ThemePreviewMock scheme={choice.scheme} />
-              <HStack gap={1} align="center" justify="center">
-                <Icon icon={choice.icon} size="sm" color="secondary" />
-                <Text
-                  type="supporting"
-                  weight={isSelected ? 'semibold' : undefined}
-                >
-                  {label}
-                </Text>
-              </HStack>
-            </VStack>
-          </SelectableCard>
+              <div className="flex items-center justify-center gap-1 text-xs">
+                <choice.icon className="size-4 text-muted-foreground" />
+                <span>{t(choice.labelKey)}</span>
+              </div>
+            </div>
+          </Label>
         );
       })}
-    </Grid>
+    </RadioGroup>
   );
 }
-
-const preview = stylex.create({
-  bar: {
-    height: 4,
-    width: '50%',
-    borderRadius: 999,
-    backgroundColor: 'var(--color-border-emphasized)',
-  },
-  barWide: { width: '66%' },
-  mutedSurface: { backgroundColor: 'var(--color-background-muted)' },
-  contentSurface: { backgroundColor: 'var(--color-background-surface)' },
-  clip: { overflow: 'hidden', borderRadius: 'var(--radius-element)' },
-  inert: { pointerEvents: 'none' },
-});
-
 function ThemePreviewCanvas({ mode }: { mode: 'light' | 'dark' }) {
+  const isDark = mode === 'dark';
   return (
-    <Theme theme={neutralTheme} mode={mode}>
-      <VStack padding={2} gap={1.5} height="100%" xstyle={preview.mutedSurface}>
-        <VStack gap={1} align="center">
-          <VStack xstyle={[preview.bar, preview.barWide]} />
-          <VStack xstyle={preview.bar} />
-        </VStack>
-        <StackItem size="fill">
-          <VStack padding={2} gap={1} justify="center" height="100%" xstyle={preview.contentSurface}>
-            {[0, 1, 2].map((row) => <VStack key={row} xstyle={preview.bar} />)}
-          </VStack>
-        </StackItem>
-      </VStack>
-    </Theme>
+    <div className={isDark ? 'flex h-full flex-col gap-1.5 bg-neutral-800 p-2' : 'flex h-full flex-col gap-1.5 bg-neutral-100 p-2'}>
+      <div className="flex flex-col items-center gap-1">
+        <div className={isDark ? 'h-1 w-2/3 rounded-full bg-neutral-600' : 'h-1 w-2/3 rounded-full bg-neutral-300'} />
+        <div className={isDark ? 'h-1 w-1/2 rounded-full bg-neutral-600' : 'h-1 w-1/2 rounded-full bg-neutral-300'} />
+      </div>
+      <div className={isDark ? 'flex min-h-0 flex-1 flex-col justify-center gap-1 rounded bg-neutral-950 p-2' : 'flex min-h-0 flex-1 flex-col justify-center gap-1 rounded bg-white p-2'}>
+        {[0, 1, 2].map((row) => <div key={row} className={isDark ? 'h-1 w-1/2 rounded-full bg-neutral-600' : 'h-1 w-1/2 rounded-full bg-neutral-300'} />)}
+      </div>
+    </div>
   );
 }
-
-function ThemePreviewMock({ scheme }: { scheme: 'light' | 'dark' | 'system' }) {
+function ThemePreviewMock({ scheme }: {
+  scheme: 'light' | 'dark' | 'system';
+}) {
   return (
-    <AspectRatio ratio={3 / 2} xstyle={preview.inert}>
-      <VStack aria-hidden="true" height="100%" xstyle={preview.clip}>
+    <Ratio ratio={3 / 2} className="pointer-events-none">
+      <div aria-hidden="true" className="overflow-hidden rounded-md flex flex-col h-full">
         {scheme === 'system'
           ? (
-              <HStack gap={0} height="100%">
-                <StackItem size="fill">
+              <div className="flex flex-row gap-0 h-full">
+                <div className="min-w-0 flex-1">
                   <ThemePreviewCanvas mode="light" />
-                </StackItem>
-                <StackItem size="fill">
+                </div>
+                <div className="min-w-0 flex-1">
                   <ThemePreviewCanvas mode="dark" />
-                </StackItem>
-              </HStack>
+                </div>
+              </div>
             )
           : <ThemePreviewCanvas mode={scheme} />}
-      </VStack>
-    </AspectRatio>
+      </div>
+    </Ratio>
   );
 }
-
 function AppearancePanel({ settings, update }: PanelProps) {
   const { t } = useI18n();
   return (
-    <VStack gap={5}>
+    <div className="flex flex-col gap-5">
       <SettingsCard>
-        <SettingsRow
-          title={t('settings.colorTheme')}
-          icon={PaintBrushIcon}
-          description={t('settings.colorThemeDescription')}
-          detail={(
-            <ThemeChoiceCards
-              value={settings.theme}
-              onChange={(value) => update('theme', value as SettingsState['theme'])}
-            />
-          )}
-        />
+        <SettingsRow title={t('settings.colorTheme')} icon={PaintBrushIcon} detail={(<ThemeChoiceCards value={settings.theme} onChange={(value) => update('theme', value as SettingsState['theme'])} />)} />
       </SettingsCard>
-    </VStack>
+    </div>
   );
 }
-
 function LanguagePanel({ settings, update }: PanelProps) {
   const { t } = useI18n();
   return (
@@ -551,9 +363,8 @@ function LanguagePanel({ settings, update }: PanelProps) {
       <SettingsRow
         title={t('settings.language')}
         icon={LanguageIcon}
-        description={t('settings.languageDescription')}
         control={(
-          <Selector
+          <SelectField
             label={t('settings.language')}
             isLabelHidden
             size="sm"
@@ -573,9 +384,8 @@ function LanguagePanel({ settings, update }: PanelProps) {
       <SettingsRow
         title={t('settings.timeFormat')}
         icon={ClockIcon}
-        description={t('settings.timeFormatDescription')}
         control={(
-          <Selector
+          <SelectField
             label={t('settings.timeFormat')}
             isLabelHidden
             size="sm"
@@ -596,9 +406,8 @@ function LanguagePanel({ settings, update }: PanelProps) {
       <SettingsRow
         title={t('settings.timezone')}
         icon={GlobeAltIcon}
-        description={t('settings.timezoneDescription')}
         control={(
-          <Selector
+          <SelectField
             label={t('settings.timezone')}
             isLabelHidden
             size="sm"
@@ -619,54 +428,29 @@ function LanguagePanel({ settings, update }: PanelProps) {
     </SettingsCard>
   );
 }
-
-function ApiKeyField({
-  value,
-  label,
-  placeholder,
-  onChange,
-}: {
+function ApiKeyField({ value, label, placeholder, onChange }: {
   value: string;
   label: string;
   placeholder: string;
   onChange: (value: string) => void;
 }) {
   const [draft, setDraft] = useState(value);
-
   useEffect(() => {
     // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
     setDraft(value);
   }, [value]);
-
   const commit = () => {
     if (draft !== value) {
       onChange(draft.trim());
     }
   };
-
-  return (
-    <TextInput
-      label={label}
-      isLabelHidden
-      size="sm"
-      type="password"
-      value={draft}
-      onChange={setDraft}
-      onBlur={commit}
-      onEnter={commit}
-      placeholder={placeholder}
-      hasClear
-      width="var(--settings-control-width)"
-    />
-  );
+  return (<FormInput label={label} isLabelHidden size="sm" type="password" value={draft} onChange={setDraft} onBlur={commit} onEnter={commit} onClear={() => onChange('')} placeholder={placeholder} hasClear width="var(--settings-control-width)" />);
 }
-
 function CapturesSettingsBlock({ settings, update }: PanelProps) {
   const { t } = useI18n();
   const library = settings.library;
   const captures = library.captures;
   const selectedApiKey = captures.fetcher ? captures[captures.fetcher].apiKey : '';
-
   const updateCaptures = (patch: Partial<CaptureSettings>) => {
     update('library', {
       ...library,
@@ -677,7 +461,6 @@ function CapturesSettingsBlock({ settings, update }: PanelProps) {
       },
     });
   };
-
   const setApiKey = (apiKey: string) => {
     if (!captures.fetcher) {
       return;
@@ -686,16 +469,14 @@ function CapturesSettingsBlock({ settings, update }: PanelProps) {
       [captures.fetcher]: { apiKey },
     });
   };
-
   return (
     <SettingsCard title={t('settings.captures')}>
       <SettingsRow
         key="fetcher"
         title={t('settings.capturesFetcher')}
         icon={BugAntIcon}
-        description={t('settings.capturesFetcherDescription')}
         control={(
-          <Selector
+          <SelectField
             label={t('settings.capturesFetcher')}
             isLabelHidden
             size="sm"
@@ -716,30 +497,13 @@ function CapturesSettingsBlock({ settings, update }: PanelProps) {
           />
         )}
       />
-      {captures.fetcher && (
-        <SettingsRow
-          key={`api-key-${captures.fetcher}`}
-          title={t('settings.capturesApiKey')}
-          icon={KeyIcon}
-          description={t('settings.capturesApiKeyDescription')}
-          control={(
-            <ApiKeyField
-              key={captures.fetcher}
-              value={selectedApiKey}
-              label={t('settings.capturesApiKey')}
-              placeholder={t('settings.capturesApiKeyPlaceholder')}
-              onChange={setApiKey}
-            />
-          )}
-        />
-      )}
+      {captures.fetcher && (<SettingsRow key={`api-key-${captures.fetcher}`} title={t('settings.capturesApiKey')} icon={KeyIcon} control={(<ApiKeyField key={captures.fetcher} value={selectedApiKey} label={t('settings.capturesApiKey')} placeholder={t('settings.capturesApiKeyPlaceholder')} onChange={setApiKey} />)} />)}
       <SettingsRow
         key="max-attempts"
         title={t('settings.capturesMaxAttempts')}
         icon={ArrowPathRoundedSquareIcon}
-        description={t('settings.capturesMaxAttemptsDescription')}
         control={(
-          <NumberInput
+          <NumberField
             label={t('settings.capturesMaxAttempts')}
             isLabelHidden
             size="sm"
@@ -759,9 +523,8 @@ function CapturesSettingsBlock({ settings, update }: PanelProps) {
         key="fetch-concurrency"
         title={t('settings.capturesConcurrency')}
         icon={BarsArrowUpIcon}
-        description={t('settings.capturesConcurrencyDescription')}
         control={(
-          <NumberInput
+          <NumberField
             label={t('settings.capturesConcurrency')}
             isLabelHidden
             size="sm"
@@ -780,19 +543,14 @@ function CapturesSettingsBlock({ settings, update }: PanelProps) {
     </SettingsCard>
   );
 }
-
 function LibraryPanel(props: PanelProps) {
   return (
-    <VStack gap={4}>
+    <div className="flex flex-col gap-4">
       <CapturesSettingsBlock {...props} />
-    </VStack>
+    </div>
   );
 }
-
-function AdvancedPanel({
-  configFolderPath,
-  onOpenConfigFolder,
-}: {
+function AdvancedPanel({ configFolderPath, onOpenConfigFolder }: {
   configFolderPath: string;
   onOpenConfigFolder: () => void;
 }) {
@@ -816,10 +574,10 @@ function AdvancedPanel({
   const blockedDescription = t('settings.finishJobsBeforeTransfer');
   const exportDescription = activeJobCount > 0
     ? blockedDescription
-    : t('settings.exportDataDescription');
+    : undefined;
   const importDescription = activeJobCount > 0
     ? blockedDescription
-    : t('settings.importDataDescription');
+    : undefined;
   const chooseImportFile = async () => {
     setIsSelectingImport(true);
     try {
@@ -840,22 +598,17 @@ function AdvancedPanel({
       setIsSelectingImport(false);
     }
   };
-
   return (
     <>
       <SettingsCard>
         <SettingsRow
           title={t('settings.downloadSkill')}
           icon={CommandLineIcon}
-          description={t('settings.downloadSkillDescription')}
           control={(
-            <Button
-              label={t('settings.downloadSkillAction')}
-              icon={<SparklesIcon />}
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsSkillDownloadOpen(true)}
-            />
+            <Button onClick={() => setIsSkillDownloadOpen(true)} variant="ghost" size="sm">
+              <SparklesIcon />
+              <span>{t('settings.downloadSkillAction')}</span>
+            </Button>
           )}
         />
         <SettingsRow
@@ -863,13 +616,10 @@ function AdvancedPanel({
           icon={FolderIcon}
           description={configFolderPath}
           control={(
-            <Button
-              label={t('settings.openConfigFolder')}
-              icon={<FolderOpenIcon />}
-              variant="ghost"
-              size="sm"
-              onClick={onOpenConfigFolder}
-            />
+            <Button onClick={onOpenConfigFolder} variant="ghost" size="sm">
+              <FolderOpenIcon />
+              <span>{t('settings.openConfigFolder')}</span>
+            </Button>
           )}
         />
         <SettingsRow
@@ -877,14 +627,10 @@ function AdvancedPanel({
           icon={ArrowUpTrayIcon}
           description={exportDescription}
           control={(
-            <Button
-              label={t('settings.exportDataAction')}
-              icon={<ArrowUpTrayIcon />}
-              variant="ghost"
-              size="sm"
-              isDisabled={isTransferBlocked}
-              onClick={() => setIsExportOpen(true)}
-            />
+            <Button onClick={() => setIsExportOpen(true)} variant="ghost" size="sm" disabled={isTransferBlocked}>
+              <ArrowUpTrayIcon />
+              <span>{t('settings.exportDataAction')}</span>
+            </Button>
           )}
         />
         <SettingsRow
@@ -893,56 +639,27 @@ function AdvancedPanel({
           description={importDescription}
           control={(
             <Button
-              label={t('settings.importDataAction')}
-              icon={<ArrowDownTrayIcon />}
-              variant="ghost"
-              size="sm"
-              isDisabled={isTransferBlocked || isSelectingImport}
-              isLoading={isSelectingImport}
               onClick={() => {
                 void chooseImportFile();
               }}
-            />
+              variant="ghost"
+              size="sm"
+              disabled={isTransferBlocked || isSelectingImport}
+            >
+              {isSelectingImport && <Spinner />}
+              <ArrowDownTrayIcon />
+              <span>{t('settings.importDataAction')}</span>
+            </Button>
           )}
         />
       </SettingsCard>
-      <DownloadSkillDialog
-        isOpen={isSkillDownloadOpen}
-        onClose={() => setIsSkillDownloadOpen(false)}
-      />
-      {isExportOpen && (
-        <ExportDataDialog
-          onClose={() => setIsExportOpen(false)}
-        />
-      )}
-      {selectedImport && (
-        <ImportDataDialog
-          key={`${selectedImport.fileName}:${selectedImport.file.lastModified}`}
-          file={selectedImport.file}
-          fileName={selectedImport.fileName}
-          onClose={() => setSelectedImport(null)}
-        />
-      )}
+      <DownloadSkillDialog isOpen={isSkillDownloadOpen} onClose={() => setIsSkillDownloadOpen(false)} />
+      {isExportOpen && (<ExportDataDialog onClose={() => setIsExportOpen(false)} />)}
+      {selectedImport && (<ImportDataDialog key={`${selectedImport.fileName}:${selectedImport.file.lastModified}`} file={selectedImport.file} fileName={selectedImport.fileName} onClose={() => setSelectedImport(null)} />)}
     </>
   );
 }
-
-const styles_settings_content_pane = stylex.create({
-  contentTopAligned: {
-    minWidth: 0,
-    paddingInlineStart: 'var(--spacing-4)',
-    paddingInlineEnd: 'var(--spacing-4)',
-    paddingBlockEnd: 'var(--spacing-4)',
-    paddingBlockStart: 0,
-  },
-});
-
-function SettingsContentPane({
-  panel,
-  settings,
-  update,
-  configFolderPath = '',
-}: {
+function SettingsContentPane({ panel, settings, update, configFolderPath = '' }: {
   panel: PanelId;
   configFolderPath?: string;
 } & PanelProps) {
@@ -970,22 +687,16 @@ function SettingsContentPane({
     }
   })();
   return (
-    <LayoutContent isScrollable padding={0} xstyle={styles_settings_content_pane.contentTopAligned}>
-      <VStack
-        gap={4}
-        className={responsive.panel}
-      >
+    <ContentPane isScrollable padding={0} className="min-w-0 px-4 pb-4 pt-0">
+      <div className="@container/settings-panel flex flex-col gap-4">
         {content}
-      </VStack>
-    </LayoutContent>
+      </div>
+    </ContentPane>
   );
 }
-
 export default function SettingsPage() {
   const [searchParams] = useSearchParams();
-  const [activePanel, setActivePanel] = useState<PanelId>(
-    searchParams.get('panel') === 'library' ? 'library' : DEFAULT_PANEL,
-  );
+  const [activePanel, setActivePanel] = useState<PanelId>(searchParams.get('panel') === 'library' ? 'library' : DEFAULT_PANEL);
   const { settings, configFolderPath, update } = useSettings();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const search = useSettingsSearch(setActivePanel);
@@ -995,7 +706,7 @@ export default function SettingsPage() {
     setIsSearchOpen(false);
   };
   return (
-    <div className={responsive.layout}>
+    <div className="grid h-full min-h-0 grid-cols-[260px_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] max-[680px]:grid-cols-1 max-[680px]:grid-rows-[auto_minmax(0,1fr)]">
       <SettingsSideNav
         search={search}
         activePanel={activePanel}
@@ -1005,17 +716,8 @@ export default function SettingsPage() {
           setIsSearchOpen(true);
         }}
       />
-      <SettingsSearchDialog
-        isOpen={isSearchOpen}
-        onSelectPanel={selectPanel}
-        onClose={() => setIsSearchOpen(false)}
-      />
-      <SettingsContentPane
-        panel={activePanel}
-        settings={settings}
-        update={update}
-        configFolderPath={configFolderPath}
-      />
+      <SettingsSearchDialog isOpen={isSearchOpen} onSelectPanel={selectPanel} onClose={() => setIsSearchOpen(false)} />
+      <SettingsContentPane panel={activePanel} settings={settings} update={update} configFolderPath={configFolderPath} />
     </div>
   );
 }

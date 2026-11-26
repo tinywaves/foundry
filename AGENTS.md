@@ -42,8 +42,8 @@ app/web/
 |-- src/i18n/              Translations and locale providers
 |-- src/lib/               Browser helpers and query client
 |-- src/shared/            Browser-side contracts shared by Web features
-|-- src/layer-order.css    StyleX layer precedence
-`-- vite.config.ts         Vite, Astryx/StyleX, and development proxy
+|-- src/styles/globals.css shadcn preset tokens and Tailwind entry
+`-- vite.config.ts         Vite, Tailwind CSS, and development proxy
 
 src/
 |-- cli/
@@ -113,18 +113,18 @@ Keep CLI and server responsibilities separate:
 
 ## Web UI Rules
 
-- The active Web UI lives in `app/web` and uses React, Vite, Astryx, and StyleX.
+- The active Web UI lives in `app/web` and uses React, Vite, Tailwind CSS v4,
+  and shadcn/ui with preset `b27GcrRo` (`base-rhea`, neutral, Inter, Lucide).
 - Keep feature code under `app/web/src/features`; each feature owns its pages,
-  dialogs, adapters, types, and local styling.
-- Keep the shell, navigation, titlebar, and hash router in
-  `app/web/src/app.tsx`.
-- Use Vite plus the official `@stylexjs/unplugin`. Do not add a custom StyleX
-  runtime, compatibility injector, or Rsbuild integration.
-- Keep `src/layer-order.css` as the first CSS import in
-  `app/web/src/index.tsx`. Vite otherwise emits Astryx layers before StyleX
-  priority layers and breaks low-specificity rules such as hover backgrounds.
-- Preserve the Astryx visual language. The Electron renderer is the visual
-  reference, but do not copy its directory structure or native window APIs.
+  dialogs, adapters, and types.
+- Keep the shell, navigation, titlebar, and hash router in `app/web/src/app.tsx`.
+- Generate shadcn components into `app/web/src/components/ui`; this directory and
+  the generated `app/web/src/hooks/use-mobile.ts` are excluded from ESLint.
+  Application components and business code must still pass ESLint.
+- Use the official `@tailwindcss/vite` plugin. Keep preset tokens and the CSS
+  entry in `app/web/src/styles/globals.css`; use Tailwind for business styling.
+- Preserve existing page composition, responsive behavior, interactions, and
+  business rules. Component appearance follows the preset.
 - Do not reintroduce Electron-only titlebar drag regions or macOS traffic-light
   padding into the Web UI.
 - Do not introduce Next.js. The Web UI is a client-side React application.

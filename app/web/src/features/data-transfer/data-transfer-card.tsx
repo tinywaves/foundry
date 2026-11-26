@@ -1,39 +1,16 @@
+import { Spinner } from '@/components/ui/spinner';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { FormInput, Modal, PanelLayout, ModalHeader, ContentPane, IconGlyph, Footer } from '@/components/workbench';
 import { useState } from 'react';
-import { LockClosedIcon } from '@heroicons/react/24/outline';
-import { Button } from '@astryxdesign/core/Button';
-import { Card } from '@astryxdesign/core/Card';
-import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
-import { Icon } from '@astryxdesign/core/Icon';
-import {
-  Layout,
-  LayoutContent,
-  LayoutFooter,
-} from '@astryxdesign/core/Layout';
-import { Spinner } from '@astryxdesign/core/Spinner';
-import { HStack, VStack } from '@astryxdesign/core/Stack';
-import { Text } from '@astryxdesign/core/Text';
-import { TextInput } from '@astryxdesign/core/TextInput';
+import { LockKeyhole as LockClosedIcon } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
-import {
-  cancelImport,
-  commitImport,
-  exportData,
-  inspectImport,
-  restartApp,
-} from './api';
+import { cancelImport, commitImport, exportData, inspectImport, restartApp } from './api';
 import type { ImportPreview } from './types';
 import { useAppToast } from '../../lib/api';
 import { useI18n, dataTransferErrorKey } from '../../i18n';
-import responsive from './data-transfer-card.module.css';
 
-function PassphraseFields({
-  passphrase,
-  confirmation,
-  onPassphraseChange,
-  onConfirmationChange,
-  onEnter,
-  isDisabled,
-}: {
+function PassphraseFields({ passphrase, confirmation, onPassphraseChange, onConfirmationChange, onEnter, isDisabled }: {
   passphrase: string;
   confirmation: string;
   onPassphraseChange: (value: string) => void;
@@ -43,21 +20,9 @@ function PassphraseFields({
 }) {
   const { t } = useI18n();
   return (
-    <VStack gap={3}>
-      <TextInput
-        label={t('dataTransfer.passphrase')}
-        description={t('dataTransfer.passphraseDescription')}
-        type="password"
-        size="sm"
-        width="100%"
-        value={passphrase}
-        onChange={onPassphraseChange}
-        isDisabled={isDisabled}
-        isRequired
-        hasAutoFocus
-        autoComplete="new-password"
-      />
-      <TextInput
+    <div className="flex flex-col gap-3">
+      <FormInput label={t('dataTransfer.passphrase')} description={t('dataTransfer.passphraseDescription')} type="password" size="sm" width="100%" value={passphrase} onChange={onPassphraseChange} isDisabled={isDisabled} isRequired hasAutoFocus autoComplete="new-password" />
+      <FormInput
         label={t('dataTransfer.confirmPassphrase')}
         type="password"
         size="sm"
@@ -72,20 +37,16 @@ function PassphraseFields({
           : undefined}
         autoComplete="new-password"
       />
-    </VStack>
+    </div>
   );
 }
-
-export function ExportDataDialog({
-  onClose,
-}: {
+export function ExportDataDialog({ onClose }: {
   onClose: () => void;
 }) {
   const { t } = useI18n();
   const toast = useAppToast();
   const [passphrase, setPassphrase] = useState('');
   const [confirmation, setConfirmation] = useState('');
-
   const mutation = useMutation({
     mutationFn: () => exportData(passphrase),
     onSuccess: (result) => {
@@ -111,16 +72,14 @@ export function ExportDataDialog({
       });
     },
   });
-
   const submit = () => {
     if (passphrase !== confirmation || passphrase.length === 0 || mutation.isPending) {
       return;
     }
     mutation.mutate();
   };
-
   return (
-    <Dialog
+    <Modal
       isOpen
       onOpenChange={(isOpen) => {
         if (!isOpen && !mutation.isPending) {
@@ -131,9 +90,9 @@ export function ExportDataDialog({
       padding={5}
       purpose="form"
     >
-      <Layout
+      <PanelLayout
         header={(
-          <DialogHeader
+          <ModalHeader
             title={t('dataTransfer.exportTitle')}
             subtitle={t('dataTransfer.exportSubtitle')}
             onOpenChange={() => {
@@ -144,67 +103,49 @@ export function ExportDataDialog({
           />
         )}
         content={(
-          <LayoutContent>
-            <VStack gap={5}>
-              <PassphraseFields
-                passphrase={passphrase}
-                confirmation={confirmation}
-                onPassphraseChange={setPassphrase}
-                onConfirmationChange={setConfirmation}
-                onEnter={submit}
-                isDisabled={mutation.isPending}
-              />
-              <Card padding={2} variant="muted">
-                <HStack gap={2} align="start">
-                  <Icon icon={LockClosedIcon} size="sm" color="secondary" />
-                  <Text type="supporting" color="secondary">
+          <ContentPane>
+            <div className="flex flex-col gap-5">
+              <PassphraseFields passphrase={passphrase} confirmation={confirmation} onPassphraseChange={setPassphrase} onConfirmationChange={setConfirmation} onEnter={submit} isDisabled={mutation.isPending} />
+              <Card className="p-2">
+                <div className="flex flex-row items-start gap-2">
+                  <IconGlyph icon={LockClosedIcon} className="size-4 shrink-0" />
+                  <span className="text-xs text-muted-foreground">
                     {t('dataTransfer.passphraseWarning')}
-                  </Text>
-                </HStack>
+                  </span>
+                </div>
               </Card>
-            </VStack>
-          </LayoutContent>
+            </div>
+          </ContentPane>
         )}
         footer={(
-          <LayoutFooter>
-            <HStack gap={2} hAlign="end" className={responsive.actions}>
-              <Button
-                label={t('dataTransfer.cancel')}
-                variant="ghost"
-                size="sm"
-                isDisabled={mutation.isPending}
-                onClick={onClose}
-              />
-              <Button
-                label={t('dataTransfer.exportAction')}
-                variant="primary"
-                size="sm"
-                isLoading={mutation.isPending}
-                isDisabled={passphrase !== confirmation || passphrase.length === 0}
-                onClick={submit}
-              />
-            </HStack>
-          </LayoutFooter>
+          <Footer>
+            <div className="max-[480px]:flex-col-reverse max-[480px]:items-stretch max-[480px]:[&>button]:w-full max-[480px]:[&>button]:min-h-11 flex flex-row justify-end gap-2">
+              <Button onClick={onClose} variant="ghost" size="sm" disabled={mutation.isPending}>
+                <span>{t('dataTransfer.cancel')}</span>
+              </Button>
+              <Button onClick={submit} variant="default" size="sm" disabled={passphrase !== confirmation || passphrase.length === 0 || mutation.isPending}>
+                {mutation.isPending && <Spinner />}
+                <span>{t('dataTransfer.exportAction')}</span>
+              </Button>
+            </div>
+          </Footer>
         )}
       />
-    </Dialog>
+    </Modal>
   );
 }
-
-function PreviewRow({ label, value }: { label: string; value: string | number }) {
+function PreviewRow({ label, value }: {
+  label: string;
+  value: string | number;
+}) {
   return (
-    <HStack gap={2}>
-      <Text type="supporting" color="secondary">{label}</Text>
-      <Text type="label">{String(value)}</Text>
-    </HStack>
+    <div className="flex flex-row gap-2">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium">{String(value)}</span>
+    </div>
   );
 }
-
-export function ImportDataDialog({
-  file,
-  fileName,
-  onClose,
-}: {
+export function ImportDataDialog({ file, fileName, onClose }: {
   file: File;
   fileName: string;
   onClose: () => void;
@@ -216,7 +157,6 @@ export function ImportDataDialog({
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [step, setStep] = useState<'passphrase' | 'preview' | 'importing' | 'complete'>('passphrase');
   const [isRestarting, setIsRestarting] = useState(false);
-
   const inspectMutation = useMutation({
     mutationFn: () => inspectImport(file, passphrase),
     onSuccess: (result) => {
@@ -240,7 +180,6 @@ export function ImportDataDialog({
       });
     },
   });
-
   const commitMutation = useMutation({
     mutationFn: (importId: string) => commitImport(importId),
     onSuccess: (result) => {
@@ -264,7 +203,6 @@ export function ImportDataDialog({
       setStep('preview');
     },
   });
-
   const isPassphraseReady = passphrase === confirmation
     && passphrase.length > 0;
   const isBlocking = step === 'importing' || step === 'complete';
@@ -298,7 +236,6 @@ export function ImportDataDialog({
       setIsRestarting(false);
     }
   };
-
   const title = (() => {
     switch (step) {
       case 'passphrase': {
@@ -315,16 +252,14 @@ export function ImportDataDialog({
       }
     }
   })();
-
   const exportedAt = preview
     ? new Intl.DateTimeFormat(locale, {
         dateStyle: 'medium',
         timeStyle: 'short',
       }).format(new Date(preview.exportedAt))
     : '';
-
   return (
-    <Dialog
+    <Modal
       isOpen
       onOpenChange={(isOpen) => {
         if (!isOpen) {
@@ -335,120 +270,90 @@ export function ImportDataDialog({
       padding={5}
       purpose={isBlocking ? 'required' : 'form'}
     >
-      <Layout
-        header={(
-          <DialogHeader
-            title={title}
-            subtitle={fileName}
-            onOpenChange={isBlocking ? undefined : close}
-          />
-        )}
+      <PanelLayout
+        header={(<ModalHeader title={title} subtitle={fileName} onOpenChange={isBlocking ? undefined : close} />)}
         content={(
-          <LayoutContent>
+          <ContentPane>
             {step === 'passphrase' && (
-              <VStack gap={4}>
-                <PassphraseFields
-                  passphrase={passphrase}
-                  confirmation={confirmation}
-                  onPassphraseChange={setPassphrase}
-                  onConfirmationChange={setConfirmation}
-                  onEnter={inspect}
-                  isDisabled={inspectMutation.isPending}
-                />
-                <Card padding={3} variant="muted">
-                  <Text type="supporting" color="secondary">
+              <div className="flex flex-col gap-4">
+                <PassphraseFields passphrase={passphrase} confirmation={confirmation} onPassphraseChange={setPassphrase} onConfirmationChange={setConfirmation} onEnter={inspect} isDisabled={inspectMutation.isPending} />
+                <Card className="p-3">
+                  <span className="text-xs text-muted-foreground">
                     {t('dataTransfer.importPassphraseDescription')}
-                  </Text>
+                  </span>
                 </Card>
-              </VStack>
+              </div>
             )}
             {step === 'preview' && preview && (
-              <VStack gap={4}>
-                <Card padding={3} variant="muted">
-                  <VStack gap={2}>
+              <div className="flex flex-col gap-4">
+                <Card className="p-3">
+                  <div className="flex flex-col gap-2">
                     <PreviewRow label={t('dataTransfer.exportedAt')} value={exportedAt} />
                     <PreviewRow label={t('dataTransfer.appVersion')} value={preview.appVersion} />
                     <PreviewRow label={t('dataTransfer.schemaVersion')} value={preview.dataFormatVersion} />
                     <PreviewRow label={t('dataTransfer.providers')} value={preview.providerCount} />
                     <PreviewRow label={t('dataTransfer.captures')} value={preview.captureCount} />
                     <PreviewRow label={t('dataTransfer.jobs')} value={preview.jobCount} />
-                  </VStack>
+                  </div>
                 </Card>
-                <Text type="supporting" color="secondary">
+                <span className="text-xs text-muted-foreground">
                   {t('dataTransfer.replaceWarning')}
-                </Text>
-              </VStack>
+                </span>
+              </div>
             )}
             {step === 'importing' && (
-              <VStack hAlign="center" vAlign="center" gap={4} paddingBlock={8}>
-                <Spinner size="lg" label={t('dataTransfer.importingDescription')} />
-                <Text type="supporting" color="secondary">
+              <div className="flex flex-col items-center justify-center gap-4 py-8">
+                <Spinner aria-label={t('dataTransfer.importingDescription')} />
+                <span className="text-xs text-muted-foreground">
                   {t('dataTransfer.importingHint')}
-                </Text>
-              </VStack>
+                </span>
+              </div>
             )}
             {step === 'complete' && (
-              <VStack gap={3}>
-                <Text>{t('dataTransfer.restartDescription')}</Text>
-                <Text type="supporting" color="secondary">
+              <div className="flex flex-col gap-3">
+                <span>{t('dataTransfer.restartDescription')}</span>
+                <span className="text-xs text-muted-foreground">
                   {t('dataTransfer.restartHint')}
-                </Text>
-              </VStack>
+                </span>
+              </div>
             )}
-          </LayoutContent>
+          </ContentPane>
         )}
         footer={(
-          <LayoutFooter>
+          <Footer>
             {step === 'passphrase' && (
-              <HStack gap={2} hAlign="end" className={responsive.actions}>
-                <Button
-                  label={t('dataTransfer.cancel')}
-                  variant="ghost"
-                  size="sm"
-                  isDisabled={inspectMutation.isPending}
-                  onClick={close}
-                />
-                <Button
-                  label={t('dataTransfer.inspectAction')}
-                  variant="primary"
-                  size="sm"
-                  isLoading={inspectMutation.isPending}
-                  isDisabled={!isPassphraseReady}
-                  onClick={inspect}
-                />
-              </HStack>
+              <div className="max-[480px]:flex-col-reverse max-[480px]:items-stretch max-[480px]:[&>button]:w-full max-[480px]:[&>button]:min-h-11 flex flex-row justify-end gap-2">
+                <Button onClick={close} variant="ghost" size="sm" disabled={inspectMutation.isPending}>
+                  <span>{t('dataTransfer.cancel')}</span>
+                </Button>
+                <Button onClick={inspect} variant="default" size="sm" disabled={!isPassphraseReady || inspectMutation.isPending}>
+                  {inspectMutation.isPending && <Spinner />}
+                  <span>{t('dataTransfer.inspectAction')}</span>
+                </Button>
+              </div>
             )}
             {step === 'preview' && (
-              <HStack gap={2} hAlign="end" className={responsive.actions}>
-                <Button
-                  label={t('dataTransfer.cancel')}
-                  variant="ghost"
-                  size="sm"
-                  onClick={close}
-                />
-                <Button
-                  label={t('dataTransfer.importAction')}
-                  variant="destructive"
-                  size="sm"
-                  isLoading={commitMutation.isPending}
-                  onClick={commit}
-                />
-              </HStack>
+              <div className="max-[480px]:flex-col-reverse max-[480px]:items-stretch max-[480px]:[&>button]:w-full max-[480px]:[&>button]:min-h-11 flex flex-row justify-end gap-2">
+                <Button onClick={close} variant="ghost" size="sm">
+                  <span>{t('dataTransfer.cancel')}</span>
+                </Button>
+                <Button onClick={commit} variant="destructive" size="sm" disabled={commitMutation.isPending}>
+                  {commitMutation.isPending && <Spinner />}
+                  <span>{t('dataTransfer.importAction')}</span>
+                </Button>
+              </div>
             )}
             {step === 'complete' && (
-              <HStack gap={2} hAlign="end" className={responsive.actions}>
-                <Button
-                  label={t('dataTransfer.restartAction')}
-                  variant="primary"
-                  size="sm"
-                  isLoading={isRestarting}
-                  onClick={restart}
-                />
-              </HStack>
+              <div className="max-[480px]:flex-col-reverse max-[480px]:items-stretch max-[480px]:[&>button]:w-full max-[480px]:[&>button]:min-h-11 flex flex-row justify-end gap-2">
+                <Button onClick={restart} variant="default" size="sm" disabled={isRestarting}>
+                  {isRestarting && <Spinner />}
+                  <span>{t('dataTransfer.restartAction')}</span>
+                </Button>
+              </div>
             )}
-          </LayoutFooter>
+          </Footer>
         )}
       />
-    </Dialog>
+    </Modal>
   );
 }

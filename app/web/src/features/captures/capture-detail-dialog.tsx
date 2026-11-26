@@ -1,44 +1,27 @@
+import { useTheme } from 'next-themes';
+import { Card } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Heading, EmptyMessage } from '@/components/workbench';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { ArrowPathIcon } from '@heroicons/react/24/outline';
-import { Card } from '@astryxdesign/core/Card';
-import { Divider } from '@astryxdesign/core/Divider';
-import { EmptyState } from '@astryxdesign/core/EmptyState';
-import { IconButton } from '@astryxdesign/core/IconButton';
-import { Link } from '@astryxdesign/core/Link';
-import { Skeleton } from '@astryxdesign/core/Skeleton';
-import { HStack, StackItem, VStack } from '@astryxdesign/core/Stack';
-import { Heading, Text } from '@astryxdesign/core/Text';
-import { useTheme } from '@astryxdesign/core/theme';
-import * as stylex from '@stylexjs/stylex';
+import { RefreshCw as ArrowPathIcon } from 'lucide-react';
 import ReactJsonView from '@microlink/react-json-view';
-import {
-  captureKeys,
-  getCapture,
-} from './api';
+import { captureKeys, getCapture } from './api';
 import { useI18n } from '../../i18n';
 import { TitlebarActions } from '../../components/titlebar-actions';
-
-const styles = stylex.create({
-  jsonViewport: {
-    height: '100%',
-    minHeight: 0,
-    fontFamily: 'ui-monospace, "SF Mono", Monaco, Consolas, "Liberation Mono", monospace',
-    fontSize: '13px',
-  },
-});
 
 export default function CaptureDetailDialog() {
   const { captureId = '' } = useParams();
   const queryClient = useQueryClient();
   const { t } = useI18n();
-  const { mode } = useTheme();
+  const { resolvedTheme: mode } = useTheme();
   const detailQuery = useQuery({
     queryKey: captureKeys.detail(captureId),
     queryFn: () => getCapture(captureId),
     enabled: Boolean(captureId),
   });
-
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: captureKeys.detail(captureId) });
   };
@@ -47,69 +30,49 @@ export default function CaptureDetailDialog() {
     && typeof detail.rawResponse === 'object'
     ? detail.rawResponse
     : null;
-
   return (
     <>
       <TitlebarActions>
-        <HStack gap={2} vAlign="center">
-          <IconButton
-            label={t('captures.refresh')}
-            tooltip={t('captures.refresh')}
-            icon={<ArrowPathIcon />}
-            size="sm"
-            variant="ghost"
-            onClick={refresh}
-          />
-        </HStack>
+        <div className="flex flex-row items-center gap-2">
+          <Button onClick={refresh} variant="ghost" size="icon-sm" aria-label={t('captures.refresh')} title={t('captures.refresh')}>
+            <ArrowPathIcon />
+          </Button>
+        </div>
       </TitlebarActions>
       {detailQuery.isPending
         ? (
-            <VStack gap={3} width="100%">
-              <Skeleton width={280} height={30} />
-              <Skeleton width={420} height={18} index={1} />
-              <Skeleton width="100%" height={280} radius={2} index={2} />
-            </VStack>
+            <div className="flex flex-col gap-3 w-full">
+              <Skeleton className="w-[280px] h-[30px]" />
+              <Skeleton className="w-[420px] h-[18px]" />
+              <Skeleton className="w-full h-[280px]" />
+            </div>
           )
         : (detail
             ? (
-                <VStack gap={5} width="100%" height="100%">
-                  <VStack gap={2}>
+                <div className="flex flex-col gap-5 w-full h-full">
+                  <div className="flex flex-col gap-2">
                     <Heading level={1}>
                       {detail.capture.title || t('navigation.captureDetails')}
                     </Heading>
-                    <Link
-                      href={detail.capture.url}
-                      isExternalLink
-                      type="supporting"
-                      display="block"
-                      maxLines={2}
-                    >
+                    <a href={detail.capture.url} className="text-primary underline-offset-4 hover:underline break-all">
                       {detail.capture.url}
-                    </Link>
-                    <HStack gap={4} wrap="wrap">
-                      <Text type="supporting">
+                    </a>
+                    <div className="flex flex-row flex-wrap gap-4">
+                      <span className="text-xs text-muted-foreground">
                         {`${t('captures.createdAt')}: ${detail.capture.createdAt}`}
-                      </Text>
-                      <Text type="supporting">
+                      </span>
+                      <span className="text-xs text-muted-foreground">
                         {`${t('captures.updatedAt')}: ${detail.capture.updatedAt}`}
-                      </Text>
-                    </HStack>
-                    {detail.capture.userNote && (
-                      <Text color="secondary">{detail.capture.userNote}</Text>
-                    )}
-                  </VStack>
-                  <Divider />
+                      </span>
+                    </div>
+                    {detail.capture.userNote && (<span className="text-muted-foreground">{detail.capture.userNote}</span>)}
+                  </div>
+                  <Separator />
                   {rawResponse
                     ? (
-                        <StackItem size="fill">
-                          <Card width="100%" height="100%" padding={5} variant="muted">
-                            <VStack
-                              width="100%"
-                              height="100%"
-                              minHeight={0}
-                              isScrollable
-                              xstyle={styles.jsonViewport}
-                            >
+                        <div className="min-w-0 flex-1">
+                          <Card className="p-5 w-full h-full">
+                            <div className="h-full min-h-0 font-mono text-[13px] flex flex-col w-full overflow-auto">
                               <ReactJsonView
                                 src={rawResponse}
                                 name={false}
@@ -131,21 +94,14 @@ export default function CaptureDetailDialog() {
                                   backgroundColor: 'transparent',
                                 }}
                               />
-                            </VStack>
+                            </div>
                           </Card>
-                        </StackItem>
+                        </div>
                       )
-                    : (
-                        <EmptyState
-                          title={t('captures.noResponseTitle')}
-                          description={t('captures.noResponseDescription')}
-                        />
-                      )}
-                </VStack>
+                    : (<EmptyMessage title={t('captures.noResponseTitle')} description={t('captures.noResponseDescription')} />)}
+                </div>
               )
-            : (
-                <EmptyState title={t('captures.detailUnavailable')} />
-              ))}
+            : (<EmptyMessage title={t('captures.detailUnavailable')} />))}
     </>
   );
 }

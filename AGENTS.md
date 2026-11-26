@@ -41,9 +41,10 @@ app/web/
 |-- src/components/        Shared feature-level UI
 |-- src/i18n/              Translations and locale providers
 |-- src/lib/               Browser helpers and query client
-|-- src/shared/            Browser-side contracts shared by Web features
 |-- src/styles/globals.css shadcn preset tokens and Tailwind entry
 `-- vite.config.ts         Vite, Tailwind CSS, and development proxy
+
+packages/shared/           Private contracts shared by server and Web
 
 src/
 |-- cli/
@@ -102,6 +103,8 @@ Keep CLI and server responsibilities separate:
   automatically. Do not log keys or expose them outside API responses.
 - Keep capture job execution and retries in `FetchJobRunner`, not in route
   handlers.
+- Keep contracts shared by the server and Web UI in `packages/shared`; do not
+  duplicate API payload or settings types in either app.
 - Skill copy targets are fixed user-level keys: `agents` maps to
   `<home>/.agents/skills/foundry`, and `claude` maps to
   `<home>/.claude/skills/foundry`, where `<home>` is `os.homedir()` (`~` on
@@ -202,7 +205,7 @@ editing files there.
 After changing active source files:
 
 ```bash
-pnpm exec eslint src app/web/src app/web/vite.config.ts vitest.config.ts tsdown.config.ts package.json
+pnpm exec eslint src app/web/src packages/shared/src app/web/vite.config.ts vitest.config.ts tsdown.config.ts package.json
 pnpm --filter web exec tsc --noEmit
 pnpm build
 pnpm test

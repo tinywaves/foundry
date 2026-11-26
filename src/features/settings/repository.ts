@@ -1,6 +1,11 @@
+import type {
+  FoundrySettings,
+  PublicSettings,
+  SettingsPatch,
+} from '@dhzh/foundry-shared';
+
 import type { FoundryStorage } from '../../storage/store';
 import { applySettingsPatch, normalizeSettings, toPublicSettings } from './contracts';
-import type { FoundrySettings, PublicSettings, SettingsPatch } from './contracts';
 
 export function readStoredSettings(storage: FoundryStorage): FoundrySettings {
   return storage.readSettings();

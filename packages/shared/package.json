@@ -1,0 +1,13 @@
+{
+  "name": "@dhzh/foundry-shared",
+  "description": "Shared Foundry contracts used by the server and Web UI",
+  "version": "0.0.0",
+  "packageManager": "pnpm@12.15.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  }
+}

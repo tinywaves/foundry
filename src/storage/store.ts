@@ -2,8 +2,10 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+
+import type { FoundrySettings } from '@dhzh/foundry-shared';
+
 import { DEFAULT_SETTINGS, normalizeSettings } from '../features/settings/contracts';
-import type { FoundrySettings } from '../features/settings/contracts';
 import { privateDirectory, syncDirectory, writeJsonAtomic } from './files';
 import { STORAGE_FORMAT_VERSION } from './models';
 import type { Collections, StorageSnapshot } from './models';

@@ -1,6 +1,5 @@
+import type { SettingsPayload, ThemeMode } from '@dhzh/foundry-shared';
 import { createContext, use } from 'react';
-
-import type { SettingsPayload, ThemeMode } from '../../shared/settings';
 
 export interface SettingsContextValue {
   settings: SettingsPayload | null;

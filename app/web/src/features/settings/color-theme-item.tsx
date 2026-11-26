@@ -1,7 +1,8 @@
+import type { ThemeMode } from '@dhzh/foundry-shared';
+
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 
-import type { ThemeMode } from '../../shared/settings';
 import { SettingsItem } from './settings-item';
 
 const themeOptions: Array<{ value: ThemeMode; label: string }> = [

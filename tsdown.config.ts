@@ -13,6 +13,9 @@ export default defineConfig({
     },
   ],
   dts: false,
+  deps: {
+    alwaysBundle: ['@dhzh/foundry-shared'],
+  },
   minify: true,
   target: false,
   banner: { js: '#!/usr/bin/env node' },

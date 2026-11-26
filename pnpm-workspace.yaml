@@ -4,6 +4,7 @@ allowBuilds:
 minimumReleaseAge: 0
 packages:
   - app/*
+  - packages/*
 catalog:
   '@types/node': ^26.6.5
   typescript: ^6.0.3

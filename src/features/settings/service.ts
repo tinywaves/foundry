@@ -1,12 +1,9 @@
+import type { SettingsPatch, SettingsPayload } from '@dhzh/foundry-shared';
+
 import { openPath } from '../../lib/open-path';
 import type { FoundryStorage } from '../../storage/index';
 import { getFoundryHomePath } from '../../storage/paths';
-import type { PublicSettings, SettingsPatch } from './contracts';
 import { readSettings, updateSettings } from './repository';
-
-export interface SettingsPayload extends PublicSettings {
-  configFolder: string;
-}
 
 export class SettingsService {
   constructor(

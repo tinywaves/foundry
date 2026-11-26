@@ -1,4 +1,4 @@
-import type { FoundrySettings } from '../features/settings/contracts';
+import type { FoundrySettings } from '@dhzh/foundry-shared';
 import type { StoredJobConfig } from '../features/captures/contracts';
 import type { ProviderInput } from '../features/providers/contracts';
 

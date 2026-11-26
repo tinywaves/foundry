@@ -1,4 +1,4 @@
-import type { SettingsPayload, ThemeMode } from '../../shared/settings';
+import type { SettingsPayload, ThemeMode } from '@dhzh/foundry-shared';
 
 const settingsPath = '/api/settings';
 

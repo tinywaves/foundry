@@ -1,3 +1,4 @@
+import type { SettingsPayload, ThemeMode } from '@dhzh/foundry-shared';
 import {
   useCallback,
   useEffect,
@@ -7,7 +8,6 @@ import {
 } from 'react';
 import type { PropsWithChildren } from 'react';
 
-import type { SettingsPayload, ThemeMode } from '../../shared/settings';
 import { getSettings, setTheme as setThemeRequest } from './api';
 import { SettingsContext } from './settings-context';
 import type { SettingsContextValue } from './settings-context';

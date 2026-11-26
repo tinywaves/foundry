@@ -1,4 +1,4 @@
-import type { FetcherType } from '../settings/contracts';
+import type { FetcherType } from '@dhzh/foundry-shared';
 
 export type CaptureFilter = 'all' | 'no-successful';
 export type FetchJobStatus = 'pending' | 'running' | 'succeeded' | 'failed';

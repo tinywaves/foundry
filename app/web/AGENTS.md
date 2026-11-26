@@ -11,7 +11,8 @@ components to use their preset appearance.
 - Keep the app shell, navigation, titlebar, and router in `src/app.tsx`.
 - Keep `src/components` limited to shared feature-level UI.
 - Keep browser helpers under `src/lib` and translations under `src/i18n`.
-- Keep shared renderer contracts in `src/shared`.
+- Import contracts shared with the server from `@dhzh/foundry-shared`; do not
+  recreate a browser-local copy.
 - Generate shadcn components into `src/components/ui`. Keep generated components
   and `src/hooks/use-mobile.ts` excluded from ESLint; lint application code.
 - Use Tailwind CSS v4 through `@tailwindcss/vite`; keep preset tokens and global

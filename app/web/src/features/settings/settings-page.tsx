@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { ColorThemeItem } from './color-theme-item';
 import { LanguageItem } from './language-item';
 import { useSettings } from './settings-context';
+import { TimeZoneItem } from './time-zone-item';
 
 import type { TranslationKey } from '@/i18n/resources';
 import type { LucideIcon } from 'lucide-react';
@@ -49,11 +50,13 @@ export function SettingsPage() {
     settings,
     theme,
     language,
+    timeZone,
     isLoading,
     isUpdating,
     error,
     setTheme,
     setLanguage,
+    setTimeZone,
   } = useSettings();
   const activeSectionAria = settingsSections.find(
     (section) => section.id === activeSection,
@@ -131,13 +134,22 @@ export function SettingsPage() {
                       />
                     )
                   : (
-                      <LanguageItem
-                        value={language}
-                        onValueChange={(nextLanguage) => {
-                          void setLanguage(nextLanguage);
-                        }}
-                        disabled={isUpdating || !settings}
-                      />
+                      <div className="divide-y">
+                        <LanguageItem
+                          value={language}
+                          onValueChange={(nextLanguage) => {
+                            void setLanguage(nextLanguage);
+                          }}
+                          disabled={isUpdating || !settings}
+                        />
+                        <TimeZoneItem
+                          value={timeZone}
+                          onValueChange={(nextTimeZone) => {
+                            void setTimeZone(nextTimeZone);
+                          }}
+                          disabled={isUpdating || !settings}
+                        />
+                      </div>
                     )
               )}
         </div>

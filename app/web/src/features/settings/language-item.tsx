@@ -46,7 +46,7 @@ export function LanguageItem({
       >
         <SelectTrigger
           aria-label={t('settings.language')}
-          className="w-44"
+          className="w-52"
         >
           <SelectValue />
         </SelectTrigger>

@@ -2,6 +2,7 @@ import type {
   LanguageMode,
   SettingsPayload,
   ThemeMode,
+  TimeZoneCode,
 } from '@dhzh/foundry-shared';
 import {
   useCallback,
@@ -35,6 +36,9 @@ export function SettingsProvider({ children }: PropsWithChildren) {
   const theme = settings?.workspace.appearance['color-theme'] ?? 'system';
   const language
     = settings?.workspace['language-region'].language ?? 'system';
+  const timeZone
+    = settings?.workspace['language-region']['time-zone']
+      ?? 'America/Los_Angeles';
   const resolvedLanguage = language === 'system'
     ? getSystemLanguage()
     : language;
@@ -150,15 +154,46 @@ export function SettingsProvider({ children }: PropsWithChildren) {
     }
   }, [isUpdating, language, settings]);
 
+  const updateTimeZone = useCallback(async (nextTimeZone: TimeZoneCode) => {
+    if (!settings || isUpdating || nextTimeZone === timeZone) {
+      return;
+    }
+
+    const previousSettings = settings;
+    setErrorKey(null);
+    setIsUpdating(true);
+    setSettings({
+      ...settings,
+      workspace: {
+        ...settings.workspace,
+        'language-region': {
+          ...settings.workspace['language-region'],
+          'time-zone': nextTimeZone,
+        },
+      },
+    });
+
+    try {
+      setSettings(await updateSettings({ timezone: nextTimeZone }));
+    } catch {
+      setSettings(previousSettings);
+      setErrorKey('settings.errors.timeZone');
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [isUpdating, settings, timeZone]);
+
   const value = useMemo<SettingsContextValue>(() => ({
     settings,
     theme,
     language,
+    timeZone,
     isLoading,
     isUpdating,
     error: errorKey ? t(errorKey) : null,
     setTheme: updateTheme,
     setLanguage: updateLanguage,
+    setTimeZone: updateTimeZone,
   }), [
     errorKey,
     isLoading,
@@ -167,8 +202,10 @@ export function SettingsProvider({ children }: PropsWithChildren) {
     settings,
     t,
     theme,
+    timeZone,
     updateLanguage,
     updateTheme,
+    updateTimeZone,
   ]);
 
   return (

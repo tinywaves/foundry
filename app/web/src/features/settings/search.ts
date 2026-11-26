@@ -8,6 +8,10 @@ export function useSettingsSearch(onSelectPanel: (panel: PanelId) => void) {
   const { t } = useI18n();
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  const setSearchQuery = (value: string) => {
+    setQuery(value);
+    setActiveIndex(0);
+  };
   const normalized = query.trim().toLowerCase();
   const isActive = normalized.length > 0;
   const results = useMemo(
@@ -20,7 +24,7 @@ export function useSettingsSearch(onSelectPanel: (panel: PanelId) => void) {
   const onKeyDown: ComponentProps<'input'>['onKeyDown'] = (event) => {
     if (query && event.key === 'Escape') {
       event.preventDefault();
-      setQuery('');
+      setSearchQuery('');
       return;
     }
     if (!isActive || results.length === 0) {
@@ -40,6 +44,7 @@ export function useSettingsSearch(onSelectPanel: (panel: PanelId) => void) {
       case 'Enter': {
         event.preventDefault();
         onSelectPanel(results[activeIndex].panel);
+        setSearchQuery('');
         break;
       }
       default: {
@@ -49,7 +54,7 @@ export function useSettingsSearch(onSelectPanel: (panel: PanelId) => void) {
   };
   return {
     query,
-    setQuery,
+    setQuery: setSearchQuery,
     isActive,
     results,
     activeIndex,

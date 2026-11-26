@@ -24,6 +24,7 @@ import {
 import type { ImportPreview } from './types';
 import { useAppToast } from '../../lib/api';
 import { useI18n, dataTransferErrorKey } from '../../i18n';
+import responsive from './data-transfer-card.module.css';
 
 function PassphraseFields({
   passphrase,
@@ -166,7 +167,7 @@ export function ExportDataDialog({
         )}
         footer={(
           <LayoutFooter>
-            <HStack gap={2} hAlign="end">
+            <HStack gap={2} hAlign="end" className={responsive.actions}>
               <Button
                 label={t('dataTransfer.cancel')}
                 variant="ghost"
@@ -399,7 +400,7 @@ export function ImportDataDialog({
         footer={(
           <LayoutFooter>
             {step === 'passphrase' && (
-              <HStack gap={2} hAlign="end">
+              <HStack gap={2} hAlign="end" className={responsive.actions}>
                 <Button
                   label={t('dataTransfer.cancel')}
                   variant="ghost"
@@ -418,7 +419,7 @@ export function ImportDataDialog({
               </HStack>
             )}
             {step === 'preview' && (
-              <HStack gap={2} hAlign="end">
+              <HStack gap={2} hAlign="end" className={responsive.actions}>
                 <Button
                   label={t('dataTransfer.cancel')}
                   variant="ghost"
@@ -435,7 +436,7 @@ export function ImportDataDialog({
               </HStack>
             )}
             {step === 'complete' && (
-              <HStack gap={2} hAlign="end">
+              <HStack gap={2} hAlign="end" className={responsive.actions}>
                 <Button
                   label={t('dataTransfer.restartAction')}
                   variant="primary"

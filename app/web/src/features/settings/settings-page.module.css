@@ -1,0 +1,121 @@
+/* Keep responsive overrides local; Astryx's shared style layers stay intact. */
+.layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+
+.sideNav {
+  width: 260px;
+  height: 100%;
+  min-height: 0;
+}
+
+.mobilePanel {
+  display: none;
+}
+
+.searchToggle {
+  flex-shrink: 0;
+}
+
+.searchDialog {
+  margin-inline: auto;
+}
+
+.searchResults {
+  max-height: calc(100dvh - 200px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.sideNavSection {
+  padding-block: var(--spacing-2);
+}
+
+.panel {
+  container: settings-panel / inline-size;
+}
+
+.themeChoices {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@container settings-panel (max-width: 335px) {
+  .themeChoices {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .themeChoiceBody {
+    display: grid;
+    grid-template-columns: 80px minmax(0, 1fr);
+    align-items: center;
+    gap: var(--spacing-3);
+  }
+}
+
+.line {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.textColumn {
+  min-width: 0;
+  max-width: 420px;
+  overflow-wrap: anywhere;
+}
+
+.control {
+  --settings-control-width: 260px;
+  flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
+  align-items: flex-start;
+}
+
+@media (max-width: 680px) {
+  .line {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-2);
+  }
+
+  .textColumn {
+    max-width: none;
+  }
+
+  .control {
+    --settings-control-width: min(260px, 100%);
+    align-self: flex-start;
+    width: 100%;
+  }
+
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .sideNav {
+    width: 100%;
+    height: auto;
+    max-height: 50dvh;
+  }
+
+  .mobilePanel {
+    display: flex;
+    width: 100%;
+    align-items: center;
+  }
+
+  .search {
+    display: none;
+  }
+
+  .sideNavSection {
+    display: none;
+  }
+}

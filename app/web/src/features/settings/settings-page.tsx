@@ -7,6 +7,8 @@ import { VStack } from '@astryxdesign/core/VStack';
 import * as stylex from '@stylexjs/stylex';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Icon } from '@astryxdesign/core/Icon';
+import { IconButton } from '@astryxdesign/core/IconButton';
+import { Dialog } from '@astryxdesign/core/Dialog';
 import { Stack, StackItem } from '@astryxdesign/core/Stack';
 import type {
   IconComponent,
@@ -38,6 +40,7 @@ import {
   ArrowUpTrayIcon,
   FolderIcon,
   FolderOpenIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import type { SettingsSearch } from './search';
@@ -66,12 +69,13 @@ import {
   ExportDataDialog,
   ImportDataDialog,
 } from '../data-transfer/data-transfer-card';
-import { LayoutContent, Layout } from '@astryxdesign/core/Layout';
+import { LayoutContent } from '@astryxdesign/core/Layout';
 import { openConfigFolder } from './api';
 import { useSearchParams } from 'react-router-dom';
 import { useSettingsSearch } from './search';
 import { useSettings } from './use-settings';
 import { DownloadSkillDialog } from './download-skill-dialog';
+import responsive from './settings-page.module.css';
 
 function SettingsCard({
   title,
@@ -108,20 +112,6 @@ function SettingsCard({
 }
 
 const ROW_PADDING = 4;
-const CONTROL_WIDTH = 260;
-const ROW_STACK = '@container settings-panel (max-width: 480px)';
-
-const row = stylex.create({
-  panel: { containerType: 'inline-size', containerName: 'settings-panel' },
-  line: {
-    display: 'flex',
-    flexDirection: { default: 'row', [ROW_STACK]: 'column' },
-    alignItems: { default: 'center', [ROW_STACK]: 'stretch' },
-    gap: { default: 'var(--spacing-3)', [ROW_STACK]: 'var(--spacing-2)' },
-  },
-  textColumn: { maxWidth: { default: 420, [ROW_STACK]: 'none' } },
-  control: { flexShrink: 0 },
-});
 
 function SettingsRow({
   title,
@@ -140,13 +130,13 @@ function SettingsRow({
 }) {
   return (
     <VStack padding={ROW_PADDING} gap={2}>
-      <Stack xstyle={row.line} data-settings-line>
+      <Stack className={responsive.line} data-settings-line>
         <StackItem size="fill">
           <HStack gap={2} align="start">
             <VStack paddingBlockStart={0.5}>
               <Icon icon={icon} size="sm" color="secondary" />
             </VStack>
-            <VStack gap={0.5} xstyle={row.textColumn}>
+            <VStack gap={0.5} className={responsive.textColumn}>
               {titleAccessory == null
                 ? (
                     <Text type="label">{title}</Text>
@@ -166,7 +156,7 @@ function SettingsRow({
           </HStack>
         </StackItem>
         {control != null && (
-          <VStack data-settings-control xstyle={row.control}>
+          <VStack data-settings-control className={responsive.control}>
             {control}
           </VStack>
         )}
@@ -176,10 +166,15 @@ function SettingsRow({
   );
 }
 
-function SettingsSearchInput({ search }: { search: SettingsSearch }) {
+function SettingsSearchInput({ search, hasAutoFocus = false, onClose }: {
+  search: SettingsSearch;
+  hasAutoFocus?: boolean;
+  onClose?: () => void;
+}) {
   const { t } = useI18n();
   return (
     <TextInput
+      hasAutoFocus={hasAutoFocus}
       label={t('settings.search')}
       isLabelHidden
       placeholder={t('settings.search')}
@@ -194,7 +189,17 @@ function SettingsSearchInput({ search }: { search: SettingsSearch }) {
       aria-activedescendant={search.activeResultId}
       value={search.query}
       onChange={search.setQuery}
-      onKeyDown={search.onKeyDown}
+      onKeyDown={(event) => {
+        if (event.nativeEvent.isComposing) {
+          return;
+        }
+        if (onClose && event.key === 'Escape') {
+          event.preventDefault();
+          onClose();
+          return;
+        }
+        search.onKeyDown(event);
+      }}
     />
   );
 }
@@ -246,26 +251,68 @@ function SettingsSearchResults({
       );
 }
 
-const styles_settings_side_nav = stylex.create({
-  sideNav: { flexShrink: 0 },
-  sideNavSection: { paddingBlock: 'var(--spacing-2)' },
-});
-
 function SettingsSideNav({
   search,
   activePanel,
   onSelectPanel,
+  onOpenSearch,
 }: {
   search: SettingsSearch;
   activePanel: PanelId;
   onSelectPanel: (panel: PanelId) => void;
+  onOpenSearch: () => void;
 }) {
   const { t } = useI18n();
   return (
     <SideNav
       aria-label={t('settings.search')}
-      xstyle={styles_settings_side_nav.sideNav}
-      topContent={<SettingsSearchInput search={search} />}
+      className={responsive.sideNav}
+      topContent={(
+        <VStack gap={2}>
+          <HStack gap={1} className={responsive.mobilePanel}>
+            <StackItem size="fill">
+              <Selector
+                label={t('navigation.settings')}
+                isLabelHidden
+                variant="ghost"
+                size="sm"
+                width="100%"
+                value={activePanel}
+                onChange={(value) => onSelectPanel(value as PanelId)}
+                options={PANEL_GROUPS.map((group) => ({
+                  type: 'section' as const,
+                  title: t(group.labelKey),
+                  options: group.panels.map((panel) => ({
+                    value: panel.id,
+                    label: t(panel.labelKey),
+                  })),
+                }))}
+                renderValue={() => (
+                  <HStack gap={2} align="center">
+                    <Text type="supporting" color="secondary">
+                      {t(PANEL_GROUPS.find((group) => group.panels.some((panel) => panel.id === activePanel))!.labelKey)}
+                    </Text>
+                    <Text type="supporting" color="secondary" aria-hidden="true">/</Text>
+                    <Text type="label">{t(panelConfig(activePanel).labelKey)}</Text>
+                  </HStack>
+                )}
+              />
+            </StackItem>
+            <IconButton
+              label={t('settings.search')}
+              icon={<MagnifyingGlassIcon />}
+              variant="ghost"
+              size="sm"
+              className={responsive.searchToggle}
+              aria-haspopup="dialog"
+              onClick={onOpenSearch}
+            />
+          </HStack>
+          <VStack className={responsive.search}>
+            <SettingsSearchInput search={search} />
+          </VStack>
+        </VStack>
+      )}
     >
       {search.isActive
         ? (
@@ -280,7 +327,7 @@ function SettingsSideNav({
             <SideNavSection
               key={group.labelKey}
               title={t(group.labelKey)}
-              xstyle={styles_settings_side_nav.sideNavSection}
+              className={responsive.sideNavSection}
             >
               {group.panels.map((panel) => (
                 <SideNavItem
@@ -295,6 +342,69 @@ function SettingsSideNav({
             </SideNavSection>
           ))}
     </SideNav>
+  );
+}
+
+function SettingsSearchDialog({ isOpen, onSelectPanel, onClose }: {
+  isOpen: boolean;
+  onSelectPanel: (panel: PanelId) => void;
+  onClose: () => void;
+}) {
+  const { t } = useI18n();
+  const search = useSettingsSearch(onSelectPanel);
+  const close = () => {
+    search.setQuery('');
+    onClose();
+  };
+  return (
+    <Dialog
+      isOpen={isOpen}
+      aria-label={t('settings.search')}
+      onOpenChange={(open) => {
+        if (!open) {
+          close();
+        }
+      }}
+      width={560}
+      padding={3}
+      purpose="info"
+      position={{ top: 64, start: 16, end: 16 }}
+      className={responsive.searchDialog}
+    >
+      <VStack gap={3}>
+        <HStack gap={2} align="center">
+          <StackItem size="fill">
+            <SettingsSearchInput search={search} hasAutoFocus onClose={close} />
+          </StackItem>
+          <IconButton
+            label={t('settings.skillCancel')}
+            icon={<XMarkIcon />}
+            variant="ghost"
+            size="sm"
+            onClick={close}
+          />
+        </HStack>
+        <VStack className={responsive.searchResults}>
+          {search.isActive
+            ? (
+                <SettingsSearchResults
+                  results={search.results}
+                  activeIndex={search.activeIndex}
+                  onActiveIndexChange={search.setActiveIndex}
+                  onSelect={(setting) => {
+                    onSelectPanel(setting.panel);
+                    search.setQuery('');
+                  }}
+                />
+              )
+            : (
+                <VStack padding={2}>
+                  <Text type="supporting" color="secondary">{t('settings.trySearch')}</Text>
+                </VStack>
+              )}
+        </VStack>
+      </VStack>
+    </Dialog>
   );
 }
 
@@ -321,7 +431,8 @@ function ThemeChoiceCards({
     <Grid
       role="radiogroup"
       aria-label="Color theme"
-      columns={{ minWidth: 96, max: 3 }}
+      columns={3}
+      className={responsive.themeChoices}
       gap={2}
       maxWidth={480}
     >
@@ -340,7 +451,7 @@ function ThemeChoiceCards({
               }
             }}
           >
-            <VStack gap={1.5}>
+            <VStack gap={1.5} className={responsive.themeChoiceBody}>
               <ThemePreviewMock scheme={choice.scheme} />
               <HStack gap={1} align="center" justify="center">
                 <Icon icon={choice.icon} size="sm" color="secondary" />
@@ -446,7 +557,7 @@ function LanguagePanel({ settings, update }: PanelProps) {
             label={t('settings.language')}
             isLabelHidden
             size="sm"
-            width={CONTROL_WIDTH}
+            width="var(--settings-control-width)"
             value={settings.language}
             onChange={(value) => update('language', value as SettingsState['language'])}
             options={[
@@ -468,7 +579,7 @@ function LanguagePanel({ settings, update }: PanelProps) {
             label={t('settings.timeFormat')}
             isLabelHidden
             size="sm"
-            width={CONTROL_WIDTH}
+            width="var(--settings-control-width)"
             value={settings.timeFormat}
             onChange={(value) => update('timeFormat', value as TimeFormatPattern)}
             options={[
@@ -491,7 +602,7 @@ function LanguagePanel({ settings, update }: PanelProps) {
             label={t('settings.timezone')}
             isLabelHidden
             size="sm"
-            width={CONTROL_WIDTH}
+            width="var(--settings-control-width)"
             value={settings.timezone}
             onChange={(value) => update('timezone', value as TimeZoneCode)}
             options={[
@@ -545,7 +656,7 @@ function ApiKeyField({
       onEnter={commit}
       placeholder={placeholder}
       hasClear
-      width={CONTROL_WIDTH}
+      width="var(--settings-control-width)"
     />
   );
 }
@@ -588,7 +699,7 @@ function CapturesSettingsBlock({ settings, update }: PanelProps) {
             label={t('settings.capturesFetcher')}
             isLabelHidden
             size="sm"
-            width={CONTROL_WIDTH}
+            width="var(--settings-control-width)"
             value={captures.fetcher ?? 'none'}
             onChange={(value) => {
               updateCaptures({
@@ -818,6 +929,7 @@ function AdvancedPanel({
 
 const styles_settings_content_pane = stylex.create({
   contentTopAligned: {
+    minWidth: 0,
     paddingInlineStart: 'var(--spacing-4)',
     paddingInlineEnd: 'var(--spacing-4)',
     paddingBlockEnd: 'var(--spacing-4)',
@@ -861,7 +973,7 @@ function SettingsContentPane({
     <LayoutContent isScrollable padding={0} xstyle={styles_settings_content_pane.contentTopAligned}>
       <VStack
         gap={4}
-        xstyle={row.panel}
+        className={responsive.panel}
       >
         {content}
       </VStack>
@@ -875,29 +987,35 @@ export default function SettingsPage() {
     searchParams.get('panel') === 'library' ? 'library' : DEFAULT_PANEL,
   );
   const { settings, configFolderPath, update } = useSettings();
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const search = useSettingsSearch(setActivePanel);
   const selectPanel = (panel: PanelId) => {
     setActivePanel(panel);
     search.setQuery('');
+    setIsSearchOpen(false);
   };
   return (
-    <Layout
-      height="fill"
-      start={(
-        <SettingsSideNav
-          search={search}
-          activePanel={activePanel}
-          onSelectPanel={selectPanel}
-        />
-      )}
-      content={(
-        <SettingsContentPane
-          panel={activePanel}
-          settings={settings}
-          update={update}
-          configFolderPath={configFolderPath}
-        />
-      )}
-    />
+    <div className={responsive.layout}>
+      <SettingsSideNav
+        search={search}
+        activePanel={activePanel}
+        onSelectPanel={selectPanel}
+        onOpenSearch={() => {
+          search.setQuery('');
+          setIsSearchOpen(true);
+        }}
+      />
+      <SettingsSearchDialog
+        isOpen={isSearchOpen}
+        onSelectPanel={selectPanel}
+        onClose={() => setIsSearchOpen(false)}
+      />
+      <SettingsContentPane
+        panel={activePanel}
+        settings={settings}
+        update={update}
+        configFolderPath={configFolderPath}
+      />
+    </div>
   );
 }

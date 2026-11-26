@@ -20,7 +20,7 @@ export function SettingsLayout() {
   };
 
   return (
-    <div className="flex min-h-svh flex-col bg-background">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background">
       <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear">
         <div className="flex items-center gap-2 px-4">
           <Button
@@ -39,7 +39,7 @@ export function SettingsLayout() {
           <span className="text-sm font-medium">{getPageTitle(pathname)}</span>
         </div>
       </header>
-      <main className="flex-1">
+      <main className="min-h-0 flex-1 overflow-hidden">
         <Outlet />
       </main>
     </div>

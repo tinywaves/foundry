@@ -2,7 +2,6 @@ import {
   BotIcon,
   LayoutDashboardIcon,
   LibraryBigIcon,
-  Settings2Icon,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -36,10 +35,6 @@ export const mainNavigation: NavItem[] = [
         title: 'Starred',
         url: '/library/starred',
       },
-      {
-        title: 'Settings',
-        url: '/library/settings',
-      },
     ],
   },
   {
@@ -57,28 +52,6 @@ export const mainNavigation: NavItem[] = [
       {
         title: 'Quantum',
         url: '/models/quantum',
-      },
-    ],
-  },
-  {
-    title: 'Settings',
-    icon: Settings2Icon,
-    items: [
-      {
-        title: 'General',
-        url: '/settings/general',
-      },
-      {
-        title: 'Team',
-        url: '/settings/team',
-      },
-      {
-        title: 'Billing',
-        url: '/settings/billing',
-      },
-      {
-        title: 'Limits',
-        url: '/settings/limits',
       },
     ],
   },
@@ -108,11 +81,4 @@ const navigationPaths = mainNavigation.flatMap((item) => [
   ...(item.items?.map((subItem) => subItem.url) ?? []),
 ]);
 
-export const mainRoutePaths = navigationPaths.filter(
-  (path) => !path.startsWith('/settings'),
-);
-
-export const settingsRoutePaths = [
-  '/settings',
-  ...navigationPaths.filter((path) => path.startsWith('/settings')),
-];
+export const mainRoutePaths = navigationPaths;

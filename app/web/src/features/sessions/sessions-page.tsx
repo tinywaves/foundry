@@ -78,6 +78,11 @@ export default function SessionsPage() {
 
   const snapshot = sessionQuery.data;
   const archivedCount = snapshot?.threads.filter((thread) => thread.archived).length ?? 0;
+  const showArchivedFilter = !sessionQuery.isPending
+    && snapshot
+    && !(sessionQuery.error && snapshot.threads.length === 0)
+    && (snapshot.threads.length > 0 || snapshot.warnings.length > 0)
+    && (source === 'codex' || archivedCount > 0);
   const sourceLabel = t(source === 'codex'
     ? 'sessions.codex'
     : 'sessions.claudeCode');
@@ -101,38 +106,49 @@ export default function SessionsPage() {
       </TitlebarActions>
 
       <VStack gap={4}>
-        <SegmentedControl
-          label={t('sessions.source')}
-          size="sm"
-          value={source}
-          onChange={(value) => {
-            if (value !== 'codex' && value !== 'claude') {
-              return;
-            }
-            const nextSearchParams = new URLSearchParams(searchParams);
-            if (value === 'claude') {
-              nextSearchParams.set('source', 'claude');
-            } else {
-              nextSearchParams.delete('source');
-            }
-            setSearchParams(nextSearchParams);
-          }}
-        >
-          <SegmentedControlItem
-            value="codex"
-            label={t('sessions.codex')}
-            icon={<span aria-hidden="true" {...stylex.props(styles.sourceIcon(chatgptIcon))} />}
-          />
-          <SegmentedControlItem
-            value="claude"
-            label={t('sessions.claudeCode')}
-            icon={<span aria-hidden="true" {...stylex.props(styles.sourceIcon(claudeCodeIcon))} />}
-          />
-        </SegmentedControl>
+        <HStack gap={4} vAlign="center" wrap="wrap">
+          <SegmentedControl
+            label={t('sessions.source')}
+            size="sm"
+            value={source}
+            onChange={(value) => {
+              if (value !== 'codex' && value !== 'claude') {
+                return;
+              }
+              const nextSearchParams = new URLSearchParams(searchParams);
+              if (value === 'claude') {
+                nextSearchParams.set('source', 'claude');
+              } else {
+                nextSearchParams.delete('source');
+              }
+              setSearchParams(nextSearchParams);
+            }}
+          >
+            <SegmentedControlItem
+              value="codex"
+              label={t('sessions.codex')}
+              icon={<span aria-hidden="true" {...stylex.props(styles.sourceIcon(chatgptIcon))} />}
+            />
+            <SegmentedControlItem
+              value="claude"
+              label={t('sessions.claudeCode')}
+              icon={<span aria-hidden="true" {...stylex.props(styles.sourceIcon(claudeCodeIcon))} />}
+            />
+          </SegmentedControl>
+          {showArchivedFilter
+            ? (
+                <CheckboxInput
+                  label={`${t('sessions.includeArchived')} (${archivedCount})`}
+                  size="sm"
+                  value={isShowingArchived}
+                  onChange={setIsShowingArchived}
+                />
+              )
+            : null}
+        </HStack>
 
         <SourceSessions
           key={source}
-          source={source}
           sourceLabel={sourceLabel}
           isPending={sessionQuery.isPending}
           isFetching={sessionQuery.isFetching}
@@ -140,7 +156,6 @@ export default function SessionsPage() {
           snapshot={snapshot}
           isShowingArchived={isShowingArchived}
           archivedCount={archivedCount}
-          onShowArchivedChange={setIsShowingArchived}
           formatUpdatedAt={formatUpdatedAt}
         />
       </VStack>
@@ -149,7 +164,6 @@ export default function SessionsPage() {
 }
 
 function SourceSessions({
-  source,
   sourceLabel,
   isPending,
   isFetching,
@@ -157,10 +171,8 @@ function SourceSessions({
   snapshot,
   isShowingArchived,
   archivedCount,
-  onShowArchivedChange,
   formatUpdatedAt,
 }: {
-  source: SessionSource;
   sourceLabel: string;
   isPending: boolean;
   isFetching: boolean;
@@ -168,7 +180,6 @@ function SourceSessions({
   snapshot: SessionSnapshot | undefined;
   isShowingArchived: boolean;
   archivedCount: number;
-  onShowArchivedChange: (isChecked: boolean) => void;
   formatUpdatedAt: (value: string) => string;
 }) {
   const { t } = useI18n();
@@ -231,16 +242,6 @@ function SourceSessions({
           description={warningDescription(warning, t)}
         />
       ))}
-      {source === 'codex' || archivedCount > 0
-        ? (
-            <CheckboxInput
-              label={`${t('sessions.includeArchived')} (${archivedCount})`}
-              size="sm"
-              value={isShowingArchived}
-              onChange={onShowArchivedChange}
-            />
-          )
-        : null}
       {hasVisibleThreads
         ? (
             <ThreadTable

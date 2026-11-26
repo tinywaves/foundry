@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { DEFAULT_SETTINGS, normalizeSettings } from '../features/settings/contracts';
@@ -46,7 +46,9 @@ export class FoundryStorage {
   constructor(readonly path: string) {
     privateDirectory(path);
     for (const collection of COLLECTIONS) {
-      privateDirectory(this.collectionPath(collection));
+      if (collection !== 'providers') {
+        privateDirectory(this.collectionPath(collection));
+      }
     }
   }
 
@@ -94,6 +96,7 @@ export class FoundryStorage {
     try {
       this.recover();
       this.lockDepth = 1;
+      this.initializeProviders();
       return action();
     } finally {
       this.lockDepth = 0;
@@ -141,12 +144,57 @@ export class FoundryStorage {
     this.applyJournal(journal);
   }
 
+  private initializeProviders(): void {
+    const filename = path.join(this.path, 'providers.json');
+    const legacyDirectory = this.collectionPath('providers');
+    if (!existsSync(filename)) {
+      const files = existsSync(legacyDirectory)
+        ? readdirSync(legacyDirectory).filter((file) => file.endsWith('.json'))
+        : [];
+      const records = files.map((file) => this.readRecord('providers', path.join('providers', file)));
+      // Commit the collection and legacy deletions together so recovery can
+      // finish migration after an interruption without duplicating records.
+      const journal: Journal = {
+        changes: [
+          { file: 'providers.json', value: records },
+          ...files.map((file) => ({ file: path.join('providers', file), value: null })),
+        ],
+      };
+      writeJsonAtomic(path.join(this.path, '.transaction.json'), journal);
+      this.applyJournal(journal);
+    }
+    if (!(existsSync(legacyDirectory) && readdirSync(legacyDirectory).length === 0)) {
+      return;
+    }
+
+    rmdirSync(legacyDirectory);
+    syncDirectory(this.path);
+  }
+
+  private readProviders(): Array<Collections['providers']> {
+    const value: unknown = this.changes?.has('providers.json')
+      ? this.changes.get('providers.json')
+      : JSON.parse(readFileSync(path.join(this.path, 'providers.json'), 'utf8'));
+    if (!Array.isArray(value)) {
+      throw new TypeError('Invalid Foundry providers collection');
+    }
+    const ids = new Set<string>();
+    for (const row of value) {
+      if (!row || typeof row.id !== 'string' || ids.has(row.id)) {
+        throw new Error('Invalid or duplicate provider ID');
+      }
+      this.recordPath('providers', row.id);
+      ids.add(row.id);
+    }
+    return structuredClone(value) as Array<Collections['providers']>;
+  }
+
   private applyJournal(journal: Journal): void {
     for (const change of journal.changes) {
       const filename = path.resolve(this.path, change.file);
       const relative = path.relative(this.path, filename);
       if (relative.startsWith('..') || path.isAbsolute(relative)
-        || !(/^(?:settings\.json|(?:providers|captures|fetch-jobs)[/\\][^/\\]+\.json)$/u).test(relative)) {
+        || !(/^(?:(?:settings|providers)\.json|(?:providers|captures|fetch-jobs)[/\\][^/\\]+\.json)$/u).test(relative)) {
         throw new Error('Invalid storage recovery journal');
       }
       if (change.value === null) {
@@ -183,6 +231,9 @@ export class FoundryStorage {
 
   all<K extends Collection>(collection: K): Array<Collections[K]> {
     return this.locked(() => {
+      if (collection === 'providers') {
+        return this.readProviders() as Array<Collections[K]>;
+      }
       const directory = this.collectionPath(collection);
       const files = new Set(readdirSync(directory, { withFileTypes: true })
         .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
@@ -207,7 +258,12 @@ export class FoundryStorage {
   }
 
   get<K extends Collection>(collection: K, id: string): Collections[K] | undefined {
-    return this.locked(() => this.readRecord(collection, this.recordPath(collection, id)));
+    return this.locked(() => {
+      const filename = this.recordPath(collection, id);
+      return collection === 'providers'
+        ? this.all(collection).find((row) => row.id === id)
+        : this.readRecord(collection, filename);
+    });
   }
 
   readSettings(): FoundrySettings {
@@ -226,7 +282,19 @@ export class FoundryStorage {
     if (!this.changes) {
       throw new Error('Storage writes require a transaction');
     }
-    this.changes.set(this.recordPath(collection, record.id), structuredClone(record));
+    const filename = this.recordPath(collection, record.id);
+    if (collection === 'providers') {
+      const rows = this.all(collection);
+      const index = rows.findIndex((row) => row.id === record.id);
+      if (index === -1) {
+        rows.push(record);
+      } else {
+        rows[index] = record;
+      }
+      this.changes.set('providers.json', structuredClone(rows));
+    } else {
+      this.changes.set(filename, structuredClone(record));
+    }
   }
 
   setSettings(settings: FoundrySettings): void {
@@ -280,6 +348,10 @@ export class FoundryStorage {
   replace(snapshot: StorageSnapshot): void {
     this.transaction(() => {
       for (const collection of COLLECTIONS) {
+        if (collection === 'providers') {
+          this.changes?.set('providers.json', structuredClone(snapshot.providers));
+          continue;
+        }
         const current = this.all(collection);
         for (const row of current) {
           this.changes?.set(this.recordPath(collection, row.id), null);

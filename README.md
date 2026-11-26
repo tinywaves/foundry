@@ -119,12 +119,12 @@ Foundry keeps user data outside the repository in `<home>/.foundry`. `<home>` is
 `~` on macOS/Linux and `%USERPROFILE%` on Windows:
 
 - `settings.json`: application settings
-- `providers/<record-key>.json`: providers and credentials
+- `providers.json`: an array of providers, credentials, and optional base64 avatars
 - `captures/<record-key>.json`: captures
 - `fetch-jobs/<record-key>.json`: fetch jobs, configuration snapshots and responses
 - `.data-transfer/`: temporary export and import files
 
-Record filenames use a SHA-256 key of the record ID for portable, collision-safe
+Capture and fetch-job filenames use a SHA-256 key of the record ID for portable, collision-safe
 paths; the original ID is preserved inside each document.
 
 Feature commands initialize JSON storage before running. `foundry web` does the
@@ -138,6 +138,9 @@ A new installation starts directly with default JSON settings and empty
 collections directly under `.foundry`, without a `data/` subdirectory. Startup
 does not inspect or import old SQLite databases. Unrelated files are left alone.
 Node's built-in SQLite reader is used only by the read-only Codex session view.
+Existing `providers/` records are automatically migrated into `providers.json`
+under the process lock using the recovery journal. Provider avatars accept PNG,
+JPEG, GIF, WebP, or SVG images up to 2 MB; clearing an avatar restores the default icon.
 
 Encrypted exports and imports use JSON snapshots in `data/foundry.json`.
 SQLite-based backup archives are not supported.

@@ -173,8 +173,9 @@ API development servers. Rebuild `dist` to test production static serving.
 
 - Runtime data belongs in `<home>/.foundry`, outside the repository and
   `dist`. `<home>` is `os.homedir()` on every supported platform.
-- Store settings in `settings.json`; providers, captures and fetch jobs each
-  have one JSON file per record in their collection directories.
+- Store settings in `settings.json` and all providers in the `providers.json`
+  array. Captures and fetch jobs each have one JSON file per record in their
+  collection directories. Provider avatars are optional base64 image data URLs.
 - `src/storage/models.ts` owns record contracts and the JSON format version.
 - Use `FoundryStorage` transactions for writes. Keep process locking, atomic
   replacement and redo recovery inside the storage module. Read JSON files

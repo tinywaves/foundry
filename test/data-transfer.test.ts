@@ -39,6 +39,7 @@ it('exports and restores an encrypted Foundry snapshot', async () => {
       captures: { fetcher: 'firecrawl', firecrawlApiKey: 'capture-secret' },
     }, database);
     providers.save({
+      avatar: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII=',
       name: 'Exported provider',
       protocol: 'openai-responses',
       baseURL: 'https://api.example.com/v1',
@@ -82,6 +83,7 @@ it('exports and restores an encrypted Foundry snapshot', async () => {
     await transfer.commitImport(preview.importId);
 
     expect(providers.list()).toHaveLength(1);
+    expect(providers.list()[0].avatar).toBe('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII=');
     expect(readSettings(database).workspace.appearance['color-theme']).toBe('dark');
     expect(readSettings(database).features.library.captures.firecrawl.apiKey).toBe('capture-secret');
     expect(await readFile(configPath, 'utf8')).toBe(configContent);

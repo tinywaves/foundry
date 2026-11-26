@@ -5,6 +5,7 @@ export const PROVIDER_PROTOCOLS = [
 ] as const;
 
 export const PROVIDER_STATUSES = ['active', 'disabled', 'deleted'] as const;
+export const MAX_PROVIDER_AVATAR_BYTES = 2 * 1024 * 1024;
 
 export type ProviderProtocol = (typeof PROVIDER_PROTOCOLS)[number];
 export type ProviderStatus = (typeof PROVIDER_STATUSES)[number];
@@ -15,6 +16,7 @@ export interface CustomModel {
 }
 
 export interface ProviderInput {
+  avatar?: string | null;
   name: string;
   protocol: ProviderProtocol;
   baseURL: string;
@@ -23,6 +25,7 @@ export interface ProviderInput {
 }
 
 export interface ProviderSummary {
+  avatar: string | null;
   id: string;
   name: string;
   protocol: ProviderProtocol;
@@ -82,12 +85,32 @@ export function parseProviderInput(value: unknown): ProviderInput {
   const customModels = parseCustomModels(value.customModels);
 
   return {
+    ...(value.avatar !== undefined && { avatar: parseProviderAvatar(value.avatar) }),
     name,
     protocol,
     baseURL,
     apiKey,
     customModels,
   };
+}
+
+function parseProviderAvatar(value: unknown): string | null {
+  if (value === null) {
+    return null;
+  }
+  if (typeof value === 'string' && value.length <= Math.ceil(MAX_PROVIDER_AVATAR_BYTES / 3) * 4 + 32) {
+    const match = (/^data:image\/(?:png|jpeg|gif|webp|svg\+xml);base64,/u).exec(value);
+    if (match) {
+      const base64 = value.slice(match[0].length);
+      const padding = base64.endsWith('==') ? 2 : (base64.endsWith('=') ? 1 : 0);
+      if (base64.length > 0 && base64.length % 4 === 0
+        && (/^[A-Za-z0-9+/]+={0,2}$/u).test(base64)
+        && base64.length / 4 * 3 - padding <= MAX_PROVIDER_AVATAR_BYTES) {
+        return value;
+      }
+    }
+  }
+  throw new ProviderInputError('avatar must be a base64 PNG, JPEG, GIF, WebP, or SVG data URL up to 2 MB, or null');
 }
 
 export function parseProviderConnection(value: unknown): ProviderConnection {

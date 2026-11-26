@@ -1,4 +1,5 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { Buffer } from 'node:buffer';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, it, vi } from 'vitest';
@@ -9,8 +10,50 @@ import { DEFAULT_SETTINGS } from '../src/features/settings/contracts';
 import { writeSettings } from '../src/features/settings/repository';
 import { createApiApp } from '../src/server/api';
 import { openFoundryStorage } from '../src/storage/index';
+import { MAX_PROVIDER_AVATAR_BYTES } from '../src/features/providers/contracts';
 
 const { join } = path;
+const pngAvatar = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX1sAAAAASUVORK5CYII=';
+
+const svgAvatar = `data:image/svg+xml;base64,${Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56"><rect width="56" height="56" fill="#2563eb"/></svg>').toString('base64')}`;
+
+it.each([pngAvatar, svgAvatar])('persists per-provider avatars, preserves omitted values, and clears back to the default (%#)', async (avatar) => {
+  const directory = await mkdtemp(join(tmpdir(), 'foundry-provider-avatars-'));
+  const storage = openFoundryStorage(directory);
+  const input = { name: 'Custom avatar', protocol: 'openai-responses', baseURL: 'https://example.test/v1', apiKey: '', customModels: [] };
+  try {
+    const app = createApiApp(storage);
+    const create = await app.request('/api/providers', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...input, avatar }) });
+    expect(create.status).toBe(201);
+    const created = await create.json() as { id: string; avatar: string };
+    expect(created.avatar).toBe(avatar);
+    const providerData = JSON.parse(await readFile(join(directory, 'providers.json'), 'utf8'));
+    expect(providerData).toMatchObject([{ id: created.id, avatar }]);
+    const update = await app.request(`/api/providers/${created.id}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...input, name: 'Renamed' }) });
+    expect(await update.json()).toMatchObject({ avatar, name: 'Renamed' });
+    const reopened = openFoundryStorage(directory);
+    try {
+      const response = await createApiApp(reopened).request('/api/providers');
+      expect(await response.json()).toMatchObject([{ id: created.id, avatar }]);
+    } finally {
+      reopened.close();
+    }
+    const clear = await app.request(`/api/providers/${created.id}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...input, avatar: null }) });
+    expect(await clear.json()).toMatchObject({ avatar: null });
+    const plain = await app.request('/api/providers', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) });
+    expect(await plain.json()).toMatchObject({ avatar: null });
+
+    for (const invalid of ['', 123, 'https://example.test/avatar.png', 'data:text/html;base64,PHN2Zy8+', 'data:image/svg+xml;base64,invalid', 'data:image/png;base64,invalid', 'data:image/png;base64,====', `data:image/png;base64,${'A'.repeat(Math.ceil((MAX_PROVIDER_AVATAR_BYTES + 1) / 3) * 4)}`]) {
+      const response = await app.request(`/api/providers/${created.id}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...input, avatar: invalid }) });
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({ error: { code: 'INVALID_PROVIDER_INPUT' } });
+    }
+    expect(storage.get('providers', created.id)?.avatar).toBeNull();
+  } finally {
+    storage.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 it('creates, updates, and preserves provider credentials', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-providers-'));

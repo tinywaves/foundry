@@ -34,6 +34,9 @@ supports `add`.
 
 Rules:
 
+- `avatar`: optional base64 image data URL (`data:image/png;base64,...`, JPEG,
+  GIF, WebP, or SVG), up to 2 MB decoded. Omit to preserve the existing avatar on
+  update; pass `null` to restore the default icon.
 - `name`: required, trimmed, non-empty.
 - `protocol`: required; one of `openai-responses`,
   `anthropic-messages`, `openai-compatible-chat-completions`.
@@ -138,3 +141,6 @@ When `baseURL` includes a path such as `/v1`, include a trailing slash
   invalid model payload.
 
 Provider responses include stored credentials. Do not expose them unnecessarily.
+
+All provider records are stored together in `<home>/.foundry/providers.json`.
+Use CLI commands to preserve transactions and process locking.

@@ -64,6 +64,13 @@ export type TranslationKey
     | 'settings.languageRegion'
     | 'settings.languageRegionDescription'
     | 'settings.search'
+    | 'providers.avatar'
+    | 'providers.avatarDescription'
+    | 'providers.avatarUpload'
+    | 'providers.avatarChange'
+    | 'providers.avatarRemove'
+    | 'providers.avatarInvalid'
+    | 'providers.saveFailed'
     | 'settings.colorTheme'
     | 'settings.colorThemeDescription'
     | 'settings.language'
@@ -324,6 +331,13 @@ const english: TranslationTable = {
   'settings.languageRegion': 'Language & region',
   'settings.languageRegionDescription': 'Language, formats, and time zone.',
   'settings.search': 'Search settings',
+  'providers.avatar': 'Avatar',
+  'providers.avatarDescription': 'Choose a PNG, JPEG, GIF, WebP, or SVG image up to 2 MB.',
+  'providers.avatarUpload': 'Upload avatar',
+  'providers.avatarChange': 'Change avatar',
+  'providers.avatarRemove': 'Remove avatar',
+  'providers.avatarInvalid': 'Choose a valid PNG, JPEG, GIF, WebP, or SVG image up to 2 MB.',
+  'providers.saveFailed': 'Unable to save this provider. Please try again.',
   'settings.colorTheme': 'Color theme',
   'settings.colorThemeDescription': 'Applies to this browser only.',
   'settings.language': 'Language',
@@ -543,6 +557,13 @@ const simplifiedChinese: TranslationTable = {
   'settings.languageRegion': '语言和地区',
   'settings.languageRegionDescription': '语言、格式和时区。',
   'settings.search': '搜索设置',
+  'providers.avatar': '头像',
+  'providers.avatarDescription': '选择不超过 2 MB 的 PNG、JPEG、GIF、WebP 或 SVG 图片。',
+  'providers.avatarUpload': '上传头像',
+  'providers.avatarChange': '更换头像',
+  'providers.avatarRemove': '移除头像',
+  'providers.avatarInvalid': '请选择有效且不超过 2 MB 的 PNG、JPEG、GIF、WebP 或 SVG 图片。',
+  'providers.saveFailed': '服务商保存失败，请重试。',
   'settings.colorTheme': '颜色主题',
   'settings.colorThemeDescription': '仅应用于此应用。',
   'settings.language': '语言',
@@ -776,6 +797,13 @@ const traditionalChinese: TranslationTable = {
   'settings.languageRegion': '語言與地區',
   'settings.languageRegionDescription': '語言、格式與時區。',
   'settings.search': '搜尋設定',
+  'providers.avatar': '頭像',
+  'providers.avatarDescription': '選擇不超過 2 MB 的 PNG、JPEG、GIF、WebP 或 SVG 圖片。',
+  'providers.avatarUpload': '上傳頭像',
+  'providers.avatarChange': '更換頭像',
+  'providers.avatarRemove': '移除頭像',
+  'providers.avatarInvalid': '請選擇有效且不超過 2 MB 的 PNG、JPEG、GIF、WebP 或 SVG 圖片。',
+  'providers.saveFailed': '服務商儲存失敗，請重試。',
   'settings.colorTheme': '色彩主題',
   'settings.colorThemeDescription': '僅套用於此應用程式。',
   'settings.language': '語言',
@@ -1007,6 +1035,13 @@ const japanese: TranslationTable = {
   'settings.languageRegion': '言語と地域',
   'settings.languageRegionDescription': '言語、形式、タイムゾーン。',
   'settings.search': '設定を検索',
+  'providers.avatar': 'アバター',
+  'providers.avatarDescription': '2 MB 以下の PNG、JPEG、GIF、WebP、SVG 画像を選択してください。',
+  'providers.avatarUpload': '画像をアップロード',
+  'providers.avatarChange': '画像を変更',
+  'providers.avatarRemove': '画像を削除',
+  'providers.avatarInvalid': '2 MB 以下の有効な PNG、JPEG、GIF、WebP、SVG 画像を選択してください。',
+  'providers.saveFailed': 'プロバイダーを保存できませんでした。もう一度お試しください。',
   'settings.colorTheme': 'カラーテーマ',
   'settings.colorThemeDescription': 'このアプリにのみ適用されます。',
   'settings.language': '言語',

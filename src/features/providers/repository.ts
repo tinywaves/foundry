@@ -41,6 +41,7 @@ export class ProviderRepository {
         deletedAt: null,
         ...existing,
         ...input,
+        avatar: input.avatar === undefined ? existing?.avatar ?? null : input.avatar,
         updatedAt: now,
       };
       this.storage.put('providers', row);
@@ -70,5 +71,5 @@ export class ProviderRepository {
   }
 }
 function toSummary(row: ProviderRecord): ProviderSummary {
-  return { ...row, status: row.status as ProviderStatus };
+  return { ...row, avatar: row.avatar ?? null, status: row.status as ProviderStatus };
 }

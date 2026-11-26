@@ -23,6 +23,7 @@ import {
 } from './api';
 import { useI18n } from '../../i18n';
 import { TitlebarActions } from '../../components/titlebar-actions';
+import { ProviderAvatarField } from './provider-avatar-field';
 
 const styles = stylex.create({
   formFieldRow: {
@@ -84,6 +85,8 @@ export default function ProviderFormPage() {
   const queryClient = useQueryClient();
   const toast = useAppToast();
   const [name, setName] = useState('');
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const [isReadingAvatar, setIsReadingAvatar] = useState(false);
   const [protocol, setProtocol] = useState<ProviderProtocol>('openai-responses');
   const [baseURL, setBaseURL] = useState('');
   const [apiKey, setApiKey] = useState('');
@@ -104,6 +107,7 @@ export default function ProviderFormPage() {
         return;
       }
       setName(provider.name);
+      setAvatar(provider.avatar ?? null);
       setProtocol(provider.protocol);
       setBaseURL(provider.baseURL);
       setApiKey(provider.apiKey);
@@ -112,7 +116,7 @@ export default function ProviderFormPage() {
   }, [providerId]);
 
   const canFetch = Boolean(baseURL.trim() && (protocol === 'openai-compatible-chat-completions' || apiKey.trim()));
-  const canSave = models.length > 0 && !isFetching && !isSaving && Boolean(name.trim() && baseURL.trim());
+  const canSave = models.length > 0 && !isFetching && !isSaving && !isReadingAvatar && Boolean(name.trim() && baseURL.trim());
   const customModels = useMemo(() => models.filter((model): model is CustomModel & { source: 'custom' } => model.source === 'custom'), [models]);
 
   const fetchModels = useCallback(async () => {
@@ -163,6 +167,7 @@ export default function ProviderFormPage() {
     }
     setIsSaving(true);
     const input: ProviderInput = {
+      avatar,
       name: name.trim(),
       protocol,
       baseURL: baseURL.trim(),
@@ -173,10 +178,13 @@ export default function ProviderFormPage() {
       await saveProvider(input, providerId);
       await queryClient.invalidateQueries({ queryKey: providerKeys.all });
       void navigate('/providers');
+    } catch {
+      toast({ body: t('providers.saveFailed'), type: 'error' });
     } finally {
       setIsSaving(false);
     }
   }, [
+    avatar,
     apiKey,
     baseURL,
     canSave,
@@ -186,6 +194,8 @@ export default function ProviderFormPage() {
     providerId,
     protocol,
     queryClient,
+    t,
+    toast,
   ]);
 
   const cancel = useCallback(() => {
@@ -222,6 +232,13 @@ export default function ProviderFormPage() {
       </TitlebarActions>
       <VStack gap={5}>
         <VStack gap={4}>
+          <ProviderAvatarField
+            value={avatar}
+            onChange={setAvatar}
+            isDisabled={isSaving}
+            isReading={isReadingAvatar}
+            onReadingChange={setIsReadingAvatar}
+          />
           <HStack gap={3} wrap="wrap" xstyle={styles.formFieldRow}>
             <TextInput containerXstyle={styles.formNameField} size="sm" label={t('providers.name')} value={name} onChange={setName} isRequired />
             <Selector containerXstyle={styles.formProtocolField} size="sm" label={t('providers.protocol')} options={protocols} value={protocol} onChange={(value) => setProtocol(value as ProviderProtocol)} isDisabled={Boolean(providerId)} isRequired />

@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
 import { IconButton } from '@astryxdesign/core/IconButton';
-import { Icon } from '@astryxdesign/core/Icon';
 import { List, ListItem } from '@astryxdesign/core/List';
 import { Text } from '@astryxdesign/core/Text';
 import { Switch } from '@astryxdesign/core/Switch';
@@ -29,6 +28,7 @@ import {
 } from './api';
 import { useI18n } from '../../i18n';
 import { TitlebarActions } from '../../components/titlebar-actions';
+import { ProviderAvatar } from './provider-avatar';
 
 const styles = stylex.create({
   providerList: {
@@ -145,7 +145,7 @@ export default function ProvidersPage() {
                     key={provider.id}
                     label={provider.name}
                     xstyle={styles.providerItem}
-                    startContent={<Icon icon={Square3Stack3DIcon} size="lg" color="secondary" />}
+                    startContent={<ProviderAvatar avatar={provider.avatar} name={provider.name} />}
                     description={(
                       <HStack gap={1} wrap="nowrap" xstyle={styles.providerDescription}>
                         <Token size="sm" label={protocolLabels[provider.protocol]} xstyle={styles.providerProtocol} />

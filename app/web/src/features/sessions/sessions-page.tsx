@@ -17,6 +17,7 @@ import {
 } from '@astryxdesign/core/SegmentedControl';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
+import * as stylex from '@stylexjs/stylex';
 import { ApiError } from '../../lib/api';
 import { formatTimestamp } from '../../lib/format-time';
 import { useI18n } from '../../i18n';
@@ -31,6 +32,12 @@ import type {
 } from './types';
 import { ThreadTable } from './thread-table';
 import type { TranslationKey } from '../../i18n';
+
+const styles = stylex.create({
+  filters: {
+    flexWrap: 'wrap',
+  },
+});
 
 export default function SessionsPage() {
   const { t } = useI18n();
@@ -74,8 +81,8 @@ export default function SessionsPage() {
       <TitlebarActions>
         <HStack gap={2} vAlign="center">
           <IconButton
-            label={t('sessions.refresh')}
-            tooltip={t('sessions.refresh')}
+            label={t(sessionQuery.isFetching ? 'sessions.loading' : 'sessions.refresh')}
+            tooltip={t(sessionQuery.isFetching ? 'sessions.loading' : 'sessions.refresh')}
             icon={<ArrowPathIcon />}
             size="sm"
             variant="ghost"
@@ -171,17 +178,12 @@ function SourceSessions({
     return <SessionsEmptyState source={sourceLabel} />;
   }
 
-  if (!snapshot && error) {
-    const isUnsupported = errorCode?.startsWith('UNSUPPORTED_') ?? false;
+  if (error && (!snapshot || snapshot.threads.length === 0)) {
     return (
       <Banner
         status="error"
-        title={t(isUnsupported
-          ? 'sessions.unsupportedTitle'
-          : 'sessions.errorTitle')}
-        description={t(isUnsupported
-          ? 'sessions.unsupportedDescription'
-          : 'sessions.errorDescription')}
+        title={t('sessions.errorTitle')}
+        description={t('sessions.errorDescription')}
       />
     );
   }
@@ -190,7 +192,7 @@ function SourceSessions({
     return <SessionSkeleton />;
   }
 
-  if (snapshot.threads.length === 0) {
+  if (snapshot.threads.length === 0 && snapshot.warnings.length === 0) {
     return <SessionsEmptyState source={sourceLabel} />;
   }
 
@@ -198,6 +200,18 @@ function SourceSessions({
     (isShowingArchived || !thread.archived)
     && (isShowingSubagents || !thread.subagent)
   ));
+  const hasHiddenArchived = archivedCount > 0 && !isShowingArchived;
+  const hasHiddenSubagents = subagentCount > 0 && !isShowingSubagents;
+  let emptyDescription: TranslationKey = 'sessions.noThreadsDescription';
+  if (snapshot.threads.length === 0) {
+    emptyDescription = 'sessions.noReadableDescription';
+  } else if (hasHiddenArchived && hasHiddenSubagents) {
+    emptyDescription = 'sessions.showBothHint';
+  } else if (hasHiddenArchived) {
+    emptyDescription = 'sessions.showArchivedHint';
+  } else if (hasHiddenSubagents) {
+    emptyDescription = 'sessions.showSubagentsHint';
+  }
 
   return (
     <VStack gap={4} aria-busy={isFetching}>
@@ -218,11 +232,11 @@ function SourceSessions({
           description={warningDescription(warning, t)}
         />
       ))}
-      <HStack gap={3} vAlign="center">
+      <HStack gap={3} vAlign="center" xstyle={styles.filters}>
         {source === 'codex' || archivedCount > 0
           ? (
               <CheckboxInput
-                label={`${t('sessions.archived')} (${archivedCount})`}
+                label={`${t('sessions.includeArchived')} (${archivedCount})`}
                 size="sm"
                 value={isShowingArchived}
                 onChange={onShowArchivedChange}
@@ -230,7 +244,7 @@ function SourceSessions({
             )
           : null}
         <CheckboxInput
-          label={`${t('sessions.subagents')} (${subagentCount})`}
+          label={`${t('sessions.includeSubagents')} (${subagentCount})`}
           size="sm"
           value={isShowingSubagents}
           onChange={onShowSubagentsChange}
@@ -251,8 +265,8 @@ function SourceSessions({
               startIcon={InboxStackIcon}
               centerIcon={CommandLineIcon}
               endIcon={SparklesIcon}
-              title={t('sessions.noThreadsTitle')}
-              description={t('sessions.noThreadsDescription')}
+              title={t(snapshot.threads.length === 0 ? 'sessions.noReadableTitle' : 'sessions.noThreadsTitle')}
+              description={t(emptyDescription)}
             />
           )}
     </VStack>
@@ -289,7 +303,5 @@ function warningDescription(
   warning: SessionWarning,
   t: (key: TranslationKey, values?: Record<string, string | number>) => string,
 ): string {
-  return warning.code === 'PROJECTS_UNAVAILABLE'
-    ? t('sessions.warningProjectsUnavailable')
-    : t('sessions.filesUnreadable', { count: warning.count ?? 0 });
+  return t('sessions.filesUnreadable', { count: warning.count ?? 0 });
 }

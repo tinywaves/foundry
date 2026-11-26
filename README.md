@@ -137,7 +137,10 @@ required.
 A new installation starts directly with default JSON settings and empty
 collections directly under `.foundry`, without a `data/` subdirectory. Startup
 does not inspect or import old SQLite databases. Unrelated files are left alone.
-Node's built-in SQLite reader is used only by the read-only Codex session view.
+The read-only Sessions view reads Codex and Claude Code JSONL transcripts, including
+Zstandard-compressed files. It does not read their databases, global state, or
+session indexes. Threads are grouped by the working directory recorded in their
+transcripts; Codex project membership and later UI-only renames are not imported.
 Existing `providers/` records are automatically migrated into `providers.json`
 under the process lock using the recovery journal. Provider avatars accept PNG,
 JPEG, GIF, WebP, or SVG images up to 2 MB; clearing an avatar restores the default icon.

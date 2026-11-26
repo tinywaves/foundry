@@ -6,17 +6,17 @@ import type { SessionService } from './service';
 export function createSessionRoutes(service: SessionService): Hono {
   const app = new Hono();
 
-  app.get('/codex', (c) => {
+  app.get('/codex', async (c) => {
     try {
-      return c.json(service.getCodexSnapshot());
+      return c.json(await service.getCodexSnapshot());
     } catch (error) {
       return sessionError(c, error);
     }
   });
 
-  app.get('/claude', (c) => {
+  app.get('/claude', async (c) => {
     try {
-      return c.json(service.getClaudeSnapshot());
+      return c.json(await service.getClaudeSnapshot());
     } catch (error) {
       return sessionError(c, error);
     }
@@ -30,9 +30,6 @@ function sessionError(c: Context, error: unknown) {
     switch (error.code) {
       case 'CODEX_DATA_NOT_FOUND': {
         return c.json({ error: { code: error.code, message: error.message } }, 404);
-      }
-      case 'UNSUPPORTED_CODEX_SCHEMA': {
-        return c.json({ error: { code: error.code, message: error.message } }, 422);
       }
       case 'CODEX_READ_FAILED': {
         return c.json({ error: { code: error.code, message: error.message } }, 500);

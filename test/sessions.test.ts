@@ -1,521 +1,199 @@
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import { Buffer } from 'node:buffer';
 import path from 'node:path';
-// Node 24 provides this built-in for read-only compatibility and test fixtures.
+// Node 24 provides Zstandard fixtures without an external executable.
 // eslint-disable-next-line n/no-unsupported-features/node-builtins
-import { DatabaseSync as Database } from 'node:sqlite';
+import { zstdCompressSync } from 'node:zlib';
 import { expect, it } from 'vitest';
-import { SessionSourceError } from '../src/features/sessions/contracts';
 import { SessionService } from '../src/features/sessions/service';
 import { createApiApp } from '../src/server/api';
 import { openFoundryStorage } from '../src/storage/index';
 
-const { join } = path;
+const ID = '11111111-1111-4111-8111-111111111111';
+const CHILD_ID = '22222222-2222-4222-8222-222222222222';
+const ARCHIVED_ID = '33333333-3333-4333-8333-333333333333';
+const START = '2026-11-26T03:00:00.000Z';
+const END = '2026-11-26T04:00:00.000Z';
 
-const ASSIGNED_ID = '11111111-1111-4111-8111-111111111111';
-const PROJECTLESS_ID = '22222222-2222-4222-8222-222222222222';
-const SUBAGENT_ID = '33333333-3333-4333-8333-333333333333';
-const UNKNOWN_PROJECT_ID = '44444444-4444-4444-8444-444444444444';
-const SEGMENT_ID = '55555555-5555-4555-8555-555555555555';
+async function transcript(file: string, records: unknown[], isCompressed = false) {
+  await mkdir(path.dirname(file), { recursive: true });
+  const content = records.map((record) => JSON.stringify(record)).join('\n');
+  const bytes = isCompressed ? zstdCompressSync(content) : content;
+  await writeFile(file, bytes);
+  return Buffer.byteLength(bytes);
+}
 
-it('builds a read-only Codex snapshot with project, size, and thread flags', async () => {
-  const codexHome = await mkdtemp(join(tmpdir(), 'foundry-codex-'));
-  const databasePath = join(codexHome, 'state_4.sqlite');
-  const client = new Database(databasePath);
-  client.exec(`
-    CREATE TABLE threads (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL DEFAULT '',
-      name TEXT,
-      first_user_message TEXT,
-      preview TEXT,
-      cwd TEXT NOT NULL DEFAULT '',
-      updated_at INTEGER NOT NULL,
-      updated_at_ms INTEGER,
-      created_at INTEGER NOT NULL,
-      created_at_ms INTEGER,
-      archived INTEGER NOT NULL DEFAULT 0,
-      source TEXT NOT NULL DEFAULT '',
-      model TEXT,
-      model_provider TEXT,
-      tokens_used INTEGER NOT NULL DEFAULT 0,
-      rollout_path TEXT,
-      git_branch TEXT
-    );
-  `);
-  const insert = client.prepare(`
-    INSERT INTO threads (
-      id, title, name, first_user_message, preview, cwd,
-      updated_at, updated_at_ms, created_at, created_at_ms,
-      archived, source, model, model_provider, tokens_used,
-      rollout_path, git_branch
-    ) VALUES (
-      @id, @title, @name, @firstUserMessage, @preview, @cwd,
-      @updatedAt, @updatedAtMs, @createdAt, @createdAtMs,
-      @archived, @source, @model, @modelProvider, @tokensUsed,
-      @rolloutPath, @gitBranch
-    )
-  `);
-  insert.run({
-    id: ASSIGNED_ID,
-    title: 'raw first message',
-    name: 'Alpha work',
-    firstUserMessage: 'first message',
-    preview: 'preview',
-    cwd: '/repo/one',
-    updatedAt: 1_795_000_000,
-    updatedAtMs: 1_795_000_000_000,
-    createdAt: 1_794_000_000,
-    createdAtMs: 1_794_000_000_000,
-    archived: 0,
-    source: 'vscode',
-    model: 'model-one',
-    modelProvider: 'provider-one',
-    tokensUsed: 1234,
-    rolloutPath: join(
-      codexHome,
-      'sessions/2026/11/18',
-      `rollout-2026-11-18T10-00-00-${ASSIGNED_ID}.jsonl`,
-    ),
-    gitBranch: 'main',
-  });
-  insert.run({
-    id: PROJECTLESS_ID,
-    title: 'projectless',
-    name: null,
-    firstUserMessage: null,
-    preview: null,
-    cwd: '',
-    updatedAt: 1_793_000_000,
-    updatedAtMs: 1_793_000_000_000,
-    createdAt: 1_793_000_000,
-    createdAtMs: 1_793_000_000_000,
-    archived: 1,
-    source: 'vscode',
-    model: null,
-    modelProvider: null,
-    tokensUsed: 0,
-    rolloutPath: null,
-    gitBranch: null,
-  });
-  insert.run({
-    id: SUBAGENT_ID,
-    title: 'delegated work',
-    name: null,
-    firstUserMessage: null,
-    preview: null,
-    cwd: '/repo/two',
-    updatedAt: 1_792_000_000,
-    updatedAtMs: 1_792_000_000_000,
-    createdAt: 1_792_000_000,
-    createdAtMs: 1_792_000_000_000,
-    archived: 0,
-    source: '{"subagent":{"thread_spawn":{"depth":1}}}',
-    model: null,
-    modelProvider: 'provider-two',
-    tokensUsed: 10,
-    rolloutPath: null,
-    gitBranch: null,
-  });
-  insert.run({
-    id: UNKNOWN_PROJECT_ID,
-    title: 'missing project assignment',
-    name: null,
-    firstUserMessage: null,
-    preview: null,
-    cwd: '',
-    updatedAt: 1_791_000_000,
-    updatedAtMs: 1_791_000_000_000,
-    createdAt: 1_791_000_000,
-    createdAtMs: 1_791_000_000_000,
-    archived: 0,
-    source: 'vscode',
-    model: null,
-    modelProvider: null,
-    tokensUsed: 0,
-    rolloutPath: null,
-    gitBranch: null,
-  });
-  client.close();
+function meta(id: string, extra = {}) {
+  return { type: 'session_meta', timestamp: START, payload: { id, cwd: '/repo/one', ...extra } };
+}
 
-  await mkdir(join(codexHome, 'sessions/2026/11/18'), { recursive: true });
-  await mkdir(join(codexHome, 'archived_sessions'), { recursive: true });
-  await writeFile(
-    join(
-      codexHome,
-      'sessions/2026/11/18',
-      `rollout-2026-11-18T10-00-00-${ASSIGNED_ID}.jsonl`,
-    ),
-    'a'.repeat(100),
-  );
-  await writeFile(
-    join(
-      codexHome,
-      'sessions/2026/11/18',
-      `rollout-2026-11-18T10-05-00-${ASSIGNED_ID}_${SEGMENT_ID}.jsonl.zst`,
-    ),
-    'b'.repeat(50),
-  );
-  await writeFile(
-    join(
-      codexHome,
-      'archived_sessions',
-      `rollout-2026-11-18T09-00-00-${PROJECTLESS_ID}.jsonl.zst`,
-    ),
-    'c'.repeat(25),
-  );
-  await writeFile(
-    join(
-      codexHome,
-      'sessions/2026/11/18',
-      `rollout-2026-11-18T09-30-00-${SUBAGENT_ID}.jsonl`,
-    ),
-    'd'.repeat(10),
-  );
-  await writeFile(
-    join(codexHome, '.codex-global-state.json'),
-    JSON.stringify({
-      'local-projects': {
-        p1: {
-          id: 'p1',
-          name: 'Project One',
-          rootPaths: ['/repo/one', '/repo/two'],
-        },
-        p2: {
-          id: 'p2',
-          name: 'Project Two',
-          rootPaths: ['/repo/three'],
-        },
-      },
-      'thread-project-assignments': {
-        [ASSIGNED_ID]: { projectKind: 'local', projectId: 'p1' },
-        [UNKNOWN_PROJECT_ID]: { projectKind: 'local', projectId: 'missing' },
-      },
-      'projectless-thread-ids': [PROJECTLESS_ID],
-    }),
-  );
+function prompt(value: string, date = START) {
+  return {
+    type: 'response_item',
+    timestamp: date,
+    payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: value }] },
+  };
+}
 
+function codexUsage(tokens: number, date = END) {
+  return {
+    type: 'token_usage_record',
+    timestamp: date,
+    payload: { thread_token_usage: { total_tokens: tokens } },
+  };
+}
+
+it('discovers Codex transcripts without databases and merges compressed continuation segments', async () => {
+  const home = await mkdtemp(path.join(tmpdir(), 'foundry-codex-'));
   try {
-    const snapshot = new SessionService(codexHome).getCodexSnapshot();
-    expect(snapshot.source).toBe('codex');
-    expect(snapshot.projects).toEqual([
-      { id: 'p1', name: 'Project One', roots: ['/repo/one', '/repo/two'] },
-      { id: 'p2', name: 'Project Two', roots: ['/repo/three'] },
+    const first = path.join(home, 'sessions/2026/11/26', `rollout-2026-11-26T03-00-00-${ID}.jsonl`);
+    const firstBytes = await transcript(first, [
+      meta(ID, { git: { branch: 'main' } }),
+      prompt('# AGENTS.md instructions for /repo/one'),
+      prompt('<environment_context>metadata</environment_context>'),
+      prompt('Actual first prompt'),
+      { type: 'turn_context', timestamp: START, payload: { model: 'model-one', cwd: '/repo/one' } },
+      codexUsage(100, START),
     ]);
-    expect(snapshot.warnings).toEqual([]);
-    expect(snapshot.threads).toHaveLength(4);
-
-    const assigned = snapshot.threads.find((thread) => thread.id === ASSIGNED_ID);
-    expect(assigned).toMatchObject({
-      title: 'Alpha work',
-      projectId: 'p1',
-      projectBucket: 'assigned',
-      sizeBytes: 150,
-      segmentCount: 2,
-      tokensUsed: 1234,
-      model: 'model-one',
-      gitBranch: 'main',
-      archived: false,
-      subagent: false,
-    });
-
-    expect(snapshot.threads.find((thread) => thread.id === PROJECTLESS_ID))
-      .toMatchObject({
-        projectId: null,
-        projectBucket: 'projectless',
-        sizeBytes: 25,
-        archived: true,
-      });
-    expect(snapshot.threads.find((thread) => thread.id === SUBAGENT_ID))
-      .toMatchObject({
-        projectBucket: 'unassigned',
-        subagent: true,
-        sizeBytes: 10,
-        model: 'provider-two',
-      });
-    expect(snapshot.threads.find((thread) => thread.id === UNKNOWN_PROJECT_ID))
-      .toMatchObject({
-        projectId: null,
-        projectBucket: 'unassigned',
-      });
-    expect(snapshot.threads[0].id).toBe(ASSIGNED_ID);
-  } finally {
-    await rm(codexHome, { recursive: true, force: true });
-  }
-});
-
-it('reports missing Codex data and unsupported schemas separately', async () => {
-  const missingHome = await mkdtemp(join(tmpdir(), 'foundry-codex-missing-'));
-  try {
-    let error: unknown;
-    try {
-      new SessionService(join(missingHome, 'missing')).getCodexSnapshot();
-    } catch (error_) {
-      error = error_;
-    }
-    expect(error).toBeInstanceOf(SessionSourceError);
-    expect(error).toMatchObject({ code: 'CODEX_DATA_NOT_FOUND' });
-  } finally {
-    await rm(missingHome, { recursive: true, force: true });
-  }
-
-  const unsupportedHome = await mkdtemp(join(tmpdir(), 'foundry-codex-schema-'));
-  const client = new Database(join(unsupportedHome, 'state_9.sqlite'));
-  client.exec('CREATE TABLE other (id TEXT PRIMARY KEY)');
-  client.close();
-
-  try {
-    let error: unknown;
-    try {
-      new SessionService(unsupportedHome).getCodexSnapshot();
-    } catch (error_) {
-      error = error_;
-    }
-    expect(error).toBeInstanceOf(SessionSourceError);
-    expect(error).toMatchObject({ code: 'UNSUPPORTED_CODEX_SCHEMA' });
-  } finally {
-    await rm(unsupportedHome, { recursive: true, force: true });
-  }
-});
-
-it('serves the Codex snapshot through the sessions API', async () => {
-  const codexHome = await mkdtemp(join(tmpdir(), 'foundry-codex-api-'));
-  const databasePath = join(codexHome, 'state_1.sqlite');
-  const client = new Database(databasePath);
-  client.exec(`
-    CREATE TABLE threads (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL DEFAULT '',
-      updated_at INTEGER NOT NULL
+    // A leftover compressed representation must not duplicate a segment.
+    await writeFile(`${first}.zst`, zstdCompressSync(await readFile(first)));
+    const secondBytes = await transcript(
+      path.join(home, 'sessions/2026/11/26', `rollout-2026-11-26T04-00-00-${ID}_${CHILD_ID}.jsonl.zst`),
+      [
+        prompt('Later prompt', END),
+        { type: 'turn_context', timestamp: END, payload: { model: 'model-two', cwd: '/repo/two' } },
+        codexUsage(200),
+        { type: 'event_msg', timestamp: END, payload: { type: 'token_count', info: { total_token_usage: { total_tokens: 200 } } } },
+      ],
+      true,
     );
-    INSERT INTO threads (id, title, updated_at)
-    VALUES ('11111111-1111-4111-8111-111111111111', 'API thread', 1795000000);
-  `);
-  client.close();
-  const foundryHome = await mkdtemp(join(tmpdir(), 'foundry-sessions-api-'));
-  const database = openFoundryStorage(foundryHome);
-  const app = createApiApp(database, {
-    sessionService: new SessionService(codexHome),
-  });
+    await transcript(path.join(home, 'archived_sessions', `${ARCHIVED_ID}.jsonl.zst`), [meta(ARCHIVED_ID), prompt('Archived work')], true);
+    await transcript(path.join(home, 'sessions', `${CHILD_ID}.jsonl`), [
+      meta(CHILD_ID, { source: { subagent: { parent_thread_id: ID } }, model_provider: 'fallback-provider' }),
+      prompt('Delegated work'),
+    ]);
+    // These are deliberately invalid: Sessions must never try to open them.
+    await writeFile(path.join(home, 'state_5.sqlite'), 'not a database');
+    await writeFile(path.join(home, '.codex-global-state.sqlite'), 'not a database');
+    await writeFile(path.join(home, '.codex-global-state.json'), 'not json');
 
-  try {
-    const response = await app.request('/api/sessions/codex');
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
-      source: 'codex',
-      projects: [],
-      threads: [
-        {
-          id: '11111111-1111-4111-8111-111111111111',
-          title: 'API thread',
-          projectBucket: 'unassigned',
-        },
-      ],
-      warnings: [{ code: 'PROJECTS_UNAVAILABLE' }],
-    });
-  } finally {
-    database.close();
-    await rm(foundryHome, { recursive: true, force: true });
-    await rm(codexHome, { recursive: true, force: true });
-  }
-});
-
-it('builds a read-only Claude snapshot from indexed and orphaned transcripts', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'foundry-claude-'));
-  const claudeHome = join(root, '.claude');
-  const projectDirectory = join(claudeHome, 'projects', '-repo-one');
-  const orphanDirectory = join(claudeHome, 'projects', '-repo-two');
-  const indexedId = '66666666-6666-4666-8666-666666666666';
-  const orphanId = '77777777-7777-4777-8777-777777777777';
-  const missingId = '88888888-8888-4888-8888-888888888888';
-  await mkdir(projectDirectory, { recursive: true });
-  await mkdir(orphanDirectory, { recursive: true });
-
-  const indexedPath = join(projectDirectory, `${indexedId}.jsonl`);
-  await writeFile(indexedPath, [
-    {
-      type: 'user',
-      timestamp: '2026-05-01T10:00:01.000Z',
-      cwd: '/repo/one',
-      gitBranch: 'main',
-      message: { role: 'user', content: 'Indexed first prompt' },
-    },
-    {
-      type: 'assistant',
-      timestamp: '2026-05-01T10:30:00.000Z',
-      cwd: '/repo/one',
-      gitBranch: 'main',
-      message: {
-        role: 'assistant',
-        model: 'claude-sonnet-4-5',
-        usage: {
-          input_tokens: 10,
-          output_tokens: 5,
-          cache_creation_input_tokens: 2,
-          cache_read_input_tokens: 3,
-        },
-      },
-    },
-  ].map((record) => JSON.stringify(record)).join('\n'));
-
-  const orphanPath = join(orphanDirectory, `${orphanId}.jsonl`);
-  await writeFile(orphanPath, [
-    { type: 'custom-title', customTitle: 'Orphan custom title' },
-    {
-      type: 'user',
-      timestamp: '2026-05-02T09:00:00.000Z',
-      cwd: '/repo/two',
-      isSidechain: true,
-      message: { role: 'user', content: 'Orphan first prompt' },
-    },
-    {
-      type: 'assistant',
-      timestamp: '2026-05-02T09:05:00.000Z',
-      cwd: '/repo/two',
-      gitBranch: 'feature/claude',
-      message: {
-        role: 'assistant',
-        model: 'claude-opus-4-5',
-        usage: { input_tokens: 4, output_tokens: 3 },
-      },
-    },
-  ].map((record) => JSON.stringify(record)).join('\n'));
-
-  await writeFile(
-    join(projectDirectory, 'sessions-index.json'),
-    JSON.stringify({
-      version: 1,
-      originalPath: '/repo/one',
-      entries: [
-        {
-          sessionId: indexedId,
-          fullPath: indexedPath,
-          firstPrompt: 'Indexed first prompt',
-          summary: 'Indexed summary',
-          created: '2026-05-01T10:00:00.000Z',
-          modified: '2026-05-01T10:30:00.000Z',
-          gitBranch: 'main',
-          projectPath: '/repo/one',
-          isSidechain: false,
-        },
-        {
-          sessionId: missingId,
-          fullPath: join(projectDirectory, `${missingId}.jsonl`),
-          summary: 'Missing transcript',
-          projectPath: '/repo/one',
-          isSidechain: false,
-        },
-      ],
-    }),
-  );
-
-  try {
-    const snapshot = new SessionService(
-      join(root, '.codex'),
-      claudeHome,
-    ).getClaudeSnapshot();
-
-    expect(snapshot.source).toBe('claude');
-    expect(snapshot.threads).toHaveLength(2);
+    const snapshot = await new SessionService(home).getCodexSnapshot();
     expect(snapshot.warnings).toEqual([]);
-    expect(snapshot.projects).toEqual(expect.arrayContaining([
-      { id: 'claude:/repo/one', name: 'one', roots: ['/repo/one'] },
-      { id: 'claude:/repo/two', name: 'two', roots: ['/repo/two'] },
-    ]));
-
-    const indexed = snapshot.threads.find((thread) => thread.id === indexedId);
-    expect(indexed).toMatchObject({
-      title: 'Indexed summary',
-      projectId: 'claude:/repo/one',
-      projectBucket: 'assigned',
+    expect(snapshot.threads).toHaveLength(3);
+    expect(snapshot).not.toHaveProperty('projects');
+    expect(snapshot.threads[0]).toMatchObject({
+      id: ID,
+      title: 'Actual first prompt',
+      cwd: '/repo/two',
+      gitBranch: 'main',
+      createdAt: START,
+      updatedAt: END,
+      model: 'model-two',
+      tokensUsed: 200,
+      sizeBytes: firstBytes + secondBytes,
+      segmentCount: 2,
       archived: false,
       subagent: false,
-      tokensUsed: 20,
-      model: 'claude-sonnet-4-5',
-      cwd: '/repo/one',
-      gitBranch: 'main',
-      createdAt: '2026-05-01T10:00:00.000Z',
-      updatedAt: '2026-05-01T10:30:00.000Z',
     });
-    expect(indexed?.sizeBytes).toBeGreaterThan(0);
-
-    const orphan = snapshot.threads.find((thread) => thread.id === orphanId);
-    expect(orphan).toMatchObject({
-      title: 'Orphan custom title',
-      projectId: 'claude:/repo/two',
-      subagent: true,
-      tokensUsed: 7,
-      model: 'claude-opus-4-5',
-      cwd: '/repo/two',
-      gitBranch: 'feature/claude',
-    });
-    expect(snapshot.threads.map((thread) => thread.id))
-      .toEqual([orphanId, indexedId]);
+    expect(snapshot.threads[0]).not.toHaveProperty('projectBucket');
+    expect(snapshot.threads.find((thread) => thread.id === ARCHIVED_ID)).toMatchObject({ archived: true, title: 'Archived work' });
+    expect(snapshot.threads.find((thread) => thread.id === CHILD_ID)).toMatchObject({ subagent: true, model: 'fallback-provider' });
   } finally {
-    await rm(root, { recursive: true, force: true });
+    await rm(home, { recursive: true, force: true });
   }
 });
 
-it('reports missing Claude data', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'foundry-claude-missing-'));
+it('reads legacy Codex token events and tolerates damaged files while warning', async () => {
+  const home = await mkdtemp(path.join(tmpdir(), 'foundry-codex-partial-'));
   try {
-    let error: unknown;
-    try {
-      new SessionService(
-        join(root, '.codex'),
-        join(root, '.claude'),
-      ).getClaudeSnapshot();
-    } catch (error_) {
-      error = error_;
+    const file = path.join(home, 'sessions', `${ID}.jsonl`);
+    await transcript(file, [
+      meta(ID),
+      prompt('你好，世界'),
+      {
+        type: 'event_msg',
+        timestamp: END,
+        payload: { type: 'token_count', info: { total_token_usage: { total_tokens: 42 } } },
+      },
+    ]);
+    await writeFile(file, `${await readFile(file, 'utf8')}\n{"incomplete":`);
+    await writeFile(path.join(home, 'sessions/broken.jsonl.zst'), 'invalid compressed stream');
+    const snapshot = await new SessionService(home).getCodexSnapshot();
+    expect(snapshot.threads).toHaveLength(1);
+    expect(snapshot.threads[0]).toMatchObject({ title: '你好，世界', tokensUsed: 42 });
+    expect(snapshot.warnings).toEqual([{ code: 'TRANSCRIPT_FILES_UNREADABLE', count: 2 }]);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+it('reports missing transcript directories and supports empty directories', async () => {
+  const home = await mkdtemp(path.join(tmpdir(), 'foundry-sessions-missing-'));
+  try {
+    const service = new SessionService(home, home);
+    await expect(service.getCodexSnapshot()).rejects.toMatchObject({ code: 'CODEX_DATA_NOT_FOUND' });
+    await expect(service.getClaudeSnapshot()).rejects.toMatchObject({ code: 'CLAUDE_DATA_NOT_FOUND' });
+    await mkdir(path.join(home, 'sessions'));
+    await mkdir(path.join(home, 'projects'));
+    const codexSnapshot = await service.getCodexSnapshot();
+    const claudeSnapshot = await service.getClaudeSnapshot();
+    expect(codexSnapshot.threads).toEqual([]);
+    expect(claudeSnapshot.threads).toEqual([]);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+it('reads Claude JSONL directly, ignores indexes and discovers nested compressed subagents', async () => {
+  const home = await mkdtemp(path.join(tmpdir(), 'foundry-claude-'));
+  try {
+    const directory = path.join(home, 'projects', '-repo-one');
+    await transcript(path.join(directory, `${ID}.jsonl`), [
+      { type: 'user', sessionId: ID, timestamp: START, cwd: '/repo/one', gitBranch: 'main', message: { role: 'user', content: 'First prompt' } },
+      { type: 'custom-title', customTitle: 'My title' },
+      ...['text', 'tool_use'].map((type) => ({
+        type: 'assistant',
+        timestamp: END,
+        sessionId: ID,
+        message: { id: 'response-one', role: 'assistant', model: 'claude-one', content: [{ type }], usage: { input_tokens: 10, output_tokens: 5, cache_creation_input_tokens: 2, cache_read_input_tokens: 3 } },
+      })),
+    ]);
+    await writeFile(path.join(directory, 'sessions-index.json'), JSON.stringify({ entries: [{ sessionId: ID, summary: 'Wrong title', projectPath: '/wrong/path', modified: '2099-01-01' }] }));
+    const childBytes = await transcript(path.join(directory, ID, 'subagents/agent-child.jsonl.zst'), [
+      { type: 'user', sessionId: ID, timestamp: START, cwd: '/repo/one', isSidechain: true, message: { role: 'user', content: [{ type: 'text', text: 'Child task' }] } },
+      { type: 'assistant', timestamp: END, message: { role: 'assistant', model: 'claude-two', usage: { input_tokens: 4, output_tokens: 3 } } },
+    ], true);
+    const snapshot = await new SessionService('/missing', home).getClaudeSnapshot();
+    expect(snapshot.warnings).toEqual([]);
+    expect(snapshot.threads).toHaveLength(2);
+    expect(snapshot.threads.find((thread) => thread.id === ID)).toMatchObject({ title: 'My title', cwd: '/repo/one', createdAt: START, updatedAt: END, gitBranch: 'main', tokensUsed: 20, subagent: false });
+    expect(snapshot.threads.find((thread) => thread.id === 'agent-child')).toMatchObject({ title: 'Child task', subagent: true, tokensUsed: 7, sizeBytes: childBytes });
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+it('serves both transcript sources and missing-data errors through the sessions API', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'foundry-sessions-api-'));
+  const storage = openFoundryStorage(path.join(root, 'storage'));
+  const codexHome = path.join(root, 'codex');
+  const claudeHome = path.join(root, 'claude');
+  const app = createApiApp(storage, { sessionService: new SessionService(codexHome, claudeHome) });
+  try {
+    const missingCodex = await app.request('/api/sessions/codex');
+    const missingClaude = await app.request('/api/sessions/claude');
+    expect(missingCodex.status).toBe(404);
+    expect(missingClaude.status).toBe(404);
+    await transcript(path.join(codexHome, 'sessions', `${ID}.jsonl.zst`), [meta(ID), prompt('Codex API thread')], true);
+    await transcript(path.join(claudeHome, 'projects/repo', `${ID}.jsonl`), [{ type: 'user', timestamp: START, sessionId: ID, message: { role: 'user', content: 'Claude API thread' } }]);
+    for (const source of ['codex', 'claude']) {
+      const response = await app.request(`/api/sessions/${source}`);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ source, threads: [{ id: ID, title: `${source === 'codex' ? 'Codex' : 'Claude'} API thread` }], warnings: [] });
     }
-    expect(error).toMatchObject({ code: 'CLAUDE_DATA_NOT_FOUND' });
   } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
-it('serves the Claude snapshot through the sessions API', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'foundry-claude-api-'));
-  const claudeHome = join(root, '.claude');
-  const projectDirectory = join(claudeHome, 'projects', '-repo-api');
-  const sessionId = '99999999-9999-4999-8999-999999999999';
-  await mkdir(projectDirectory, { recursive: true });
-  await writeFile(
-    join(projectDirectory, `${sessionId}.jsonl`),
-    JSON.stringify({
-      type: 'user',
-      timestamp: '2026-05-03T09:00:00.000Z',
-      cwd: '/repo/api',
-      message: { role: 'user', content: 'Claude API thread' },
-    }),
-  );
-
-  const foundryHome = await mkdtemp(join(tmpdir(), 'foundry-sessions-api-'));
-  const database = openFoundryStorage(foundryHome);
-  const app = createApiApp(database, {
-    sessionService: new SessionService(
-      join(root, '.codex'),
-      claudeHome,
-    ),
-  });
-
-  try {
-    const response = await app.request('/api/sessions/claude');
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
-      source: 'claude',
-      threads: [
-        {
-          id: sessionId,
-          title: 'Claude API thread',
-          projectId: 'claude:/repo/api',
-        },
-      ],
-      warnings: [],
-    });
-  } finally {
-    database.close();
-    await rm(foundryHome, { recursive: true, force: true });
+    storage.close();
     await rm(root, { recursive: true, force: true });
   }
 });

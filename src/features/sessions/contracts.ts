@@ -1,18 +1,8 @@
-export type SessionThreadBucket = 'assigned' | 'projectless' | 'unassigned';
-
 export type SessionSource = 'codex' | 'claude';
-
-export interface SessionProject {
-  id: string;
-  name: string;
-  roots: string[];
-}
 
 export interface SessionThread {
   id: string;
   title: string;
-  projectId: string | null;
-  projectBucket: SessionThreadBucket;
   archived: boolean;
   subagent: boolean;
   createdAt: string;
@@ -25,9 +15,7 @@ export interface SessionThread {
   gitBranch: string | null;
 }
 
-export type SessionWarningCode
-  = | 'PROJECTS_UNAVAILABLE'
-    | 'ROLLOUT_FILES_UNREADABLE';
+export type SessionWarningCode = 'TRANSCRIPT_FILES_UNREADABLE';
 
 export interface SessionWarning {
   code: SessionWarningCode;
@@ -37,7 +25,6 @@ export interface SessionWarning {
 export interface SessionSnapshot {
   source: SessionSource;
   capturedAt: string;
-  projects: SessionProject[];
   threads: SessionThread[];
   warnings: SessionWarning[];
 }
@@ -52,7 +39,6 @@ export interface ClaudeSessionSnapshot extends SessionSnapshot {
 
 export type SessionErrorCode
   = | 'CODEX_DATA_NOT_FOUND'
-    | 'UNSUPPORTED_CODEX_SCHEMA'
     | 'CODEX_READ_FAILED'
     | 'CLAUDE_DATA_NOT_FOUND'
     | 'CLAUDE_READ_FAILED';

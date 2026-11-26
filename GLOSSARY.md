@@ -1,4 +1,4 @@
-# Codex Sessions
+# Agent Sessions
 
 Vocabulary for Foundry's read-only view of agent conversation history.
 
@@ -12,17 +12,13 @@ _Avoid_: Session, conversation, chat
 The user-facing label for a Thread in the Sessions page. It is not a separate domain object.
 _Avoid_: using Session as an entity name or identifier
 
-**Project**:
-A user-defined grouping of one or more repository roots that organizes Threads. Thread membership is independent of the Thread's working directory.
-_Avoid_: workspace, repo, folder
+**Working Directory**:
+The directory recorded as the execution location of a Thread. It provides a folder-based grouping for Threads and does not imply membership in a project defined by an agent application.
+_Avoid_: Project
 
-**Projectless Thread**:
-A Thread explicitly marked as not belonging to any Project.
-_Avoid_: unassigned, orphaned
-
-**Unassigned Thread**:
-A Thread with no recorded Project membership. It is not the same as a Projectless Thread.
-_Avoid_: projectless
+**Transcript**:
+The persisted sequence of conversation and execution records for a Thread. A Transcript may span multiple segments.
+_Avoid_: database, session index
 
 **Subagent Thread**:
 A Thread created by another Thread to perform delegated work.

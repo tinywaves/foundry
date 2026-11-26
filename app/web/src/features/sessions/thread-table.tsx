@@ -13,17 +13,14 @@ import * as stylex from '@stylexjs/stylex';
 import type { TranslationKey } from '../../i18n';
 import { useI18n } from '../../i18n';
 import type {
-  SessionProject,
   SessionSnapshot,
   SessionThread,
-  SessionThreadBucket,
 } from './types';
 import { formatBytes, formatTokens } from './format';
 
 type ThreadGroup = {
   key: string;
   name: string;
-  kind: 'project' | SessionThreadBucket;
   roots: string[];
   threads: SessionThread[];
   totalBytes: number;
@@ -79,25 +76,9 @@ export function ThreadTable({
     [groups, t],
   );
 
-  const defaultOpenGroups = useMemo(() => {
-    const open = new Set(groups.slice(0, 3).map((group) => group.key));
-    for (const group of groups) {
-      if (isShowingArchived && group.threads.some((thread) => thread.archived)) {
-        open.add(group.key);
-      }
-      if (isShowingSubagents && group.threads.some((thread) => thread.subagent)) {
-        open.add(group.key);
-      }
-    }
-    return open;
-  }, [groups, isShowingArchived, isShowingSubagents]);
   const defaultCollapsedGroups = useMemo(
-    () => new Set(
-      groups
-        .filter((group) => !defaultOpenGroups.has(group.key))
-        .map((group) => group.key),
-    ),
-    [defaultOpenGroups, groups],
+    () => new Set(groups.map((group) => group.key)),
+    [groups],
   );
   const [groupOverrides, setGroupOverrides] = useState<Map<string, boolean>>(
     () => new Map(),
@@ -139,9 +120,7 @@ export function ThreadTable({
             </Text>
           </span>
           <Text type="supporting">
-            {count}
-            {' '}
-            {t('sessions.threadsLabel')}
+            {t('sessions.sessionCount', { count })}
           </Text>
           <StackItem size="fill" />
           <Text type="supporting">{formatBytes(group.totalBytes)}</Text>
@@ -186,7 +165,7 @@ export function ThreadTable({
     {
       key: 'size',
       header: t('sessions.size'),
-      width: pixel(100),
+      width: pixel(144),
       align: 'end',
       renderCell: (thread) => (
         <Text color="secondary">{formatBytes(thread.sizeBytes)}</Text>
@@ -231,9 +210,6 @@ function buildGroups(
   isShowingSubagents: boolean,
   t: (key: TranslationKey) => string,
 ): ThreadGroup[] {
-  const projectsById = new Map(
-    snapshot.projects.map((project) => [project.id, project]),
-  );
   const groups = new Map<string, ThreadGroup>();
 
   for (const thread of snapshot.threads) {
@@ -244,15 +220,13 @@ function buildGroups(
       continue;
     }
 
-    const project = thread.projectId ? projectsById.get(thread.projectId) : undefined;
-    const key = groupKey(thread, project);
+    const key = thread.cwd;
     let group = groups.get(key);
     if (!group) {
       group = {
         key,
-        name: groupName(thread, project, t),
-        kind: project ? 'project' : thread.projectBucket,
-        roots: project?.roots ?? [],
+        name: thread.cwd.split(/[\\/]/u).findLast(Boolean) || thread.cwd || t('sessions.unknownDirectory'),
+        roots: thread.cwd ? [thread.cwd] : [],
         threads: [],
         totalBytes: 0,
         lastUpdatedAt: thread.updatedAt,
@@ -280,29 +254,6 @@ function buildGroups(
     right.lastUpdatedAt.localeCompare(left.lastUpdatedAt)
     || left.name.localeCompare(right.name)
   ));
-}
-
-function groupKey(
-  thread: SessionThread,
-  project: SessionProject | undefined,
-): string {
-  if (project) {
-    return `project:${project.id}`;
-  }
-  return thread.projectBucket === 'projectless' ? 'projectless' : 'unassigned';
-}
-
-function groupName(
-  thread: SessionThread,
-  project: SessionProject | undefined,
-  t: (key: TranslationKey) => string,
-): string {
-  if (project) {
-    return project.name;
-  }
-  return t(thread.projectBucket === 'projectless'
-    ? 'sessions.projectless'
-    : 'sessions.unassigned');
 }
 
 function secondaryLine(

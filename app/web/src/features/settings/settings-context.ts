@@ -2,6 +2,7 @@ import type {
   LanguageMode,
   SettingsPayload,
   ThemeMode,
+  TimeFormatPattern,
   TimeZoneCode,
 } from '@dhzh/foundry-shared';
 import { createContext, use } from 'react';
@@ -10,12 +11,14 @@ export interface SettingsContextValue {
   settings: SettingsPayload | null;
   theme: ThemeMode;
   language: LanguageMode;
+  timeFormat: TimeFormatPattern;
   timeZone: TimeZoneCode;
   isLoading: boolean;
   isUpdating: boolean;
   error: string | null;
   setTheme: (theme: ThemeMode) => Promise<void>;
   setLanguage: (language: LanguageMode) => Promise<void>;
+  setTimeFormat: (timeFormat: TimeFormatPattern) => Promise<void>;
   setTimeZone: (timeZone: TimeZoneCode) => Promise<void>;
 }
 

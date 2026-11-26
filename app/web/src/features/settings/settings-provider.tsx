@@ -2,6 +2,7 @@ import type {
   LanguageMode,
   SettingsPayload,
   ThemeMode,
+  TimeFormatPattern,
   TimeZoneCode,
 } from '@dhzh/foundry-shared';
 import {
@@ -36,6 +37,9 @@ export function SettingsProvider({ children }: PropsWithChildren) {
   const theme = settings?.workspace.appearance['color-theme'] ?? 'system';
   const language
     = settings?.workspace['language-region'].language ?? 'system';
+  const timeFormat
+    = settings?.workspace['language-region']['time-format']
+      ?? 'YYYY-MM-DD HH:mm:ss';
   const timeZone
     = settings?.workspace['language-region']['time-zone']
       ?? 'America/Los_Angeles';
@@ -183,16 +187,50 @@ export function SettingsProvider({ children }: PropsWithChildren) {
     }
   }, [isUpdating, settings, timeZone]);
 
+  const updateTimeFormat = useCallback(
+    async (nextTimeFormat: TimeFormatPattern) => {
+      if (!settings || isUpdating || nextTimeFormat === timeFormat) {
+        return;
+      }
+
+      const previousSettings = settings;
+      setErrorKey(null);
+      setIsUpdating(true);
+      setSettings({
+        ...settings,
+        workspace: {
+          ...settings.workspace,
+          'language-region': {
+            ...settings.workspace['language-region'],
+            'time-format': nextTimeFormat,
+          },
+        },
+      });
+
+      try {
+        setSettings(await updateSettings({ timeFormat: nextTimeFormat }));
+      } catch {
+        setSettings(previousSettings);
+        setErrorKey('settings.errors.timeFormat');
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    [isUpdating, settings, timeFormat],
+  );
+
   const value = useMemo<SettingsContextValue>(() => ({
     settings,
     theme,
     language,
+    timeFormat,
     timeZone,
     isLoading,
     isUpdating,
     error: errorKey ? t(errorKey) : null,
     setTheme: updateTheme,
     setLanguage: updateLanguage,
+    setTimeFormat: updateTimeFormat,
     setTimeZone: updateTimeZone,
   }), [
     errorKey,
@@ -202,9 +240,11 @@ export function SettingsProvider({ children }: PropsWithChildren) {
     settings,
     t,
     theme,
+    timeFormat,
     timeZone,
     updateLanguage,
     updateTheme,
+    updateTimeFormat,
     updateTimeZone,
   ]);
 

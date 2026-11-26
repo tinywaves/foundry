@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { ColorThemeItem } from './color-theme-item';
 import { LanguageItem } from './language-item';
 import { useSettings } from './settings-context';
+import { TimeFormatItem } from './time-format-item';
 import { TimeZoneItem } from './time-zone-item';
 
 import type { TranslationKey } from '@/i18n/resources';
@@ -50,12 +51,14 @@ export function SettingsPage() {
     settings,
     theme,
     language,
+    timeFormat,
     timeZone,
     isLoading,
     isUpdating,
     error,
     setTheme,
     setLanguage,
+    setTimeFormat,
     setTimeZone,
   } = useSettings();
   const activeSectionAria = settingsSections.find(
@@ -146,6 +149,13 @@ export function SettingsPage() {
                           value={timeZone}
                           onValueChange={(nextTimeZone) => {
                             void setTimeZone(nextTimeZone);
+                          }}
+                          disabled={isUpdating || !settings}
+                        />
+                        <TimeFormatItem
+                          value={timeFormat}
+                          onValueChange={(nextTimeFormat) => {
+                            void setTimeFormat(nextTimeFormat);
                           }}
                           disabled={isUpdating || !settings}
                         />

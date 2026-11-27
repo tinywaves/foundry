@@ -1,154 +1,41 @@
-# Data Transfer
+# Data Backup Commands
 
-## Commands
-
-```bash
-foundry data-transfer status
-foundry data-transfer export --output <path> [--force]
-foundry data-transfer inspect <path>
-foundry data-transfer import <path>
-```
-
-Alias: `foundry data ...`. `import` also supports `restore`.
-
-Pass the passphrase through `FOUNDRY_PASSPHRASE`; `--passphrase` is also
-accepted but may expose the secret in shell history or process inspection.
-
-## Status
-
-```json
-{
-  "activeJobCount": 0,
-  "isBusy": false
-}
-```
-
-`activeJobCount` counts pending/running fetch jobs. Export, inspect, and import
-are blocked when the current Foundry storage has active jobs. Concurrent
-transfers return `BUSY`.
+The CLI and Web UI share the `data-export` and `data-import` services and the
+`foundry.data` version 1 backup format. The command group retains the name
+`data-transfer` (alias `data`).
 
 ## Export
 
 ```bash
-export FOUNDRY_PASSPHRASE='...'
-foundry data-transfer export --output ./foundry.foundry-backup
+foundry data-transfer export --output <path> [--force]
 ```
 
-Behavior:
+Use `FOUNDRY_PASSPHRASE` for the encryption password, or pass `--passphrase`.
+Passwords preserve case and whitespace. Output is an authenticated encrypted
+`.foundry-backup` file. Existing destinations require `--force`; a missing
+extension is added automatically. The JSON result contains `filePath`.
 
-- Exports and imports JSON snapshots with `data/foundry.json`. SQLite-based
-  backup archives are not supported.
-
-- Produces an encrypted `.foundry-backup` archive.
-- Settings are included in the JSON snapshot. Device connection configuration
-  is not exported.
-- If `--output` is omitted, writes `foundry-<iso-timestamp>.foundry-backup` in
-  the current directory.
-- Appends `.foundry-backup` when the destination lacks that extension.
-- Creates missing destination directories.
-- Refuses to overwrite by default; use `--force` only with explicit intent.
-- Uses restrictive file permissions on POSIX systems.
-
-Response:
-
-```json
-{
-  "filePath": "/absolute/path/foundry.foundry-backup",
-  "providerCount": 2,
-  "captureCount": 10,
-  "jobCount": 14
-}
-```
-
-Counts describe records present in the exported snapshot.
-
-## Inspect
-
-```bash
-foundry data-transfer inspect ./foundry.foundry-backup
-```
-
-Inspection:
-
-- requires a non-empty passphrase
-- blocks if current Foundry has active jobs
-- decrypts and validates the archive
-- verifies manifest, checksums, JSON format compatibility, record references, provider/capture/job rows, and capture success pointers
-- returns a preview without replacing current data
-
-Response:
-
-```json
-{
-  "importId": "<temporary-id>",
-  "fileName": "foundry.foundry-backup",
-  "exportedAt": "<iso>",
-  "appVersion": "3.1.3",
-  "dataFormatVersion": 1,
-  "settingsVersion": 1,
-  "providerCount": 2,
-  "captureCount": 10,
-  "jobCount": 14
-}
-```
-
-The `importId` is for the temporary API-style inspection flow. The CLI cleans
-the staged import before exiting, so do not attempt to reuse that ID in a later
-command.
+The application data contract currently contains settings. Provider, capture,
+and fetch-job collections are not yet included. Runtime paths are excluded.
 
 ## Import
 
 ```bash
-export FOUNDRY_PASSPHRASE='...'
-foundry data-transfer import ./foundry.foundry-backup
+foundry data-transfer import <path>
 ```
 
-Import performs inspection and commit in one process:
+Use the same password as export. This command directly replaces the current
+application data with the backup, without merging or retaining a preview
+session. The JSON result is `{ "status": "imported" }`.
 
-1. Validate current state has no active jobs.
-2. Decrypt and validate the archive.
-3. Stage the imported JSON snapshot, including settings.
-4. Replace current providers, captures, fetch jobs, and settings in one
-   recoverable JSON file transaction. Device connection configuration is left unchanged.
+Only current `foundry.data` backups are accepted; legacy `foundry.snapshot`
+archives and raw JSON are unsupported. Decryption, archive structure, checksum,
+and the presence of a settings object are checked. Import and export both use
+the application normalization rules for defaults and supported fields. Import
+replaces the complete normalized settings without merging current values.
+The operation has no application file-size limit. Storage transactions protect
+writes; the last successful import wins. Failed imports leave previous data
+intact. There is no automatic pre-import backup or undo.
 
-This operation is destructive: the current Foundry storage and settings are
-replaced by the archive. Run `inspect` first and summarize the preview unless
-the user explicitly asked for immediate restoration of a known-good file.
-
-Response:
-
-```json
-{
-  "status": "imported",
-  "preview": {
-    "importId": "<temporary-id>",
-    "fileName": "foundry.foundry-backup",
-    "exportedAt": "<iso>",
-    "appVersion": "3.1.3",
-    "dataFormatVersion": 1,
-    "settingsVersion": 1,
-    "providerCount": 2,
-    "captureCount": 10,
-    "jobCount": 14
-  }
-}
-```
-
-After import, query the affected feature commands to verify the new state.
-
-## Errors
-
-- `PASSPHRASE_REQUIRED`: no passphrase supplied.
-- `INVALID_PASSPHRASE`: decryption failed.
-- `INVALID_ARCHIVE`: malformed, incomplete, corrupt, or semantically invalid
-  backup.
-- `UNSUPPORTED_ARCHIVE`: unsupported archive or settings version.
-- `NEWER_SCHEMA`: archive data format is newer than the installed Foundry.
-- `ACTIVE_JOBS`: pending/running jobs block transfer.
-- `BUSY`: another transfer is already running.
-- `IMPORT_NOT_FOUND`: staged import is unavailable.
-- `IO_ERROR`: filesystem or other transfer I/O failure.
-- `OUTPUT_EXISTS`: export destination exists and `--force` was not supplied.
-
-Do not extract, patch, or repack a `.foundry-backup` manually. Treat the archive
-format and manifest validation as compatibility contracts.
+`status` and `inspect` are no longer commands. The Web UI reloads at its root
+route after import; CLI callers can verify with `foundry settings get`.

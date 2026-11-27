@@ -38,12 +38,8 @@ it('streams foundry events over SSE', async () => {
   const decoder = new TextDecoder();
   let streamed = '';
   const readStream = (async () => {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        return;
-      }
-      streamed += decoder.decode(value, { stream: true });
+    for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
+      streamed += decoder.decode(chunk.value, { stream: true });
     }
   })();
 

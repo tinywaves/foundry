@@ -1,4 +1,3 @@
-import type { FoundrySettings } from '@dhzh/foundry-shared';
 import type { StoredJobConfig } from '../features/captures/contracts';
 import type { ProviderInput } from '../features/providers/contracts';
 
@@ -38,11 +37,4 @@ export interface Collections {
   providers: ProviderRecord;
   captures: CaptureRecord;
   fetchJobs: FetchJobRecord;
-}
-export interface StorageSnapshot {
-  formatVersion: number;
-  settings: FoundrySettings;
-  providers: ProviderRecord[];
-  captures: CaptureRecord[];
-  fetchJobs: FetchJobRecord[];
 }

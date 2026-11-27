@@ -279,53 +279,28 @@ it('exports and imports a backup through the CLI', async () => {
   vi.stubEnv('FOUNDRY_PASSPHRASE', 'cli backup passphrase');
 
   try {
-    const created = await runJsonCommand([
-      'providers',
-      'create',
-      '--input',
-      JSON.stringify({
-        name: 'Backup Provider',
-        protocol: 'openai-responses',
-        baseURL: 'https://api.example.com/v1',
-        apiKey: 'provider-secret',
-        customModels: [],
-      }),
-    ]) as { id: string };
-
+    await runJsonCommand(['settings', 'update', '--input', JSON.stringify({ theme: 'dark', language: 'zh-CN' })]);
     const backupPath = join(directory, 'backup.foundry-backup');
     const exported = await runJsonCommand([
       'data-transfer',
       'export',
       '--output',
       backupPath,
-    ]) as { filePath: string; providerCount: number };
-    expect(exported).toMatchObject({
-      filePath: backupPath,
-      providerCount: 1,
-    });
+    ]) as { filePath: string };
+    expect(exported).toEqual({ filePath: backupPath });
     const backupStat = await stat(backupPath);
     expect(backupStat.mode & 0o777).toBe(0o600);
 
-    await runJsonCommand([
-      'providers',
-      'set-status',
-      created.id,
-      '--status',
-      'deleted',
-    ]);
-    expect(await runJsonCommand(['providers', 'list'])).toEqual([]);
-
+    await runJsonCommand(['settings', 'update', '--input', JSON.stringify({ theme: 'light', language: 'en-US' })]);
     const imported = await runJsonCommand([
       'data-transfer',
       'import',
       backupPath,
-    ]) as { status: string; preview: { providerCount: number } };
-    expect(imported).toMatchObject({
-      status: 'imported',
-      preview: { providerCount: 1 },
+    ]) as { status: string };
+    expect(imported).toEqual({ status: 'imported' });
+    expect(await runJsonCommand(['settings', 'get'])).toMatchObject({
+      workspace: { 'appearance': { 'color-theme': 'dark' }, 'language-region': { language: 'zh-CN' } },
     });
-    expect(await runJsonCommand(['providers', 'list']))
-      .toMatchObject([{ id: created.id, status: 'active' }]);
   } finally {
     vi.unstubAllEnvs();
     await rm(directory, { recursive: true, force: true });

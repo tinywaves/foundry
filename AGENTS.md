@@ -26,7 +26,7 @@ The `foundry web` startup sequence is part of the product contract:
 1. Parse CLI arguments with citty.
 2. Initialize JSON storage in `<home>/.foundry`.
 3. Recover interrupted JSON file transactions.
-4. Start capture and data-transfer services.
+4. Prepare feature services and start capture execution.
 5. Serve the API and bundled Web UI on `127.0.0.1:11111`.
 6. Print the URL and open the browser unless `--no-open` is used.
 
@@ -54,10 +54,11 @@ src/
 |   `-- open-browser.ts    Platform-specific browser opening
 |-- features/
 |   |-- captures/          Capture service, fetchers, runner, repository, routes
-|   |-- data-transfer/     Encrypted archive export and import
+|   |-- data-export/       Current app data collection and encrypted export
+|   |-- data-import/       Direct encrypted backup replacement
 |   |-- providers/         Provider repository, model discovery, routes
 |   `-- settings/          Settings, bundled skill copy, validation, routes
-|-- lib/                   Small server-side utilities
+|-- lib/                   Small server-side utilities, shared backup ZIP and crypto
 |-- server/
 |   |-- api.ts             API composition and feature route mounting
 |   |-- app.ts             API plus static Web UI and SPA fallback
@@ -69,7 +70,6 @@ src/
     |-- index.ts           Default JSON storage initialization
     |-- store.ts           JSON records, process locking and redo recovery
     |-- models.ts          JSON record contracts and format version
-    |-- validation.ts      Snapshot integrity validation
     |-- files.ts           Atomic private file writes
     `-- paths.ts           User-home Foundry paths and POSIX permissions
 
@@ -184,7 +184,7 @@ API development servers. Rebuild `dist` to test production static serving.
   replacement and redo recovery inside the storage module. Read JSON files
   directly on each request; do not introduce cross-request caches or manifests.
 - Preserve active-URL uniqueness, one active job per capture and valid capture/job
-  references in repositories and snapshot validation.
+  references in repositories.
 - Preserve POSIX `0700` directories and `0600` files.
 - New storage starts from default settings and empty JSON collections. Startup
   does not import old SQLite databases.

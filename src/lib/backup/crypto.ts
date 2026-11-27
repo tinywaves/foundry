@@ -15,7 +15,7 @@ import {
 import { Transform } from 'node:stream';
 import type { TransformCallback } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { DataTransferError } from './errors';
+import { BackupCryptoError } from './errors';
 
 const MAGIC = Buffer.from('FOUNDRYX', 'ascii');
 const ENVELOPE_VERSION = 1;
@@ -90,7 +90,7 @@ export async function encryptExportFile(
     await chmod(outputPath, 0o600);
   } catch (error) {
     await rm(outputPath, { force: true });
-    throw new DataTransferError(
+    throw new BackupCryptoError(
       'IO_ERROR',
       'Unable to encrypt the Foundry export',
       { cause: error },
@@ -165,11 +165,11 @@ export async function decryptExportFile(
     await chmod(outputPath, 0o600);
   } catch (error) {
     await rm(outputPath, { force: true });
-    throw error instanceof DataTransferError
+    throw error instanceof BackupCryptoError
       ? error
-      : new DataTransferError(
-          'INVALID_PASSPHRASE',
-          'The passphrase is incorrect or the export file is corrupted',
+      : new BackupCryptoError(
+          isFileSystemError(error) ? 'IO_ERROR' : 'INVALID_PASSPHRASE',
+          isFileSystemError(error) ? 'Unable to read or decrypt the backup file' : 'The passphrase is incorrect or the export file is corrupted',
           { cause: error },
         );
   } finally {
@@ -334,4 +334,9 @@ async function readAt(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isFileSystemError(error: unknown): boolean {
+  return error instanceof Error && 'code' in error
+    && typeof error.code === 'string' && (/^E[A-Z]+$/u).test(error.code);
 }

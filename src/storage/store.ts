@@ -8,7 +8,7 @@ import type { FoundrySettings } from '@dhzh/foundry-shared';
 import { DEFAULT_SETTINGS, normalizeSettings } from '../features/settings/contracts';
 import { privateDirectory, syncDirectory, writeJsonAtomic } from './files';
 import { STORAGE_FORMAT_VERSION } from './models';
-import type { Collections, StorageSnapshot } from './models';
+import type { Collections } from './models';
 
 const COLLECTIONS = ['providers', 'captures', 'fetchJobs'] as const;
 type Collection = keyof Collections;
@@ -271,7 +271,7 @@ export class FoundryStorage {
   readSettings(): FoundrySettings {
     return this.locked(() => {
       if (this.changes?.has('settings.json')) {
-        return structuredClone(this.changes.get('settings.json')) as FoundrySettings;
+        return normalizeSettings(this.changes.get('settings.json'));
       }
       const filename = path.join(this.path, 'settings.json');
       return existsSync(filename)
@@ -312,7 +312,7 @@ export class FoundryStorage {
         return action(this);
       }
       this.changes = new Map();
-      let isCommitted = false;
+      let committedResult: { value: T } | undefined;
       try {
         const result = action(this);
         if (result instanceof Promise) {
@@ -321,49 +321,21 @@ export class FoundryStorage {
         if (this.changes.size > 0) {
           const journal: Journal = { changes: [...this.changes].map(([file, value]) => ({ file, value })) };
           writeJsonAtomic(path.join(this.path, '.transaction.json'), journal);
-          isCommitted = true;
+          committedResult = { value: result };
           this.applyJournal(journal);
         }
         return result;
       } catch (error) {
-        if (isCommitted) {
-          // A durable journal exists: recover it before accepting another call.
+        if (committedResult) {
+          // The durable transaction already committed. Finish recovery and
+          // report its result once all writes have been applied successfully.
           this.recover();
+          return committedResult.value;
         }
         throw error;
       } finally {
         this.changes = null;
       }
-    });
-  }
-
-  snapshot(): StorageSnapshot {
-    return this.locked(() => ({
-      formatVersion: STORAGE_FORMAT_VERSION,
-      settings: this.readSettings(),
-      providers: this.all('providers'),
-      captures: this.all('captures'),
-      fetchJobs: this.all('fetchJobs'),
-    }));
-  }
-
-  replace(snapshot: StorageSnapshot): void {
-    this.transaction(() => {
-      for (const collection of COLLECTIONS) {
-        if (collection === 'providers') {
-          this.changes?.set('providers.json', structuredClone(snapshot.providers));
-          continue;
-        }
-        const current = this.all(collection);
-        for (const row of current) {
-          this.changes?.set(this.recordPath(collection, row.id), null);
-        }
-        const imported = snapshot[collection];
-        for (const row of imported) {
-          this.put(collection, row);
-        }
-      }
-      this.setSettings(snapshot.settings);
     });
   }
 

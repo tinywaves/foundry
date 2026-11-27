@@ -5,16 +5,12 @@ import { pipeline } from 'node:stream/promises';
 import yauzl from 'yauzl';
 import type { Entry } from 'yauzl';
 import yazl from 'yazl';
-import {
-  DATA_ENTRY_PATH,
-  MANIFEST_ENTRY_PATH,
-} from './format';
+import { DATA_BACKUP_ENTRY } from '@dhzh/foundry-shared';
 
-export const MAXIMUM_ARCHIVE_BYTES = 4 * 1024 * 1024 * 1024;
-const MAXIMUM_MANIFEST_BYTES = 1024 * 1024;
+const MANIFEST_ENTRY_PATH = 'manifest.json';
 const ALLOWED_ENTRIES = new Set([
   MANIFEST_ENTRY_PATH,
-  DATA_ENTRY_PATH,
+  DATA_BACKUP_ENTRY,
 ]);
 
 export interface ArchiveInputFile {
@@ -40,7 +36,6 @@ export async function extractFoundryArchive(
 ): Promise<Record<string, string>> {
   const zip = await openZip(zipPath);
   const extractedPaths = new Map<string, string>();
-  let totalBytes = 0;
 
   try {
     await new Promise<void>((resolve, reject) => {
@@ -56,16 +51,8 @@ export async function extractFoundryArchive(
           throw new Error('The Foundry archive contains an invalid file');
         }
 
-        const maximumBytes = entry.fileName === MANIFEST_ENTRY_PATH
-          ? MAXIMUM_MANIFEST_BYTES
-          : MAXIMUM_ARCHIVE_BYTES;
-        totalBytes += entry.uncompressedSize;
-        if (entry.uncompressedSize > maximumBytes || totalBytes > MAXIMUM_ARCHIVE_BYTES) {
-          throw new Error('The Foundry archive is too large');
-        }
-
         const destinationPath = path.join(outputDirectory, entry.fileName);
-        await mkdir(path.dirname(destinationPath), { recursive: true });
+        await mkdir(path.dirname(destinationPath), { recursive: true, mode: 0o700 });
         await pipeline(
           await openEntryStream(zip, entry),
           createWriteStream(destinationPath, { mode: 0o600 }),
@@ -89,7 +76,7 @@ export async function extractFoundryArchive(
     zip.close();
   }
 
-  if (!extractedPaths.has(MANIFEST_ENTRY_PATH) || !extractedPaths.has(DATA_ENTRY_PATH)) {
+  if (!extractedPaths.has(MANIFEST_ENTRY_PATH) || !extractedPaths.has(DATA_BACKUP_ENTRY)) {
     await rm(outputDirectory, { recursive: true, force: true });
     throw new Error('The Foundry archive is incomplete');
   }

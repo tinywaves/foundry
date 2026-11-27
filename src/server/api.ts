@@ -3,14 +3,7 @@ import packageJson from '../../package.json' with { type: 'json' };
 import { createCaptureRoutes } from '../features/captures/routes';
 import { CAPTURES_CHANGED_EVENT } from '../features/captures/events';
 import type { CaptureService } from '../features/captures/service';
-import { createDataTransferRoutes } from '../features/data-transfer/routes';
-import type { DataTransferService } from '../features/data-transfer/service';
-import {
-  createWorkspaceMutationMiddleware,
-  WorkspaceMutationGate,
-} from '../features/data-transfer/workspace-mutation';
 import type { FoundryEventHub } from '../events/hub';
-import { DATA_TRANSFER_IMPORTED_EVENT } from '../features/data-transfer/events';
 import { PROVIDERS_CHANGED_EVENT } from '../features/providers/events';
 import { createProviderRoutes } from '../features/providers/routes';
 import { ProviderService } from '../features/providers/service';
@@ -22,15 +15,19 @@ import { createSessionRoutes } from '../features/sessions/routes';
 import { SessionService } from '../features/sessions/service';
 import { createEventRoutes } from '../events/routes';
 import type { FoundryStorage } from '../storage/index';
+import { DataExportService } from '../features/data-export/service';
+import { createDataExportRoutes } from '../features/data-export/routes';
+import { DataImportService } from '../features/data-import/service';
+import { createDataImportRoutes } from '../features/data-import/routes';
 
 export interface ApiAppOptions {
   captureService?: CaptureService;
-  dataTransferService?: DataTransferService;
+  dataExportService?: DataExportService;
+  dataImportService?: DataImportService;
   providerService?: ProviderService;
   settingsService?: SettingsService;
   settingsSkillCopyService?: BundledSkillCopyService;
   sessionService?: SessionService;
-  workspaceMutationGate?: WorkspaceMutationGate;
   eventHub?: FoundryEventHub;
   onSettingsChanged?: () => void;
 }
@@ -41,9 +38,6 @@ export function isApiPath(path: string): boolean {
 
 export function createApiApp(storage: FoundryStorage, options: ApiAppOptions = {}): Hono {
   const app = new Hono();
-  const workspaceMutationGate = options.workspaceMutationGate
-    ?? options.dataTransferService?.workspaceMutationGate
-    ?? new WorkspaceMutationGate();
   const providerService = options.providerService
     ?? new ProviderService(storage);
   const settingsService = options.settingsService
@@ -52,11 +46,6 @@ export function createApiApp(storage: FoundryStorage, options: ApiAppOptions = {
     ?? new BundledSkillCopyService();
   const sessionService = options.sessionService
     ?? new SessionService();
-
-  app.use(
-    '/api/*',
-    createWorkspaceMutationMiddleware(workspaceMutationGate),
-  );
 
   app.get('/api/health', (c) => c.json({
     status: 'ok',
@@ -70,6 +59,17 @@ export function createApiApp(storage: FoundryStorage, options: ApiAppOptions = {
   if (options.eventHub) {
     app.route('/api/events', createEventRoutes(options.eventHub));
   }
+  app.route(
+    '/api/data-import',
+    createDataImportRoutes(options.dataImportService ?? new DataImportService(storage), () => {
+      options.onSettingsChanged?.();
+      options.eventHub?.publish(SETTINGS_CHANGED_EVENT, { fields: ['theme', 'language', 'timeFormat', 'timezone', 'captures'] });
+    }),
+  );
+  app.route(
+    '/api/data-export',
+    createDataExportRoutes(options.dataExportService ?? new DataExportService(storage)),
+  );
   app.route(
     '/api/providers',
     createProviderRoutes(providerService, () => {
@@ -99,15 +99,6 @@ export function createApiApp(storage: FoundryStorage, options: ApiAppOptions = {
       }),
     );
   }
-  if (options.dataTransferService) {
-    app.route(
-      '/api/data-transfer',
-      createDataTransferRoutes(options.dataTransferService, () => {
-        options.eventHub?.publish(DATA_TRANSFER_IMPORTED_EVENT, {});
-      }),
-    );
-  }
-
   app.notFound((c) => {
     if (!isApiPath(c.req.path)) {
       return c.text('Not Found', 404);

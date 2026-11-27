@@ -17,7 +17,3 @@ export function ensureFoundryHome(): string {
 
   return foundryHome;
 }
-
-export function getFoundryDataTransferPath(): string {
-  return path.join(getFoundryHomePath(), '.data-transfer');
-}

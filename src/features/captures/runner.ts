@@ -11,7 +11,6 @@ export class FetchJobRunner {
   private readonly queue: string[] = [];
   private readonly knownJobIDs = new Set<string>();
   private runningCount = 0;
-  private paused = false;
 
   constructor(
     private readonly repository: CaptureRepository,
@@ -21,10 +20,6 @@ export class FetchJobRunner {
   ) {}
 
   private schedule(): void {
-    if (this.paused) {
-      return;
-    }
-
     const concurrency = readStoredSettings(
       this.storage,
     ).features.library.captures.fetchConcurrency;
@@ -137,15 +132,6 @@ export class FetchJobRunner {
   }
 
   notifySettingsChanged(): void {
-    this.schedule();
-  }
-
-  pause(): void {
-    this.paused = true;
-  }
-
-  resume(): void {
-    this.paused = false;
     this.schedule();
   }
 }

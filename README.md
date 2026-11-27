@@ -17,8 +17,8 @@ entry point.
 - Save links as agent-facing index cards using the configured capture fetcher,
   run background jobs with retries, and inspect the raw fetcher response.
 - Configure appearance, language and region, capture behavior, and concurrency.
-- Export and import an encrypted `.foundry-backup` snapshot containing the
-  JSON records and application settings.
+- Export and import encrypted `.foundry-backup` application data. The current
+  data contract contains settings; imports replace those settings completely.
 - Copy the bundled agent skill into `<home>/.agents/skills/foundry`,
   `<home>/.claude/skills/foundry`, or both from the CLI or Settings > Advanced.
 
@@ -74,9 +74,7 @@ foundry captures jobs list <capture-id>
 foundry captures jobs get <capture-id> <job-id>
 foundry captures jobs recapture <capture-id>
 
-foundry data-transfer status
 foundry data-transfer export --output ./foundry.foundry-backup
-foundry data-transfer inspect ./foundry.foundry-backup
 foundry data-transfer import ./foundry.foundry-backup
 
 foundry settings download-skill --target .agents,.claude
@@ -84,8 +82,10 @@ foundry settings download-skill --target .agents,.claude
 
 Use `--input-file <path>` or `--input -` for large JSON payloads. Data-transfer
 passphrases can be passed with `--passphrase` or `FOUNDRY_PASSPHRASE`.
-`data-transfer import` validates and replaces local JSON records and settings in
-one command.
+`data-transfer export/import` use the same data services and backup format as
+the Web UI. Import replaces current app data in one command; the current data
+contract contains settings. Provider and capture collections are not yet part
+of this backup contract.
 
 Skill targets are fixed relative to the user home directory. Here `<home>` is
 `~` on macOS/Linux and `%USERPROFILE%` on Windows:
@@ -122,7 +122,6 @@ Foundry keeps user data outside the repository in `<home>/.foundry`. `<home>` is
 - `providers.json`: an array of providers, credentials, and optional base64 avatars
 - `captures/<record-key>.json`: captures
 - `fetch-jobs/<record-key>.json`: fetch jobs, configuration snapshots and responses
-- `.data-transfer/`: temporary export and import files
 
 Capture and fetch-job filenames use a SHA-256 key of the record ID for portable, collision-safe
 paths; the original ID is preserved inside each document.

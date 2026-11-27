@@ -186,8 +186,8 @@ export function SettingsPage() {
           )}
           {!isLoading && activeSection === 'advanced' && (
             <div className="divide-y">
-              <ExportItem />
-              <ImportItem />
+              <ExportItem disabled={isUpdating || !settings} />
+              <ImportItem disabled={isUpdating || !settings} />
               <ConfigFolderItem configFolder={settings?.configFolder} />
             </div>
           )}

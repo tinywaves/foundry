@@ -21,7 +21,7 @@ Read only the references needed for the current request.
 | Appearance, language, timezone, capture fetcher configuration | [references/settings.md](references/settings.md) |
 | List, create, update, disable, or discover models for providers | [references/providers.md](references/providers.md) |
 | Captures, capture detail, notes, recapture, or child fetch jobs | [references/captures.md](references/captures.md) |
-| Encrypted export, preview, or destructive restore | [references/data-transfer.md](references/data-transfer.md) |
+| Encrypted export or destructive restore | [references/data-transfer.md](references/data-transfer.md) |
 
 ## Core Model
 
@@ -46,8 +46,8 @@ Read only the references needed for the current request.
 3. Treat provider `update` as full replacement, not partial patching.
 4. Check `job.status` after capture operations. A command can exit successfully
    with a completed job whose status is `failed`.
-5. Run `data-transfer inspect` before `data-transfer import`; import replaces the
-   current JSON records and settings.
+5. Use `data-transfer import` when replacing current app data is the intended
+   action. It applies the backup directly without a preview or merge.
 6. Prefer `FOUNDRY_PASSPHRASE` over `--passphrase` so backup secrets do not enter
    shell history.
 7. Use CLI commands instead of editing files under `<home>/.foundry` directly.
@@ -82,9 +82,7 @@ foundry captures jobs list <capture-id>
 foundry captures jobs get <capture-id> <job-id>
 foundry captures jobs recapture <capture-id>
 
-foundry data-transfer status
 foundry data-transfer export --output <path> [--force]
-foundry data-transfer inspect <path>
 foundry data-transfer import <path>
 
 ```
@@ -113,7 +111,8 @@ from these references.
 
 ## Workflow: Restore Data
 
-1. Run `data-transfer status`; active jobs block transfers.
-2. Run `data-transfer inspect <path>` and report the preview.
-3. Proceed with `data-transfer import <path>` only when replacing current
-   Foundry data is the explicit intent.
+1. Read [the backup reference](references/data-transfer.md) for the supported
+   format and current data scope.
+2. Run `data-transfer import <path>` when complete replacement is intended.
+3. Read `settings get` to verify the restored values. Backups currently contain
+   settings; other feature collections are not part of this data contract yet.

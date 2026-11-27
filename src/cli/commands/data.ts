@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import {
   chmod,
-  copyFile,
+  writeFile,
   link,
   mkdir,
   rename,
@@ -12,24 +12,10 @@ import path from 'node:path';
 import process from 'node:process';
 import { defineCommand } from 'citty';
 import {
-  ensureExportExtension,
-} from '../../features/data-transfer/format';
-import {
   CliInputError,
   resolvePassphrase,
   runCliAction,
 } from '../shared';
-
-const status = defineCommand({
-  meta: {
-    name: 'status',
-    description: 'Read data-transfer and fetch-job status',
-  },
-  run() {
-    return runCliAction(({ runtime }) =>
-      runtime.services.dataTransferService.getStatus());
-  },
-});
 
 const exportCommand = defineCommand({
   meta: {
@@ -56,57 +42,11 @@ const exportCommand = defineCommand({
   },
   run({ args }) {
     return runCliAction(async ({ runtime }) => {
-      const service = runtime.services.dataTransferService;
-      const passphrase = resolvePassphrase(args.passphrase);
-      service.cleanupStaleTransfers();
-      const exported = await service.createExport(passphrase);
+      const exported = await runtime.services.dataExportService.createExport(resolvePassphrase(args.passphrase));
       const destination = resolveExportDestination(args.output);
 
-      try {
-        await copyExport(exported, destination, args.force);
-      } finally {
-        await service.removeExportFile(exported.filePath);
-      }
-
-      return {
-        ...exported,
-        filePath: destination,
-      };
-    });
-  },
-});
-
-const inspect = defineCommand({
-  meta: {
-    name: 'inspect',
-    description: 'Validate a Foundry backup without importing it',
-  },
-  args: {
-    file: {
-      type: 'positional',
-      description: 'Path to a .foundry-backup file',
-      required: true,
-    },
-    passphrase: {
-      type: 'string',
-      description: 'Decryption passphrase; defaults to FOUNDRY_PASSPHRASE',
-      valueHint: 'text',
-    },
-  },
-  run({ args }) {
-    return runCliAction(async ({ runtime }) => {
-      const service = runtime.services.dataTransferService;
-      service.cleanupStaleTransfers();
-      const preview = await service.inspectImport(
-        path.resolve(args.file),
-        resolvePassphrase(args.passphrase),
-      );
-
-      try {
-        return preview;
-      } finally {
-        await service.cancelImport(preview.importId);
-      }
+      await copyExport(exported.contents, destination, args.force);
+      return { filePath: destination };
     });
   },
 });
@@ -114,7 +54,7 @@ const inspect = defineCommand({
 const importBackup = defineCommand({
   meta: {
     name: 'import',
-    description: 'Validate and replace local Foundry data from a backup',
+    description: 'Replace local Foundry data from an encrypted backup',
     alias: ['restore'],
   },
   args: {
@@ -131,32 +71,23 @@ const importBackup = defineCommand({
   },
   run({ args }) {
     return runCliAction(async ({ runtime }) => {
-      const service = runtime.services.dataTransferService;
-      service.cleanupStaleTransfers();
-      const preview = await service.inspectImport(
+      await runtime.services.dataImportService.importData(
         path.resolve(args.file),
         resolvePassphrase(args.passphrase),
       );
-      await service.commitImport(preview.importId);
-
-      return {
-        status: 'imported',
-        preview,
-      };
+      return { status: 'imported' };
     });
   },
 });
 
-export const dataTransferCommand = defineCommand({
+export const dataCommand = defineCommand({
   meta: {
     name: 'data-transfer',
     description: 'Export or import encrypted Foundry backups',
     alias: ['data'],
   },
   subCommands: {
-    status,
     export: exportCommand,
-    inspect,
     import: importBackup,
   },
 });
@@ -165,11 +96,12 @@ function resolveExportDestination(value: string | undefined): string {
   const timestamp = new Date().toISOString().replaceAll(':', '-');
   const output = value ?? `foundry-${timestamp}.foundry-backup`;
 
-  return ensureExportExtension(path.resolve(output));
+  const destination = path.resolve(output);
+  return destination.toLowerCase().endsWith('.foundry-backup') ? destination : `${destination}.foundry-backup`;
 }
 
 async function copyExport(
-  exported: { filePath: string },
+  contents: Uint8Array,
   destination: string,
   shouldForce: boolean,
 ): Promise<void> {
@@ -180,7 +112,7 @@ async function copyExport(
   );
 
   try {
-    await copyFile(exported.filePath, temporaryDestination);
+    await writeFile(temporaryDestination, contents, { mode: 0o600 });
     if (process.platform !== 'win32') {
       await chmod(temporaryDestination, 0o600);
     }

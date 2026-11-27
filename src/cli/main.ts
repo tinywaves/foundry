@@ -5,7 +5,7 @@ import {
 import type { CommandDef } from 'citty';
 import packageJson from '../../package.json' with { type: 'json' };
 import { capturesCommand } from './commands/captures';
-import { dataTransferCommand } from './commands/data-transfer';
+import { dataCommand } from './commands/data';
 import { providersCommand } from './commands/providers';
 import { settingsCommand } from './commands/settings';
 import { webCommand } from './commands/web';
@@ -37,7 +37,7 @@ export function createFoundryCommand(): CommandDef {
       'settings': settingsCommand,
       'providers': providersCommand,
       'captures': capturesCommand,
-      'data-transfer': dataTransferCommand,
+      'data-transfer': dataCommand,
     },
   });
 

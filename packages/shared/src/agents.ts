@@ -7,6 +7,18 @@ export interface Agent {
   instructionIds: string[];
 }
 
+export interface AgentInstructionsRecord {
+  instructionIds: string[];
+  enabled: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface AgentRecord {
+  id: string;
+  instructions: AgentInstructionsRecord;
+}
+
 export interface UpdateAgentInstructionsInput {
   instructionIds: string[];
 }

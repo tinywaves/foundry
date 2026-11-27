@@ -1,4 +1,5 @@
-import type { AgentRecord } from '../../storage/models';
+import type { AgentRecord } from '@dhzh/foundry-shared';
+
 import type { FoundryStorage } from '../../storage/store';
 
 export function listAgentRecords(storage: FoundryStorage): AgentRecord[] {

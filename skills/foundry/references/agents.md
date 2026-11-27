@@ -277,4 +277,4 @@ Operation errors use Foundry's JSON error envelope and exit nonzero.
 
 - [Instructions](instructions.md): create and list the Markdown records.
 - [Settings](settings.md): application preferences and Skill installation.
-- [Encrypted backups](backups.md): backup scope; assignments are not included.
+- [Encrypted backups](backups.md): assignments are included; external files are not.

@@ -6,7 +6,12 @@ import process from 'node:process';
 import type { FoundrySettings } from '@dhzh/foundry-shared';
 
 import { DEFAULT_SETTINGS, normalizeSettings } from '../features/settings/contracts';
-import { privateDirectory, syncDirectory, writeJsonAtomic } from './files';
+import {
+  privateDirectory,
+  syncDirectory,
+  writeJsonAtomic,
+  writeTextAtomic,
+} from './files';
 import { STORAGE_FORMAT_VERSION } from './models';
 import type { Collections } from './models';
 
@@ -14,7 +19,8 @@ const COLLECTIONS = ['agents', 'providers', 'captures', 'fetchJobs'] as const;
 type Collection = keyof Collections;
 interface Change {
   file: string;
-  value: unknown;
+  value?: unknown;
+  text?: string;
 }
 interface Journal {
   changes: Change[];
@@ -42,6 +48,7 @@ Owns direct JSON file reads, process locking, atomic writes and redo recovery.
 */
 export class FoundryStorage {
   private changes: Map<string, unknown> | null = null;
+  private textChanges: Map<string, string | null> | null = null;
   private closed = false;
   private lockDepth = 0;
   readonly formatVersion = STORAGE_FORMAT_VERSION;
@@ -63,6 +70,18 @@ export class FoundryStorage {
       throw new Error('Invalid storage record ID');
     }
     return path.relative(this.path, path.join(this.collectionPath(collection), `${createHash('sha256').update(id).digest('hex')}.json`));
+  }
+
+  private instructionFilename(filename: string): string {
+    const relative = path.relative(this.path, path.resolve(this.path, filename));
+    if (
+      relative.startsWith('..')
+      || path.isAbsolute(relative)
+      || !(/^instructions[/\\][^/\\]+\.md$/u).test(relative)
+    ) {
+      throw new Error('Invalid instruction filename');
+    }
+    return relative;
   }
 
   private locked<T>(action: () => T): T {
@@ -196,12 +215,22 @@ export class FoundryStorage {
       const filename = path.resolve(this.path, change.file);
       const relative = path.relative(this.path, filename);
       if (relative.startsWith('..') || path.isAbsolute(relative)
-        || !(/^(?:(?:settings|providers)\.json|(?:agents|providers|captures|fetch-jobs)[/\\][^/\\]+\.json)$/u).test(relative)) {
+        || !(/^(?:(?:settings|providers)\.json|(?:agents|providers|captures|fetch-jobs)[/\\][^/\\]+\.json|instructions[/\\][^/\\]+\.md)$/u).test(relative)) {
+        throw new Error('Invalid storage recovery journal');
+      }
+      if (change.text !== undefined && change.value !== undefined) {
         throw new Error('Invalid storage recovery journal');
       }
       if (change.value === null) {
         rmSync(filename, { force: true });
         syncDirectory(path.dirname(filename));
+      } else if (change.text !== undefined) {
+        if (typeof change.text !== 'string') {
+          throw new TypeError('Invalid storage recovery journal');
+        }
+        writeTextAtomic(filename, change.text);
+      } else if (change.value === undefined) {
+        throw new Error('Invalid storage recovery journal');
       } else {
         writeJsonAtomic(filename, change.value);
       }
@@ -299,6 +328,30 @@ export class FoundryStorage {
     }
   }
 
+  remove(
+    collection: 'agents' | 'captures' | 'fetchJobs',
+    id: string,
+  ): void {
+    if (!this.changes) {
+      throw new Error('Storage writes require a transaction');
+    }
+    this.changes.set(this.recordPath(collection, id), null);
+  }
+
+  putTextFile(filename: string, contents: string): void {
+    if (!this.changes || !this.textChanges) {
+      throw new Error('Storage writes require a transaction');
+    }
+    this.textChanges.set(this.instructionFilename(filename), contents);
+  }
+
+  removeTextFile(filename: string): void {
+    if (!this.changes || !this.textChanges) {
+      throw new Error('Storage writes require a transaction');
+    }
+    this.textChanges.set(this.instructionFilename(filename), null);
+  }
+
   setSettings(settings: FoundrySettings): void {
     if (!this.changes) {
       throw new Error('Storage writes require a transaction');
@@ -312,14 +365,21 @@ export class FoundryStorage {
         return action(this);
       }
       this.changes = new Map();
+      this.textChanges = new Map();
       let committedResult: { value: T } | undefined;
       try {
         const result = action(this);
         if (result instanceof Promise) {
           throw new TypeError('Storage transactions must be synchronous');
         }
-        if (this.changes.size > 0) {
-          const journal: Journal = { changes: [...this.changes].map(([file, value]) => ({ file, value })) };
+        const changes: Change[] = [
+          ...[...this.changes].map(([file, value]) => ({ file, value })),
+          ...[...this.textChanges].map(([file, value]) => value === null
+            ? { file, value }
+            : { file, text: value }),
+        ];
+        if (changes.length > 0) {
+          const journal: Journal = { changes };
           writeJsonAtomic(path.join(this.path, '.transaction.json'), journal);
           committedResult = { value: result };
           this.applyJournal(journal);
@@ -335,6 +395,7 @@ export class FoundryStorage {
         throw error;
       } finally {
         this.changes = null;
+        this.textChanges = null;
       }
     });
   }

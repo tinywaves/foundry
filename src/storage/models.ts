@@ -1,3 +1,5 @@
+import type { AgentRecord } from '@dhzh/foundry-shared';
+
 import type { StoredJobConfig } from '../features/captures/contracts';
 import type { ProviderInput } from '../features/providers/contracts';
 
@@ -32,16 +34,6 @@ export interface FetchJobRecord {
   createdAt: number;
   updatedAt: number;
   deletedAt: number | null;
-}
-export interface AgentInstructionsRecord {
-  instructionIds: string[];
-  enabled: boolean;
-  createdAt: number;
-  updatedAt: number;
-}
-export interface AgentRecord {
-  id: string;
-  instructions: AgentInstructionsRecord;
 }
 export interface Collections {
   agents: AgentRecord;

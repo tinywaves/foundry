@@ -15,14 +15,14 @@ import {
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
-import type { Agent } from '@dhzh/foundry-shared';
+import type {
+  Agent,
+  AgentInstructionsRecord,
+  AgentRecord,
+} from '@dhzh/foundry-shared';
 
 import { openPath } from '../../lib/open-path';
 import { syncDirectory } from '../../storage/files';
-import type {
-  AgentInstructionsRecord,
-  AgentRecord,
-} from '../../storage/models';
 import type { FoundryStorage } from '../../storage/store';
 import { InstructionsService } from '../instructions/service';
 import { AgentError } from './contracts';

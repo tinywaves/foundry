@@ -6,12 +6,13 @@ import type { CreateInstructionInput, Instruction } from '@dhzh/foundry-shared';
 
 import { syncDirectory, writeTextAtomic } from '../../storage/files';
 import type { FoundryStorage } from '../../storage/store';
-import { INSTRUCTION_NAME_MAX_LENGTH } from './contracts';
+import {
+  INSTRUCTION_ID_PATTERN,
+  INSTRUCTION_NAME_MAX_LENGTH,
+} from './contracts';
 
 const INSTRUCTIONS_DIRECTORY = 'instructions';
 const INSTRUCTION_FILE_SUFFIX = '.md';
-const INSTRUCTION_ID_PATTERN
-  = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
 const FRONTMATTER_PATTERN = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/u;
 
 interface InstructionFrontmatter {

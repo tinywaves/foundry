@@ -118,8 +118,11 @@ named objects. The current record format is:
 ```
 
 The fixed agent definitions supply names, icons, and file paths; the record
-stores only mutable capability state. Agent records are outside the encrypted
-backup payload. Timestamps are Unix epoch milliseconds, not ISO strings.
+stores only mutable capability state. Agent records are included in encrypted
+backup export and replacement import. The external agent instruction files are
+not included, so an imported enabled agent keeps its assignment and switch
+state but requires Reapply to rewrite the managed block on the target machine.
+Timestamps are Unix epoch milliseconds, not ISO strings.
 
 The record remains agent-centric because ordering is per agent. Putting the
 assignment list into each instruction file's frontmatter would duplicate shared

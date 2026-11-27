@@ -1,7 +1,9 @@
+import type { AgentRecord } from './agents';
+import type { Instruction } from './instructions';
 import type { FoundrySettings } from './settings';
 
 export const DATA_BACKUP_FORMAT = 'foundry.data';
-export const DATA_BACKUP_VERSION = 1;
+export const DATA_BACKUP_VERSION = 2;
 export const DATA_BACKUP_ENTRY = 'data/foundry.json';
 
 export interface DataExportInput {
@@ -10,6 +12,8 @@ export interface DataExportInput {
 
 export interface FoundryData {
   settings: FoundrySettings;
+  instructions: Instruction[];
+  agents: AgentRecord[];
 }
 
 export interface DataBackupManifest {

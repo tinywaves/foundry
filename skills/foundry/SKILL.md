@@ -214,8 +214,8 @@ Settings routes are documented in
 
 - Backup import is destructive and replaces supported data. Read
   [Encrypted backups](references/backups.md) before running it.
-- Instructions are not included in encrypted backups; exporting a backup does
-  not preserve the instruction library or agent assignments.
+- Encrypted backups include instructions and agent assignments, but not the
+  external agent instruction files. Reapply enabled agents after import.
 - Deleting an instruction is rejected with `INSTRUCTION_IN_USE` while any agent
   assignment references its ID. Clear those assignments first.
 - Enabling an agent overwrites Foundry's managed block. Reapply is the recovery

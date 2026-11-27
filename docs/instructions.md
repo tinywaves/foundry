@@ -157,10 +157,11 @@ the remaining IDs.
 
 ## Backup boundary
 
-The current encrypted data export contains normalized settings only. Instructions
-are not included in `.foundry-backup` archives and are not removed or replaced by
-backup import. A future backup change must update the shared payload and the
-export/import repositories together; see [Data export and import](data-export.md).
+Encrypted backups include every instruction record, including its Markdown
+content and epoch-millisecond timestamps. Import fully replaces the current
+instruction set and removes Markdown files that are absent from the backup.
+Agent assignments are included separately as agent profiles; external agent
+instruction files are not. See [Data export and import](data-export.md).
 
 ## Source map
 

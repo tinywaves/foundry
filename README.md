@@ -199,11 +199,11 @@ foundry settings download-skill --target .agents,.claude
 
 Backup passphrases use `FOUNDRY_PASSPHRASE` or `--passphrase`. Export rejects an
 existing destination unless `--force` is supplied. Import normalizes backup data
-and replaces the supported data completely. The current backup payload contains
-settings, including settings retained for backend features; it is not a copy of
-all runtime files. Instructions, agent assignments, providers, captures, and
-fetch jobs are outside this payload. Web import reloads the page without the hash
-route and enters the normal root route. See
+and replaces the supported data completely. The backup payload contains
+settings, instructions, and agent assignments. Providers, captures, fetch jobs,
+and the external `AGENTS.md`/`CLAUDE.md` files are outside this payload; reapply
+enabled agents after import to rewrite their managed blocks. Web import reloads
+the page without the hash route and enters the normal root route. See
 [backup behavior and format](docs/data-export.md).
 
 Download Skill installs Foundry's agent usage manual, which teaches agents how
@@ -256,7 +256,7 @@ Runtime data lives in `<home>/.foundry`, outside the repository and `dist`:
 - `agents/`: one JSON agent profile per record, including the `instructions`
   capability state
 
-Foundry uses process locking, atomic replacement, and a redo journal for JSON
+Foundry uses process locking, atomic replacement, and a redo journal for storage
 transactions. Reads load files directly. Startup recovers committed interrupted
 writes; a new installation uses default settings and empty collections. Foundry
 does not import old SQLite databases. The retained Sessions backend reads external

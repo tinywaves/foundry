@@ -7,6 +7,8 @@ import { expect, it, vi } from 'vitest';
 import yauzl from 'yauzl';
 
 import { decryptExportFile } from '../src/lib/backup/crypto';
+import { AgentsService } from '../src/features/agents/service';
+import { InstructionsService } from '../src/features/instructions/service';
 import { ProviderRepository } from '../src/features/providers/repository';
 import { DATA_BACKUP_ENTRY, DATA_BACKUP_FORMAT, DATA_BACKUP_VERSION } from '@dhzh/foundry-shared';
 import { normalizeSettings } from '../src/features/settings/contracts';
@@ -26,7 +28,19 @@ it('downloads an authenticated encrypted backup of the data implemented in the c
       apiKey: 'excluded-provider-secret',
       customModels: [],
     });
+    const instructions = new InstructionsService(storage);
+    const instruction = instructions.create({
+      name: 'Exported instruction',
+      content: '# Exported\n\nInclude this Markdown in the backup.',
+    });
+    new AgentsService(
+      storage,
+      instructions,
+      path.join(directory, 'home'),
+    ).updateInstructions('chatgpt', [instruction.id]);
     const expectedSettings = storage.readSettings();
+    const expectedInstructions = instructions.list();
+    const expectedAgents = storage.all('agents');
     const app = createApiApp(storage);
     const response = await app.request('/api/data-export', {
       method: 'POST',
@@ -40,6 +54,7 @@ it('downloads an authenticated encrypted backup of the data implemented in the c
     const encrypted = Buffer.from(await response.arrayBuffer());
     expect(encrypted.subarray(0, 8).toString()).toBe('FOUNDRYX');
     expect(encrypted.includes(Buffer.from('settings-secret'))).toBe(false);
+    expect(encrypted.includes(Buffer.from('Include this Markdown'))).toBe(false);
 
     const backupPath = path.join(directory, 'settings.foundry-backup');
     const zipPath = path.join(directory, 'settings.zip');
@@ -49,8 +64,13 @@ it('downloads an authenticated encrypted backup of the data implemented in the c
     const files = await readZip(await readFile(zipPath));
     expect(Object.keys(files).toSorted((a, b) => a.localeCompare(b))).toEqual([DATA_BACKUP_ENTRY, 'manifest.json']);
     const dataFile = files[DATA_BACKUP_ENTRY];
-    expect(JSON.parse(dataFile.toString('utf8'))).toEqual({ settings: expectedSettings });
+    expect(JSON.parse(dataFile.toString('utf8'))).toEqual({
+      settings: expectedSettings,
+      instructions: expectedInstructions,
+      agents: expectedAgents,
+    });
     expect(dataFile.includes(Buffer.from('excluded-provider-secret'))).toBe(false);
+    expect(dataFile.toString()).toContain('Include this Markdown in the backup.');
     expect(dataFile.toString()).not.toContain('configFolder');
     expect(JSON.parse(files['manifest.json'].toString('utf8'))).toMatchObject({
       format: DATA_BACKUP_FORMAT,
@@ -64,6 +84,8 @@ it('downloads an authenticated encrypted backup of the data implemented in the c
       },
     });
     expect(storage.readSettings()).toEqual(expectedSettings);
+    expect(instructions.list()).toEqual(expectedInstructions);
+    expect(storage.all('agents')).toEqual(expectedAgents);
     expect(new ProviderRepository(storage).list()).toHaveLength(1);
   } finally {
     storage.close();
@@ -151,7 +173,11 @@ it('exports settings according to the same normalization rules as import and run
     await writeFile(backupPath, Buffer.from(await response.arrayBuffer()));
     await decryptExportFile(backupPath, zipPath, 'roundtrip password');
     const files = await readZip(await readFile(zipPath));
-    expect(JSON.parse(files[DATA_BACKUP_ENTRY].toString('utf8'))).toEqual({ settings: normalizeSettings(settings) });
+    expect(JSON.parse(files[DATA_BACKUP_ENTRY].toString('utf8'))).toEqual({
+      settings: normalizeSettings(settings),
+      instructions: [],
+      agents: [],
+    });
     expect(storage.readSettings()).toEqual(normalizeSettings(settings));
   } finally {
     storage.close();

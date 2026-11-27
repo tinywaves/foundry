@@ -6,14 +6,15 @@ Foundry can export its supported data to an encrypted `.foundry-backup` archive
 and import such an archive as a complete replacement. Import is destructive and
 does not merge records.
 
-The current payload contains normalized settings, including settings retained
-for backend features. It is not a snapshot of all Foundry runtime files.
+The current payload contains normalized settings, instruction records, and agent
+assignment profiles. It is not a snapshot of all Foundry runtime files.
 
 | Data | Included in backup |
 | --- | --- |
 | Normalized settings and retained backend feature settings | Yes |
-| Instruction Markdown files | No |
-| Agent assignments and enabled state | No |
+| Instructions, including Markdown content and timestamps | Yes |
+| Agent assignments, order, and enabled state | Yes |
+| External `~/.codex/AGENTS.md` and `~/.claude/CLAUDE.md` files | No |
 | Provider, capture, and fetch-job records | No |
 
 ## When to use
@@ -21,12 +22,17 @@ for backend features. It is not a snapshot of all Foundry runtime files.
 Use export/import when the user wants to:
 
 - Move supported Foundry settings to another installation.
+- Move the instruction library and agent assignments to another installation.
 - Preserve settings before a risky change.
-- Replace current settings with a previously exported snapshot.
+- Replace current settings, instructions, and assignments with a snapshot.
 
-Do not use a backup to preserve or restore instructions or agent assignments.
-Those require copying or backing up the relevant runtime directories by a
-separate, explicitly chosen process.
+Do not use a backup to preserve external agent files, providers, captures, or
+fetch jobs. Those require a separate, explicitly chosen process.
+
+Import updates Foundry's own agent profiles but never rewrites external agent
+instruction files. If an imported agent is enabled, run
+`foundry agents instructions reapply <agent>` to write its managed block on the
+current machine.
 
 ## Passphrase handling
 
@@ -77,38 +83,48 @@ foundry settings import ./backup.foundry-backup
 Import:
 
 1. Reads and decrypts the archive.
-2. Validates the manifest version, checksum, archive structure, and required
-   settings object.
+2. Validates the manifest version, checksum, archive structure, settings,
+   instruction records, agent profiles, and instruction references.
 3. Normalizes settings with Foundry's regular rules, including defaults and
    numeric bounds for retained backend fields.
-4. Replaces the supported dataset completely.
+4. Replaces settings, instructions, and agent profiles completely.
 5. Returns `{ "status": "imported" }`.
 
 There is no preview, merge, or partial apply. The last successful write wins.
-Invalid or missing fields are normalized rather than rejected field by field;
-an unreadable archive, wrong checksum, unsupported version, or wrong passphrase
-fails before replacement.
+Invalid or missing settings fields are normalized rather than rejected field by
+field; invalid instruction or agent records are rejected instead. An unreadable
+archive, wrong checksum, unsupported version, or wrong passphrase fails before
+replacement.
 
 ### Verify after import
 
 ```bash
 foundry settings get
+foundry instructions list
+foundry agents instructions list
 ```
 
 Confirm the expected theme, language, time zone, and time format. If the import
 was initiated from the Web UI, the page reloads without the hash route and the
 normal root route opens Dashboard.
 
+For every imported agent that should be active, reapply its managed block:
+
+```bash
+foundry agents instructions reapply chatgpt
+foundry agents instructions reapply claude-code
+```
+
 ## Common scenarios
 
-### Back up current settings before a migration
+### Back up current data before a migration
 
 ```bash
 export FOUNDRY_PASSPHRASE="<secret>"
 foundry settings export --output ./before-migration.foundry-backup
 ```
 
-### Restore a known-good settings snapshot
+### Restore a known-good data snapshot
 
 ```bash
 export FOUNDRY_PASSPHRASE="<secret>"
@@ -116,8 +132,8 @@ foundry settings import ./before-migration.foundry-backup
 foundry settings get
 ```
 
-Only run the import after confirming that replacing current settings is the
-user's intent.
+Only run the import after confirming that replacing current data is the user's
+intent.
 
 ### Export without overwriting an existing file
 
@@ -131,7 +147,7 @@ the archive.
 | --- | --- | --- |
 | `PASSPHRASE_REQUIRED` | No passphrase supplied | No |
 | `INVALID_PASSPHRASE` | Wrong passphrase or corrupted encrypted content | No |
-| `INVALID_BACKUP` | Invalid manifest, checksum, structure, or missing settings object | No |
+| `INVALID_BACKUP` | Invalid manifest, checksum, structure, records, or references | No |
 | `OUTPUT_EXISTS` | Export destination exists and `--force` was not supplied | No |
 | `IMPORT_FAILED` | Unexpected import failure | No verified replacement |
 | `IO_ERROR` | Export encryption or filesystem read/write failure | No verified replacement |
@@ -142,5 +158,5 @@ different copy of the passphrase; store the passphrase securely.
 ## Related
 
 - [Settings](settings.md): the CLI-visible preference keys.
-- [Instructions](instructions.md): why instructions are outside the backup.
-- [Agents](agents.md): why assignments are outside the backup.
+- [Instructions](instructions.md): backed-up instruction records and deletion.
+- [Agents](agents.md): assignment state and reapplying external files.

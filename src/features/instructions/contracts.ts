@@ -2,6 +2,8 @@ import type { CreateInstructionInput } from '@dhzh/foundry-shared';
 
 export const INSTRUCTION_NAME_MAX_LENGTH = 200;
 export const INSTRUCTION_CONTENT_MAX_LENGTH = 1_000_000;
+export const INSTRUCTION_ID_PATTERN
+  = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
 
 export class InstructionInputError extends Error {
   readonly code = 'INVALID_INSTRUCTION_INPUT';

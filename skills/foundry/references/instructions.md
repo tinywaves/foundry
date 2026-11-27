@@ -310,9 +310,10 @@ updatedAt: 1795801802798
 
 ## Backup boundary
 
-Encrypted backups currently contain settings only. Instruction Markdown files
-and agent assignments are not included in `.foundry-backup` archives and are
-not replaced by backup import. See
+Encrypted backups include all instruction records, including Markdown content
+and timestamps, plus agent assignments. Import fully replaces both and removes
+stored instructions that are absent from the backup. External agent instruction
+files are not included; reapply enabled agents after import. See
 [Encrypted backups](backups.md#overview).
 
 ## Related

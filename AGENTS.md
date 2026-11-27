@@ -278,10 +278,11 @@ API development servers. Rebuild `dist` to test production static serving.
 - Export and import JSON snapshots only. Verify format changes with validation
   and encrypted round-trip tests.
 - Backup data follows `normalizeSettings` on export and import. The current
-  payload contains settings, including retained backend feature settings; it is
-  not limited to the four fields exposed by CLI get/set. See `docs/data-export.md`.
-  Instructions, agent assignments, providers, captures, and fetch jobs are
-  outside this payload.
+  payload contains settings, including retained backend feature settings, all
+  instruction records, and all supported agent profiles. It is not limited to
+  the four fields exposed by CLI get/set. Providers, captures, fetch jobs, and
+  external agent instruction files are outside this payload. See
+  `docs/data-export.md`.
 - Tests use temporary directories; never run imports or mutating
   commands against the developer's real `<home>/.foundry` data.
 

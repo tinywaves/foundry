@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer';
-import { createHash, randomBytes } from 'node:crypto';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import * as filePromises from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -9,7 +10,10 @@ import { expect, it, vi } from 'vitest';
 
 import { createFoundryArchive } from '../src/lib/backup/archive';
 import { encryptExportFile } from '../src/lib/backup/crypto';
+import { AgentsService } from '../src/features/agents/service';
 import { DataImportService } from '../src/features/data-import/service';
+import { InstructionsService } from '../src/features/instructions/service';
+import { ProviderRepository } from '../src/features/providers/repository';
 import { normalizeSettings } from '../src/features/settings/contracts';
 import { updateSettings } from '../src/features/settings/repository';
 import { createApiApp } from '../src/server/api';
@@ -66,6 +70,104 @@ it('imports in one request, fully replaces current data, and preserves data on a
     reopened.close();
     await expectStatus(app.request('/api/data-import/inspect', { method: 'POST' }), 404);
     await expectStatus(app.request('/api/data-import/unused/commit', { method: 'POST' }), 404);
+  } finally {
+    source.close();
+    target.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+it('round-trips instructions and agent assignments without rewriting external agent files', async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'foundry-import-features-'));
+  const source = openFoundryStorage(path.join(directory, 'source'));
+  const target = openFoundryStorage(path.join(directory, 'target'));
+  try {
+    updateSettings(
+      { theme: 'dark', language: 'zh-CN', timezone: 'UTC' },
+      source,
+    );
+    const sourceInstructions = new InstructionsService(source);
+    const first = sourceInstructions.create({
+      name: 'First backup instruction',
+      content: '# First\n\nBacked up first.',
+    });
+    const second = sourceInstructions.create({
+      name: 'Second backup instruction',
+      content: '# Second\n\nBacked up second.',
+    });
+    const sourceAgents = new AgentsService(
+      source,
+      sourceInstructions,
+      path.join(directory, 'source-home'),
+    );
+    sourceAgents.updateInstructions('chatgpt', [second.id, first.id]);
+    sourceAgents.setEnabled('chatgpt', true);
+    const expectedInstructions = sourceInstructions.list();
+    const expectedAgents = source.all('agents');
+
+    const exported = await createApiApp(source).request('/api/data-export', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ passphrase: backupPassphrase }),
+    });
+    expect(exported.status).toBe(200);
+
+    const targetInstructions = new InstructionsService(target);
+    const stale = targetInstructions.create({
+      name: 'Stale instruction',
+      content: '# Stale\n\nRemove during import.',
+    });
+    target.transaction(() => {
+      target.put('agents', {
+        id: 'claude-code',
+        instructions: {
+          instructionIds: [],
+          enabled: false,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      });
+    });
+    const provider = new ProviderRepository(target).save({
+      name: 'Retained provider',
+      protocol: 'openai-responses',
+      baseURL: 'https://api.example.com/v1',
+      apiKey: 'retained-provider-secret',
+      customModels: [],
+    });
+    const targetAgentFile = path.join(
+      directory,
+      'target-home',
+      '.codex',
+      'AGENTS.md',
+    );
+    await mkdir(path.dirname(targetAgentFile), { recursive: true });
+    await writeFile(targetAgentFile, 'Existing target agent content\n');
+
+    const archive = Buffer.from(await exported.arrayBuffer());
+    await expectStatus(importRequest(createApiApp(target), archive), 200);
+
+    expect(sortById(targetInstructions.list()))
+      .toEqual(sortById(expectedInstructions));
+    expect(existsSync(
+      path.join(target.path, 'instructions', `${stale.id}.md`),
+    )).toBe(false);
+    expect(sortById(target.all('agents'))).toEqual(sortById(expectedAgents));
+    expect(await readFile(targetAgentFile, 'utf8'))
+      .toBe('Existing target agent content\n');
+    expect(new ProviderRepository(target).get(provider.id)).toMatchObject({
+      id: provider.id,
+      apiKey: 'retained-provider-secret',
+    });
+
+    const reopened = openFoundryStorage(target.path);
+    try {
+      expect(sortById(new InstructionsService(reopened).list()))
+        .toEqual(sortById(expectedInstructions));
+      expect(sortById(reopened.all('agents'))).toEqual(sortById(expectedAgents));
+    } finally {
+      reopened.close();
+    }
   } finally {
     source.close();
     target.close();
@@ -256,6 +358,41 @@ it('rejects unreadable or corrupted backups using basic checks without changing 
   try {
     const app = createApiApp(storage);
     const previous = storage.readSettings();
+    const instructions = new InstructionsService(storage);
+    instructions.create({
+      name: 'Existing instruction',
+      content: '# Existing\n\nMust survive invalid imports.',
+    });
+    storage.transaction(() => {
+      storage.put('agents', {
+        id: 'claude-code',
+        instructions: {
+          instructionIds: [],
+          enabled: false,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      });
+    });
+    const previousInstructions = instructions.list();
+    const previousAgents = storage.all('agents');
+    const timestamp = Date.now();
+    const backupInstruction = {
+      id: randomUUID(),
+      name: 'Backup instruction',
+      content: '# Backup\n\nValid backup content.',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    const backupAgent = {
+      id: 'chatgpt',
+      instructions: {
+        instructionIds: [backupInstruction.id],
+        enabled: false,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      },
+    };
     const good = await makeBackup(directory, { settings: previous });
     const wrong = await importRequest(app, good, 'wrong-password');
     expect(wrong.status).toBe(400);
@@ -265,16 +402,35 @@ it('rejects unreadable or corrupted backups using basic checks without changing 
     const cases = [
       tampered,
       await makeBackup(directory, { settings: previous }, { archiveVersion: DATA_BACKUP_VERSION + 1 }),
+      await makeBackup(directory, { settings: previous }, { archiveVersion: DATA_BACKUP_VERSION - 1 }),
       await makeBackup(directory, { settings: previous }, { format: 'foundry.snapshot' }),
       await makeBackup(directory, { settings: previous }, { data: { path: DATA_BACKUP_ENTRY, bytes: 1, sha256: 'a'.repeat(64) } }),
       await makeBackup(directory, {}),
       await makeBackup(directory, { settings: [] }),
+      await makeBackup(directory, { settings: previous, instructions: undefined, agents: undefined }),
+      await makeBackup(directory, { settings: previous, instructions: [backupInstruction, backupInstruction], agents: [] }),
+      await makeBackup(directory, { settings: previous, instructions: [backupInstruction], agents: [backupAgent, backupAgent] }),
+      await makeBackup(directory, {
+        settings: previous,
+        instructions: [backupInstruction],
+        agents: [
+          {
+            ...backupAgent,
+            instructions: {
+              ...backupAgent.instructions,
+              instructionIds: [randomUUID()],
+            },
+          },
+        ],
+      }),
       await makeBackup(directory, { settings: previous }, {}, true),
       Buffer.from('invalid data'),
     ];
     for (const archive of cases) {
       await expectStatus(importRequest(app, archive), 400);
       expect(storage.readSettings()).toEqual(previous);
+      expect(instructions.list()).toEqual(previousInstructions);
+      expect(storage.all('agents')).toEqual(previousAgents);
     }
     await expectStatus(importRequest(app, good, ''), 400);
     await expectStatus(importRequest(app, good, backupPassphrase, { 'x-foundry-passphrase': '%broken' }), 400);
@@ -294,7 +450,10 @@ function importRequest(app: ReturnType<typeof createApiApp>, body: Buffer, passp
 }
 
 async function makeBackup(directory: string, data: unknown, manifestPatch: Record<string, unknown> = {}, hasUnexpectedEntry = false): Promise<Buffer> {
-  const bytes = JSON.stringify(data);
+  const value = isRecord(data)
+    ? { instructions: [], agents: [], ...data }
+    : data;
+  const bytes = JSON.stringify(value);
   const dataPath = path.join(directory, 'data.json');
   const manifestPath = path.join(directory, 'manifest.json');
   const archivePath = path.join(directory, 'archive.zip');
@@ -315,6 +474,14 @@ async function makeBackup(directory: string, data: unknown, manifestPatch: Recor
   await createFoundryArchive(files, archivePath);
   await encryptExportFile(archivePath, encryptedPath, backupPassphrase);
   return readFile(encryptedPath);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function sortById<T extends { id: string }>(records: T[]): T[] {
+  return records.toSorted((left, right) => left.id.localeCompare(right.id));
 }
 
 async function expectStatus(response: Response | Promise<Response>, status: number) {

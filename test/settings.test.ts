@@ -6,10 +6,41 @@ import { expect, it } from 'vitest';
 import { FoundryEventHub } from '../src/events/hub';
 import { SETTINGS_CHANGED_EVENT } from '../src/features/settings/events';
 import { readStoredSettings } from '../src/features/settings/repository';
+import { SettingsService } from '../src/features/settings/service';
 import { createApiApp } from '../src/server/api';
 import { openFoundryStorage } from '../src/storage/index';
 
 const { join } = path;
+
+it('opens the config folder exposed in settings instead of a client-supplied path', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'foundry-settings-folder-'));
+  const storage = openFoundryStorage(directory);
+  const openedPaths: string[] = [];
+  const configFolder = join(directory, '配置文件夹 with spaces');
+  const service = new SettingsService(storage, configFolder, (target) => {
+    openedPaths.push(target);
+  });
+  const app = createApiApp(storage, { settingsService: service });
+
+  try {
+    const settingsResponse = await app.request('/api/settings');
+    expect(settingsResponse.status).toBe(200);
+    expect(await settingsResponse.json()).toMatchObject({ configFolder });
+    expect(openedPaths).toEqual([]);
+
+    const response = await app.request('/api/settings/config-folder/open', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ configFolder: '/another-folder' }),
+    });
+    expect(response.status).toBe(202);
+    expect(await response.json()).toEqual({ configFolder });
+    expect(openedPaths).toEqual([configFolder]);
+  } finally {
+    storage.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 it('persists settings and exposes capture API keys', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-settings-'));

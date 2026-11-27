@@ -14,8 +14,12 @@ export function updateSettings(patch: SettingsPatch): Promise<SettingsPayload> {
   });
 }
 
-async function requestSettings<T>(init?: RequestInit): Promise<T> {
-  const response = await fetch(settingsPath, init);
+export function openConfigFolder(): Promise<Pick<SettingsPayload, 'configFolder'>> {
+  return requestSettings({ method: 'POST' }, `${settingsPath}/config-folder/open`);
+}
+
+async function requestSettings<T>(init?: RequestInit, path = settingsPath): Promise<T> {
+  const response = await fetch(path, init);
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response));

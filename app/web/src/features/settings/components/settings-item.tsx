@@ -7,6 +7,7 @@ interface SettingsItemProps {
   description?: string;
   children: ReactNode;
   className?: string;
+  controlClassName?: string;
 }
 
 export function SettingsItem({
@@ -14,6 +15,7 @@ export function SettingsItem({
   description,
   children,
   className,
+  controlClassName,
 }: SettingsItemProps) {
   return (
     <div
@@ -28,7 +30,9 @@ export function SettingsItem({
           <p className="mt-1 text-xs text-muted-foreground">{description}</p>
         )}
       </div>
-      <div className="min-w-0 max-[680px]:w-full min-[680px]:shrink-0">{children}</div>
+      <div className={cn('min-w-0 max-[680px]:w-full min-[680px]:shrink-0', controlClassName)}>
+        {children}
+      </div>
     </div>
   );
 }

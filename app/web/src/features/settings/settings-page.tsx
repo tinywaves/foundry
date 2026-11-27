@@ -22,7 +22,7 @@ import { ColorThemeItem } from './sections/appearance/color-theme-item';
 import { LanguageItem } from './sections/language-region/language-item';
 import { TimeFormatItem } from './sections/language-region/time-format-item';
 import { TimeZoneItem } from './sections/language-region/time-zone-item';
-import { useSettings } from './state/settings-context';
+import { useSettings } from './state/use-settings';
 
 import type { TranslationKey } from '@/i18n/resources';
 import type { LucideIcon } from 'lucide-react';
@@ -67,7 +67,6 @@ export function SettingsPage() {
     timeZone,
     isLoading,
     isUpdating,
-    error,
     setTheme,
     setLanguage,
     setTimeFormat,
@@ -155,7 +154,7 @@ export function SettingsPage() {
             <ColorThemeItem
               value={theme}
               onValueChange={(nextTheme) => {
-                void setTheme(nextTheme);
+                setTheme(nextTheme);
               }}
               disabled={isUpdating || !settings}
             />
@@ -165,21 +164,21 @@ export function SettingsPage() {
               <LanguageItem
                 value={language}
                 onValueChange={(nextLanguage) => {
-                  void setLanguage(nextLanguage);
+                  setLanguage(nextLanguage);
                 }}
                 disabled={isUpdating || !settings}
               />
               <TimeZoneItem
                 value={timeZone}
                 onValueChange={(nextTimeZone) => {
-                  void setTimeZone(nextTimeZone);
+                  setTimeZone(nextTimeZone);
                 }}
                 disabled={isUpdating || !settings}
               />
               <TimeFormatItem
                 value={timeFormat}
                 onValueChange={(nextTimeFormat) => {
-                  void setTimeFormat(nextTimeFormat);
+                  setTimeFormat(nextTimeFormat);
                 }}
                 disabled={isUpdating || !settings}
               />
@@ -189,16 +188,11 @@ export function SettingsPage() {
             <div className="divide-y">
               <ExportItem />
               <ImportItem />
-              <ConfigFolderItem />
+              <ConfigFolderItem configFolder={settings?.configFolder} />
             </div>
           )}
         </Card>
 
-        {error && (
-          <p role="alert" className="px-1 pt-3 text-xs text-destructive">
-            {error}
-          </p>
-        )}
       </section>
     </div>
   );

@@ -1,4 +1,5 @@
 export * from './settings';
+export type * from './agents';
 export * from './data-export';
 export type * from './data-import';
 export * from './events';

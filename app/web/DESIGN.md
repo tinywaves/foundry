@@ -44,7 +44,30 @@ does not change the app's root destination.
 Instructions is a page in the main Library layout at
 `#/library/instructions`. Feature actions mount through the page header action
 slot and sit at the right side of the header. The current page exposes a
-New instruction action.
+New instruction action and renders stored instructions newest first. The list
+covers loading skeletons, an empty state, and an inline retry action for load
+failures. Each row shows only the instruction name.
+
+At desktop widths the page has two columns: the saved instruction list on the
+left and fixed ChatGPT and Claude Code agent cards on the right. At narrow
+widths the columns stack vertically. Agent cards show the LobeHub agent icon,
+the agent name, and its fixed file path. The path is a button that opens the
+existing file through the local API. Use `@lobehub/icons-static-svg` for the
+agent marks.
+
+Drag an instruction from the left list into an agent to assign it; an agent
+cannot contain the same instruction twice. Assigned rows show their composition
+order and can be reordered by drag or removed individually. Give the card a
+visible drag-over state and keep the drop target usable at narrow widths.
+
+The right-side switch applies or removes the Foundry-managed block in the agent
+file. Reapply is a separate default-sized icon button and is available only when
+the switch is on. Adding, removing, or reordering while the switch is on rewrites
+the block; removing the last row also turns the switch off. Use toasts for apply,
+remove, reapply, duplicate, and file-missing feedback. The managed block uses the
+exact `<!-- foundry:instructions:start -->` and
+`<!-- foundry:instructions:end -->` markers described in
+[Agent orchestration](../../docs/agents.md).
 
 The creation dialog requires both name and content. Use the shared required-label
 pattern for both fields. Content uses the locally bundled Monaco Markdown editor,

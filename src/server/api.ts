@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import packageJson from '../../package.json' with { type: 'json' };
+import { createAgentRoutes } from '../features/agents/routes';
+import { AgentsService } from '../features/agents/service';
 import { createCaptureRoutes } from '../features/captures/routes';
 import { CAPTURES_CHANGED_EVENT } from '../features/captures/events';
 import type { CaptureService } from '../features/captures/service';
@@ -23,6 +25,7 @@ import { DataImportService } from '../features/data-import/service';
 import { createDataImportRoutes } from '../features/data-import/routes';
 
 export interface ApiAppOptions {
+  agentsService?: AgentsService;
   captureService?: CaptureService;
   dataExportService?: DataExportService;
   dataImportService?: DataImportService;
@@ -51,6 +54,8 @@ export function createApiApp(storage: FoundryStorage, options: ApiAppOptions = {
     ?? new SessionService();
   const instructionsService = options.instructionsService
     ?? new InstructionsService(storage);
+  const agentsService = options.agentsService
+    ?? new AgentsService(storage, instructionsService);
 
   app.get('/api/health', (c) => c.json({
     status: 'ok',
@@ -74,6 +79,10 @@ export function createApiApp(storage: FoundryStorage, options: ApiAppOptions = {
   app.route(
     '/api/data-export',
     createDataExportRoutes(options.dataExportService ?? new DataExportService(storage)),
+  );
+  app.route(
+    '/api/agents',
+    createAgentRoutes(agentsService),
   );
   app.route(
     '/api/instructions',

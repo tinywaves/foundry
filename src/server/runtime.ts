@@ -1,5 +1,6 @@
 import { DataExportService } from '../features/data-export/service';
 import { DataImportService } from '../features/data-import/service';
+import { AgentsService } from '../features/agents/service';
 import { createCaptureRuntime } from '../features/captures/runtime';
 import { InstructionsService } from '../features/instructions/service';
 import { ProviderService } from '../features/providers/service';
@@ -13,6 +14,7 @@ import type { FoundryStorage } from '../storage/index';
 import type { ApiAppOptions } from './api';
 
 export interface FoundryFeatureServices {
+  agentsService: AgentsService;
   captureRuntime: ReturnType<typeof createCaptureRuntime>;
   dataExportService: DataExportService;
   dataImportService: DataImportService;
@@ -36,11 +38,13 @@ export function createServerRuntime(storage: FoundryStorage): ServerRuntime {
   const dataExportService = new DataExportService(storage);
   const dataImportService = new DataImportService(storage);
   const instructionsService = new InstructionsService(storage);
+  const agentsService = new AgentsService(storage, instructionsService);
   const providerService = new ProviderService(storage);
   const settingsService = new SettingsService(storage);
   const settingsSkillCopyService = new BundledSkillCopyService();
   const sessionService = new SessionService();
   const services: FoundryFeatureServices = {
+    agentsService,
     captureRuntime,
     dataExportService,
     dataImportService,
@@ -55,6 +59,7 @@ export function createServerRuntime(storage: FoundryStorage): ServerRuntime {
   return {
     services,
     apiOptions: {
+      agentsService,
       captureService: captureRuntime.service,
       dataExportService,
       dataImportService,

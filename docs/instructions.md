@@ -3,13 +3,26 @@
 ## Scope and routes
 
 Instructions is an implemented feature with a Web page and CLI command. The Web
-page is `#/library/instructions`. It exposes creation through a page-header
-action; the current page does not yet render a browsable list or edit flow.
+page is `#/library/instructions`. It renders the stored instructions newest
+first and exposes creation through a page-header action. The list has loading,
+empty, and error states; edit and delete flows are not implemented yet.
 
 The creation dialog requires a name and Markdown content. Content is edited in a
 lazily loaded Monaco editor using the local Monaco bundle and editor worker.
 The editor follows the application light/dark theme, preserves Markdown source,
 and displays the Markdown save behavior in its placeholder.
+
+The list is owned by React Query under the `instructions` query key. Each row
+shows the instruction name. A successful creation updates the cached list
+immediately and invalidates the query so the API remains authoritative. List
+failures show an inline retry action rather than replacing the page.
+
+The instruction list is also the drag source for agent orchestration. Dragging
+does not edit the instruction file. Assignments, managed external files, and the
+agent API are covered in [Agent orchestration](agents.md). Ordered agent
+assignment state lives in the agent profile under
+`<home>/.foundry/agents/<sha256(agent-id)>.json`, inside its `instructions`
+namespace rather than in instruction Markdown frontmatter.
 
 ## Contracts and API
 
@@ -75,8 +88,16 @@ foundry instructions new \
 
 Both arguments are required. Quote values containing spaces or newlines. The
 command initializes temporary feature services through the normal CLI
-composition, creates the file, and prints the created instruction as JSON. There
-is currently no CLI list, update, or delete command.
+composition, creates the file, and prints the created instruction as JSON.
+
+List instructions, newest first:
+
+```bash
+foundry instructions list
+```
+
+The command prints the same ordered JSON array as `GET /api/instructions`. There
+is currently no CLI update or delete command.
 
 ## Backup boundary
 
@@ -91,7 +112,8 @@ export/import repositories together; see [Data export and import](data-export.md
 - `src/features/instructions/contracts.ts`: input validation
 - `src/features/instructions/repository.ts`: Markdown serialization and file access
 - `src/features/instructions/routes.ts`: API routes
-- `src/cli/commands/instructions.ts`: `foundry instructions new`
+- `src/cli/commands/instructions.ts`: `foundry instructions new` and
+  `foundry instructions list`
 - `app/web/src/features/instructions/`: page, header action, dialog, and API adapter
 - `app/web/src/lib/monaco.ts`: local Monaco bundle and worker setup
 

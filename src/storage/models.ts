@@ -33,7 +33,18 @@ export interface FetchJobRecord {
   updatedAt: string;
   deletedAt: string | null;
 }
+export interface AgentInstructionsRecord {
+  instructionIds: string[];
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface AgentRecord {
+  id: string;
+  instructions: AgentInstructionsRecord;
+}
 export interface Collections {
+  agents: AgentRecord;
   providers: ProviderRecord;
   captures: CaptureRecord;
   fetchJobs: FetchJobRecord;

@@ -10,7 +10,7 @@ import { privateDirectory, syncDirectory, writeJsonAtomic } from './files';
 import { STORAGE_FORMAT_VERSION } from './models';
 import type { Collections } from './models';
 
-const COLLECTIONS = ['providers', 'captures', 'fetchJobs'] as const;
+const COLLECTIONS = ['agents', 'providers', 'captures', 'fetchJobs'] as const;
 type Collection = keyof Collections;
 interface Change {
   file: string;
@@ -196,7 +196,7 @@ export class FoundryStorage {
       const filename = path.resolve(this.path, change.file);
       const relative = path.relative(this.path, filename);
       if (relative.startsWith('..') || path.isAbsolute(relative)
-        || !(/^(?:(?:settings|providers)\.json|(?:providers|captures|fetch-jobs)[/\\][^/\\]+\.json)$/u).test(relative)) {
+        || !(/^(?:(?:settings|providers)\.json|(?:agents|providers|captures|fetch-jobs)[/\\][^/\\]+\.json)$/u).test(relative)) {
         throw new Error('Invalid storage recovery journal');
       }
       if (change.value === null) {

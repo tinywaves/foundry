@@ -19,9 +19,15 @@ components to use their preset appearance.
   language updates separate from fetching. See `../../docs/settings.md` for the
   current Settings routes, synchronization, and API boundaries.
 - Instructions lives at `#/library/instructions`. Page actions use
-  `PageHeaderActions`; the creation dialog keeps name and Markdown content
-  required and uses the shared local Monaco editor setup. See
-  `../../docs/instructions.md`.
+  `PageHeaderActions`; desktop layouts show the instruction list on the left and
+  agent cards on the right, stacking on narrow screens. The creation dialog keeps
+  name and Markdown content required and uses the shared local Monaco editor
+  setup. See `../../docs/instructions.md`.
+- Agent assignment, drag/reorder, switch, Reapply, and file-opening state belong
+  to `src/features/agents`. The instruction list belongs to
+  `src/features/instructions` and remains the drag source. Use the shared `Agent`
+  contracts and render agent IDs, names, paths, and icons returned or defined by
+  the server contract. See `../../docs/agents.md`.
 - Settings categories use the `panel` query parameter; omitted or invalid values
   select Appearance. The app root still opens Dashboard. Full-screen back uses
   browser history.

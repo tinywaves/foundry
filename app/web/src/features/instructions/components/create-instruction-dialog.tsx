@@ -1,6 +1,6 @@
 import Editor from '@monaco-editor/react';
-import { useMutation } from '@tanstack/react-query';
-import type { CreateInstructionInput } from '@dhzh/foundry-shared';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { CreateInstructionInput, Instruction } from '@dhzh/foundry-shared';
 import { LoaderCircleIcon, PlusIcon, XIcon } from 'lucide-react';
 import type { editor } from 'monaco-editor';
 import {
@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input';
 import '@/lib/monaco';
 
 import { createInstruction } from '../api';
+import { instructionsQueryKey } from '../state/use-instructions';
 
 function subscribeTheme(onChange: () => void) {
   const observer = new MutationObserver(onChange);
@@ -42,6 +43,7 @@ function isDarkTheme() {
 
 export default function CreateInstructionDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const isDark = useSyncExternalStore(subscribeTheme, isDarkTheme);
   const nameId = useId();
   const contentLabelId = useId();
@@ -49,7 +51,15 @@ export default function CreateInstructionDialog({ onClose }: { onClose: () => vo
   const [content, setContent] = useState('');
   const mutation = useMutation({
     mutationFn: (input: CreateInstructionInput) => createInstruction(input),
-    onSuccess: () => {
+    onSuccess: (instruction) => {
+      queryClient.setQueryData<Instruction[]>(
+        instructionsQueryKey,
+        (current) => [
+          instruction,
+          ...(current ?? []).filter((existing) => existing.id !== instruction.id),
+        ],
+      );
+      void queryClient.invalidateQueries({ queryKey: instructionsQueryKey });
       toast.success(t('instructions.created'));
       onClose();
     },

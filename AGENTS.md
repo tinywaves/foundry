@@ -6,17 +6,21 @@ Project guidance for coding agents working on Foundry.
 
 Foundry is a local personal workbench distributed as a CLI, not as a JavaScript
 library. The current Web UI implements Instructions and Settings. The CLI
-provides `instructions` and `settings` business command groups. Preserve the
-main layout, sidebar, titlebar, and placeholder routes. Other backend feature
-services and APIs remain available; work on one feature does not imply changing
-those features or removing the shell.
+provides `instructions`, `agents`, and `settings` business command groups.
+Preserve the main layout, sidebar, titlebar, and placeholder routes. Other
+backend feature services and APIs remain available; work on one feature does
+not imply changing those features or removing the shell.
 
-The CLI provides `instructions new`, `settings get [key]`,
-`settings set <key> <value>`, config-folder opening, encrypted export/import,
-and bundled Skill installation. Document instruction input and allowed setting
-keys and values in CLI help and the bundled Skill rather than adding a discovery
-API. `foundry web` initializes storage, starts Hono, serves the bundled Web UI,
-and opens the browser unless `--no-open` is supplied.
+The CLI provides `instructions new`, `instructions list`, `agents list`,
+`agents instructions list`, `agents instructions assign`,
+`agents instructions enable`, `agents instructions disable`,
+`agents instructions reapply`, `agents instructions open`,
+`settings get [key]`, `settings set <key> <value>`, config-folder opening,
+encrypted export/import, and bundled Skill installation. Document instruction
+input and allowed setting keys and values in CLI help and the bundled Skill
+rather than adding a discovery API. `foundry web` initializes storage, starts
+Hono, serves the bundled Web UI, and opens the browser unless `--no-open` is
+supplied.
 
 - Keep `bin` pointed at `dist/index.mjs`.
 - Publish only `dist`.
@@ -60,6 +64,7 @@ src/
 |   |-- commands/          Feature and Web subcommands
 |   `-- open-browser.ts    Platform-specific browser opening
 |-- features/
+|   |-- agents/            Agent assignments and managed instruction blocks
 |   |-- captures/          Capture service, fetchers, runner, repository, routes
 |   |-- data-export/       Current app data collection and encrypted export
 |   |-- data-import/       Direct encrypted backup replacement
@@ -125,6 +130,21 @@ Keep CLI and server responsibilities separate:
 - Keep instruction validation in `src/features/instructions/contracts.ts` and
   persistence in its repository. API routes list and create instructions;
   CLI actions call `InstructionsService` rather than reimplementing storage.
+- Agent definitions and instruction-file paths are fixed. `chatgpt` targets
+  `<home>/.codex/AGENTS.md`, and `claude-code` targets
+  `<home>/.claude/CLAUDE.md`; never accept arbitrary filesystem paths.
+- Store agent assignment order in one JSON record per agent under
+  `<home>/.foundry/agents`. Each record has a stable top-level `id` and
+  capability namespaces; instruction state belongs under `instructions`.
+  Assignment changes do not rewrite the external file unless the agent is
+  enabled.
+- Agent orchestration is available in the Web UI, API, and CLI. CLI actions call
+  `AgentsService` rather than reimplementing assignment or file behavior.
+- Foundry owns only its managed block in an agent instruction file. Use the
+  exact `<!-- foundry:instructions:start -->` and
+  `<!-- foundry:instructions:end -->` markers, keep at most one block, and
+  preserve all other text. Enabling and reapplying overwrite the managed block;
+  disabling removes the entire block. See `docs/agents.md`.
 - Skill copy targets are fixed user-level keys: `agents` maps to
   `<home>/.agents/skills/foundry`, and `claude` maps to
   `<home>/.claude/skills/foundry`, where `<home>` is `os.homedir()` (`~` on
@@ -146,7 +166,14 @@ Keep CLI and server responsibilities separate:
   within Settings. Preserve the full-screen back button's browser-history behavior.
 - Instructions lives at `#/library/instructions` in the Library section. Page
   actions mount through `PageHeaderActions` at the right side of the page header.
-  The creation dialog uses the shared Markdown editor and required-field labels.
+  The desktop page has an instruction list on the left and agent orchestration
+  cards on the right; narrow layouts stack them. The instruction list renders
+  names newest first with loading, empty, and error states. The creation dialog
+  uses the shared Markdown editor and required-field labels.
+- Agent cards show the fixed file path, an apply switch, and Reapply. Dragging an
+  instruction into an agent adds it once; assigned rows can be reordered by drag
+  and removed individually. Use `@lobehub/icons-static-svg` for OpenAI and Claude
+  Code marks. Keep all user-facing copy in the four-language i18n resources.
 - React Query owns settings data and requests. Effects may own external
   subscriptions and document updates, not duplicate fetched state. See
   `docs/settings.md` for synchronization and CLI/API representation boundaries.
@@ -216,6 +243,11 @@ API development servers. Rebuild `dist` to test production static serving.
 - Store instructions as individual Markdown files in `instructions/`. Each file
   uses YAML frontmatter for `id`, `name`, `createdAt`, and `updatedAt`, followed
   by the untouched Markdown content. An absent directory means an empty list.
+- Store agent profiles as individual JSON records in `agents/`. The fixed ID is
+  top-level; the `instructions` capability contains ordered instruction IDs,
+  enabled state, and timestamps. Future capabilities can add sibling namespaces
+  without changing the record file. External agent instruction files live
+  outside `.foundry` and are not JSON storage records.
 - `src/storage/models.ts` owns record contracts and the JSON format version.
 - Use `FoundryStorage` transactions for writes. Keep process locking, atomic
   replacement and redo recovery inside the storage module. Read JSON files
@@ -233,7 +265,8 @@ API development servers. Rebuild `dist` to test production static serving.
 - Backup data follows `normalizeSettings` on export and import. The current
   payload contains settings, including retained backend feature settings; it is
   not limited to the four fields exposed by CLI get/set. See `docs/data-export.md`.
-  Instructions, providers, captures, and fetch jobs are outside this payload.
+  Instructions, agent assignments, providers, captures, and fetch jobs are
+  outside this payload.
 - Tests use temporary directories; never run imports or mutating
   commands against the developer's real `<home>/.foundry` data.
 
@@ -278,8 +311,21 @@ directory.
 
 For instruction changes, create one with
 `foundry instructions new --name ... --content ...` under temporary `HOME`,
-verify the returned JSON and Markdown file, then exercise `GET` and `POST`
-`/api/instructions` in behavioral tests.
+verify the returned JSON and Markdown file, then exercise
+`foundry instructions list` and `GET` and `POST` `/api/instructions` in
+behavioral tests.
+
+For agent orchestration changes, use temporary `HOME` and exercise assignment,
+enable, reorder, reapply, disable, missing-file creation, and malformed-marker
+cleanup. Verify the managed block and all outside text in both target files, and
+open the Web page at desktop and narrow widths. Never write to the developer's
+real `~/.codex` or `~/.claude` files during tests.
+
+For the agents CLI, smoke-test `agents list`,
+`agents instructions list`, `agents instructions assign`,
+`agents instructions enable`, `agents instructions reapply`, and
+`agents instructions disable` under temporary `HOME`. Verify the printed JSON
+and that only the selected agent file changed.
 
 For Skill changes, rebuild and verify `dist/skills/foundry` matches
 `skills/foundry`. Smoke-test

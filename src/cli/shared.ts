@@ -3,6 +3,7 @@ import { SettingsService } from '../features/settings/service';
 import { BundledSkillCopyService } from '../features/settings/skill-copy-service';
 import { DataExportService } from '../features/data-export/service';
 import { DataImportService } from '../features/data-import/service';
+import { AgentsService } from '../features/agents/service';
 import { InstructionsService } from '../features/instructions/service';
 import {
   initializeFoundryStorage,
@@ -11,6 +12,7 @@ import type { FoundryStorage } from '../storage/index';
 
 export interface CliSession {
   storage: FoundryStorage;
+  agentsService: AgentsService;
   settingsService: SettingsService;
   settingsSkillCopyService: BundledSkillCopyService;
   dataExportService: DataExportService;
@@ -25,13 +27,15 @@ export async function runCliAction(
 
   try {
     const storage = initializeFoundryStorage();
+    const instructionsService = new InstructionsService(storage);
     session = {
       storage,
+      agentsService: new AgentsService(storage, instructionsService),
       settingsService: new SettingsService(storage),
       settingsSkillCopyService: new BundledSkillCopyService(),
       dataExportService: new DataExportService(storage),
       dataImportService: new DataImportService(storage),
-      instructionsService: new InstructionsService(storage),
+      instructionsService,
     };
 
     writeJson(await action(session));

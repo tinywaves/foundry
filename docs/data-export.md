@@ -15,9 +15,9 @@ entry points in Settings does not make the backup format a four-setting format.
 `FoundryData` in `packages/shared/src/data-export.ts` defines the payload. Today
 it contains `{ "settings": … }`, including backend feature settings retained by
 normalization. It excludes the runtime config-folder path, instruction Markdown
-files, provider records, captures, and fetch-job collections. Export is not a
-complete copy of `<home>/.foundry`, and import does not replace those excluded
-collections.
+files, agent assignment records, provider records, captures, and fetch-job
+collections. Export is not a complete copy of `<home>/.foundry`, and import does
+not replace those excluded collections.
 
 As application data support grows, extend the shared payload and the collection
 and replacement repositories together. Reuse the archive, encryption, and Web

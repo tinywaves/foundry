@@ -7,12 +7,13 @@ import encrypted backups, and install the bundled Foundry Skill.
 ## Current scope
 
 The current Web UI implements Instructions and Settings. The CLI exposes
-`instructions` and `settings` business command groups. Instructions supports
-creating Markdown instruction files from the Web UI or CLI. Settings covers
-appearance, language and region, and Advanced actions, including encrypted
-backups and bundled Skill installation. The main layout and sidebar remain
-available, with placeholder routes for features not implemented yet. The root
-route opens Dashboard; opening Settings without a category shows Appearance.
+`instructions`, `agents`, and `settings` business command groups. Instructions
+supports creating and listing Markdown instruction files from the Web UI or CLI,
+and the Web page and CLI assign them to ChatGPT and Claude Code.
+Settings covers appearance, language and region, and Advanced actions, including
+encrypted backups and bundled Skill installation. The main layout and sidebar
+remain available, with placeholder routes for features not implemented yet. The
+root route opens Dashboard; opening Settings without a category shows Appearance.
 
 Provider, capture, fetch-job, and session backend services and APIs are retained.
 Their presence does not imply a corresponding page or CLI command in the current
@@ -97,13 +98,63 @@ foundry instructions new \
 Quote content containing spaces or newlines. Names are trimmed and limited to
 200 characters; content must be non-empty and is capped at 1,000,000 characters.
 The command prints the stored instruction as JSON. The Web UI exposes the same
-creation flow at `#/library/instructions`.
+creation flow at `#/library/instructions` and renders the stored instructions
+newest first.
+
+List all instructions, newest first:
+
+```bash
+foundry instructions list
+```
+
+The command prints a JSON array in the same shape as the creation result. Use
+the Web page or `GET /api/instructions` for the same ordered list.
 
 Instructions are stored as individual Markdown files at
 `<home>/.foundry/instructions/<id>.md`. Each file has YAML frontmatter for the
 ID, name, and timestamps; the Markdown body is preserved unchanged. The API
 provides `GET /api/instructions` and `POST /api/instructions`. See
 [Instructions implementation](docs/instructions.md).
+
+## Agent orchestration
+
+The Instructions page composes saved instructions into two fixed agent files:
+
+- ChatGPT: `~/.codex/AGENTS.md`
+- Claude Code: `~/.claude/CLAUDE.md`
+
+Desktop layouts show instructions on the left and agent cards on the right.
+Drag an instruction into an agent to assign it; drag assigned rows to reorder
+them. Each agent accepts an instruction only once. The switch applies or removes
+Foundry's managed block without affecting other file content, and Reapply
+rewrites the current block.
+
+Foundry writes exactly one managed block using the selected markers:
+
+```md
+<!-- foundry:instructions:start -->
+
+...assigned instructions in order...
+
+<!-- foundry:instructions:end -->
+```
+
+Assignment state is stored under `<home>/.foundry/agents`. Each file keeps the
+agent `id` at the top level and instruction state under an `instructions`
+namespace. The Web page uses `/api/agents`; the equivalent CLI operations are:
+
+```bash
+foundry agents list
+foundry agents instructions list [agent]
+foundry agents instructions assign chatgpt --instructions <id1>,<id2>
+foundry agents instructions enable chatgpt
+foundry agents instructions reapply chatgpt
+foundry agents instructions disable chatgpt
+foundry agents instructions open chatgpt
+```
+
+See [Agent orchestration](docs/agents.md) for the CLI, API, behavior, and block
+rules.
 
 ## Backups and agent Skill
 
@@ -120,9 +171,10 @@ Backup passphrases use `FOUNDRY_PASSPHRASE` or `--passphrase`. Export rejects an
 existing destination unless `--force` is supplied. Import normalizes backup data
 and replaces the supported data completely. The current backup payload contains
 settings, including settings retained for backend features; it is not a copy of
-all runtime files. Instructions, providers, captures, and fetch jobs are outside
-this payload. Web import reloads the page without the hash route and enters the
-normal root route. See [backup behavior and format](docs/data-export.md).
+all runtime files. Instructions, agent assignments, providers, captures, and
+fetch jobs are outside this payload. Web import reloads the page without the hash
+route and enters the normal root route. See
+[backup behavior and format](docs/data-export.md).
 
 Download Skill installs Foundry's agent usage manual, which teaches agents how
 to operate the installed Foundry CLI. It copies to selected user-level targets:
@@ -171,6 +223,8 @@ Runtime data lives in `<home>/.foundry`, outside the repository and `dist`:
 - `providers.json`: retained provider records
 - `captures/` and `fetch-jobs/`: one JSON file per retained record
 - `instructions/`: one Markdown instruction file per record
+- `agents/`: one JSON agent profile per record, including the `instructions`
+  capability state
 
 Foundry uses process locking, atomic replacement, and a redo journal for JSON
 transactions. Reads load files directly. Startup recovers committed interrupted
@@ -197,7 +251,8 @@ exposes only `./package.json`. Verify with `pnpm pack --dry-run`.
 
 - [Development constraints](AGENTS.md): architecture, storage, and verification
 - [Web development](app/web/README.md) and [design rules](app/web/DESIGN.md)
-- [Instructions implementation](docs/instructions.md): Web creation flow, API, CLI, and file format
+- [Instructions implementation](docs/instructions.md): Web list and creation flow, API, CLI, and file format
+- [Agent orchestration](docs/agents.md): fixed agent files, drag state, CLI/API, and managed block rules
 - [Settings implementation](docs/settings.md): routing, synchronization, and API boundaries
 - [Data export and import](docs/data-export.md): normalization, replacement, and format
 - [Foundry Skill](skills/foundry/SKILL.md): installed CLI usage for agents

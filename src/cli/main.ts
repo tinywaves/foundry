@@ -4,6 +4,7 @@ import {
 } from 'citty';
 import type { CommandDef } from 'citty';
 import packageJson from '../../package.json' with { type: 'json' };
+import { agentsCommand } from './commands/agents';
 import { instructionsCommand } from './commands/instructions';
 import { settingsCommand } from './commands/settings';
 import { webCommand } from './commands/web';
@@ -34,6 +35,7 @@ export function createFoundryCommand(): CommandDef {
       web: webCommand,
       settings: settingsCommand,
       instructions: instructionsCommand,
+      agents: agentsCommand,
     },
   });
 

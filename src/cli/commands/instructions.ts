@@ -35,12 +35,23 @@ const create = defineCommand({
   },
 });
 
+const list = defineCommand({
+  meta: {
+    name: 'list',
+    description: 'List instructions, newest first, as JSON',
+  },
+  run() {
+    return runCliAction(({ instructionsService }) => instructionsService.list());
+  },
+});
+
 export const instructionsCommand = defineCommand({
   meta: {
     name: 'instructions',
-    description: 'Create Foundry instructions',
+    description: 'Create and list Foundry instructions',
   },
   subCommands: {
     new: create,
+    list,
   },
 });

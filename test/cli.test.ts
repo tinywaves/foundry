@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
@@ -7,6 +7,10 @@ import { runCommand, showUsage } from 'citty';
 import { settingsCommand } from '../src/cli/commands/settings';
 import { expect, it, vi } from 'vitest';
 import { createFoundryCommand } from '../src/cli/main';
+import {
+  INSTRUCTION_BLOCK_END,
+  INSTRUCTION_BLOCK_START,
+} from '../src/features/agents/document';
 
 const { join } = path;
 it('prints root help without initializing storage', async () => {
@@ -88,6 +92,7 @@ it('limits the command tree to settings, instructions and web and documents allo
     'web',
     'settings',
     'instructions',
+    'agents',
   ]);
   const output: string[] = [];
   const log = vi.spyOn(console, 'log').mockImplementation((value: unknown) => {
@@ -111,7 +116,7 @@ it('limits the command tree to settings, instructions and web and documents allo
   expect(help).toContain('zh-TW');
 });
 
-it('creates an instruction through the CLI', async () => {
+it('creates and lists instructions through the CLI', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'foundry-cli-instructions-'));
   stubHome(directory);
 
@@ -127,6 +132,8 @@ it('creates an instruction through the CLI', async () => {
       id: string;
       name: string;
       content: string;
+      createdAt: string;
+      updatedAt: string;
     };
     expect(created).toMatchObject({
       name: 'Release checklist',
@@ -138,7 +145,191 @@ it('creates an instruction through the CLI', async () => {
     );
     expect(markdown).toContain('name: Release checklist');
     expect(markdown).toContain('# Release\n\n- Run tests');
+
+    const listed = await runJsonCommand(['instructions', 'list']);
+    expect(listed).toEqual([created]);
   } finally {
+    vi.unstubAllEnvs();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+it('orchestrates agent instructions through the CLI', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'foundry-cli-agents-'));
+  stubHome(directory);
+
+  try {
+    const first = await runJsonCommand([
+      'instructions',
+      'new',
+      '--name',
+      'First',
+      '--content',
+      '# First\n\nUse the first instruction.',
+    ]) as { id: string };
+    const second = await runJsonCommand([
+      'instructions',
+      'new',
+      '--name',
+      'Second',
+      '--content',
+      '# Second\n\nUse the second instruction.',
+    ]) as { id: string };
+
+    expect(await runJsonCommand(['agents', 'list'])).toEqual([
+      {
+        id: 'chatgpt',
+        name: 'ChatGPT',
+        icon: 'openai',
+        instructionFile: '~/.codex/AGENTS.md',
+        enabled: false,
+        instructionIds: [],
+      },
+      {
+        id: 'claude-code',
+        name: 'Claude Code',
+        icon: 'claudecode',
+        instructionFile: '~/.claude/CLAUDE.md',
+        enabled: false,
+        instructionIds: [],
+      },
+    ]);
+
+    expect(await runJsonCommand([
+      'agents',
+      'instructions',
+      'assign',
+      'claude-code',
+      '--instructions',
+      `${second.id},${first.id}`,
+    ])).toMatchObject({
+      id: 'claude-code',
+      enabled: false,
+      instructionIds: [second.id, first.id],
+    });
+    expect(existsSync(join(directory, '.claude', 'CLAUDE.md'))).toBe(false);
+
+    expect(await runJsonCommand([
+      'agents',
+      'instructions',
+      'list',
+      'claude-code',
+    ])).toEqual([
+      {
+        id: 'claude-code',
+        name: 'Claude Code',
+        instructionFile: '~/.claude/CLAUDE.md',
+        enabled: false,
+        instructions: [
+          { id: second.id, name: 'Second' },
+          { id: first.id, name: 'First' },
+        ],
+      },
+    ]);
+
+    expect(await runJsonCommand([
+      'agents',
+      'instructions',
+      'enable',
+      'claude-code',
+    ])).toMatchObject({
+      id: 'claude-code',
+      enabled: true,
+      instructionIds: [second.id, first.id],
+    });
+    const claudeFile = join(directory, '.claude', 'CLAUDE.md');
+    const markdown = await readFile(claudeFile, 'utf8');
+    expect(markdown).toContain(INSTRUCTION_BLOCK_START);
+    expect(markdown).toContain(INSTRUCTION_BLOCK_END);
+    expect(markdown.indexOf('Use the second instruction.'))
+      .toBeLessThan(markdown.indexOf('Use the first instruction.'));
+
+    await runJsonCommand(['agents', 'instructions', 'reapply', 'claude-code']);
+    expect(await readFile(claudeFile, 'utf8')).toBe(markdown);
+
+    expect(await runJsonCommand([
+      'agents',
+      'instructions',
+      'disable',
+      'claude-code',
+    ])).toMatchObject({
+      enabled: false,
+      instructionIds: [second.id, first.id],
+    });
+    expect(await readFile(claudeFile, 'utf8')).toBe('');
+
+    expect(await runJsonCommand([
+      'agents',
+      'instructions',
+      'assign',
+      'claude-code',
+      '--instructions',
+      '',
+    ])).toMatchObject({
+      enabled: false,
+      instructionIds: [],
+    });
+  } finally {
+    vi.unstubAllEnvs();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+it('rejects unknown agents and instructions through the CLI', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'foundry-cli-agent-errors-'));
+  stubHome(directory);
+  const previousExitCode = process.exitCode;
+  const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+  const errors: string[] = [];
+  const error = vi.spyOn(console, 'error').mockImplementation((value: unknown) => {
+    errors.push(String(value));
+  });
+
+  try {
+    for (const [args, code] of [
+      [
+        ['agents', 'instructions', 'enable', 'unknown'],
+        'AGENT_NOT_FOUND',
+      ],
+      [
+        ['agents', 'instructions', 'list', 'unknown'],
+        'AGENT_NOT_FOUND',
+      ],
+      [
+        [
+          'agents',
+          'instructions',
+          'assign',
+          'chatgpt',
+          '--instructions',
+          'missing-id',
+        ],
+        'UNKNOWN_INSTRUCTION',
+      ],
+      [
+        [
+          'agents',
+          'instructions',
+          'assign',
+          'chatgpt',
+          '--instructions',
+          'same-id,same-id',
+        ],
+        'DUPLICATE_INSTRUCTION',
+      ],
+    ] as const) {
+      errors.length = 0;
+      process.exitCode = undefined;
+      await runCommand(createFoundryCommand(), { rawArgs: [...args] });
+      expect(process.exitCode).toBe(1);
+      expect(JSON.parse(errors.join(''))).toMatchObject({ error: { code } });
+    }
+    expect(log).not.toHaveBeenCalled();
+    expect(await readdir(join(directory, '.foundry', 'agents'))).toEqual([]);
+  } finally {
+    log.mockRestore();
+    error.mockRestore();
+    process.exitCode = previousExitCode;
     vi.unstubAllEnvs();
     await rm(directory, { recursive: true, force: true });
   }

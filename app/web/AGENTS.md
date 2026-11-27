@@ -10,7 +10,7 @@ components to use their preset appearance.
   local styles, types, and browser API adapter.
 - Keep router composition and providers in `src/app.tsx`, with layouts and
   navigation definitions in `src/app`. Preserve the main shell and placeholder
-  routes while implementing Settings.
+  routes while implementing Instructions and Settings.
 - Keep `src/components` limited to shared feature-level UI.
 - Keep browser helpers under `src/lib` and translations under `src/i18n`.
 - Import contracts shared with the server from `@dhzh/foundry-shared`; do not
@@ -18,6 +18,10 @@ components to use their preset appearance.
 - Use React Query for server state. Keep connection lifecycle and DOM theme or
   language updates separate from fetching. See `../../docs/settings.md` for the
   current Settings routes, synchronization, and API boundaries.
+- Instructions lives at `#/library/instructions`. Page actions use
+  `PageHeaderActions`; the creation dialog keeps name and Markdown content
+  required and uses the shared local Monaco editor setup. See
+  `../../docs/instructions.md`.
 - Settings categories use the `panel` query parameter; omitted or invalid values
   select Appearance. The app root still opens Dashboard. Full-screen back uses
   browser history.
@@ -40,8 +44,9 @@ the standalone API server at `http://localhost:22222`.
 
 ## Verification
 
-Check affected interactions at `900x670` and narrow viewports: Settings category
-links and browser history, realtime synchronization, localized labels, Advanced
+Check affected interactions at `900x670` and narrow viewports: instruction
+creation, required labels, Markdown source preservation, Settings category links
+and browser history, realtime synchronization, localized labels, Advanced
 dialogs, hover/focus, and loading, disabled, and error states. For layout or
 navigation changes, also verify main-sidebar collapse, mobile navigation, and
 full-screen return behavior. Remaining legacy code is reference only; its

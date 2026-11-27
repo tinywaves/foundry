@@ -123,7 +123,7 @@ export function SettingsPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  size="icon-lg"
+                  size="icon"
                   aria-label={t('settings.openNavigation')}
                 />
               )}
@@ -256,7 +256,6 @@ function SettingsNavigation({
                 key={id}
                 type="button"
                 variant={isActive ? 'secondary' : 'ghost'}
-                size="lg"
                 aria-current={isActive ? 'page' : undefined}
                 onClick={() => {
                   onSectionChange(id);

@@ -81,9 +81,14 @@ it('rejects unknown keys, read-only settings and invalid values without writing'
   }
 });
 
-it('limits the command tree to settings and web and documents allowed values', async () => {
+it('limits the command tree to settings, instructions and web and documents allowed values', async () => {
   const command = createFoundryCommand();
-  expect(Object.keys(command.subCommands ?? {})).toEqual(['help', 'web', 'settings']);
+  expect(Object.keys(command.subCommands ?? {})).toEqual([
+    'help',
+    'web',
+    'settings',
+    'instructions',
+  ]);
   const output: string[] = [];
   const log = vi.spyOn(console, 'log').mockImplementation((value: unknown) => {
     output.push(String(value));
@@ -104,6 +109,39 @@ it('limits the command tree to settings and web and documents allowed values', a
   expect(help).toContain('Asia/Shanghai');
   expect(help).toContain('YYYY-MM-DD HH:mm:ss');
   expect(help).toContain('zh-TW');
+});
+
+it('creates an instruction through the CLI', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'foundry-cli-instructions-'));
+  stubHome(directory);
+
+  try {
+    const created = await runJsonCommand([
+      'instructions',
+      'new',
+      '--name',
+      'Release checklist',
+      '--content',
+      '# Release\n\n- Run tests',
+    ]) as {
+      id: string;
+      name: string;
+      content: string;
+    };
+    expect(created).toMatchObject({
+      name: 'Release checklist',
+      content: '# Release\n\n- Run tests',
+    });
+    const markdown = await readFile(
+      join(directory, '.foundry', 'instructions', `${created.id}.md`),
+      'utf8',
+    );
+    expect(markdown).toContain('name: Release checklist');
+    expect(markdown).toContain('# Release\n\n- Run tests');
+  } finally {
+    vi.unstubAllEnvs();
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
 it('copies the bundled Foundry skill through the CLI', async () => {

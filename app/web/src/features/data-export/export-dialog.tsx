@@ -4,6 +4,8 @@ import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import { PasswordInput } from '@/components/password-input';
+import { RequiredLabel } from '@/components/required-label';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,8 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { PasswordInput } from '@/components/password-input';
-import { Label } from '@/components/ui/label';
 
 import { exportData } from './api';
 
@@ -66,7 +66,9 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
             <DialogDescription>{t('dataExport.description')}</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2">
-            <Label htmlFor={passphraseId}>{t('dataExport.passphrase')}</Label>
+            <RequiredLabel htmlFor={passphraseId}>
+              {t('dataExport.passphrase')}
+            </RequiredLabel>
             <PasswordInput
               id={passphraseId}
               autoComplete="new-password"
@@ -77,7 +79,9 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor={confirmationId}>{t('dataExport.confirmPassphrase')}</Label>
+            <RequiredLabel htmlFor={confirmationId}>
+              {t('dataExport.confirmPassphrase')}
+            </RequiredLabel>
             <PasswordInput
               id={confirmationId}
               autoComplete="new-password"
@@ -107,7 +111,7 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
           render={(
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="icon"
               className="absolute top-2 right-2"
             />
           )}

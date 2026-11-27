@@ -19,8 +19,9 @@ replaces the supported data. It does not merge or offer a preview session.
 Missing or invalid fields follow the same normalization rules as regular settings
 reads, including default values and numeric bounds. The last successful write
 wins. Current backup data includes retained backend feature settings. It is not
-limited to the four CLI get/set fields. Provider, capture, and fetch-job records
-are outside this backup dataset.
+limited to the four CLI get/set fields. Instruction Markdown files, provider,
+capture, and fetch-job records are outside this backup dataset. Exporting a
+backup does not preserve or restore instructions.
 
 Import is destructive. Run it when the user intends to replace current data.
 After `{"status":"imported"}`, verify with `foundry settings get`. Import from

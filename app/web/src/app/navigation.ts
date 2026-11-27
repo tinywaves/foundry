@@ -30,12 +30,12 @@ export const mainNavigation: NavItem[] = [
     icon: LibraryBigIcon,
     items: [
       {
-        titleKey: 'nav.skills',
-        url: '/library/skills',
+        titleKey: 'nav.instructions',
+        url: '/library/instructions',
       },
       {
-        titleKey: 'nav.starred',
-        url: '/library/starred',
+        titleKey: 'nav.skills',
+        url: '/library/skills',
       },
     ],
   },

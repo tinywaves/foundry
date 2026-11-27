@@ -3,6 +3,7 @@ import { SettingsService } from '../features/settings/service';
 import { BundledSkillCopyService } from '../features/settings/skill-copy-service';
 import { DataExportService } from '../features/data-export/service';
 import { DataImportService } from '../features/data-import/service';
+import { InstructionsService } from '../features/instructions/service';
 import {
   initializeFoundryStorage,
 } from '../storage/index';
@@ -14,6 +15,7 @@ export interface CliSession {
   settingsSkillCopyService: BundledSkillCopyService;
   dataExportService: DataExportService;
   dataImportService: DataImportService;
+  instructionsService: InstructionsService;
 }
 
 export async function runCliAction(
@@ -29,6 +31,7 @@ export async function runCliAction(
       settingsSkillCopyService: new BundledSkillCopyService(),
       dataExportService: new DataExportService(storage),
       dataImportService: new DataImportService(storage),
+      instructionsService: new InstructionsService(storage),
     };
 
     writeJson(await action(session));

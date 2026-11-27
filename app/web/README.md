@@ -5,10 +5,16 @@ React Web UI built with Vite, Tailwind CSS v4, and shadcn/ui preset `b1D0dv72`
 
 ## Current scope
 
-Settings is the implemented feature. Preserve the main layout, sidebar, titlebar,
-and placeholder routes under `src/app`; these are the application skeleton.
-`src/app.tsx` composes the hash router and providers. Root and unknown routes
-open Dashboard, while `#/settings` opens Settings with Appearance selected.
+Instructions and Settings are the implemented features. Preserve the main
+layout, sidebar, titlebar, and placeholder routes under `src/app`; these are the
+application skeleton. `src/app.tsx` composes the hash router and providers. Root
+and unknown routes open Dashboard, while `#/library/instructions` opens the
+Instructions page.
+
+Instructions uses the main layout. Its header action opens a creation dialog with
+required name and Markdown content fields, backed by the local Monaco editor. See
+[Instructions implementation](../../docs/instructions.md).
+
 Settings uses the shared full-screen layout. Each full-screen route declares its
 `handle.backTo` target; Settings returns to Dashboard.
 

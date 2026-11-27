@@ -1,22 +1,25 @@
 # Foundry
 
 Foundry is a local personal workbench distributed as a CLI with a bundled Web UI.
-People and agents can use the CLI to manage settings, export or import encrypted
-backups, and install the bundled Foundry Skill.
+People and agents can use the CLI to manage instructions and settings, export or
+import encrypted backups, and install the bundled Foundry Skill.
 
 ## Current scope
 
-Settings is the implemented feature in the current Web UI and the only business
-command group in the CLI. It covers appearance, language and region, and Advanced
-actions. The main layout, sidebar, and placeholder routes remain available for
-future work. The root route opens Dashboard; opening Settings without a category
-shows Appearance.
+The current Web UI implements Instructions and Settings. The CLI exposes
+`instructions` and `settings` business command groups. Instructions supports
+creating Markdown instruction files from the Web UI or CLI. Settings covers
+appearance, language and region, and Advanced actions, including encrypted
+backups and bundled Skill installation. The main layout and sidebar remain
+available, with placeholder routes for features not implemented yet. The root
+route opens Dashboard; opening Settings without a category shows Appearance.
 
 Provider, capture, fetch-job, and session backend services and APIs are retained.
 Their presence does not imply a corresponding page or CLI command in the current
 product. `app/web/legacy-src` holds remaining reference code; its Settings
-implementation has been removed. Keeping the current scope focused on Settings
-does not mean removing the application shell or other backend capabilities.
+implementation has been removed. Keeping the current scope focused on
+Instructions and Settings does not mean removing the application shell or other
+backend capabilities.
 
 ## Requirements and startup
 
@@ -78,6 +81,30 @@ Omitted or invalid `panel` values select Appearance. Timezone names are localize
 the stored values remain IANA timezone identifiers. The full-screen Settings back
 button returns one step through browser history.
 
+## Instructions
+
+Create an instruction with a required name and Markdown content:
+
+```bash
+foundry instructions new \
+  --name "Release checklist" \
+  --content "# Release
+
+- Run tests
+- Check the changelog"
+```
+
+Quote content containing spaces or newlines. Names are trimmed and limited to
+200 characters; content must be non-empty and is capped at 1,000,000 characters.
+The command prints the stored instruction as JSON. The Web UI exposes the same
+creation flow at `#/library/instructions`.
+
+Instructions are stored as individual Markdown files at
+`<home>/.foundry/instructions/<id>.md`. Each file has YAML frontmatter for the
+ID, name, and timestamps; the Markdown body is preserved unchanged. The API
+provides `GET /api/instructions` and `POST /api/instructions`. See
+[Instructions implementation](docs/instructions.md).
+
 ## Backups and agent Skill
 
 Settings > Advanced provides Export, Import, Config Folder, and Download Skill.
@@ -93,9 +120,9 @@ Backup passphrases use `FOUNDRY_PASSPHRASE` or `--passphrase`. Export rejects an
 existing destination unless `--force` is supplied. Import normalizes backup data
 and replaces the supported data completely. The current backup payload contains
 settings, including settings retained for backend features; it is not a copy of
-all runtime files. Providers, captures, and fetch jobs are outside this payload.
-Web import reloads the page without the hash route and enters the normal root
-route. See [backup behavior and format](docs/data-export.md).
+all runtime files. Instructions, providers, captures, and fetch jobs are outside
+this payload. Web import reloads the page without the hash route and enters the
+normal root route. See [backup behavior and format](docs/data-export.md).
 
 Download Skill installs Foundry's agent usage manual, which teaches agents how
 to operate the installed Foundry CLI. It copies to selected user-level targets:
@@ -143,6 +170,7 @@ Runtime data lives in `<home>/.foundry`, outside the repository and `dist`:
 - `settings.json`: normalized application settings
 - `providers.json`: retained provider records
 - `captures/` and `fetch-jobs/`: one JSON file per retained record
+- `instructions/`: one Markdown instruction file per record
 
 Foundry uses process locking, atomic replacement, and a redo journal for JSON
 transactions. Reads load files directly. Startup recovers committed interrupted
@@ -169,6 +197,7 @@ exposes only `./package.json`. Verify with `pnpm pack --dry-run`.
 
 - [Development constraints](AGENTS.md): architecture, storage, and verification
 - [Web development](app/web/README.md) and [design rules](app/web/DESIGN.md)
+- [Instructions implementation](docs/instructions.md): Web creation flow, API, CLI, and file format
 - [Settings implementation](docs/settings.md): routing, synchronization, and API boundaries
 - [Data export and import](docs/data-export.md): normalization, replacement, and format
 - [Foundry Skill](skills/foundry/SKILL.md): installed CLI usage for agents

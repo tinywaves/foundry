@@ -5,13 +5,15 @@ Project guidance for coding agents working on Foundry.
 ## Product Contract
 
 Foundry is a local personal workbench distributed as a CLI, not as a JavaScript
-library. Settings is the currently implemented Web feature and the CLI's only
-business command group. Preserve the main layout, sidebar, titlebar, and
-placeholder routes. Other backend feature services and APIs remain available;
-work on Settings does not imply changing those features or removing the shell.
+library. The current Web UI implements Instructions and Settings. The CLI
+provides `instructions` and `settings` business command groups. Preserve the
+main layout, sidebar, titlebar, and placeholder routes. Other backend feature
+services and APIs remain available; work on one feature does not imply changing
+those features or removing the shell.
 
-The CLI provides `settings get [key]`, `settings set <key> <value>`, config-folder
-opening, encrypted export/import, and bundled Skill installation. Document allowed
+The CLI provides `instructions new`, `settings get [key]`,
+`settings set <key> <value>`, config-folder opening, encrypted export/import,
+and bundled Skill installation. Document instruction input and allowed setting
 keys and values in CLI help and the bundled Skill rather than adding a discovery
 API. `foundry web` initializes storage, starts Hono, serves the bundled Web UI,
 and opens the browser unless `--no-open` is supplied.
@@ -61,6 +63,7 @@ src/
 |   |-- captures/          Capture service, fetchers, runner, repository, routes
 |   |-- data-export/       Current app data collection and encrypted export
 |   |-- data-import/       Direct encrypted backup replacement
+|   |-- instructions/      Instruction Markdown repository, validation, routes
 |   |-- providers/         Provider repository, model discovery, routes
 |   |-- sessions/          Read-only external transcript adapters and routes
 |   `-- settings/          Settings, synchronization, bundled Skill copy, routes
@@ -115,6 +118,13 @@ Keep CLI and server responsibilities separate:
   retry configuration belongs to the feature fetcher. Route handlers only dispatch.
 - Keep contracts shared by the server and Web UI in `packages/shared`; do not
   duplicate API payload or settings types in either app.
+- Store each instruction as one Markdown file under
+  `<home>/.foundry/instructions/<id>.md`. Keep its identity, name, and timestamps
+  in YAML frontmatter and its Markdown body unchanged. The filename must match
+  the frontmatter ID; do not add a separate instruction index or database.
+- Keep instruction validation in `src/features/instructions/contracts.ts` and
+  persistence in its repository. API routes list and create instructions;
+  CLI actions call `InstructionsService` rather than reimplementing storage.
 - Skill copy targets are fixed user-level keys: `agents` maps to
   `<home>/.agents/skills/foundry`, and `claude` maps to
   `<home>/.claude/skills/foundry`, where `<home>` is `os.homedir()` (`~` on
@@ -134,12 +144,20 @@ Keep CLI and server responsibilities separate:
   layouts and navigation definitions live under `app/web/src/app`.
 - The root route opens Dashboard. The default Appearance category applies only
   within Settings. Preserve the full-screen back button's browser-history behavior.
+- Instructions lives at `#/library/instructions` in the Library section. Page
+  actions mount through `PageHeaderActions` at the right side of the page header.
+  The creation dialog uses the shared Markdown editor and required-field labels.
 - React Query owns settings data and requests. Effects may own external
   subscriptions and document updates, not duplicate fetched state. See
   `docs/settings.md` for synchronization and CLI/API representation boundaries.
 - Generate shadcn components into `app/web/src/components/ui`; this directory and
   the generated `app/web/src/hooks/use-mobile.ts` are excluded from ESLint.
   Application components and business code must still pass ESLint.
+- Use the default button size for application actions: `default` for text
+  buttons and `icon` for standalone icon buttons, both `28px`. Reserve smaller
+  icon sizes for controls embedded in compact fields or toolbars.
+- Mark every required form field with a red `*` in its label through
+  `RequiredLabel`; keep required semantics on the field itself.
 - Use the official `@tailwindcss/vite` plugin. Keep preset tokens and the CSS
   entry in `app/web/src/styles/globals.css`; use Tailwind for business styling.
 - Preserve existing page composition, responsive behavior, interactions, and
@@ -195,6 +213,9 @@ API development servers. Rebuild `dist` to test production static serving.
 - Store settings in `settings.json` and all providers in the `providers.json`
   array. Captures and fetch jobs each have one JSON file per record in their
   collection directories. Provider avatars are optional base64 image data URLs.
+- Store instructions as individual Markdown files in `instructions/`. Each file
+  uses YAML frontmatter for `id`, `name`, `createdAt`, and `updatedAt`, followed
+  by the untouched Markdown content. An absent directory means an empty list.
 - `src/storage/models.ts` owns record contracts and the JSON format version.
 - Use `FoundryStorage` transactions for writes. Keep process locking, atomic
   replacement and redo recovery inside the storage module. Read JSON files
@@ -212,6 +233,7 @@ API development servers. Rebuild `dist` to test production static serving.
 - Backup data follows `normalizeSettings` on export and import. The current
   payload contains settings, including retained backend feature settings; it is
   not limited to the four fields exposed by CLI get/set. See `docs/data-export.md`.
+  Instructions, providers, captures, and fetch jobs are outside this payload.
 - Tests use temporary directories; never run imports or mutating
   commands against the developer's real `<home>/.foundry` data.
 
@@ -253,6 +275,11 @@ curl http://localhost:11111/api/health
 For feature CLI changes, smoke-test the affected command against temporary
 `HOME` storage. Do not point mutating command tests at the developer's real home
 directory.
+
+For instruction changes, create one with
+`foundry instructions new --name ... --content ...` under temporary `HOME`,
+verify the returned JSON and Markdown file, then exercise `GET` and `POST`
+`/api/instructions` in behavioral tests.
 
 For Skill changes, rebuild and verify `dist/skills/foundry` matches
 `skills/foundry`. Smoke-test

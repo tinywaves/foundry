@@ -4,6 +4,7 @@ import {
 } from 'citty';
 import type { CommandDef } from 'citty';
 import packageJson from '../../package.json' with { type: 'json' };
+import { instructionsCommand } from './commands/instructions';
 import { settingsCommand } from './commands/settings';
 import { webCommand } from './commands/web';
 
@@ -25,13 +26,14 @@ export function createFoundryCommand(): CommandDef {
     meta: {
       name: 'foundry',
       version: packageJson.version,
-      description: 'Manage Foundry settings or start the Web UI',
+      description: 'Manage Foundry settings and instructions or start the Web UI',
     },
     default: 'help',
     subCommands: {
       help,
       web: webCommand,
       settings: settingsCommand,
+      instructions: instructionsCommand,
     },
   });
 

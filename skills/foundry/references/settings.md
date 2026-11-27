@@ -57,6 +57,7 @@ absolute destinations. Paths are fixed user-level targets on every platform.
 Settings deep links use `#/settings?panel=appearance`,
 `#/settings?panel=language-region`, or `#/settings?panel=advanced`.
 Omitted or invalid panels show Appearance. This is the Settings category default;
-the application root opens Dashboard. The main navigation contains placeholder
-pages, while Settings is the implemented Web feature. Its full-screen back button
+the application root opens Dashboard. Settings and
+[Instructions](instructions.md) are the implemented Web features; other main
+navigation pages remain placeholders. The Settings full-screen back button
 returns one browser history entry.

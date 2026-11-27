@@ -22,7 +22,7 @@ export function DownloadSkillItem({ disabled = false }: { disabled?: boolean }) 
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-xs"
+                  size="icon"
                   className="shrink-0 text-muted-foreground"
                   aria-label={t('settings.aboutFoundrySkill')}
                 />

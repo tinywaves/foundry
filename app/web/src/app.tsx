@@ -6,6 +6,7 @@ import { createHashRouter, Navigate, RouterProvider } from 'react-router-dom';
 import { MainLayout } from './app/main-layout';
 import { FullScreenLayout } from './app/full-screen-layout';
 import { mainRoutePaths } from './app/navigation';
+import { InstructionsPage } from './features/instructions/instructions-page';
 import { SettingsPage } from './features/settings/settings-page';
 import { SettingsProvider } from './features/settings/state/settings-provider';
 import { useSettings } from './features/settings/state/use-settings';
@@ -22,7 +23,9 @@ const router = createHashRouter([
     element: <MainLayout />,
     children: mainRoutePaths.map((path) => ({
       path,
-      element: <EmptyPage />,
+      element: path === '/library/instructions'
+        ? <InstructionsPage />
+        : <EmptyPage />,
     })),
   },
   {

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { PasswordInput } from '@/components/password-input';
+import { RequiredLabel } from '@/components/required-label';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,7 +15,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 
 import { importData, ImportRequestError } from './api';
 
@@ -66,7 +66,9 @@ export function ImportDialog({ file, onClose }: { file: File; onClose: () => voi
             <DialogDescription className="break-all">{file.name}</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2">
-            <Label htmlFor={passphraseId}>{t('dataImport.passphrase')}</Label>
+            <RequiredLabel htmlFor={passphraseId}>
+              {t('dataImport.passphrase')}
+            </RequiredLabel>
             <PasswordInput
               id={passphraseId}
               autoComplete="current-password"
@@ -90,7 +92,7 @@ export function ImportDialog({ file, onClose }: { file: File; onClose: () => voi
           disabled={isPending}
           onClick={close}
           variant="ghost"
-          size="icon-sm"
+          size="icon"
           className="absolute top-2 right-2"
         >
           <XIcon />

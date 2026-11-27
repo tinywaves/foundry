@@ -21,12 +21,15 @@ export function syncDirectory(directory: string): void {
   }
 }
 export function writeJsonAtomic(filename: string, value: unknown): void {
+  writeTextAtomic(filename, `${JSON.stringify(value, null, 2)}\n`);
+}
+export function writeTextAtomic(filename: string, contents: string): void {
   privateDirectory(path.dirname(filename));
   const temporary = `${filename}.${randomUUID()}.tmp`;
   try {
     const fd = openSync(temporary, 'wx', 0o600);
     try {
-      writeFileSync(fd, `${JSON.stringify(value, null, 2)}\n`);
+      writeFileSync(fd, contents);
       fsyncSync(fd);
     } finally {
       closeSync(fd);

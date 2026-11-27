@@ -3,6 +3,8 @@ import packageJson from '../../package.json' with { type: 'json' };
 import { createCaptureRoutes } from '../features/captures/routes';
 import { CAPTURES_CHANGED_EVENT } from '../features/captures/events';
 import type { CaptureService } from '../features/captures/service';
+import { createInstructionRoutes } from '../features/instructions/routes';
+import { InstructionsService } from '../features/instructions/service';
 import type { FoundryEventHub } from '../events/hub';
 import { PROVIDERS_CHANGED_EVENT } from '../features/providers/events';
 import { createProviderRoutes } from '../features/providers/routes';
@@ -24,6 +26,7 @@ export interface ApiAppOptions {
   captureService?: CaptureService;
   dataExportService?: DataExportService;
   dataImportService?: DataImportService;
+  instructionsService?: InstructionsService;
   providerService?: ProviderService;
   settingsService?: SettingsService;
   settingsSkillCopyService?: BundledSkillCopyService;
@@ -46,6 +49,8 @@ export function createApiApp(storage: FoundryStorage, options: ApiAppOptions = {
     ?? new BundledSkillCopyService();
   const sessionService = options.sessionService
     ?? new SessionService();
+  const instructionsService = options.instructionsService
+    ?? new InstructionsService(storage);
 
   app.get('/api/health', (c) => c.json({
     status: 'ok',
@@ -69,6 +74,10 @@ export function createApiApp(storage: FoundryStorage, options: ApiAppOptions = {
   app.route(
     '/api/data-export',
     createDataExportRoutes(options.dataExportService ?? new DataExportService(storage)),
+  );
+  app.route(
+    '/api/instructions',
+    createInstructionRoutes(instructionsService),
   );
   app.route(
     '/api/providers',

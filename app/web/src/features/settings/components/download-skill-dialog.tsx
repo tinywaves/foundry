@@ -1,10 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import type { BundledSkillTarget } from '@dhzh/foundry-shared';
 import { DownloadIcon, LoaderCircleIcon, XIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import { RequiredLabel } from '@/components/required-label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -14,6 +15,7 @@ import { downloadSkill, getSkillTargets } from '../api';
 
 export function DownloadSkillDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
+  const targetsLabelId = useId();
   const [targets, setTargets] = useState<BundledSkillTarget[]>(['agents']);
   const query = useQuery({ queryKey: ['skill-targets'], queryFn: ({ signal }) => getSkillTargets(signal), retry: false });
   const mutation = useMutation({
@@ -49,53 +51,63 @@ export function DownloadSkillDialog({ onClose }: { onClose: () => void }) {
             <DialogTitle>{t('settings.downloadSkill')}</DialogTitle>
             <DialogDescription>{t('settings.downloadSkillDescription')}</DialogDescription>
           </DialogHeader>
-          {query.isPending && (
-            <div className="space-y-2">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          )}
-          {query.isError && (
-            <Button
-              type="button"
-              variant="outline"
-              disabled={query.isFetching}
-              onClick={() => {
-                void query.refetch();
-              }}
-            >
-              {t('common.retry')}
-            </Button>
-          )}
-          {query.data && (
-            <div className="flex flex-col gap-2">
-              {query.data.targets.map(({ target, destination }) => (
-                <Label
-                  key={target}
-                  className="flex items-start gap-3 rounded-lg border p-3"
-                >
-                  <Checkbox
-                    checked={targets.includes(target)}
-                    disabled={mutation.isPending}
-                    onCheckedChange={(checked) => {
-                      setTargets((previous) => (checked ? [...previous, target] : previous.filter((item) => item !== target)));
-                    }}
-                  />
-                  <span className="flex min-w-0 flex-col gap-1">
-                    <span>{target === 'agents' ? '.agents' : '.claude'}</span>
-                    <span
-                      className="
-                        font-mono text-xs font-normal break-all
-                        text-muted-foreground
-                      "
-                    >
-                      {destination}
+          <div className="flex flex-col gap-2">
+            <RequiredLabel id={targetsLabelId}>
+              {t('settings.skillTargets')}
+            </RequiredLabel>
+            {query.isPending && (
+              <div className="space-y-2">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            )}
+            {query.isError && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={query.isFetching}
+                onClick={() => {
+                  void query.refetch();
+                }}
+              >
+                {t('common.retry')}
+              </Button>
+            )}
+            {query.data && (
+              <div
+                role="group"
+                aria-labelledby={targetsLabelId}
+                aria-required="true"
+                className="flex flex-col gap-2"
+              >
+                {query.data.targets.map(({ target, destination }) => (
+                  <Label
+                    key={target}
+                    className="flex items-start gap-3 rounded-lg border p-3"
+                  >
+                    <Checkbox
+                      checked={targets.includes(target)}
+                      disabled={mutation.isPending}
+                      onCheckedChange={(checked) => {
+                        setTargets((previous) => (checked ? [...previous, target] : previous.filter((item) => item !== target)));
+                      }}
+                    />
+                    <span className="flex min-w-0 flex-col gap-1">
+                      <span>{target === 'agents' ? '.agents' : '.claude'}</span>
+                      <span
+                        className="
+                          font-mono text-xs font-normal break-all
+                          text-muted-foreground
+                        "
+                      >
+                        {destination}
+                      </span>
                     </span>
-                  </span>
-                </Label>
-              ))}
-            </div>
-          )}
+                  </Label>
+                ))}
+              </div>
+            )}
+          </div>
           <DialogFooter>
             <Button type="button" variant="ghost" disabled={mutation.isPending} onClick={onClose}>{t('common.cancel')}</Button>
             <Button type="submit" disabled={targets.length === 0 || !query.isSuccess || mutation.isPending}>
@@ -109,7 +121,7 @@ export function DownloadSkillDialog({ onClose }: { onClose: () => void }) {
           render={(
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="icon"
               className="absolute top-2 right-2"
             />
           )}

@@ -1,6 +1,7 @@
 import { DataExportService } from '../features/data-export/service';
 import { DataImportService } from '../features/data-import/service';
 import { createCaptureRuntime } from '../features/captures/runtime';
+import { InstructionsService } from '../features/instructions/service';
 import { ProviderService } from '../features/providers/service';
 import { SettingsService } from '../features/settings/service';
 import { BundledSkillCopyService } from '../features/settings/skill-copy-service';
@@ -15,6 +16,7 @@ export interface FoundryFeatureServices {
   captureRuntime: ReturnType<typeof createCaptureRuntime>;
   dataExportService: DataExportService;
   dataImportService: DataImportService;
+  instructionsService: InstructionsService;
   providerService: ProviderService;
   settingsService: SettingsService;
   settingsSkillCopyService: BundledSkillCopyService;
@@ -33,6 +35,7 @@ export function createServerRuntime(storage: FoundryStorage): ServerRuntime {
   const captureRuntime = createCaptureRuntime(storage, eventHub);
   const dataExportService = new DataExportService(storage);
   const dataImportService = new DataImportService(storage);
+  const instructionsService = new InstructionsService(storage);
   const providerService = new ProviderService(storage);
   const settingsService = new SettingsService(storage);
   const settingsSkillCopyService = new BundledSkillCopyService();
@@ -41,6 +44,7 @@ export function createServerRuntime(storage: FoundryStorage): ServerRuntime {
     captureRuntime,
     dataExportService,
     dataImportService,
+    instructionsService,
     providerService,
     settingsService,
     settingsSkillCopyService,
@@ -54,6 +58,7 @@ export function createServerRuntime(storage: FoundryStorage): ServerRuntime {
       captureService: captureRuntime.service,
       dataExportService,
       dataImportService,
+      instructionsService,
       providerService,
       settingsService,
       settingsSkillCopyService,

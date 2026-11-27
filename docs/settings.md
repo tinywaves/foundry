@@ -1,16 +1,17 @@
 # Settings implementation
 
-Settings is the currently implemented Web feature and the CLI's only business
-command group. Keep the existing application shell and placeholder routes.
-Providers, captures, fetch jobs, and sessions remain backend capabilities outside
-the current Web and CLI feature scope.
+Settings is one of the implemented Web features and CLI business command groups;
+Instructions is the other. Keep the existing application shell and placeholder
+routes. Providers, captures, fetch jobs, and sessions remain backend capabilities
+outside the current Web and CLI feature scope.
 
 ## Routes and layout
 
 `app/web/src/app.tsx` composes the hash router. `src/app/main-layout.tsx` owns the
 main sidebar and content host, with navigation paths in `src/app/navigation.ts`.
-Those paths currently render placeholder pages. The root and unknown routes
-redirect to `/dashboard`.
+`/library/instructions` renders the Instructions page. Dashboard, Skills, and the
+Models routes remain placeholders. The root and unknown routes redirect to
+`/dashboard`.
 
 Settings uses the shared full-screen `src/app/full-screen-layout.tsx` at
 `#/settings`. Each page route declares its return target through

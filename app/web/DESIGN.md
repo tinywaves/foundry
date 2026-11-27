@@ -1,8 +1,8 @@
 # Foundry Web UI
 
-Foundry is an operational local workbench. Refine the implemented Settings UI
-within the existing application structure. Preserve the main layout, sidebar,
-titlebar, and placeholder routes; focusing current work on Settings does not
+Foundry is an operational local workbench. Refine the implemented Instructions
+and Settings UI within the existing application structure. Preserve the main
+layout, sidebar, titlebar, and placeholder routes; work on one feature does not
 remove that skeleton or migrate other business features.
 
 ## Visual system
@@ -15,6 +15,16 @@ Keep the CSS entry and tokens in `src/styles/globals.css`.
 Component appearance follows the preset. Reuse Dialog, Select, RadioGroup,
 Checkbox, Tooltip, and related primitives rather than creating independent
 floating panels. Keep generated component code separate from business code.
+Use the default button size for every application action: `default` for text
+buttons and `icon` for standalone icon buttons. Both are `28px`. Do not
+override application action buttons with `xs`, `sm`, `lg`, `icon-sm`, or
+`icon-lg`; smaller icon sizes are reserved for controls embedded in compact
+fields or toolbars. Generated navigation primitives keep their preset sizing.
+
+Every required form field must show a red `*` in its label using
+`RequiredLabel`. Keep the marker `aria-hidden`; required semantics belong on
+the field through `required` or `aria-required`. This applies to native inputs
+and required composite fields such as checkbox groups.
 
 ## Shell and routing
 
@@ -28,6 +38,19 @@ full-screen page route declares an explicit `handle.backTo` target; Settings
 returns to Dashboard rather than relying on browser history. Root and unknown
 routes open Dashboard. A missing Settings category defaults to Appearance; it
 does not change the app's root destination.
+
+## Instructions
+
+Instructions is a page in the main Library layout at
+`#/library/instructions`. Feature actions mount through the page header action
+slot and sit at the right side of the header. The current page exposes a
+New instruction action.
+
+The creation dialog requires both name and content. Use the shared required-label
+pattern for both fields. Content uses the locally bundled Monaco Markdown editor,
+preserves source text exactly, follows the application theme, and keeps the
+editor lazy-loaded with the dialog. Do not add a rich-text toolbar or transform
+Markdown source before saving.
 
 ## Settings composition
 

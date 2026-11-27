@@ -2,7 +2,8 @@
 
 Vocabulary for Foundry's retained read-only Sessions backend and legacy UI
 reference. Sessions is not a page in the current Web UI or a CLI command. These
-terms describe the domain without expanding the current Settings feature scope.
+terms describe the domain without expanding the current implemented feature
+scope.
 
 ## Language
 

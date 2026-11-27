@@ -1,6 +1,6 @@
 ---
 name: foundry
-description: Operate the local Foundry workbench through its installed CLI. Use when a task asks to read or change Foundry settings, open its configuration folder, export or import Foundry data, install the Foundry Skill, or start its Web UI.
+description: Operate the local Foundry workbench through its installed CLI. Use when a task asks to create Foundry instructions, read or change Foundry settings, open its configuration folder, export or import Foundry data, install the Foundry Skill, or start its Web UI.
 ---
 
 # Foundry
@@ -17,6 +17,7 @@ availability when versions differ.
 
 | Task | Reference |
 | --- | --- |
+| Instructions: create a named Markdown instruction | [references/instructions.md](references/instructions.md) |
 | Settings: appearance, language and region, configuration folder, encrypted export/import, or Skill installation | [references/settings.md](references/settings.md) |
 
 ## CLI conventions
@@ -35,5 +36,6 @@ availability when versions differ.
 
 Start the Web UI when requested with `foundry web`. Use `foundry web --no-open`
 to start the same local server without opening a browser. It prints the URL and
-serves the UI on port 11111. Feature-specific routes and behavior belong in their
-references.
+serves the UI on port 11111. Instructions is at
+`#/library/instructions`; Settings uses the Settings routes documented in its
+reference. Feature-specific behavior belongs in those references.

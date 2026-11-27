@@ -22,6 +22,7 @@ const agentsMutationKey = ['agents', 'update'] as const;
 interface InstructionUpdate {
   agentId: string;
   instructionIds: string[];
+  previous: Agent[] | undefined;
 }
 
 interface EnabledUpdate {
@@ -49,19 +50,8 @@ export function useAgents() {
     mutationKey: agentsMutationKey,
     mutationFn: ({ agentId, instructionIds }: InstructionUpdate) =>
       updateAgentInstructions(agentId, instructionIds),
-    onMutate: async ({ agentId, instructionIds }) => {
+    onMutate: async ({ previous }) => {
       await queryClient.cancelQueries({ queryKey: agentsQueryKey });
-      const previous = queryClient.getQueryData<Agent[]>(agentsQueryKey);
-      queryClient.setQueryData<Agent[]>(
-        agentsQueryKey,
-        (current) => current?.map((agent) => (agent.id === agentId
-          ? {
-              ...agent,
-              instructionIds,
-              enabled: instructionIds.length > 0 && agent.enabled,
-            }
-          : agent)),
-      );
       return { previous };
     },
     onError: (_error, _update, context) => {
@@ -157,7 +147,18 @@ export function useAgents() {
     pendingAgentIds,
     reapplyingAgentIds,
     updateInstructions: (agentId: string, instructionIds: string[]) => {
-      instructionMutation.mutate({ agentId, instructionIds });
+      const previous = queryClient.getQueryData<Agent[]>(agentsQueryKey);
+      queryClient.setQueryData<Agent[]>(
+        agentsQueryKey,
+        (current) => current?.map((agent) => (agent.id === agentId
+          ? {
+              ...agent,
+              instructionIds,
+              enabled: instructionIds.length > 0 && agent.enabled,
+            }
+          : agent)),
+      );
+      instructionMutation.mutate({ agentId, instructionIds, previous });
     },
     setEnabled: (agentId: string, isEnabled: boolean) => {
       enabledMutation.mutate({ agentId, enabled: isEnabled });

@@ -1,3 +1,4 @@
+import { useDraggable } from '@dnd-kit/core';
 import type { Instruction } from '@dhzh/foundry-shared';
 import {
   FileTextIcon,
@@ -26,7 +27,8 @@ import {
   PopoverContent,
 } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
-import { INSTRUCTION_DRAG_TYPE } from '@/features/agents/drag';
+import { libraryInstructionDragId } from '@/features/agents/drag';
+import { cn } from '@/lib/utils';
 
 interface InstructionLibraryProps {
   assignedInstructionIds: ReadonlySet<string>;
@@ -57,7 +59,6 @@ export function InstructionLibrary({
   onPreload,
 }: InstructionLibraryProps) {
   const { t } = useTranslation();
-  const rowRef = useRef(new Map<string, HTMLElement>());
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(
     null,
   );
@@ -106,92 +107,21 @@ export function InstructionLibrary({
   return (
     <Card className="gap-0 py-0">
       <ul aria-label={t('instructions.listAria')} className="divide-y">
-        {instructions.map((instruction) => {
-          const isInUse = assignedInstructionIds.has(instruction.id);
-
-          return (
-            <ContextMenu key={instruction.id}>
-              <ContextMenuTrigger
-                ref={(node) => {
-                  if (node) {
-                    rowRef.current.set(instruction.id, node);
-                  } else {
-                    rowRef.current.delete(instruction.id);
-                  }
-                }}
-                render={(
-                  <li
-                    data-instruction-id={instruction.id}
-                    draggable
-                    className="
-                      flex cursor-grab items-center gap-2 px-3 py-2.5
-                      hover:bg-muted/40
-                      active:cursor-grabbing
-                    "
-                    onDragStart={(event) => {
-                      event.dataTransfer.setData(
-                        INSTRUCTION_DRAG_TYPE,
-                        instruction.id,
-                      );
-                      event.dataTransfer.effectAllowed = 'copy';
-                    }}
-                  />
-                )}
-              >
-                <GripVerticalIcon
-                  aria-hidden="true"
-                  className="size-3.5 shrink-0 text-muted-foreground"
-                />
-                <button
-                  type="button"
-                  className="
-                    flex min-w-0 flex-1 cursor-grab items-center gap-2 text-left
-                    text-xs outline-none
-                    focus-visible:underline focus-visible:underline-offset-3
-                    active:cursor-grabbing
-                  "
-                  onClick={() => {
-                    onEdit(instruction);
-                  }}
-                  onFocus={onPreload}
-                  onPointerEnter={onPreload}
-                >
-                  <span className="min-w-0 flex-1 truncate">
-                    {instruction.name}
-                  </span>
-                </button>
-              </ContextMenuTrigger>
-              <ContextMenuContent>
-                <ContextMenuItem
-                  onClick={() => {
-                    onEdit(instruction);
-                  }}
-                >
-                  <PencilIcon />
-                  <span>{t('instructions.edit')}</span>
-                </ContextMenuItem>
-                <ContextMenuItem
-                  variant="destructive"
-                  disabled={!isAssignmentStateReady || isInUse}
-                  onClick={() => {
-                    const anchor = rowRef.current.get(instruction.id);
-                    if (anchor) {
-                      setPendingDelete({ anchor, instruction });
-                    }
-                  }}
-                >
-                  <Trash2Icon />
-                  <span>{t('instructions.delete')}</span>
-                  {isInUse && (
-                    <span className="ml-auto text-[10px] text-muted-foreground">
-                      {t('instructions.inUse')}
-                    </span>
-                  )}
-                </ContextMenuItem>
-              </ContextMenuContent>
-            </ContextMenu>
-          );
-        })}
+        {instructions.map((instruction) => (
+          <InstructionLibraryItem
+            key={instruction.id}
+            instruction={instruction}
+            isAssignmentStateReady={isAssignmentStateReady}
+            isInUse={assignedInstructionIds.has(instruction.id)}
+            onRequestDelete={(anchor) => {
+              setPendingDelete({ anchor, instruction });
+            }}
+            onEdit={() => {
+              onEdit(instruction);
+            }}
+            onPreload={onPreload}
+          />
+        ))}
       </ul>
       <Popover
         open={pendingDelete !== null}
@@ -246,5 +176,109 @@ export function InstructionLibrary({
         </PopoverContent>
       </Popover>
     </Card>
+  );
+}
+
+interface InstructionLibraryItemProps {
+  instruction: Instruction;
+  isAssignmentStateReady: boolean;
+  isInUse: boolean;
+  onEdit: () => void;
+  onPreload: () => void;
+  onRequestDelete: (anchor: HTMLElement) => void;
+}
+
+function InstructionLibraryItem({
+  instruction,
+  isAssignmentStateReady,
+  isInUse,
+  onEdit,
+  onPreload,
+  onRequestDelete,
+}: InstructionLibraryItemProps) {
+  const { t } = useTranslation();
+  const rowRef = useRef<HTMLElement | null>(null);
+  const {
+    attributes,
+    isDragging,
+    listeners,
+    setNodeRef,
+  } = useDraggable({
+    id: libraryInstructionDragId(instruction.id),
+    data: {
+      type: 'library-instruction',
+      instructionId: instruction.id,
+    },
+  });
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger
+        ref={(node) => {
+          rowRef.current = node;
+          setNodeRef(node);
+        }}
+        render={(
+          <li
+            {...listeners}
+            data-instruction-id={instruction.id}
+            className={cn(
+              `
+                flex cursor-grab items-center gap-2 px-3 py-2.5
+                hover:bg-muted/40
+                active:cursor-grabbing
+              `,
+              isDragging && 'opacity-40',
+            )}
+          />
+        )}
+      >
+        <GripVerticalIcon
+          aria-hidden="true"
+          className="size-3.5 shrink-0 text-muted-foreground"
+        />
+        <button
+          {...attributes}
+          type="button"
+          className="
+            flex min-w-0 flex-1 cursor-grab items-center gap-2 text-left text-xs
+            outline-none
+            focus-visible:underline focus-visible:underline-offset-3
+            active:cursor-grabbing
+          "
+          onClick={onEdit}
+          onFocus={onPreload}
+          onPointerEnter={onPreload}
+        >
+          <span className="min-w-0 flex-1 truncate">
+            {instruction.name}
+          </span>
+        </button>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem onClick={onEdit}>
+          <PencilIcon />
+          <span>{t('instructions.edit')}</span>
+        </ContextMenuItem>
+        <ContextMenuItem
+          variant="destructive"
+          disabled={!isAssignmentStateReady || isInUse}
+          onClick={() => {
+            const anchor = rowRef.current;
+            if (anchor) {
+              onRequestDelete(anchor);
+            }
+          }}
+        >
+          <Trash2Icon />
+          <span>{t('instructions.delete')}</span>
+          {isInUse && (
+            <span className="ml-auto text-[10px] text-muted-foreground">
+              {t('instructions.inUse')}
+            </span>
+          )}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }

@@ -1,4 +1,4 @@
-import { LanguagesIcon, MenuIcon, PaintbrushIcon } from 'lucide-react';
+import { LanguagesIcon, MenuIcon, PaintbrushIcon, SlidersHorizontalIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -15,16 +15,19 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 
-import { ColorThemeItem } from './color-theme-item';
-import { LanguageItem } from './language-item';
-import { useSettings } from './settings-context';
-import { TimeFormatItem } from './time-format-item';
-import { TimeZoneItem } from './time-zone-item';
+import { ConfigFolderItem } from './sections/advanced/config-folder-item';
+import { ExportItem } from './sections/advanced/export-item';
+import { ImportItem } from './sections/advanced/import-item';
+import { ColorThemeItem } from './sections/appearance/color-theme-item';
+import { LanguageItem } from './sections/language-region/language-item';
+import { TimeFormatItem } from './sections/language-region/time-format-item';
+import { TimeZoneItem } from './sections/language-region/time-zone-item';
+import { useSettings } from './state/settings-context';
 
 import type { TranslationKey } from '@/i18n/resources';
 import type { LucideIcon } from 'lucide-react';
 
-type SettingsSection = 'appearance' | 'language-region';
+type SettingsSection = 'appearance' | 'language-region' | 'advanced';
 
 const settingsSections: Array<{
   id: SettingsSection;
@@ -43,6 +46,12 @@ const settingsSections: Array<{
     labelKey: 'settings.languageRegion',
     ariaKey: 'settings.languageRegionAria',
     icon: LanguagesIcon,
+  },
+  {
+    id: 'advanced',
+    labelKey: 'settings.advanced',
+    ariaKey: 'settings.advancedAria',
+    icon: SlidersHorizontalIcon,
   },
 ];
 
@@ -132,54 +141,57 @@ export function SettingsPage() {
         </div>
 
         <Card className="gap-0 py-0">
-          {isLoading
-            ? (
-                <div className="flex flex-col items-start gap-3 p-4 min-[680px]:min-h-16 min-[680px]:flex-row min-[680px]:items-center min-[680px]:justify-between min-[680px]:gap-8">
-                  <Skeleton className="h-4 w-24" />
-                  <div className="flex items-center gap-6">
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-4 w-10" />
-                    <Skeleton className="h-4 w-10" />
-                  </div>
-                </div>
-              )
-            : (
-                activeSection === 'appearance'
-                  ? (
-                      <ColorThemeItem
-                        value={theme}
-                        onValueChange={(nextTheme) => {
-                          void setTheme(nextTheme);
-                        }}
-                        disabled={isUpdating || !settings}
-                      />
-                    )
-                  : (
-                      <div className="divide-y">
-                        <LanguageItem
-                          value={language}
-                          onValueChange={(nextLanguage) => {
-                            void setLanguage(nextLanguage);
-                          }}
-                          disabled={isUpdating || !settings}
-                        />
-                        <TimeZoneItem
-                          value={timeZone}
-                          onValueChange={(nextTimeZone) => {
-                            void setTimeZone(nextTimeZone);
-                          }}
-                          disabled={isUpdating || !settings}
-                        />
-                        <TimeFormatItem
-                          value={timeFormat}
-                          onValueChange={(nextTimeFormat) => {
-                            void setTimeFormat(nextTimeFormat);
-                          }}
-                          disabled={isUpdating || !settings}
-                        />
-                      </div>
-                    )
-              )}
+          {isLoading && (
+            <div className="flex flex-col items-start gap-3 p-4 min-[680px]:min-h-16 min-[680px]:flex-row min-[680px]:items-center min-[680px]:justify-between min-[680px]:gap-8">
+              <Skeleton className="h-4 w-24" />
+              <div className="flex items-center gap-6">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-10" />
+                <Skeleton className="h-4 w-10" />
+              </div>
+            </div>
+          )}
+          {!isLoading && activeSection === 'appearance' && (
+            <ColorThemeItem
+              value={theme}
+              onValueChange={(nextTheme) => {
+                void setTheme(nextTheme);
+              }}
+              disabled={isUpdating || !settings}
+            />
+          )}
+          {!isLoading && activeSection === 'language-region' && (
+            <div className="divide-y">
+              <LanguageItem
+                value={language}
+                onValueChange={(nextLanguage) => {
+                  void setLanguage(nextLanguage);
+                }}
+                disabled={isUpdating || !settings}
+              />
+              <TimeZoneItem
+                value={timeZone}
+                onValueChange={(nextTimeZone) => {
+                  void setTimeZone(nextTimeZone);
+                }}
+                disabled={isUpdating || !settings}
+              />
+              <TimeFormatItem
+                value={timeFormat}
+                onValueChange={(nextTimeFormat) => {
+                  void setTimeFormat(nextTimeFormat);
+                }}
+                disabled={isUpdating || !settings}
+              />
+            </div>
+          )}
+          {!isLoading && activeSection === 'advanced' && (
+            <div className="divide-y">
+              <ExportItem />
+              <ImportItem />
+              <ConfigFolderItem />
+            </div>
+          )}
         </Card>
 
         {error && (

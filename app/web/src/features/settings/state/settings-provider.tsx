@@ -21,7 +21,7 @@ import {
 } from '@/i18n';
 import type { TranslationKey } from '@/i18n/resources';
 
-import { getSettings, updateSettings } from './api';
+import { getSettings, updateSettings } from '../api';
 import { SettingsContext } from './settings-context';
 import type { SettingsContextValue } from './settings-context';
 

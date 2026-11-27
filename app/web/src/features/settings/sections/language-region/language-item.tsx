@@ -1,5 +1,4 @@
-import { TIME_FORMATS } from '@dhzh/foundry-shared';
-import type { TimeFormatPattern } from '@dhzh/foundry-shared';
+import type { LanguageMode } from '@dhzh/foundry-shared';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -9,34 +8,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { UI_LANGUAGES, UI_LANGUAGE_LABELS } from '@/i18n/resources';
 
-import { SettingsItem } from './settings-item';
+import { SettingsItem } from '../../components/settings-item';
 
-const timeFormatOptions: Array<{
-  value: TimeFormatPattern;
-  label: string;
-}> = TIME_FORMATS.map((timeFormat) => ({
-  value: timeFormat,
-  label: timeFormat,
-}));
-
-interface TimeFormatItemProps {
-  value: TimeFormatPattern;
-  onValueChange: (value: TimeFormatPattern) => void;
+interface LanguageItemProps {
+  value: LanguageMode;
+  onValueChange: (value: LanguageMode) => void;
   disabled?: boolean;
 }
 
-export function TimeFormatItem({
+export function LanguageItem({
   value,
   onValueChange,
   disabled = false,
-}: TimeFormatItemProps) {
+}: LanguageItemProps) {
   const { t } = useTranslation();
+  const options: Array<{ value: LanguageMode; label: string }> = [
+    { value: 'system', label: t('common.system') },
+    ...UI_LANGUAGES.map((language) => ({
+      value: language,
+      label: UI_LANGUAGE_LABELS[language],
+    })),
+  ];
 
   return (
-    <SettingsItem label={t('settings.timeFormat')}>
-      <Select<TimeFormatPattern>
-        items={timeFormatOptions}
+    <SettingsItem label={t('settings.language')}>
+      <Select<LanguageMode>
+        items={options}
         value={value}
         onValueChange={(nextValue) => {
           if (nextValue) {
@@ -46,13 +45,13 @@ export function TimeFormatItem({
         disabled={disabled}
       >
         <SelectTrigger
-          aria-label={t('settings.timeFormat')}
+          aria-label={t('settings.language')}
           className="w-52"
         >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {timeFormatOptions.map((option) => (
+          {options.map((option) => (
             <SelectItem key={option.value} value={option.value}>
               {option.label}
             </SelectItem>

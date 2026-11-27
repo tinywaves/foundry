@@ -5,7 +5,7 @@ import { MainLayout } from './app/main-layout';
 import { mainRoutePaths } from './app/navigation';
 import { SettingsLayout } from './app/settings-layout';
 import { SettingsPage } from './features/settings/settings-page';
-import { SettingsProvider } from './features/settings/settings-provider';
+import { SettingsProvider } from './features/settings/state/settings-provider';
 
 function EmptyPage() {
   return null;

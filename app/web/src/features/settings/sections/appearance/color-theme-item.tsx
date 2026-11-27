@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 
-import { SettingsItem } from './settings-item';
+import { SettingsItem } from '../../components/settings-item';
 
 const themeOptions: Array<{
   value: ThemeMode;

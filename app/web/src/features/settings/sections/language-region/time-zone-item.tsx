@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-import { SettingsItem } from './settings-item';
+import { SettingsItem } from '../../components/settings-item';
 
 const timeZoneOptions: Array<{ value: TimeZoneCode; label: string }>
   = TIME_ZONES.map((timeZone) => ({ value: timeZone, label: timeZone }));

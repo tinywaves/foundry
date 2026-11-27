@@ -3,13 +3,17 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
 
 import { ColorThemeItem } from './color-theme-item';
 import { LanguageItem } from './language-item';
@@ -44,7 +48,6 @@ const settingsSections: Array<{
 
 export function SettingsPage() {
   const { t } = useTranslation();
-  const [isNavigationOpen, setIsNavigationOpen] = useState(false);
   const [activeSection, setActiveSection]
     = useState<SettingsSection>('appearance');
   const {
@@ -82,8 +85,8 @@ export function SettingsPage() {
         className="min-h-0 overflow-y-auto p-4"
       >
         <div className="mb-3 flex items-center gap-3 min-[680px]:hidden">
-          <Popover open={isNavigationOpen} onOpenChange={setIsNavigationOpen}>
-            <PopoverTrigger
+          <DropdownMenu>
+            <DropdownMenuTrigger
               render={(
                 <Button
                   type="button"
@@ -94,26 +97,41 @@ export function SettingsPage() {
               )}
             >
               <MenuIcon />
-            </PopoverTrigger>
-            <PopoverContent
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
               side="bottom"
               align="start"
               sideOffset={8}
-              className="w-56 border-0 bg-transparent p-0 shadow-none ring-0"
+              aria-label={t('settings.navigation')}
+              className="w-56"
             >
-              <SettingsNavigation
-                activeSection={activeSection}
-                onSectionChange={setActiveSection}
-                onNavigate={() => setIsNavigationOpen(false)}
-              />
-            </PopoverContent>
-          </Popover>
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>{t('settings.workspace')}</DropdownMenuLabel>
+                <DropdownMenuRadioGroup
+                  value={activeSection}
+                  onValueChange={(value) => {
+                    const section = settingsSections.find(({ id }) => id === value);
+                    if (section) {
+                      setActiveSection(section.id);
+                    }
+                  }}
+                >
+                  {settingsSections.map(({ id, labelKey, icon: Icon }) => (
+                    <DropdownMenuRadioItem key={id} value={id} closeOnClick>
+                      <Icon />
+                      {t(labelKey)}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <span className="min-w-0 truncate text-sm font-medium">
             {t(activeSectionLabel)}
           </span>
         </div>
 
-        <div className="overflow-hidden rounded-xl border bg-card">
+        <Card className="gap-0 py-0">
           {isLoading
             ? (
                 <div className="flex flex-col items-start gap-3 p-4 min-[680px]:min-h-16 min-[680px]:flex-row min-[680px]:items-center min-[680px]:justify-between min-[680px]:gap-8">
@@ -162,7 +180,7 @@ export function SettingsPage() {
                       </div>
                     )
               )}
-        </div>
+        </Card>
 
         {error && (
           <p role="alert" className="px-1 pt-3 text-xs text-destructive">
@@ -177,50 +195,43 @@ export function SettingsPage() {
 function SettingsNavigation({
   activeSection,
   onSectionChange,
-  onNavigate,
 }: {
   activeSection: SettingsSection;
   onSectionChange: (section: SettingsSection) => void;
-  onNavigate?: () => void;
 }) {
   const { t } = useTranslation();
 
   return (
-    <nav
-      aria-label={t('settings.navigation')}
-      className="flex flex-col items-stretch gap-2 rounded-2xl border border-border/60 bg-muted/50 p-2 shadow-[0_8px_30px_rgb(0_0_0/0.06)] backdrop-blur-xl dark:bg-muted/35"
-    >
-      <h2 className="shrink-0 px-2 text-[11px] font-medium tracking-wide text-muted-foreground min-[680px]:mb-2">
-        {t('settings.workspace')}
-      </h2>
-      <div className="flex shrink-0 flex-col gap-1">
-        {settingsSections.map(({ id, labelKey, icon: Icon }) => {
-          const isActive = id === activeSection;
+    <nav aria-label={t('settings.navigation')}>
+      <Card size="sm">
+        <CardHeader>
+          <h2 className="text-xs font-medium text-muted-foreground">
+            {t('settings.workspace')}
+          </h2>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-1">
+          {settingsSections.map(({ id, labelKey, icon: Icon }) => {
+            const isActive = id === activeSection;
 
-          return (
-            <Button
-              key={id}
-              type="button"
-              variant="ghost"
-              size="lg"
-              aria-current={isActive ? 'page' : undefined}
-              onClick={() => {
-                onSectionChange(id);
-                onNavigate?.();
-              }}
-              className={cn(
-                'h-8 w-full justify-start gap-2 rounded-lg border px-2 text-sm',
-                isActive
-                  ? 'border-border/70 bg-background text-foreground shadow-xs hover:bg-background dark:bg-accent dark:hover:bg-accent'
-                  : 'border-transparent text-muted-foreground hover:bg-background/70 hover:text-foreground dark:hover:bg-background/10',
-              )}
-            >
-              <Icon className={isActive ? undefined : 'text-muted-foreground'} />
-              <span>{t(labelKey)}</span>
-            </Button>
-          );
-        })}
-      </div>
+            return (
+              <Button
+                key={id}
+                type="button"
+                variant={isActive ? 'secondary' : 'ghost'}
+                size="lg"
+                aria-current={isActive ? 'page' : undefined}
+                onClick={() => {
+                  onSectionChange(id);
+                }}
+                className="w-full justify-start gap-2"
+              >
+                <Icon className={isActive ? undefined : 'text-muted-foreground'} />
+                <span>{t(labelKey)}</span>
+              </Button>
+            );
+          })}
+        </CardContent>
+      </Card>
     </nav>
   );
 }

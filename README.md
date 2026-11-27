@@ -1,35 +1,27 @@
 # Foundry
 
-Foundry is an AI-native local personal workbench distributed as a CLI. Its
-settings, providers, captures, fetch jobs, encrypted data transfer, and bundled
-agent skill copy are available as JSON CLI commands for both people and agents.
-`foundry web` prepares local storage, starts a Hono server, serves the bundled
-React Web UI, and opens it in the default browser.
+Foundry is a local personal workbench distributed as a CLI with a bundled Web UI.
+People and agents can use the CLI to manage settings, export or import encrypted
+backups, and install the bundled Foundry Skill.
 
-The package is intentionally CLI-only. It does not expose a JavaScript library
-entry point.
+## Current scope
 
-## Features
+Settings is the implemented feature in the current Web UI and the only business
+command group in the CLI. It covers appearance, language and region, and Advanced
+actions. The main layout, sidebar, and placeholder routes remain available for
+future work. The root route opens Dashboard; opening Settings without a category
+shows Appearance.
 
-- Manage model providers using OpenAI Responses, Anthropic Messages, or
-  OpenAI-compatible Chat Completions protocols.
-- Discover provider models and keep custom model IDs alongside remote models.
-- Save links as agent-facing index cards using the configured capture fetcher,
-  run background jobs with retries, and inspect the raw fetcher response.
-- Configure appearance, language and region, capture behavior, and concurrency.
-- Export and import encrypted `.foundry-backup` application data. The current
-  data contract contains settings; imports replace those settings completely.
-- Copy the bundled agent skill into `<home>/.agents/skills/foundry`,
-  `<home>/.claude/skills/foundry`, or both from the CLI or Settings > Advanced.
+Provider, capture, fetch-job, and session backend services and APIs are retained.
+Their presence does not imply a corresponding page or CLI command in the current
+product. `app/web/legacy-src` holds remaining reference code; its Settings
+implementation has been removed. Keeping the current scope focused on Settings
+does not mean removing the application shell or other backend capabilities.
 
-## Requirements
+## Requirements and startup
 
-- Node.js 24.22.1 or newer
-- pnpm 12.15 or newer
-
-Foundry stores its own data as JSON files. No native SQLite package is required.
-
-## Run From Source
+Use Node.js and pnpm versions compatible with `package.json` (currently Node.js
+24.22.1 or newer within major 24, and pnpm 12.15 or newer within major 12).
 
 ```bash
 pnpm install
@@ -37,11 +29,8 @@ pnpm build
 pnpm start web
 ```
 
-`pnpm start` runs the built CLI from `dist/index.mjs`; `pnpm start web` starts
-the Web UI. Build first after changing the CLI, server, or Web UI.
-
-`foundry web` listens on `http://127.0.0.1:11111`, prints the URL, and opens the
-browser by default:
+The installed command is `foundry`. The package exposes a CLI executable, not a
+JavaScript library entry point.
 
 ```bash
 foundry web
@@ -50,185 +39,142 @@ foundry --help
 foundry --version
 ```
 
-Running bare `foundry` only prints help. It does not initialize storage or start
-the Web UI. The Web host and port are fixed; there are no CLI or
-environment-variable port overrides.
+`foundry web` initializes JSON storage, starts the local Hono server at
+`http://localhost:11111`, serves the bundled React UI, and opens the browser.
+`--no-open` starts the same server without opening a browser. Bare `foundry`
+prints help without initializing storage. `pnpm start` runs the built CLI and
+does not build implicitly.
 
-## CLI
-
-Feature commands write JSON to stdout and errors to stderr:
+## Settings
 
 ```bash
 foundry settings get
-foundry settings update --input '{"theme":"dark"}'
+foundry settings get color-theme
+foundry settings set color-theme dark
+foundry settings set language zh-CN
+foundry settings set time-zone Asia/Shanghai
+foundry settings set time-format "YYYY-MM-DD HH:mm:ss"
+foundry settings get config-folder
+foundry settings config-folder open
+```
 
-foundry providers list
-foundry providers create --input '{"name":"Local","protocol":"openai-compatible-chat-completions","baseURL":"http://127.0.0.1:11434/v1","apiKey":"","customModels":[]}'
-foundry providers set-status <id> --status disabled
+`get` returns a flat JSON object containing the four editable settings and the
+read-only `config-folder`. `get <key>` returns a JSON string, and
+`set <key> <value>` returns `{ "key": "...", "value": "..." }`. Invalid values
+are rejected. Use `foundry settings set --help` or the
+[Settings reference](skills/foundry/references/settings.md) for all supported
+keys and values.
+Settings commands return JSON on stdout and operation errors on stderr with a
+nonzero exit code. Help, version, and Web startup output are human-readable.
 
-foundry captures list
-foundry captures create https://example.com/article --note "Read later"
-foundry captures get <capture-id>
+Web clients receive settings changes from other tabs and CLI processes while
+the server is running. Settings categories can be opened directly:
 
-foundry captures jobs list <capture-id>
-foundry captures jobs get <capture-id> <job-id>
-foundry captures jobs recapture <capture-id>
+- `#/settings?panel=appearance`
+- `#/settings?panel=language-region`
+- `#/settings?panel=advanced`
 
-foundry data-transfer export --output ./foundry.foundry-backup
-foundry data-transfer import ./foundry.foundry-backup
+Omitted or invalid `panel` values select Appearance. Timezone names are localized;
+the stored values remain IANA timezone identifiers. The full-screen Settings back
+button returns one step through browser history.
 
+## Backups and agent Skill
+
+Settings > Advanced provides Export, Import, Config Folder, and Download Skill.
+The equivalent CLI operations are:
+
+```bash
+foundry settings export --output ./backup.foundry-backup
+foundry settings import ./backup.foundry-backup
 foundry settings download-skill --target .agents,.claude
 ```
 
-Use `--input-file <path>` or `--input -` for large JSON payloads. Data-transfer
-passphrases can be passed with `--passphrase` or `FOUNDRY_PASSPHRASE`.
-`data-transfer export/import` use the same data services and backup format as
-the Web UI. Import replaces current app data in one command; the current data
-contract contains settings. Provider and capture collections are not yet part
-of this backup contract.
+Backup passphrases use `FOUNDRY_PASSPHRASE` or `--passphrase`. Export rejects an
+existing destination unless `--force` is supplied. Import normalizes backup data
+and replaces the supported data completely. The current backup payload contains
+settings, including settings retained for backend features; it is not a copy of
+all runtime files. Providers, captures, and fetch jobs are outside this payload.
+Web import reloads the page without the hash route and enters the normal root
+route. See [backup behavior and format](docs/data-export.md).
 
-Skill targets are fixed relative to the user home directory. Here `<home>` is
-`~` on macOS/Linux and `%USERPROFILE%` on Windows:
+Download Skill installs Foundry's agent usage manual, which teaches agents how
+to operate the installed Foundry CLI. It copies to selected user-level targets:
 
-- `.agents` -> `<home>/.agents/skills/foundry`
-- `.claude` -> `<home>/.claude/skills/foundry`
+- `.agents` → `<home>/.agents/skills/foundry`
+- `.claude` → `<home>/.claude/skills/foundry`
 
-Selecting both copies to both locations. Replacing one selected target does not
-change the other.
+`<home>` is the operating system's user home directory. Existing copies at
+selected targets are replaced; unselected targets are left alone.
 
-## Local Development
+## Development
 
-Run the API and Web UI as two independent processes:
+Run the API and Web dev servers separately:
 
 ```bash
 pnpm dev:api
 pnpm dev:web
 ```
 
-- Web UI: `http://localhost:33333`
-- API: `http://localhost:22222`
+| Process | URL | Purpose |
+| --- | --- | --- |
+| Vite Web | `http://localhost:33333` | UI development; proxies `/api` to the API dev server |
+| Hono API | `http://localhost:22222` | Standalone API development |
+| Production Web | `http://localhost:11111` | Built CLI, API, and bundled Web assets |
 
-Vite proxies `/api` from the Web dev server to the API server. There is
-intentionally no CLI development command; use the two development servers to
-test page behavior, then use `pnpm build && pnpm start web` to verify the
-production server and static assets.
-
-## Data and Storage
-
-Foundry keeps user data outside the repository in `<home>/.foundry`. `<home>` is
-`~` on macOS/Linux and `%USERPROFILE%` on Windows:
-
-- `settings.json`: application settings
-- `providers.json`: an array of providers, credentials, and optional base64 avatars
-- `captures/<record-key>.json`: captures
-- `fetch-jobs/<record-key>.json`: fetch jobs, configuration snapshots and responses
-
-Capture and fetch-job filenames use a SHA-256 key of the record ID for portable, collision-safe
-paths; the original ID is preserved inside each document.
-
-Feature commands initialize JSON storage before running. `foundry web` does the
-same before the server starts. A process lock serializes writers and protects
-consistent reads. Writes use temporary-file replacement and a durable redo
-journal; interrupted committed writes are completed on the next open. Each read
-loads the requested JSON files directly; no cross-request cache or manifest is
-required.
-
-A new installation starts directly with default JSON settings and empty
-collections directly under `.foundry`, without a `data/` subdirectory. Startup
-does not inspect or import old SQLite databases. Unrelated files are left alone.
-The read-only Sessions view reads Codex and Claude Code JSONL transcripts, including
-Zstandard-compressed files. It does not read their databases, global state, or
-session indexes. Threads are grouped by the working directory recorded in their
-transcripts; Codex project membership and later UI-only renames are not imported.
-Existing `providers/` records are automatically migrated into `providers.json`
-under the process lock using the recovery journal. Provider avatars accept PNG,
-JPEG, GIF, WebP, or SVG images up to 2 MB; clearing an avatar restores the default icon.
-
-Encrypted exports and imports use JSON snapshots in `data/foundry.json`.
-SQLite-based backup archives are not supported.
-
-On POSIX systems, Foundry creates the data directory with `0700` permissions and
-sensitive files with `0600` permissions.
-
-Agent skill copies are user-level rather than Foundry runtime data:
-
-- `<home>/.agents/skills/foundry`
-- `<home>/.claude/skills/foundry`
-
-## Build Output
+Ports are fixed. There is no CLI dev command. Rebuild after source changes when
+testing the packaged CLI or production Web flow.
 
 ```bash
+pnpm exec eslint src app/web/src packages/shared/src app/web/vite.config.ts vitest.config.ts tsdown.config.ts package.json
+pnpm exec tsc --noEmit
+pnpm --filter web exec tsc --noEmit
 pnpm build
+pnpm test
+git diff --check
 ```
 
-The build produces:
+Use temporary `HOME` storage for mutating CLI or import tests. For UI changes,
+verify the affected behavior in a browser as well as running static checks.
+
+## Storage and packaging
+
+Runtime data lives in `<home>/.foundry`, outside the repository and `dist`:
+
+- `settings.json`: normalized application settings
+- `providers.json`: retained provider records
+- `captures/` and `fetch-jobs/`: one JSON file per retained record
+
+Foundry uses process locking, atomic replacement, and a redo journal for JSON
+transactions. Reads load files directly. Startup recovers committed interrupted
+writes; a new installation uses default settings and empty collections. Foundry
+does not import old SQLite databases. The retained Sessions backend reads external
+Codex and Claude Code JSONL transcripts, including `.jsonl.zst` files, read-only.
+On POSIX, Foundry runtime directories use `0700` and data files use `0600`.
+
+`pnpm build` bundles the CLI with tsdown, copies the Skill into `dist/skills`,
+then builds the Web UI directly into `dist/web` with Vite:
 
 ```text
 dist/
 |-- index.mjs
-|-- skills/
-|   `-- foundry/
-|       |-- SKILL.md
-|       `-- references/
+|-- skills/foundry/
 `-- web/
-    |-- assets/
-    |-- index.html
-    `-- favicon.png
 ```
 
-`tsdown` cleans `dist`, bundles the CLI, and copies the bundled
-agent skill. Vite then writes the Web UI directly to `dist/web`. Do not add a
-manual copy step for the Web UI.
+The published payload is `dist` plus package metadata and standard root files
+included by the package manager. `bin` points to `dist/index.mjs`; `exports`
+exposes only `./package.json`. Verify with `pnpm pack --dry-run`.
 
-## Commands
+## Documentation
 
-| Command | Purpose |
-| --- | --- |
-| `pnpm dev:api` | Run the API server at `22222` |
-| `pnpm dev:web` | Run the Vite Web UI at `33333` |
-| `pnpm build` | Build the CLI and Web UI |
-| `pnpm start web` | Run the production Web UI at `11111` |
-| `pnpm start` | Print the built CLI help |
-| `pnpm test` | Run behavioral tests |
-| `pnpm test:coverage` | Run tests with V8 coverage |
-
-Run the project scripts with the Node.js version declared in `package.json`.
-Older Node.js versions cannot run the installed pnpm or project toolchain.
-
-## Project Structure
-
-```text
-app/web/                  React, Vite, Tailwind CSS, and shadcn/ui Web UI
-src/
-|-- cli/                  CLI commands, JSON I/O, and browser opening
-|-- features/             Feature services, validation, repositories, and routes
-|-- lib/                  Small server-side utilities
-|-- server/               Hono API, static serving, and server entry points
-`-- storage/              JSON records, process locking, and transaction recovery
-skills/foundry/           Agent-facing CLI usage skill and references
-test/                     Behavioral API and feature tests
-```
-
-`skills/foundry/SKILL.md` is the agent-facing Foundry CLI usage skill. Its
-feature references live in `skills/foundry/references`.
-
-The API is mounted under `/api`. The production server serves files from
-`dist/web` and falls back to `dist/web/index.html` for client-side routes.
-
-## Packaging
-
-The published package contains only `dist`. The `bin` entry points to
-`dist/index.mjs`, and `exports` exposes only `./package.json`; consumers cannot
-import Foundry as a JavaScript library.
-
-Verify package contents with:
-
-```bash
-pnpm pack --dry-run
-```
-
-The tarball must include the CLI, Web assets, and bundled
-agent skill.
+- [Development constraints](AGENTS.md): architecture, storage, and verification
+- [Web development](app/web/README.md) and [design rules](app/web/DESIGN.md)
+- [Settings implementation](docs/settings.md): routing, synchronization, and API boundaries
+- [Data export and import](docs/data-export.md): normalization, replacement, and format
+- [Foundry Skill](skills/foundry/SKILL.md): installed CLI usage for agents
+- [Sessions vocabulary](GLOSSARY.md): retained backend domain terms
+- [ADRs](docs/adr/): decisions with current backend and historical UI scope identified
+- [Chatbot research](docs/research/chatbot-api-and-persistence.md): historical proposal
 
 ## License
 

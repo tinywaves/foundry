@@ -5,8 +5,6 @@ import type {
   RemoteModel,
 } from './types';
 import { requestJSON } from '../../lib/api';
-import { formatRecordTimes } from '../../lib/format-time';
-import { getCachedSettings } from '../settings/api';
 
 export const providerKeys = {
   all: ['providers'] as const,
@@ -15,37 +13,26 @@ export const providerKeys = {
 };
 
 export async function listProviders() {
-  const [providers, settings] = await Promise.all([
-    requestJSON<ProviderListItem[]>('/api/providers'),
-    getCachedSettings(),
-  ]);
-  return providers.map((provider) => ({
-    ...formatRecordTimes(provider, settings),
-  }));
+  const providers = await requestJSON<ProviderListItem[]>('/api/providers');
+  return providers;
 }
 
 export async function saveProvider(input: ProviderInput, id?: string) {
-  const [provider, settings] = await Promise.all([
-    requestJSON<ProviderSummary>(
+  const provider = await requestJSON<ProviderSummary>(
       id ? `/api/providers/${id}` : '/api/providers',
       {
         method: id ? 'PUT' : 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(input),
       },
-    ),
-    getCachedSettings(),
-  ]);
-  return formatRecordTimes(provider, settings);
+    );
+  return provider;
 }
 
 export async function getProvider(id: string): Promise<ProviderSummary | null> {
   try {
-    const [provider, settings] = await Promise.all([
-      requestJSON<ProviderSummary>(`/api/providers/${id}`),
-      getCachedSettings(),
-    ]);
-    return formatRecordTimes(provider, settings);
+    const provider = await requestJSON<ProviderSummary>(`/api/providers/${id}`);
+    return provider;
   } catch {
     return null;
   }
@@ -55,15 +42,12 @@ export async function setProviderStatus(
   id: string,
   status: 'active' | 'disabled' | 'deleted',
 ) {
-  const [provider, settings] = await Promise.all([
-    requestJSON<ProviderSummary>(`/api/providers/${id}/status`, {
+  const provider = await requestJSON<ProviderSummary>(`/api/providers/${id}/status`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ status }),
-    }),
-    getCachedSettings(),
-  ]);
-  return formatRecordTimes(provider, settings);
+    });
+  return provider;
 }
 
 export function fetchProviderModels(id: string): Promise<RemoteModel[]> {

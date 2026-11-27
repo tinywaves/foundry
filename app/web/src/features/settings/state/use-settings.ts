@@ -7,8 +7,8 @@ import { getSettings, updateSettings } from '../api';
 
 import type { TranslationKey } from '@/i18n/resources';
 
-const settingsQueryKey = ['settings'] as const;
-const settingsMutationKey = ['settings', 'update'] as const;
+export const settingsQueryKey = ['settings'] as const;
+export const settingsMutationKey = ['settings', 'update'] as const;
 
 export function useSettings() {
   const { t } = useTranslation();
@@ -40,6 +40,7 @@ export function useSettings() {
       }
       toast.error(t(getUpdateErrorKey(patch)));
     },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: settingsQueryKey }),
   });
   const settings = query.data ?? null;
   const theme = settings?.workspace.appearance['color-theme'] ?? 'system';

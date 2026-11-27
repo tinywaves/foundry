@@ -1,37 +1,71 @@
 # Foundry Web UI
 
-Foundry is an operational local workbench. Preserve its existing routes, page
-composition, responsive behavior, content, and business interactions.
+Foundry is an operational local workbench. Refine the implemented Settings UI
+within the existing application structure. Preserve the main layout, sidebar,
+titlebar, and placeholder routes; focusing current work on Settings does not
+remove that skeleton or migrate other business features.
 
-Use shadcn/ui preset `b1D0dv72`, generated with the official CLI. The resolved
-preset is `base-mira`, neutral base and theme, neutral charts, Inter Variable,
-Lucide icons, default radius, subtle menu accent, and default menu color.
-`components.json` records the generator configuration. Component appearance
-follows the preset rather than the previous Astryx implementation.
+## Visual system
 
-Use generated primitives in `src/components/ui`; these files and the generated
-`src/hooks/use-mobile.ts` are excluded from ESLint. Application and feature
-components are linted. Use Tailwind CSS v4 for application styles and the preset
-CSS variables from `src/styles/globals.css`; do not add a second styling runtime.
+Use shadcn/ui preset `b1D0dv72`: Base UI Mira, neutral base and theme, Inter
+Variable, Lucide icons, and the preset radius and surface tokens. Use generated
+primitives in `src/components/ui` and Tailwind CSS v4 for application styling.
+Keep the CSS entry and tokens in `src/styles/globals.css`.
 
-Keep the main navigation at 200px expanded and 48px collapsed. Use a mobile
-navigation sheet below the sidebar's 768px breakpoint. Keep standalone routes
-for settings, provider forms, capture details, and jobs, with their back button
-and titlebar actions.
+Component appearance follows the preset. Reuse Dialog, Select, RadioGroup,
+Checkbox, Tooltip, and related primitives rather than creating independent
+floating panels. Keep generated component code separate from business code.
 
-Settings retain a 260px navigation column, switching to a panel picker and
-search dialog at 680px. Setting controls stack below labels at that breakpoint.
-Theme cards use three columns and switch to a single column below a 335px panel
-container width. Settings hide static secondary descriptions; runtime paths,
-errors, and transfer blocking messages remain visible.
+## Shell and routing
 
-Session directory groups and nested subagents start collapsed. Session rows
-stack at 600px. Capture tables scroll horizontally and retain sticky action
-columns. Data transfer actions stack and reverse at 480px. Preserve keyboard
-search, focus handling, disabled and pending states, deletion confirmation,
-provider model discovery, and import/export state transitions.
+`src/app.tsx` composes the hash router. `src/app/main-layout.tsx` provides the
+main sidebar and content host; `src/app/navigation.ts` defines the retained
+placeholder routes. The main sidebar uses the generated defaults: `16rem`
+expanded, `3rem` collapsed, and an `18rem` mobile sheet below `768px`.
 
-Light, dark, and system appearance follow persisted settings. Theme previews
-show both schemes independently of the current page scheme. System appearance
-tracks the operating system. All application strings remain in the existing
-i18n system.
+Settings uses a separate full-screen layout with a back button and title.
+The button goes back one browser history entry. Root and unknown routes open
+Dashboard. A missing Settings category defaults to Appearance; it does not
+change the app's root destination.
+
+## Settings composition
+
+Use a `260px` category column with the existing content host. Below `680px`,
+replace the category column with the dropdown category picker. Controls stack
+below labels at that breakpoint. Categories remain Appearance, Language &
+Region, and Advanced, with selection represented by the `panel` query parameter.
+Navigation hover, selected, and keyboard focus states must be distinguishable.
+
+Appearance uses System, Light, and Dark radio options. Language & Region uses
+selects for language, timezone, and time format. Timezone names are localized;
+the values remain shared timezone identifiers. System theme follows OS changes.
+Theme and UI language apply throughout the app, including the shell and toasts.
+
+Advanced contains Export, Import, Config Folder, and Download Skill. Paths are
+selectable monospace text and wrap at narrow widths. Config Folder copy shows
+brief success feedback and resets its icon. Use toasts for copy success and
+operation errors rather than inline error containers.
+
+The Download Skill help icon explains that the bundled Skill teaches agents to
+operate Foundry through its CLI. The install dialog shows `.agents` and `.claude`
+targets with absolute paths. Keep target options grouped closely, preserve
+internal padding, and disable submission when no target is selected or an
+operation is pending. Hover and keyboard focus both reveal help text.
+
+## State and dialogs
+
+React Query owns server data and request state. Use skeletons for initial loading,
+disable affected controls during writes, and display failures through toasts.
+Settings changes propagate across open clients and from CLI writes through SSE.
+See [Settings implementation](../../docs/settings.md) for synchronization details.
+
+Export asks for a passphrase and confirmation. Import asks for the selected
+backup's passphrase and warns that supported data will be fully replaced.
+Password controls support reveal/hide. Prevent duplicate submissions and dialog
+closure during transfer. Successful import performs a full page reload without
+the hash route; data is fetched again through the normal application startup.
+
+Keep all user-facing copy in the existing four-language i18n resources. Verify
+desktop and narrow layouts, keyboard access, hover, pending, loading, and error
+states affected by a change. Remaining legacy page designs are reference only,
+not requirements to add those pages to the current UI.

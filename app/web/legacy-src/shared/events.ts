@@ -2,10 +2,7 @@ export const FOUNDRY_EVENT_VERSION = 1 as const;
 
 export const CAPTURE_JOB_CHANGED_EVENT = 'capture.job.changed';
 export const CAPTURES_CHANGED_EVENT = 'captures.changed';
-export const DATA_TRANSFER_STATUS_CHANGED_EVENT = 'data-transfer.status.changed';
-export const DATA_TRANSFER_IMPORTED_EVENT = 'data-transfer.imported';
 export const PROVIDERS_CHANGED_EVENT = 'providers.changed';
-export const SETTINGS_CHANGED_EVENT = 'settings.changed';
 
 export interface FoundryEvent<TData = unknown> {
   version: typeof FOUNDRY_EVENT_VERSION;

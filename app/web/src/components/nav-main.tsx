@@ -114,7 +114,12 @@ export function NavMain({ items }: { items: NavItem[] }) {
               >
                 <Icon />
                 <span>{t(item.titleKey)}</span>
-                <ChevronRightIcon className="ml-auto transition-transform duration-200 group-data-open/collapsible:rotate-90" />
+                <ChevronRightIcon
+                  className="
+                    ml-auto transition-transform duration-200
+                    group-data-open/collapsible:rotate-90
+                  "
+                />
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <SidebarMenuSub>

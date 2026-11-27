@@ -2,6 +2,14 @@
 
 Date: 2026-10-17
 
+Status: historical research, not the current implementation contract. The text
+below records proposals and repository observations from the Electron/SQLite
+version. Current Foundry runs as a CLI with a Hono server and React Web UI, stores
+its own data in JSON, and currently exposes Settings in the Web UI and CLI.
+Chat-provider streaming and chat persistence described here are not implemented
+product capabilities. Use the [README](../../README.md) and
+[development guide](../../AGENTS.md) for current architecture and scope.
+
 ## Conclusions
 
 The first version should not treat different providers' HTTP request bodies as one wire format. Define an internal provider contract in the Electron main process, then implement adapters for OpenAI Responses, OpenAI Chat Completions (including OpenAI-compatible services), and Anthropic Messages.
@@ -68,7 +76,9 @@ The Electron main process should read and use API keys. The renderer should call
 
 ### SQLite as the Primary Store (Recommended)
 
-This repository already initializes `better-sqlite3` and Drizzle. SQLite is a better source of truth for chat records because it provides:
+At the time of this research, the Electron repository initialized
+`better-sqlite3` and Drizzle. That observation no longer describes the current
+JSON storage implementation. SQLite is a better source of truth for chat records because it provides:
 
 - Transactions for user messages, assistant placeholders, and completion state.
 - Indexed conversation, time, and sequence queries with pagination.

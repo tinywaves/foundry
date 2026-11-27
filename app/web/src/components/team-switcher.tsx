@@ -73,14 +73,22 @@ export function TeamSwitcher() {
             render={(
               <SidebarMenuButton
                 size="lg"
-                className="data-open:bg-sidebar-accent data-open:text-sidebar-accent-foreground"
+                className="
+                  data-open:bg-sidebar-accent
+                  data-open:text-sidebar-accent-foreground
+                "
               />
             )}
           >
-            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+            <div
+              className="
+                flex aspect-square size-8 items-center justify-center rounded-lg
+                bg-sidebar-primary text-sidebar-primary-foreground
+              "
+            >
               {activeTeam.logo}
             </div>
-            <div className="grid flex-1 text-left text-sm leading-tight">
+            <div className="grid flex-1 text-left text-sm/tight">
               <span className="truncate font-medium">
                 {t(activeTeam.nameKey)}
               </span>
@@ -106,7 +114,11 @@ export function TeamSwitcher() {
                   onClick={() => setActiveTeamId(team.id)}
                   className="gap-2 p-2"
                 >
-                  <div className="flex size-6 items-center justify-center rounded-md border">
+                  <div
+                    className="
+                      flex size-6 items-center justify-center rounded-md border
+                    "
+                  >
                     {team.logo}
                   </div>
                   {t(team.nameKey)}
@@ -120,7 +132,12 @@ export function TeamSwitcher() {
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem className="gap-2 p-2">
-                <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+                <div
+                  className="
+                    flex size-6 items-center justify-center rounded-md border
+                    bg-transparent
+                  "
+                >
                   <PlusIcon className="size-4" />
                 </div>
                 <div className="font-medium text-muted-foreground">

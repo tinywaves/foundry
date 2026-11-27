@@ -5,12 +5,16 @@ Project guidance for coding agents working on Foundry.
 ## Product Contract
 
 Foundry is a local personal workbench distributed as a CLI, not as a JavaScript
-library. The CLI exposes settings, providers, captures, fetch jobs, and
-encrypted data transfer as JSON commands. It can also copy the bundled agent
-skill into `<home>/.agents/skills/foundry`,
-`<home>/.claude/skills/foundry`, or both. `foundry web` prepares local storage,
-starts a local Hono server, serves the bundled React Web UI, and opens the
-browser.
+library. Settings is the currently implemented Web feature and the CLI's only
+business command group. Preserve the main layout, sidebar, titlebar, and
+placeholder routes. Other backend feature services and APIs remain available;
+work on Settings does not imply changing those features or removing the shell.
+
+The CLI provides `settings get [key]`, `settings set <key> <value>`, config-folder
+opening, encrypted export/import, and bundled Skill installation. Document allowed
+keys and values in CLI help and the bundled Skill rather than adding a discovery
+API. `foundry web` initializes storage, starts Hono, serves the bundled Web UI,
+and opens the browser unless `--no-open` is supplied.
 
 - Keep `bin` pointed at `dist/index.mjs`.
 - Publish only `dist`.
@@ -36,7 +40,8 @@ Do not serve the production Web UI before storage initialization succeeds.
 
 ```text
 app/web/
-|-- src/app.tsx            Hash router, app shell, navigation, and titlebar
+|-- src/app.tsx            Hash router and application providers
+|-- src/app/               Main and Settings layouts, navigation definitions
 |-- src/features/          Feature pages, dialogs, API adapters, and types
 |-- src/components/        Shared feature-level UI
 |-- src/i18n/              Translations and locale providers
@@ -57,7 +62,8 @@ src/
 |   |-- data-export/       Current app data collection and encrypted export
 |   |-- data-import/       Direct encrypted backup replacement
 |   |-- providers/         Provider repository, model discovery, routes
-|   `-- settings/          Settings, bundled skill copy, validation, routes
+|   |-- sessions/          Read-only external transcript adapters and routes
+|   `-- settings/          Settings, synchronization, bundled Skill copy, routes
 |-- lib/                   Small server-side utilities, shared backup ZIP and crypto
 |-- server/
 |   |-- api.ts             API composition and feature route mounting
@@ -84,25 +90,29 @@ Keep CLI and server responsibilities separate:
 - Server code must not parse CLI arguments or open browsers.
 - Put CLI subcommands in `src/cli/commands`; call feature services instead of
   reimplementing repository or business logic.
-- Keep the agent-facing Foundry usage manual in `skills/foundry/SKILL.md` and
-  feature-level operating details under `skills/foundry/references`.
+- Settings CLI actions compose their required services directly. Server startup
+  and background execution belong to `foundry web`.
+- Keep `skills/foundry/SKILL.md` as the product-level entry point with common CLI
+  conventions and feature routing. Put command details and allowed values in
+  feature references under `skills/foundry/references`; Settings belongs in
+  `references/settings.md`. Add future features as peer references.
 - Put API route composition in `src/server/api.ts`.
 - Keep production composition in `src/server/start.ts`.
 - Keep standalone API development composition in `src/server/dev.ts`.
 
 ## Feature Boundaries
 
-- Keep route handlers thin. Put business rules in a feature service and SQL in
-  its repository.
+- Keep route handlers thin. Put business rules in feature services and JSON
+  persistence access in repositories through `FoundryStorage`.
 - Keep request/response validation in feature `contracts.ts` files.
 - Mount new feature routes from `src/server/api.ts`.
 - Return API errors as `{ "error": { "code": string, "message": string } }`
   with a deliberate HTTP status. Unknown `/api/*` routes must remain JSON 404s.
-- This local-only Web UI returns stored provider and capture API keys so edit
-  forms can repopulate credentials and provider model discovery can run
-  automatically. Do not log keys or expose them outside API responses.
-- Keep capture job execution and retries in `FetchJobRunner`, not in route
-  handlers.
+- Retained local APIs return stored provider and capture API keys. Preserve that
+  contract even though the current UI does not expose those feature forms.
+  Do not log credentials.
+- Keep capture queueing, lifecycle, and recovery in `FetchJobRunner`; transport
+  retry configuration belongs to the feature fetcher. Route handlers only dispatch.
 - Keep contracts shared by the server and Web UI in `packages/shared`; do not
   duplicate API payload or settings types in either app.
 - Skill copy targets are fixed user-level keys: `agents` maps to
@@ -120,7 +130,13 @@ Keep CLI and server responsibilities separate:
   and shadcn/ui with preset `b1D0dv72` (`base-mira`, neutral, Inter, Lucide).
 - Keep feature code under `app/web/src/features`; each feature owns its pages,
   dialogs, adapters, and types.
-- Keep the shell, navigation, titlebar, and hash router in `app/web/src/app.tsx`.
+- Keep hash-router composition and application providers in `app/web/src/app.tsx`;
+  layouts and navigation definitions live under `app/web/src/app`.
+- The root route opens Dashboard. The default Appearance category applies only
+  within Settings. Preserve the full-screen back button's browser-history behavior.
+- React Query owns settings data and requests. Effects may own external
+  subscriptions and document updates, not duplicate fetched state. See
+  `docs/settings.md` for synchronization and CLI/API representation boundaries.
 - Generate shadcn components into `app/web/src/components/ui`; this directory and
   the generated `app/web/src/hooks/use-mobile.ts` are excluded from ESLint.
   Application components and business code must still pass ESLint.
@@ -188,10 +204,14 @@ API development servers. Rebuild `dist` to test production static serving.
 - Preserve POSIX `0700` directories and `0600` files.
 - New storage starts from default settings and empty JSON collections. Startup
   does not import old SQLite databases.
-- Node's built-in SQLite is limited to the external, read-only Codex session
-  adapter. Foundry persists only JSON.
+- Foundry persists JSON. The retained Sessions backend reads external Codex and
+  Claude Code JSONL transcripts, including Zstandard-compressed files, read-only;
+  it does not use their SQLite databases or session indexes.
 - Export and import JSON snapshots only. Verify format changes with validation
   and encrypted round-trip tests.
+- Backup data follows `normalizeSettings` on export and import. The current
+  payload contains settings, including retained backend feature settings; it is
+  not limited to the four fields exposed by CLI get/set. See `docs/data-export.md`.
 - Tests use temporary directories; never run imports or mutating
   commands against the developer's real `<home>/.foundry` data.
 
@@ -206,6 +226,7 @@ After changing active source files:
 
 ```bash
 pnpm exec eslint src app/web/src packages/shared/src app/web/vite.config.ts vitest.config.ts tsdown.config.ts package.json
+pnpm exec tsc --noEmit
 pnpm --filter web exec tsc --noEmit
 pnpm build
 pnpm test

@@ -1,10 +1,8 @@
-export const BUNDLED_SKILL_TARGETS = ['agents', 'claude'] as const;
+import { BUNDLED_SKILL_TARGETS } from '@dhzh/foundry-shared';
+import type { BundledSkillTarget, BundledSkillCopyInput } from '@dhzh/foundry-shared';
 
-export type BundledSkillTarget = (typeof BUNDLED_SKILL_TARGETS)[number];
-
-export interface BundledSkillCopyInput {
-  targets: BundledSkillTarget[];
-}
+export { BUNDLED_SKILL_TARGETS } from '@dhzh/foundry-shared';
+export type { BundledSkillTarget, BundledSkillCopyInput } from '@dhzh/foundry-shared';
 
 export function parseBundledSkillCopyInput(
   value: unknown,

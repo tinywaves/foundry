@@ -43,5 +43,6 @@ export function startServer({
     process.exitCode = 1;
   });
 
+  server.on('close', runtime.stop);
   return server;
 }

@@ -1,10 +1,38 @@
 # Provider model discovery and lifecycle
 
-Foundry treats a Provider as a named protocol connection rather than a vendor account. Remote models are fetched for the current form session and are not persisted because availability changes; only user-entered custom models (with an optional display name) are persisted. Provider deletion and disabling are logical state changes, and both are blocked while any application setting references the Provider ID; no default Provider is maintained.
+Status: retained backend decision. The current Web UI and CLI implement Settings;
+provider forms described by the earlier UI design are legacy reference, not
+current product surfaces.
 
-## Consequences
+## Decision
 
-- Provider persistence must distinguish transient fetched models from persisted custom models.
-- The form re-fetches models when connection fields change; saving is disabled while the fetch is loading and requires at least one currently available remote or custom model.
-- Model discovery failure does not prevent saving a Provider when a custom model is present; a custom model provides the offline fallback.
-- Future settings must reference Providers by stable ID so lifecycle checks can prevent dangling usage.
+A Provider is a named protocol connection, identified by a stable ID. It stores
+the protocol, connection details, credentials, optional avatar, custom models,
+and lifecycle metadata. Remote model discovery is a separate request; its results
+are not persisted in the Provider record. Only user-entered custom models are
+stored. No default Provider is maintained.
+
+Disabling and deleting are logical state changes. The backend prevents these
+transitions when retained feature settings reference the Provider ID. The usage
+scan currently reads top-level `provider` references in entries under
+`settings.features`; it is not a recursive scan of arbitrary settings fields.
+
+## Current backend behavior
+
+- Provider records live in the `providers.json` collection through FoundryStorage.
+- Connection and model-discovery APIs remain mounted under `/api/providers`.
+- Saving a Provider does not depend on a successful remote model-discovery call.
+  The input contract permits an empty custom-model list.
+- Stored API keys are returned by the local API. Preserve that contract and keep
+  credentials out of logs.
+
+## Historical UI policy
+
+The legacy form fetched models as connection fields changed, disabled saving
+while discovery was pending, and required an available remote or custom model.
+Custom models provided an offline fallback when discovery failed. These form
+constraints are not server validation rules and do not imply that the current
+Web UI contains a Provider editor.
+
+See `src/features/providers/contracts.ts`, `service.ts`, `repository.ts`, and
+`usage.ts` for the retained implementation.

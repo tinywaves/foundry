@@ -104,7 +104,13 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
         </form>
         <DialogClose
           disabled={mutation.isPending}
-          render={<Button variant="ghost" size="icon-sm" className="absolute top-2 right-2" />}
+          render={(
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="absolute top-2 right-2"
+            />
+          )}
         >
           <XIcon />
           <span className="sr-only">{t('a11y.close')}</span>

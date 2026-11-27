@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import type { ReactNode, CSSProperties } from 'react';
-import { QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { NavLink, Navigate, Outlet, createHashRouter, useLocation, useMatches, useNavigate, RouterProvider } from 'react-router-dom';
-import { ArrowLeft, PanelLeft, ChevronRight, MessagesSquare, Settings, FileText, Folder, Link, Layers, LayoutGrid } from 'lucide-react';
+import { ArrowLeft, PanelLeft, ChevronRight, MessagesSquare, FileText, Folder, Link, Layers, LayoutGrid } from 'lucide-react';
 import { ThemeProvider } from 'next-themes';
 import { Button } from './components/ui/button';
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarMenuAction, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton, SidebarInset, SidebarProvider, useSidebar } from './components/ui/sidebar';
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarMenuAction, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton, SidebarInset, SidebarProvider, useSidebar } from './components/ui/sidebar';
 import { TooltipProvider } from './components/ui/tooltip';
 import { Toaster } from './components/ui/sonner';
 import { TitlebarActionsProvider } from './components/titlebar-actions';
@@ -16,7 +16,6 @@ import { FoundryEventsProvider } from './lib/foundry-events';
 import { queryClient } from './lib/query-client';
 import OverviewPage from './features/overview/overview-page';
 import PromptsPage from './features/prompts/prompts-page';
-import SettingsPage from './features/settings/settings-page';
 import ProvidersPage from './features/providers/provider-page';
 import ProviderFormPage from './features/providers/provider-form';
 import CapturesPage from './features/captures/capture-page';
@@ -24,10 +23,7 @@ import SessionsPage from './features/sessions/sessions-page';
 import CaptureDetailDialog from './features/captures/capture-detail-dialog';
 import JobsPage from './features/captures/jobs-page';
 import { CaptureRealtimeBridge } from './features/captures/realtime';
-import { DataTransferRealtimeBridge } from './features/data-transfer/realtime';
 import { ProvidersRealtimeBridge } from './features/providers/realtime';
-import { SettingsRealtimeBridge } from './features/settings/realtime';
-import { getSettings, settingsKeys } from './features/settings/api';
 
 const navigation = [
   { id: 'overview', href: '/overview', icon: LayoutGrid, key: 'navigation.overview' },
@@ -138,16 +134,7 @@ function Navigation() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton aria-label={t('navigation.settings')} size="sm" tooltip={t('navigation.settings')} render={<NavLink to="/settings" onClick={closeMobile} />}>
-              <Settings />
-              <span>{t('navigation.settings')}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+
     </Sidebar>
   );
 }
@@ -165,12 +152,11 @@ function SidebarLayout() {
   );
 }
 function StandaloneLayout() {
-  const { pathname } = useLocation();
   return (
     <SidebarProvider className="h-dvh min-h-0">
       <div className="flex h-full min-w-0 flex-1 flex-col">
         <WindowTitlebar standalone />
-        <main className={pathname === '/settings' ? 'min-h-0 flex-1 overflow-hidden' : 'min-h-0 flex-1 overflow-auto p-4'}>
+        <main className="min-h-0 flex-1 overflow-auto p-4">
           <Outlet />
         </main>
       </div>
@@ -252,11 +238,6 @@ const router = createHashRouter([
             handle: routeHandle('navigation.jobs', 'navigation.jobsDescription'),
           },
           {
-            path: 'settings',
-            element: <SettingsPage />,
-            handle: routeHandle('navigation.settings'),
-          },
-          {
             path: 'providers/new',
             element: <ProviderFormPage />,
             handle: routeHandle('navigation.newProvider', 'providers.formDescription'),
@@ -278,9 +259,7 @@ const router = createHashRouter([
 ]);
 
 function AppTheme({ children }: { children: ReactNode }) {
-  const settingsQuery = useQuery({ queryKey: settingsKeys.current(), queryFn: getSettings });
-  const mode = settingsQuery.data?.workspace.appearance['color-theme'] ?? 'system';
-  return <ThemeProvider attribute="class" forcedTheme={mode === 'system' ? undefined : mode} defaultTheme="system" enableSystem disableTransitionOnChange>{children}</ThemeProvider>;
+  return <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>{children}</ThemeProvider>;
 }
 export default function App() {
   return (
@@ -288,9 +267,7 @@ export default function App() {
       <FoundryEventsProvider>
         <TitlebarActionsProvider>
           <CaptureRealtimeBridge />
-          <DataTransferRealtimeBridge />
           <ProvidersRealtimeBridge />
-          <SettingsRealtimeBridge />
           <AppTheme>
             <TooltipProvider>
               <I18nProvider>

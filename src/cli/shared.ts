@@ -1,29 +1,19 @@
-import { readFile } from 'node:fs/promises';
 import process from 'node:process';
-import type { ArgsDef } from 'citty';
-import { createServerRuntime } from '../server/runtime';
-import type { ServerRuntime } from '../server/runtime';
+import { SettingsService } from '../features/settings/service';
+import { BundledSkillCopyService } from '../features/settings/skill-copy-service';
+import { DataExportService } from '../features/data-export/service';
+import { DataImportService } from '../features/data-import/service';
 import {
   initializeFoundryStorage,
 } from '../storage/index';
 import type { FoundryStorage } from '../storage/index';
 
-export const JSON_INPUT_ARGS = {
-  'input': {
-    type: 'string',
-    description: 'JSON payload; use "-" to read it from stdin',
-    valueHint: 'json',
-  },
-  'input-file': {
-    type: 'string',
-    description: 'Path to a JSON payload file',
-    valueHint: 'path',
-  },
-} satisfies ArgsDef;
-
 export interface CliSession {
   storage: FoundryStorage;
-  runtime: ServerRuntime;
+  settingsService: SettingsService;
+  settingsSkillCopyService: BundledSkillCopyService;
+  dataExportService: DataExportService;
+  dataImportService: DataImportService;
 }
 
 export async function runCliAction(
@@ -33,8 +23,13 @@ export async function runCliAction(
 
   try {
     const storage = initializeFoundryStorage();
-    const runtime = createServerRuntime(storage);
-    session = { storage, runtime };
+    session = {
+      storage,
+      settingsService: new SettingsService(storage),
+      settingsSkillCopyService: new BundledSkillCopyService(),
+      dataExportService: new DataExportService(storage),
+      dataImportService: new DataImportService(storage),
+    };
 
     writeJson(await action(session));
   } catch (error) {
@@ -44,54 +39,6 @@ export async function runCliAction(
   } finally {
     session?.storage.close();
   }
-}
-
-export async function readJsonInput(
-  args: { input?: string; inputFile?: string },
-): Promise<unknown> {
-  if (args.input !== undefined && args.inputFile !== undefined) {
-    throw new CliInputError(
-      'CONFLICTING_INPUT',
-      'Use either --input or --input-file, not both',
-    );
-  }
-  if (args.input === undefined && args.inputFile === undefined) {
-    throw new CliInputError(
-      'INPUT_REQUIRED',
-      'Provide a JSON payload with --input or --input-file',
-    );
-  }
-
-  let source: string;
-  try {
-    if (args.inputFile === undefined) {
-      source = args.input === '-' ? await readStdin() : args.input ?? '';
-    } else {
-      source = args.inputFile === '-'
-        ? await readStdin()
-        : await readFile(args.inputFile, 'utf8');
-    }
-  } catch (error) {
-    throw new CliInputError(
-      'INPUT_READ_FAILED',
-      error instanceof Error ? error.message : 'Unable to read JSON input',
-    );
-  }
-
-  try {
-    return JSON.parse(source) as unknown;
-  } catch {
-    throw new CliInputError('INVALID_JSON', 'Input must be valid JSON');
-  }
-}
-
-async function readStdin(): Promise<string> {
-  const chunks: string[] = [];
-  for await (const chunk of process.stdin) {
-    chunks.push(typeof chunk === 'string' ? chunk : chunk.toString('utf8'));
-  }
-
-  return chunks.join('');
 }
 
 export function resolvePassphrase(value: string | undefined): string {

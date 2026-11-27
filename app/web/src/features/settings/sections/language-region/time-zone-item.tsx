@@ -11,9 +11,16 @@ import {
 } from '@/components/ui/select';
 
 import { SettingsItem } from '../../components/settings-item';
+import type { TranslationKey } from '@/i18n/resources';
 
-const timeZoneOptions: Array<{ value: TimeZoneCode; label: string }>
-  = TIME_ZONES.map((timeZone) => ({ value: timeZone, label: timeZone }));
+const timeZoneLabels = {
+  'America/Los_Angeles': 'timeZone.losAngeles',
+  'America/New_York': 'timeZone.newYork',
+  'Asia/Shanghai': 'timeZone.shanghai',
+  'Asia/Taipei': 'timeZone.taipei',
+  'Asia/Tokyo': 'timeZone.tokyo',
+  'UTC': 'timeZone.utc',
+} satisfies Record<TimeZoneCode, TranslationKey>;
 
 interface TimeZoneItemProps {
   value: TimeZoneCode;
@@ -27,6 +34,7 @@ export function TimeZoneItem({
   disabled = false,
 }: TimeZoneItemProps) {
   const { t } = useTranslation();
+  const timeZoneOptions = TIME_ZONES.map((timeZone) => ({ value: timeZone, label: t(timeZoneLabels[timeZone]) }));
 
   return (
     <SettingsItem label={t('settings.timeZone')}>

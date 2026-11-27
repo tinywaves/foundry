@@ -42,8 +42,10 @@ export function ColorThemeItem({
           <label
             key={option.value}
             className={cn(
-              'flex select-none items-center gap-2 text-sm',
-              option.value === value ? 'font-medium text-foreground' : 'text-muted-foreground',
+              'flex items-center gap-2 text-sm select-none',
+              option.value === value
+                ? 'font-medium text-foreground'
+                : 'text-muted-foreground',
               disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
             )}
           >

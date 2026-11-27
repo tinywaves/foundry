@@ -5,6 +5,8 @@ import { ProviderService } from '../features/providers/service';
 import { SettingsService } from '../features/settings/service';
 import { BundledSkillCopyService } from '../features/settings/skill-copy-service';
 import { SessionService } from '../features/sessions/service';
+import { SETTINGS_CHANGED_EVENT } from '../features/settings/events';
+import { watchSettings } from '../features/settings/watch';
 import { FoundryEventHub } from '../events/hub';
 import type { FoundryStorage } from '../storage/index';
 import type { ApiAppOptions } from './api';
@@ -23,6 +25,7 @@ export interface ServerRuntime {
   apiOptions: ApiAppOptions;
   services: FoundryFeatureServices;
   start: () => void;
+  stop: () => void;
 }
 
 export function createServerRuntime(storage: FoundryStorage): ServerRuntime {
@@ -44,6 +47,7 @@ export function createServerRuntime(storage: FoundryStorage): ServerRuntime {
     sessionService,
   };
 
+  let stopWatching: (() => void) | undefined;
   return {
     services,
     apiOptions: {
@@ -58,7 +62,15 @@ export function createServerRuntime(storage: FoundryStorage): ServerRuntime {
       onSettingsChanged: captureRuntime.notifySettingsChanged,
     },
     start() {
+      stopWatching ??= watchSettings(storage.path, () => {
+        captureRuntime.notifySettingsChanged();
+        eventHub.publish(SETTINGS_CHANGED_EVENT, { fields: [] });
+      });
       captureRuntime.start();
+    },
+    stop() {
+      stopWatching?.();
+      stopWatching = undefined;
     },
   };
 }

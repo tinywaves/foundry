@@ -12,18 +12,17 @@ export function SettingsLayout() {
   const navigate = useNavigate();
 
   const handleBack = () => {
-    const segments = pathname.split('/').filter(Boolean);
-    const parentPath
-      = segments.length > 1
-        ? `/${segments.slice(0, -1).join('/')}`
-        : '/dashboard';
-
-    void navigate(parentPath);
+    void navigate(-1);
   };
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background">
-      <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear">
+      <header
+        className="
+          flex h-16 shrink-0 items-center gap-2 transition-[width,height]
+          ease-linear
+        "
+      >
         <div className="flex items-center gap-2 px-4">
           <Button
             variant="ghost"
@@ -36,7 +35,10 @@ export function SettingsLayout() {
           </Button>
           <Separator
             orientation="vertical"
-            className="mr-2 data-vertical:h-4 data-vertical:self-auto"
+            className="
+              mr-2
+              data-vertical:h-4 data-vertical:self-auto
+            "
           />
           <span className="text-sm font-medium">
             {t(getPageTitleKey(pathname))}

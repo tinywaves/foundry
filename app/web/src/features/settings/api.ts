@@ -1,4 +1,4 @@
-import type { SettingsPatch, SettingsPayload } from '@dhzh/foundry-shared';
+import type { BundledSkillCopyInput, BundledSkillCopyResult, BundledSkillTargetsResult, SettingsPatch, SettingsPayload } from '@dhzh/foundry-shared';
 
 const settingsPath = '/api/settings';
 
@@ -16,6 +16,14 @@ export function updateSettings(patch: SettingsPatch): Promise<SettingsPayload> {
 
 export function openConfigFolder(): Promise<Pick<SettingsPayload, 'configFolder'>> {
   return requestSettings({ method: 'POST' }, `${settingsPath}/config-folder/open`);
+}
+
+export function getSkillTargets(signal?: AbortSignal): Promise<BundledSkillTargetsResult> {
+  return requestSettings({ signal }, `${settingsPath}/skill-copy`);
+}
+
+export function downloadSkill(input: BundledSkillCopyInput): Promise<BundledSkillCopyResult> {
+  return requestSettings({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) }, `${settingsPath}/skill-copy`);
 }
 
 async function requestSettings<T>(init?: RequestInit, path = settingsPath): Promise<T> {

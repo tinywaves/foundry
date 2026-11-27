@@ -9,11 +9,9 @@ import { MessagesSquare as ChatBubbleLeftRightIcon, Terminal as CommandLineIcon,
 import chatgptIcon from '@lobehub/icons-static-svg/icons/openai.svg';
 import claudeCodeIcon from '@lobehub/icons-static-svg/icons/claudecode.svg';
 import { ApiError } from '../../lib/api';
-import { formatTimestamp } from '../../lib/format-time';
 import { useI18n } from '../../i18n';
 import { FeatureEmptyState } from '../../components/feature-empty-state';
 import { TitlebarActions } from '../../components/titlebar-actions';
-import { getSettings, settingsKeys } from '../settings/api';
 import { getSessions, sessionKeys } from './api';
 import type { SessionSnapshot, SessionSource, SessionWarning } from './types';
 import { ThreadGroups } from './thread-groups';
@@ -26,10 +24,6 @@ export default function SessionsPage() {
     ? 'claude'
     : 'codex';
   const [isShowingArchived, setIsShowingArchived] = useState(false);
-  const settingsQuery = useQuery({
-    queryKey: settingsKeys.current(),
-    queryFn: getSettings,
-  });
   const sessionQuery = useQuery({
     queryKey: sessionKeys.source(source),
     queryFn: () => getSessions(source),
@@ -40,12 +34,9 @@ export default function SessionsPage() {
     if (!value) {
       return '';
     }
-    if (settingsQuery.data) {
-      return formatTimestamp(value, settingsQuery.data);
-    }
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? '' : date.toLocaleString();
-  }, [settingsQuery.data]);
+  }, []);
   const snapshot = sessionQuery.data;
   const archivedCount = snapshot?.threads.filter((thread) => thread.archived).length ?? 0;
   const showArchivedFilter = !sessionQuery.isPending

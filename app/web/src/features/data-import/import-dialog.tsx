@@ -85,7 +85,14 @@ export function ImportDialog({ file, onClose }: { file: File; onClose: () => voi
             </Button>
           </DialogFooter>
         </form>
-        <Button type="button" disabled={isPending} onClick={close} variant="ghost" size="icon-sm" className="absolute top-2 right-2">
+        <Button
+          type="button"
+          disabled={isPending}
+          onClick={close}
+          variant="ghost"
+          size="icon-sm"
+          className="absolute top-2 right-2"
+        >
           <XIcon />
           <span className="sr-only">{t('a11y.close')}</span>
         </Button>

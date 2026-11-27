@@ -1,6 +1,6 @@
 import { LanguagesIcon, MenuIcon, PaintbrushIcon, SlidersHorizontalIcon } from 'lucide-react';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -16,6 +16,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { ConfigFolderItem } from './sections/advanced/config-folder-item';
+import { DownloadSkillItem } from './sections/advanced/download-skill-item';
 import { ExportItem } from './sections/advanced/export-item';
 import { ImportItem } from './sections/advanced/import-item';
 import { ColorThemeItem } from './sections/appearance/color-theme-item';
@@ -57,8 +58,16 @@ const settingsSections: Array<{
 
 export function SettingsPage() {
   const { t } = useTranslation();
-  const [activeSection, setActiveSection]
-    = useState<SettingsSection>('appearance');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeSection = settingsSections.find(({ id }) => id === searchParams.get('panel'))?.id
+    ?? settingsSections[0].id;
+  const setActiveSection = (section: SettingsSection) => {
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.set('panel', section);
+      return next;
+    });
+  };
   const {
     settings,
     theme,
@@ -80,8 +89,18 @@ export function SettingsPage() {
   )?.labelKey ?? 'settings.appearance';
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-[260px_minmax(0,1fr)] max-[680px]:grid-cols-1">
-      <aside className="hidden min-h-0 overflow-y-auto p-4 min-[680px]:block">
+    <div
+      className="
+        grid h-full min-h-0 grid-cols-[260px_minmax(0,1fr)]
+        max-[680px]:grid-cols-1
+      "
+    >
+      <aside
+        className="
+          hidden min-h-0 overflow-y-auto p-4
+          min-[680px]:block
+        "
+      >
         <SettingsNavigation
           activeSection={activeSection}
           onSectionChange={setActiveSection}
@@ -92,7 +111,12 @@ export function SettingsPage() {
         aria-label={t(activeSectionAria)}
         className="min-h-0 overflow-y-auto p-4"
       >
-        <div className="mb-3 flex items-center gap-3 min-[680px]:hidden">
+        <div
+          className="
+            mb-3 flex items-center gap-3
+            min-[680px]:hidden
+          "
+        >
           <DropdownMenu>
             <DropdownMenuTrigger
               render={(
@@ -141,7 +165,14 @@ export function SettingsPage() {
 
         <Card className="gap-0 py-0">
           {isLoading && (
-            <div className="flex flex-col items-start gap-3 p-4 min-[680px]:min-h-16 min-[680px]:flex-row min-[680px]:items-center min-[680px]:justify-between min-[680px]:gap-8">
+            <div
+              className="
+                flex flex-col items-start gap-3 p-4
+                min-[680px]:min-h-16 min-[680px]:flex-row
+                min-[680px]:items-center min-[680px]:justify-between
+                min-[680px]:gap-8
+              "
+            >
               <Skeleton className="h-4 w-24" />
               <div className="flex items-center gap-6">
                 <Skeleton className="h-4 w-16" />
@@ -189,6 +220,7 @@ export function SettingsPage() {
               <ExportItem disabled={isUpdating || !settings} />
               <ImportItem disabled={isUpdating || !settings} />
               <ConfigFolderItem configFolder={settings?.configFolder} />
+              <DownloadSkillItem disabled={isUpdating || !settings} />
             </div>
           )}
         </Card>

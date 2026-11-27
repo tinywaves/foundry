@@ -40,9 +40,19 @@ export function ConfigFolderItem({ configFolder }: { configFolder?: string }) {
       label={t('settings.configFolder')}
       controlClassName="min-[680px]:shrink"
     >
-      <div className="flex min-w-0 items-center justify-end gap-2 max-[680px]:justify-start">
+      <div
+        className="
+          flex min-w-0 items-center justify-end gap-2
+          max-[680px]:justify-start
+        "
+      >
         {configFolder && (
-          <span className="min-w-0 select-text break-all font-mono text-xs text-muted-foreground">
+          <span
+            className="
+              min-w-0 font-mono text-xs break-all text-muted-foreground
+              select-text
+            "
+          >
             {configFolder}
           </span>
         )}

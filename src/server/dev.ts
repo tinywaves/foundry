@@ -9,7 +9,7 @@ const runtime = createServerRuntime(storage);
 const app = createApiApp(storage, runtime.apiOptions);
 runtime.start();
 
-serve(
+const server = serve(
   {
     fetch: app.fetch,
     hostname,
@@ -19,3 +19,4 @@ serve(
     console.info('Foundry API is running at http://localhost:22222');
   },
 );
+server.on('close', runtime.stop);

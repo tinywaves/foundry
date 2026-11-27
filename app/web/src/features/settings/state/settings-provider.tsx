@@ -4,6 +4,7 @@ import type { PropsWithChildren } from 'react';
 import { getSystemLanguage, i18n } from '@/i18n';
 
 import { useSettings } from './use-settings';
+import { useSettingsRealtime } from './use-settings-realtime';
 
 const systemThemeQuery = matchMedia('(prefers-color-scheme: dark)');
 function subscribeSystemTheme(onChange: () => void) {
@@ -15,6 +16,7 @@ function getSystemTheme() {
 }
 
 export function SettingsProvider({ children }: PropsWithChildren) {
+  useSettingsRealtime();
   const { theme, language } = useSettings();
   const systemTheme = useSyncExternalStore(subscribeSystemTheme, getSystemTheme);
   const resolvedTheme = theme === 'system' ? systemTheme : theme;

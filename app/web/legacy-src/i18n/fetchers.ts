@@ -1,4 +1,4 @@
-import type { FetcherType } from '../shared/settings';
+import type { FetcherType } from '@dhzh/foundry-shared';
 import type { TranslationKey } from './messages';
 
 const fetcherLabelKeys: Record<FetcherType, TranslationKey> = {

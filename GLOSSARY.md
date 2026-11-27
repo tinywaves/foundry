@@ -1,6 +1,8 @@
 # Agent Sessions
 
-Vocabulary for Foundry's read-only view of agent conversation history.
+Vocabulary for Foundry's retained read-only Sessions backend and legacy UI
+reference. Sessions is not a page in the current Web UI or a CLI command. These
+terms describe the domain without expanding the current Settings feature scope.
 
 ## Language
 
@@ -9,7 +11,7 @@ A single logical conversation with an agent, identified by a stable thread id. C
 _Avoid_: Session, conversation, chat
 
 **Session**:
-The user-facing label for a Thread in the Sessions page. It is not a separate domain object.
+The user-facing label for a Thread in the legacy Sessions UI. It is not a separate domain object.
 _Avoid_: using Session as an entity name or identifier
 
 **Working Directory**:

@@ -1,52 +1,107 @@
 # Data export and import
 
-The Web UI exports Foundry application data through `POST /api/data-export`
-and imports it through `POST /api/data-import`. The CLI commands
-`foundry data-transfer export/import` call the same feature services.
-Settings → Advanced contains the entry point; export is its own feature on both
-the server and Web client.
+## Scope and entry points
 
-`FoundryData` in `packages/shared/src/data-export.ts` defines the current data
-payload. It currently contains settings because Settings is the feature
-implemented in the new UI. As other features are implemented, extend this
-payload and `src/features/data-export/repository.ts` to collect their data, and
-`src/features/data-import/repository.ts` to replace that data on import.
-The download, password dialog, archive and encryption pipeline remain shared.
-The archive and encryption utilities live in `src/lib/backup`.
+Settings > Advanced hosts the current Export and Import controls. Export and
+import remain separate data features on the server and Web client; hosting their
+entry points in Settings does not make the backup format a four-setting format.
 
-The `.foundry-backup` download uses the existing AES-256-GCM envelope. Inside
-is a ZIP containing `manifest.json` and `data/foundry.json`. The manifest uses
-format `foundry.data`, archive version 1, app version, creation time, data size
-and SHA-256 checksum. The data JSON currently has the shape `{ "settings": … }`.
-The runtime config-folder path is not application data and is excluded.
-Import and export both follow `normalizeSettings`: missing or unsupported values
-use its defaults, and fields are retained or removed according to that one rule.
+| Entry point | Export | Import |
+| --- | --- | --- |
+| Web/API | `POST /api/data-export` | `POST /api/data-import` |
+| CLI | `foundry settings export` | `foundry settings import <file>` |
+| Services | `DataExportService` | `DataImportService` |
 
-The backup format is `foundry.data` version 1. Legacy `foundry.snapshot`
-backups are not accepted. The old data-transfer service, routes, preview
-sessions, task blocking and status reporting have been removed. The CLI retains
-its `data-transfer` command name (alias `data`) with export/import operations.
+`FoundryData` in `packages/shared/src/data-export.ts` defines the payload. Today
+it contains `{ "settings": … }`, including backend feature settings retained by
+normalization. It excludes the runtime config-folder path, provider records,
+captures, and fetch-job collections. Export is not a complete copy of
+`<home>/.foundry`, and import does not replace those excluded collections.
 
-## Full replacement import
+As application data support grows, extend the shared payload and the collection
+and replacement repositories together. Reuse the archive, encryption, and Web
+transfer flows.
 
-The Web UI asks for the selected backup's password and displays the overwrite
-warning in one dialog. Confirming sends a single `POST /api/data-import` request
-with an octet-stream body and URL-encoded passphrase header. There are no preview
-sessions, inspect/commit/cancel endpoints, expiration times, or application size
-caps on the upload, manifest, or expanded archive. Available disk and memory
-still bound the operation.
+## Normalization
 
-Tabs submit independently. Imports are applied in transaction commit order;
-the last successful write wins without invalidating another tab's selected file.
+Export reads settings through `FoundryStorage.readSettings`, which applies
+`normalizeSettings`. Import requires a settings object, then runs the same
+normalization before writing it in a storage transaction. It does not merge the
+backup with current settings.
 
-Import decrypts into a private temporary directory and checks the backup format,
-version, expected ZIP entries, data size/checksum, valid JSON, and the existence
-of a settings object. It does not validate individual settings fields or reject
-partial settings. It normalizes the backup settings and replaces the complete
-settings file inside a FoundryStorage transaction. Current settings are not
-merged into the backup, and the runtime config-folder path stays local.
+The rules in `src/features/settings/contracts.ts` are authoritative. For example,
+unsupported workspace enum values use defaults, retained capture numeric values
+are normalized, and feature fields are retained or removed according to that
+function. Import does not reject a backup merely because individual settings are
+missing or invalid, and it does not promise to preserve every arbitrary field
+verbatim. There is no separate backup-specific settings schema to maintain.
 
-Temporary files are removed afterward. Failures before the transaction commits
-preserve existing data. After success, the frontend performs a full navigation
-to the app's root URL without the settings hash; the new page fetches its data
-from scratch. It does not patch or invalidate the previous page's query cache.
+This differs from interactive CLI set and Settings PATCH, which validate supplied
+values and reject unsupported inputs.
+
+## Archive and encryption
+
+A `.foundry-backup` file is protected by the shared AES-256-GCM envelope with
+scrypt key derivation. The decrypted ZIP contains exactly:
+
+```text
+manifest.json
+data/foundry.json
+```
+
+The manifest records format `foundry.data`, archive version `1`, app version,
+creation time, payload byte length, and SHA-256 checksum. `data/foundry.json`
+contains the current `FoundryData` payload. Legacy `foundry.snapshot` and SQLite
+backup archives are unsupported.
+
+Import verifies decryption/authentication, expected ZIP entries, manifest format
+and version, payload length/checksum, valid JSON, and a settings object. There is
+no app-version ordering gate. Changes to archive or encryption compatibility need
+focused validation and encrypted round-trip tests.
+
+## Request and file handling
+
+Web export submits a JSON passphrase and receives an octet-stream attachment.
+The export dialog requests passphrase confirmation and provides reveal/hide
+controls. CLI export accepts `--output`, appends `.foundry-backup` when needed,
+and uses a timestamped working-directory filename when output is omitted. An
+existing destination requires `--force`.
+
+Web import sends the selected file as `application/octet-stream`, with the
+passphrase URI-encoded in `x-foundry-passphrase`. It displays a full-replacement
+warning before submission. CLI import reads the supplied file path. Both CLI
+operations accept `FOUNDRY_PASSPHRASE` or `--passphrase`.
+
+There are no preview sessions, inspect/commit/cancel endpoints, transfer locks,
+active-job gates, expiration times, or application file-size caps. Disk and
+memory availability still bound an operation. Tabs import independently; the last
+successful transaction write wins. One import does not invalidate another tab's
+selected file.
+
+Export, import, and the Web import upload use private temporary directories under
+the operating system's temporary location. Cleanup runs in `finally` paths.
+Cleanup failures are logged without reporting an already committed import as a
+failed replacement. Temporary plaintext files are not stored under the
+repository or retained as import sessions.
+
+## Completion and refresh
+
+An error before the storage transaction commits preserves the current supported
+data. A successful import returns `{ "status": "imported" }`. CLI callers can
+verify with `foundry settings get`.
+
+After Web import, `location.replace(location.pathname + location.search)` removes
+the hash route and performs a full navigation. Startup fetches data again with a
+fresh query cache. The normal root route then opens Dashboard; Appearance remains
+the default only when visiting Settings. The importing page does not manually
+patch its cached settings. Other connected Web clients receive a Settings change
+notification and refetch through the normal realtime path.
+
+## Source map
+
+- `packages/shared/src/data-export.ts`: payload and manifest contracts
+- `src/features/data-export/`: collection, encryption orchestration, API
+- `src/features/data-import/`: validation, normalization, replacement, API
+- `src/lib/backup/`: archive, crypto, and temporary-directory cleanup
+- `app/web/src/features/data-export/` and `data-import/`: Web dialogs and adapters
+- `src/cli/commands/backups.ts`: CLI file handling and service calls

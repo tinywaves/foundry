@@ -4,9 +4,6 @@ import {
 } from 'citty';
 import type { CommandDef } from 'citty';
 import packageJson from '../../package.json' with { type: 'json' };
-import { capturesCommand } from './commands/captures';
-import { dataCommand } from './commands/data';
-import { providersCommand } from './commands/providers';
 import { settingsCommand } from './commands/settings';
 import { webCommand } from './commands/web';
 
@@ -28,16 +25,13 @@ export function createFoundryCommand(): CommandDef {
     meta: {
       name: 'foundry',
       version: packageJson.version,
-      description: 'Manage local Foundry data or start the Web UI',
+      description: 'Manage Foundry settings or start the Web UI',
     },
     default: 'help',
     subCommands: {
-      'help': help,
-      'web': webCommand,
-      'settings': settingsCommand,
-      'providers': providersCommand,
-      'captures': capturesCommand,
-      'data-transfer': dataCommand,
+      help,
+      web: webCommand,
+      settings: settingsCommand,
     },
   });
 

@@ -10,8 +10,6 @@ import type {
   FetchJobSummary,
 } from './types';
 import { errorResult, requestJSON } from '../../lib/api';
-import { formatRecordTimes } from '../../lib/format-time';
-import { getCachedSettings } from '../settings/api';
 
 export const captureKeys = {
   all: ['captures'] as const,
@@ -24,11 +22,8 @@ export const captureKeys = {
 export async function listCaptures(
   filter: CaptureFilter = 'all',
 ): Promise<CaptureSummary[]> {
-  const [captures, settings] = await Promise.all([
-    requestJSON<CaptureSummary[]>(`/api/captures?filter=${filter}`),
-    getCachedSettings(),
-  ]);
-  return captures.map((capture) => formatRecordTimes(capture, settings));
+  const captures = await requestJSON<CaptureSummary[]>(`/api/captures?filter=${filter}`);
+  return captures;
 }
 
 export function countCaptures(): Promise<CaptureCounts> {
@@ -39,15 +34,12 @@ export async function getCapture(
   captureId: string,
 ): Promise<CaptureResult<CaptureDetail>> {
   try {
-    const [data, settings] = await Promise.all([
-      requestJSON<CaptureDetail>(`/api/captures/${captureId}`),
-      getCachedSettings(),
-    ]);
+    const data = await requestJSON<CaptureDetail>(`/api/captures/${captureId}`);
     return {
       ok: true,
       data: {
         ...data,
-        capture: formatRecordTimes(data.capture, settings),
+        capture: data.capture,
       },
     };
   } catch (error) {
@@ -59,15 +51,12 @@ export async function createCapture(
   input: CreateCaptureInput,
 ): Promise<CaptureResult<CreateCaptureResult>> {
   try {
-    const [capture, settings] = await Promise.all([
-      requestJSON<CaptureSummary>('/api/captures', {
+    const capture = await requestJSON<CaptureSummary>('/api/captures', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(input),
-      }),
-      getCachedSettings(),
-    ]);
-    return { ok: true, data: { capture: formatRecordTimes(capture, settings) } };
+      });
+    return { ok: true, data: { capture: capture } };
   } catch (error) {
     return captureFailure<never>(error);
   }
@@ -77,14 +66,11 @@ export async function recapture(
   captureId: string,
 ): Promise<CaptureResult<FetchJobSummary>> {
   try {
-    const [data, settings] = await Promise.all([
-      requestJSON<FetchJobSummary>(
+    const data = await requestJSON<FetchJobSummary>(
         `/api/captures/${captureId}/recapture`,
         { method: 'POST' },
-      ),
-      getCachedSettings(),
-    ]);
-    return { ok: true, data: formatRecordTimes(data, settings) };
+      );
+    return { ok: true, data: data };
   } catch (error) {
     return captureFailure<never>(error);
   }
@@ -106,18 +92,15 @@ export async function updateCaptureNote(
   userNote: string,
 ): Promise<CaptureResult<CaptureSummary>> {
   try {
-    const [data, settings] = await Promise.all([
-      requestJSON<CaptureSummary>(
+    const data = await requestJSON<CaptureSummary>(
         `/api/captures/${captureId}/note`,
         {
           method: 'PATCH',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ userNote }),
         },
-      ),
-      getCachedSettings(),
-    ]);
-    return { ok: true, data: formatRecordTimes(data, settings) };
+      );
+    return { ok: true, data: data };
   } catch (error) {
     return captureFailure<never>(error);
   }
@@ -127,13 +110,10 @@ export async function listFetchJobs(
   captureId: string,
 ): Promise<CaptureResult<FetchJobSummary[]>> {
   try {
-    const [data, settings] = await Promise.all([
-      requestJSON<FetchJobSummary[]>(`/api/captures/${captureId}/jobs`),
-      getCachedSettings(),
-    ]);
+    const data = await requestJSON<FetchJobSummary[]>(`/api/captures/${captureId}/jobs`);
     return {
       ok: true,
-      data: data.map((job) => formatRecordTimes(job, settings)),
+      data,
     };
   } catch (error) {
     return captureFailure<never>(error);

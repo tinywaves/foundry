@@ -17,7 +17,7 @@ import {
   runCliAction,
 } from '../shared';
 
-const exportCommand = defineCommand({
+export const exportCommand = defineCommand({
   meta: {
     name: 'export',
     description: 'Write an encrypted Foundry backup',
@@ -41,8 +41,8 @@ const exportCommand = defineCommand({
     },
   },
   run({ args }) {
-    return runCliAction(async ({ runtime }) => {
-      const exported = await runtime.services.dataExportService.createExport(resolvePassphrase(args.passphrase));
+    return runCliAction(async ({ dataExportService }) => {
+      const exported = await dataExportService.createExport(resolvePassphrase(args.passphrase));
       const destination = resolveExportDestination(args.output);
 
       await copyExport(exported.contents, destination, args.force);
@@ -51,11 +51,10 @@ const exportCommand = defineCommand({
   },
 });
 
-const importBackup = defineCommand({
+export const importBackup = defineCommand({
   meta: {
     name: 'import',
     description: 'Replace local Foundry data from an encrypted backup',
-    alias: ['restore'],
   },
   args: {
     file: {
@@ -70,25 +69,13 @@ const importBackup = defineCommand({
     },
   },
   run({ args }) {
-    return runCliAction(async ({ runtime }) => {
-      await runtime.services.dataImportService.importData(
+    return runCliAction(async ({ dataImportService }) => {
+      await dataImportService.importData(
         path.resolve(args.file),
         resolvePassphrase(args.passphrase),
       );
       return { status: 'imported' };
     });
-  },
-});
-
-export const dataCommand = defineCommand({
-  meta: {
-    name: 'data-transfer',
-    description: 'Export or import encrypted Foundry backups',
-    alias: ['data'],
-  },
-  subCommands: {
-    export: exportCommand,
-    import: importBackup,
   },
 });
 

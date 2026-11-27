@@ -1,4 +1,4 @@
-import type { FetcherType } from './settings';
+import type { FetcherType } from '@dhzh/foundry-shared';
 
 export type CaptureFilter = 'all' | 'no-successful';
 
@@ -59,7 +59,6 @@ export type FetchJobSummary = {
 
 export type CaptureErrorCode
   = | 'ACTIVE_JOB_EXISTS'
-    | 'DATA_TRANSFER_BUSY'
     | 'FETCHER_NOT_CONFIGURED'
     | 'CAPTURE_ALREADY_EXISTS'
     | 'CAPTURE_NOT_FOUND'

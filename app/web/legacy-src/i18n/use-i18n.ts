@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { LanguageMode } from '../features/settings/api';
+import type { LanguageMode } from '@dhzh/foundry-shared';
 import { i18n } from './instance';
 import type { Locale, TranslationKey } from './messages';
 

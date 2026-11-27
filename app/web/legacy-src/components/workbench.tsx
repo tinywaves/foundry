@@ -1,5 +1,5 @@
 import { useI18n } from '../i18n';
-import { createContext, use, useEffect, useId, useState } from 'react';
+import { useId } from 'react';
 import type { ComponentProps, ElementType, ReactElement, ReactNode } from 'react';
 import { ChevronRight, X } from 'lucide-react';
 import { Button } from './ui/button';
@@ -7,7 +7,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { Switch } from './ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from './ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogClose } from './ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger, PopoverTitle } from './ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from './ui/select';
@@ -85,28 +85,6 @@ export function FormInput({ label, description, isLabelHidden, size: _size, isRe
       {(description || status) && <p id={`${id}-description`} role={status ? 'alert' : undefined} className={cn('text-xs text-muted-foreground', status && 'text-destructive')}>{status?.message ?? description}</p>}
     </div>
   );
-}
-
-export function NumberField({ value, onChange, min, max, isIntegerOnly: _integer, ...props }: Omit<FieldProps, 'value' | 'onChange'> & {
-  value: number;
-  onChange: (value: number) => void;
-  isIntegerOnly?: boolean;
-}) {
-  const [draft, setDraft] = useState(String(value));
-  useEffect(() => {
-    // Persisted settings can arrive after the field first mounts.
-    // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
-    setDraft(String(value));
-  }, [value]);
-  const commit = () => {
-    const parsed = Number(draft);
-    const next = Number.isFinite(parsed) && draft.trim() ? Math.min(Number(max ?? Infinity), Math.max(Number(min ?? -Infinity), Math.round(parsed))) : value;
-    setDraft(String(next));
-    if (next !== value) {
-      onChange(next);
-    }
-  };
-  return <FormInput {...props} type="number" min={min} max={max} value={draft} onChange={setDraft} onBlur={commit} onEnter={commit} />;
 }
 
 type SelectOption = { value: string; label: string } | { type: 'section'; title: string; options: Array<{ value: string; label: string }> };
@@ -222,14 +200,6 @@ export function Modal({ isOpen, onOpenChange, children, width = 520, className, 
     </Dialog>
   );
 }
-export function ModalHeader({ title, subtitle, onOpenChange: _onOpenChange }: { title: string; subtitle?: string; onOpenChange?: (isOpen: boolean) => void }) {
-  return (
-    <DialogHeader className="pr-6">
-      <DialogTitle>{title}</DialogTitle>
-      {subtitle && <DialogDescription>{subtitle}</DialogDescription>}
-    </DialogHeader>
-  );
-}
 export function Hint({ content, children }: { content: ReactNode; children: ReactElement }) {
   return (
     <Tooltip>
@@ -301,48 +271,6 @@ export function FieldGroup({ label, children, isRequired, size: _size, className
 export function FieldAddon({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={className}>{children}</div>;
 }
-export function PanelLayout({ header, content, footer }: { header?: ReactNode; content: ReactNode; footer?: ReactNode }) {
-  return (
-    <div className="flex min-h-0 flex-col gap-6">
-      {header}
-      {content}
-      {footer}
-    </div>
-  );
-}
-export function ContentPane({ children, className, isScrollable, padding }: { children: ReactNode; className?: string; isScrollable?: boolean; padding?: number }) {
-  return <div className={cn('min-h-0 min-w-0', isScrollable && 'overflow-auto', padding === 0 ? 'p-0' : '', className)}>{children}</div>;
-}
-export function Footer({ children }: { children: ReactNode }) {
-  return <div>{children}</div>;
-}
-export function SettingsNav({ children, topContent, className, ...props }: ComponentProps<'nav'> & { topContent?: ReactNode }) {
-  return (
-    <nav {...props} className={cn('flex flex-col gap-3 overflow-auto p-3', className)}>
-      {topContent}
-      {children}
-    </nav>
-  );
-}
-export function SettingsNavSection({ title, children, className }: { title: string; children: ReactNode; className?: string }) {
-  return (
-    <section className={className}>
-      <h2 className="mb-2 px-2 text-xs font-medium text-muted-foreground">{title}</h2>
-      <div className="space-y-1">{children}</div>
-    </section>
-  );
-}
-export function SettingsNavItem({ label, icon, isSelected, onClick, size: _size }: { label: string; icon: ReactNode; isSelected?: boolean; onClick: () => void; size?: string }) {
-  return (
-    <Button type="button" variant={isSelected ? 'secondary' : 'ghost'} className="w-full justify-start" onClick={onClick} aria-current={isSelected ? 'page' : undefined}>
-      <span>{icon}</span>
-      <span>{label}</span>
-    </Button>
-  );
-}
-export function Ratio({ ratio, children, className }: { ratio: number; children: ReactNode; className?: string }) {
-  return <div className={cn('w-full', className)} style={{ aspectRatio: ratio }}>{children}</div>;
-}
 export function IconGlyph({ icon: Icon, ...props }: { icon: ElementType; className?: string }) {
   return typeof Icon === 'string' ? <ChevronRight {...props} /> : <Icon aria-hidden="true" {...props} />;
 }
@@ -360,20 +288,6 @@ export function FilterTab({ label, value, icon }: { label: string; value: string
       <span>{label}</span>
     </TabsTrigger>
   );
-}
-const CheckListContext = createContext<{ value: string[]; onChange: (value: string[]) => void }>({ value: [], onChange: () => {} });
-CheckListContext.displayName = 'CheckListContext';
-export function CheckList({ label, value, onChange, children }: { label: string; value: string[]; onChange: (value: string[]) => void; children: ReactNode; hasDividers?: boolean; width?: string }) {
-  return (
-    <fieldset className="min-w-0 space-y-4">
-      <legend className="sr-only">{label}</legend>
-      <CheckListContext value={{ value, onChange }}>{children}</CheckListContext>
-    </fieldset>
-  );
-}
-export function CheckListItem({ label, description, value }: { label: string; description: string; value: string }) {
-  const list = use(CheckListContext);
-  return <CheckField label={label} description={description} value={list.value.includes(value)} onChange={(checked) => list.onChange(checked ? [...list.value, value] : list.value.filter((item) => item !== value))} />;
 }
 export type DataColumn<T> = { key: string; header: string; width?: number | string; align?: 'end'; renderCell: (record: T) => ReactNode };
 export function DataTable<T>({ data, columns, idKey, stickyEndKeys = [] }: { data: T[]; columns: Array<DataColumn<T>>; idKey: keyof T; stickyEndKeys?: string[] }) {

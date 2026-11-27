@@ -5,28 +5,10 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import type { BundledSkillTarget } from './skill-copy-contracts';
+import type { BundledSkillTarget, BundledSkillTargetInfo, BundledSkillCopyResult, BundledSkillTargetsResult } from '@dhzh/foundry-shared';
 
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
 const SKILL_NAME = 'foundry';
-
-export interface BundledSkillInstall {
-  target: BundledSkillTarget;
-  destination: string;
-}
-
-export interface BundledSkillCopyResult {
-  installed: BundledSkillInstall[];
-}
-
-export interface BundledSkillTargetInfo {
-  target: BundledSkillTarget;
-  destination: string;
-}
-
-export interface BundledSkillTargetsResult {
-  targets: BundledSkillTargetInfo[];
-}
 
 export interface BundledSkillCopyServiceOptions {
   skillRoot?: string;
@@ -47,7 +29,7 @@ export class BundledSkillCopyService {
 
   private async copyToTarget(
     target: BundledSkillTarget,
-  ): Promise<BundledSkillInstall> {
+  ): Promise<BundledSkillTargetInfo> {
     const skillRoot = this.configuredSkillRoot ?? resolveBundledSkillRoot();
     if (!existsSync(path.join(skillRoot, 'SKILL.md'))) {
       throw new BundledSkillCopyError(

@@ -12,10 +12,10 @@ main sidebar and content host, with navigation paths in `src/app/navigation.ts`.
 Those paths currently render placeholder pages. The root and unknown routes
 redirect to `/dashboard`.
 
-Settings uses the full-screen `src/app/settings-layout.tsx` at `#/settings`.
-Its back button calls `navigate(-1)`, returning one history entry, including
-query parameters. It does not compute a parent URL or force a Dashboard return.
-A direct visit with no previous entry has no history destination to return to.
+Settings uses the shared full-screen `src/app/full-screen-layout.tsx` at
+`#/settings`. Each page route declares its return target through
+`handle.backTo`; Settings uses `/dashboard`. A direct visit therefore still has
+a predictable destination instead of depending on browser history.
 
 The category is URL state owned by `SettingsPage`:
 

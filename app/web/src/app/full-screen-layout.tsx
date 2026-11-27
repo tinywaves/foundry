@@ -2,17 +2,39 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeftIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import {
+  Outlet,
+  useLocation,
+  useMatches,
+  useNavigate,
+} from 'react-router-dom';
 
 import { getPageTitleKey } from './navigation';
 
-export function SettingsLayout() {
+export interface FullScreenRouteHandle {
+  backTo: string;
+}
+
+export function FullScreenLayout() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
+  const matches = useMatches();
   const navigate = useNavigate();
+  let backTo: string | undefined;
+  for (const match of matches.toReversed()) {
+    if (isFullScreenRouteHandle(match.handle)) {
+      backTo = match.handle.backTo;
+      break;
+    }
+  }
 
   const handleBack = () => {
-    void navigate(-1);
+    if (backTo === undefined) {
+      void navigate(-1);
+      return;
+    }
+
+    void navigate(backTo);
   };
 
   return (
@@ -50,4 +72,13 @@ export function SettingsLayout() {
       </main>
     </div>
   );
+}
+
+function isFullScreenRouteHandle(
+  value: unknown,
+): value is FullScreenRouteHandle {
+  return typeof value === 'object'
+    && value !== null
+    && 'backTo' in value
+    && typeof value.backTo === 'string';
 }

@@ -23,10 +23,11 @@ main sidebar and content host; `src/app/navigation.ts` defines the retained
 placeholder routes. The main sidebar uses the generated defaults: `16rem`
 expanded, `3rem` collapsed, and an `18rem` mobile sheet below `768px`.
 
-Settings uses a separate full-screen layout with a back button and title.
-The button goes back one browser history entry. Root and unknown routes open
-Dashboard. A missing Settings category defaults to Appearance; it does not
-change the app's root destination.
+Settings uses the shared full-screen layout with a back button and title. Each
+full-screen page route declares an explicit `handle.backTo` target; Settings
+returns to Dashboard rather than relying on browser history. Root and unknown
+routes open Dashboard. A missing Settings category defaults to Appearance; it
+does not change the app's root destination.
 
 ## Settings composition
 

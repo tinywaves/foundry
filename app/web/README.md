@@ -9,8 +9,8 @@ Settings is the implemented feature. Preserve the main layout, sidebar, titlebar
 and placeholder routes under `src/app`; these are the application skeleton.
 `src/app.tsx` composes the hash router and providers. Root and unknown routes
 open Dashboard, while `#/settings` opens Settings with Appearance selected.
-Settings has its own full-screen layout; its back button returns one browser
-history entry.
+Settings uses the shared full-screen layout. Each full-screen route declares its
+`handle.backTo` target; Settings returns to Dashboard.
 
 Settings includes Appearance, Language & Region, and Advanced. Categories use
 `#/settings?panel=appearance`, `#/settings?panel=language-region`, and

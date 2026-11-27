@@ -20,9 +20,12 @@ components to use their preset appearance.
   current Settings routes, synchronization, and API boundaries.
 - Instructions lives at `#/library/instructions`. Page actions use
   `PageHeaderActions`; desktop layouts show the instruction list on the left and
-  agent cards on the right, stacking on narrow screens. The creation dialog keeps
-  name and Markdown content required and uses the shared local Monaco editor
-  setup. See `../../docs/instructions.md`.
+  agent cards on the right, stacking on narrow screens. Creation and editing use
+  one shared dialog with a fixed-height Markdown editor. Selecting a row opens
+  that dialog directly; right-clicking a row opens Edit and Delete actions.
+  Delete stays disabled while any agent assignment references the instruction.
+  The Web UI edits Markdown source and does not render it. See
+  `../../docs/instructions.md`.
 - Agent assignment, drag/reorder, switch, Reapply, and file-opening state belong
   to `src/features/agents`. The instruction list belongs to
   `src/features/instructions` and remains the drag source. Use the shared `Agent`
@@ -33,6 +36,9 @@ components to use their preset appearance.
   browser history.
 - Generate shadcn components into `src/components/ui`. Keep generated components
   and `src/hooks/use-mobile.ts` excluded from ESLint; lint application code.
+- Use the shared `Empty` component in `src/components/empty.tsx` for
+  data-driven empty states instead of duplicating icon, title, and description
+  markup.
 - Use Tailwind CSS v4 through `@tailwindcss/vite`; keep preset tokens and global
   CSS in `src/styles/globals.css`. Do not reintroduce Astryx or StyleX.
 - Do not add a `@renderer` alias. Use relative imports within the Web app.
@@ -51,12 +57,12 @@ the standalone API server at `http://localhost:22222`.
 ## Verification
 
 Check affected interactions at `900x670` and narrow viewports: instruction
-creation, required labels, Markdown source preservation, Settings category links
-and browser history, realtime synchronization, localized labels, Advanced
-dialogs, hover/focus, and loading, disabled, and error states. For layout or
-navigation changes, also verify main-sidebar collapse, mobile navigation, and
-full-screen return behavior. Remaining legacy code is reference only; its
-Settings implementation has been removed.
+creation, direct edit/save, required labels, Markdown source preservation,
+Settings category links and browser history, realtime synchronization,
+localized labels, Advanced dialogs, hover/focus, and loading, disabled, and
+error states. For layout or navigation changes, also verify main-sidebar
+collapse, mobile navigation, and full-screen return behavior. Remaining legacy
+code is reference only; its Settings implementation has been removed.
 
 Avoid migrating Electron-specific window APIs. Browser equivalents belong in
 the adapter layer; purely native actions may become no-ops in the Web UI.

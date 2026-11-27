@@ -8,8 +8,9 @@ import encrypted backups, and install the bundled Foundry Skill.
 
 The current Web UI implements Instructions and Settings. The CLI exposes
 `instructions`, `agents`, and `settings` business command groups. Instructions
-supports creating and listing Markdown instruction files from the Web UI or CLI,
-and the Web page and CLI assign them to ChatGPT and Claude Code.
+supports creating, editing, deleting, and listing Markdown instruction files
+from the Web UI or CLI, and the Web page and CLI assign them to ChatGPT and
+Claude Code.
 Settings covers appearance, language and region, and Advanced actions, including
 encrypted backups and bundled Skill installation. The main layout and sidebar
 remain available, with placeholder routes for features not implemented yet. The
@@ -110,10 +111,39 @@ foundry instructions list
 The command prints a JSON array in the same shape as the creation result. Use
 the Web page or `GET /api/instructions` for the same ordered list.
 
+Read one instruction or replace its name and Markdown content:
+
+```bash
+foundry instructions get <id>
+foundry instructions edit <id> \
+  --name "Release checklist" \
+  --content "# Release
+
+- Run tests"
+```
+
+`edit` requires both fields, trims the name, preserves the ID and creation time,
+and advances `updatedAt`. It changes the instruction record only; reapply any
+enabled agent that uses it to rewrite the managed block.
+
+Delete an unused instruction:
+
+```bash
+foundry instructions delete <id>
+```
+
+Deletion removes the Markdown file. It is rejected with
+`INSTRUCTION_IN_USE` while any agent assignment still references the
+instruction; clear the assignment from every agent first. The command prints
+the deleted record as JSON.
+
 Instructions are stored as individual Markdown files at
 `<home>/.foundry/instructions/<id>.md`. Each file has YAML frontmatter for the
-ID, name, and timestamps; the Markdown body is preserved unchanged. The API
-provides `GET /api/instructions` and `POST /api/instructions`. See
+ID, name, and timestamps; timestamps are Unix epoch milliseconds. The Markdown
+body is preserved unchanged. The API
+provides list/create and `GET`/`PUT`/`DELETE /api/instructions/:id`. In the Web
+UI, selecting an instruction opens the editor directly; right-clicking a row
+opens Edit and Delete actions. See
 [Instructions implementation](docs/instructions.md).
 
 ## Agent orchestration
@@ -251,7 +281,7 @@ exposes only `./package.json`. Verify with `pnpm pack --dry-run`.
 
 - [Development constraints](AGENTS.md): architecture, storage, and verification
 - [Web development](app/web/README.md) and [design rules](app/web/DESIGN.md)
-- [Instructions implementation](docs/instructions.md): Web list and creation flow, API, CLI, and file format
+- [Instructions implementation](docs/instructions.md): Web list, view, edit, API, CLI, and file format
 - [Agent orchestration](docs/agents.md): fixed agent files, drag state, CLI/API, and managed block rules
 - [Settings implementation](docs/settings.md): routing, synchronization, and API boundaries
 - [Data export and import](docs/data-export.md): normalization, replacement, and format

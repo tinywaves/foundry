@@ -12,6 +12,16 @@ export function getAgentRecord(
   return storage.get('agents', id);
 }
 
+export function listAgentIdsUsingInstruction(
+  storage: FoundryStorage,
+  instructionId: string,
+): string[] {
+  return listAgentRecords(storage)
+    .filter(({ instructions }) =>
+      instructions.instructionIds.includes(instructionId))
+    .map(({ id }) => id);
+}
+
 export function saveAgentRecord(
   storage: FoundryStorage,
   record: AgentRecord,

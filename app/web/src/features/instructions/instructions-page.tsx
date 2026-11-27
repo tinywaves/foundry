@@ -1,37 +1,50 @@
+import type { Instruction } from '@dhzh/foundry-shared';
+import {
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { PlusIcon, RotateCwIcon } from 'lucide-react';
 import {
-  lazy,
-  Suspense,
   useMemo,
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 
 import { PageHeaderActions } from '@/app/page-header-actions';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AgentCard } from '@/features/agents/components/agent-card';
 import { useAgents } from '@/features/agents/state/use-agents';
 
+import {
+  deleteInstruction,
+  InstructionApiError,
+} from './api';
 import { InstructionLibrary } from './components/instruction-library';
-import { useInstructions } from './state/use-instructions';
-
-const CreateInstructionDialog = lazy(
-  () => import('./components/create-instruction-dialog'),
-);
+import InstructionEditorDialog from './components/instruction-editor-dialog';
+import { preloadMarkdownEditor } from './components/markdown-editor-loader';
+import {
+  instructionsQueryKey,
+  useInstructions,
+} from './state/use-instructions';
 
 export function InstructionsPage() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedInstructionId, setSelectedInstructionId] = useState<
+    string | null
+  >(null);
   const instructionState = useInstructions();
   const agentState = useAgents();
+  const assignedInstructionIds = useMemo(
+    () => new Set(
+      agentState.agents.flatMap(({ instructionIds }) => instructionIds),
+    ),
+    [agentState.agents],
+  );
   const instructionsById = useMemo(
     () => new Map(
       instructionState.instructions.map((instruction) => [
@@ -41,6 +54,30 @@ export function InstructionsPage() {
     ),
     [instructionState.instructions],
   );
+  const selectedInstruction = selectedInstructionId
+    ? instructionState.instructions.find(
+        ({ id }) => id === selectedInstructionId,
+      )
+    : undefined;
+  const instructionRemovalMutation = useMutation({
+    mutationFn: (instruction: Instruction) => deleteInstruction(instruction.id),
+    onSuccess: (_result, instruction) => {
+      queryClient.setQueryData<Instruction[]>(
+        instructionsQueryKey,
+        (current) => current?.filter(({ id }) => id !== instruction.id),
+      );
+      void queryClient.invalidateQueries({ queryKey: instructionsQueryKey });
+      toast.success(t('instructions.deleted'));
+    },
+    onError: (error) => {
+      toast.error(t(
+        error instanceof InstructionApiError
+        && error.code === 'INSTRUCTION_IN_USE'
+          ? 'instructions.deleteInUse'
+          : 'instructions.deleteError',
+      ));
+    },
+  });
 
   function addInstruction(agentId: string, instructionId: string) {
     const agent = agentState.agents.find(({ id }) => id === agentId);
@@ -106,6 +143,8 @@ export function InstructionsPage() {
       <PageHeaderActions>
         <Button
           type="button"
+          onFocus={preloadMarkdownEditor}
+          onPointerEnter={preloadMarkdownEditor}
           onClick={() => {
             setIsCreateOpen(true);
           }}
@@ -126,17 +165,28 @@ export function InstructionsPage() {
         </div>
         <div
           className="
-            min-h-0 flex-1 overflow-y-auto pr-1
+            min-h-0 flex-1 overflow-y-auto p-1
             max-md:max-h-64
           "
         >
           <InstructionLibrary
+            assignedInstructionIds={assignedInstructionIds}
             instructions={instructionState.instructions}
+            isAssignmentStateReady={
+              !agentState.isLoading && !agentState.isError
+            }
             isLoading={instructionState.isLoading}
             isError={instructionState.isError}
             onRetry={() => {
               void instructionState.retry();
             }}
+            onEdit={(instruction) => {
+              setSelectedInstructionId(instruction.id);
+            }}
+            onDelete={(instruction) => {
+              instructionRemovalMutation.mutate(instruction);
+            }}
+            onPreload={preloadMarkdownEditor}
           />
         </div>
       </section>
@@ -152,7 +202,7 @@ export function InstructionsPage() {
         </div>
         <div
           className="
-            flex min-h-0 flex-1 flex-col gap-3 pr-1
+            flex min-h-0 flex-1 flex-col gap-3 p-1
             max-md:pb-2
             md:overflow-y-auto
           "
@@ -203,13 +253,19 @@ export function InstructionsPage() {
       </section>
 
       {isCreateOpen && (
-        <Suspense fallback={<CreateInstructionDialogFallback />}>
-          <CreateInstructionDialog
-            onClose={() => {
-              setIsCreateOpen(false);
-            }}
-          />
-        </Suspense>
+        <InstructionEditorDialog
+          onClose={() => {
+            setIsCreateOpen(false);
+          }}
+        />
+      )}
+      {selectedInstruction && (
+        <InstructionEditorDialog
+          instruction={selectedInstruction}
+          onClose={() => {
+            setSelectedInstructionId(null);
+          }}
+        />
       )}
     </div>
   );
@@ -234,21 +290,5 @@ function AgentsSkeleton() {
         </Card>
       ))}
     </>
-  );
-}
-
-function CreateInstructionDialogFallback() {
-  const { t } = useTranslation();
-
-  return (
-    <Dialog open>
-      <DialogContent showCloseButton={false} className="sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>{t('instructions.createTitle')}</DialogTitle>
-        </DialogHeader>
-        <Skeleton className="h-7 w-full" />
-        <Skeleton className="h-72 w-full" />
-      </DialogContent>
-    </Dialog>
   );
 }

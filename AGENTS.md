@@ -11,16 +11,17 @@ Preserve the main layout, sidebar, titlebar, and placeholder routes. Other
 backend feature services and APIs remain available; work on one feature does
 not imply changing those features or removing the shell.
 
-The CLI provides `instructions new`, `instructions list`, `agents list`,
-`agents instructions list`, `agents instructions assign`,
-`agents instructions enable`, `agents instructions disable`,
-`agents instructions reapply`, `agents instructions open`,
-`settings get [key]`, `settings set <key> <value>`, config-folder opening,
-encrypted export/import, and bundled Skill installation. Document instruction
-input and allowed setting keys and values in CLI help and the bundled Skill
-rather than adding a discovery API. `foundry web` initializes storage, starts
-Hono, serves the bundled Web UI, and opens the browser unless `--no-open` is
-supplied.
+The CLI provides `instructions new`, `instructions list`, `instructions get`,
+`instructions edit`, `instructions delete`, `agents list`,
+`agents instructions list`,
+`agents instructions assign`, `agents instructions enable`,
+`agents instructions disable`, `agents instructions reapply`,
+`agents instructions open`, `settings get [key]`,
+`settings set <key> <value>`, config-folder opening, encrypted export/import,
+and bundled Skill installation. Document instruction input and allowed setting
+keys and values in CLI help and the bundled Skill rather than adding a discovery
+API. `foundry web` initializes storage, starts Hono, serves the bundled Web UI,
+and opens the browser unless `--no-open` is supplied.
 
 - Keep `bin` pointed at `dist/index.mjs`.
 - Publish only `dist`.
@@ -128,8 +129,9 @@ Keep CLI and server responsibilities separate:
   in YAML frontmatter and its Markdown body unchanged. The filename must match
   the frontmatter ID; do not add a separate instruction index or database.
 - Keep instruction validation in `src/features/instructions/contracts.ts` and
-  persistence in its repository. API routes list and create instructions;
-  CLI actions call `InstructionsService` rather than reimplementing storage.
+  persistence in its repository. API routes list, read, create, and update
+  instructions; CLI actions call `InstructionsService` rather than
+  reimplementing storage.
 - Agent definitions and instruction-file paths are fixed. `chatgpt` targets
   `<home>/.codex/AGENTS.md`, and `claude-code` targets
   `<home>/.claude/CLAUDE.md`; never accept arbitrary filesystem paths.
@@ -168,8 +170,11 @@ Keep CLI and server responsibilities separate:
   actions mount through `PageHeaderActions` at the right side of the page header.
   The desktop page has an instruction list on the left and agent orchestration
   cards on the right; narrow layouts stack them. The instruction list renders
-  names newest first with loading, empty, and error states. The creation dialog
-  uses the shared Markdown editor and required-field labels.
+  names newest first with loading, empty, and error states. Selecting a row
+  opens the shared create/edit dialog directly with a fixed-height Markdown
+  editor. Right-clicking a row opens Edit and Delete actions; Delete is disabled
+  while any agent assignment references the instruction. The Web UI edits
+  Markdown source and does not render Markdown.
 - Agent cards show the fixed file path, an apply switch, and Reapply. Dragging an
   instruction into an agent adds it once; assigned rows can be reordered by drag
   and removed individually. Use `@lobehub/icons-static-svg` for OpenAI and Claude
@@ -185,6 +190,9 @@ Keep CLI and server responsibilities separate:
   icon sizes for controls embedded in compact fields or toolbars.
 - Mark every required form field with a red `*` in its label through
   `RequiredLabel`; keep required semantics on the field itself.
+- Render data-driven empty states with the shared `Empty` component in
+  `app/web/src/components/empty.tsx`; pass its icon, title, and optional
+  description instead of rebuilding the same centered layout.
 - Use the official `@tailwindcss/vite` plugin. Keep preset tokens and the CSS
   entry in `app/web/src/styles/globals.css`; use Tailwind for business styling.
 - Preserve existing page composition, responsive behavior, interactions, and
@@ -243,11 +251,18 @@ API development servers. Rebuild `dist` to test production static serving.
 - Store instructions as individual Markdown files in `instructions/`. Each file
   uses YAML frontmatter for `id`, `name`, `createdAt`, and `updatedAt`, followed
   by the untouched Markdown content. An absent directory means an empty list.
+- Delete an instruction only when no agent profile references its ID. Keep the
+  usage check and Markdown file removal in one storage transaction.
 - Store agent profiles as individual JSON records in `agents/`. The fixed ID is
   top-level; the `instructions` capability contains ordered instruction IDs,
   enabled state, and timestamps. Future capabilities can add sibling namespaces
   without changing the record file. External agent instruction files live
   outside `.foundry` and are not JSON storage records.
+- Persist timestamps in Foundry application records as Unix epoch milliseconds
+  (`number`, generated with `Date.now()`), never as ISO strings. Use the
+  configured time zone only when formatting a timestamp for display. External
+  transcript timestamps and encrypted-backup metadata remain defined by their
+  external formats.
 - `src/storage/models.ts` owns record contracts and the JSON format version.
 - Use `FoundryStorage` transactions for writes. Keep process locking, atomic
   replacement and redo recovery inside the storage module. Read JSON files
@@ -312,8 +327,10 @@ directory.
 For instruction changes, create one with
 `foundry instructions new --name ... --content ...` under temporary `HOME`,
 verify the returned JSON and Markdown file, then exercise
-`foundry instructions list` and `GET` and `POST` `/api/instructions` in
-behavioral tests.
+`foundry instructions list`, `foundry instructions get`, and
+`foundry instructions edit`. Exercise `GET`, `POST`, `PUT`, and `DELETE` on
+`/api/instructions` in behavioral tests, including the `INSTRUCTION_IN_USE`
+response while an agent assignment references the ID.
 
 For agent orchestration changes, use temporary `HOME` and exercise assignment,
 enable, reorder, reapply, disable, missing-file creation, and malformed-marker

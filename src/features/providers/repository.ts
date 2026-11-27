@@ -14,7 +14,7 @@ export class ProviderNotFoundError extends Error {
 export class ProviderRepository {
   constructor(private readonly storage: FoundryStorage) {}
   list(usedProviderIds: ReadonlySet<string> = new Set()): ProviderListItem[] {
-    return this.storage.all('providers').filter((row) => row.status !== 'deleted').toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt)).map((row) => ({ ...toSummary(row), isInUse: usedProviderIds.has(row.id) }));
+    return this.storage.all('providers').filter((row) => row.status !== 'deleted').toSorted((a, b) => b.updatedAt - a.updatedAt).map((row) => ({ ...toSummary(row), isInUse: usedProviderIds.has(row.id) }));
   }
 
   get(id: string): ProviderSummary | null {
@@ -33,7 +33,7 @@ export class ProviderRepository {
       if (id && !existing) {
         throw new ProviderNotFoundError();
       }
-      const now = new Date().toISOString();
+      const now = Date.now();
       const row: ProviderRecord = {
         id: id ?? randomUUID(),
         status: 'active',
@@ -58,7 +58,7 @@ export class ProviderRepository {
       if (!existing) {
         throw new ProviderNotFoundError();
       }
-      const now = new Date().toISOString();
+      const now = Date.now();
       const row = {
         ...existing,
         status,

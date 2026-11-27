@@ -12,6 +12,24 @@ export class InstructionInputError extends Error {
   }
 }
 
+export class InstructionNotFoundError extends Error {
+  readonly code = 'INSTRUCTION_NOT_FOUND';
+
+  constructor(id: string) {
+    super(`Instruction not found: ${id}`);
+    this.name = 'InstructionNotFoundError';
+  }
+}
+
+export class InstructionInUseError extends Error {
+  readonly code = 'INSTRUCTION_IN_USE';
+
+  constructor(readonly agentIds: string[]) {
+    super(`Instruction is assigned to: ${agentIds.join(', ')}`);
+    this.name = 'InstructionInUseError';
+  }
+}
+
 export function parseCreateInstructionInput(value: unknown): CreateInstructionInput {
   if (!isRecord(value)) {
     throw new InstructionInputError('Instruction input must be an object');

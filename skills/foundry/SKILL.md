@@ -1,6 +1,6 @@
 ---
 name: foundry
-description: Operate the local Foundry workbench through its installed CLI. Use when a task asks to create, list, assign, enable, disable, or reapply Foundry instructions for ChatGPT or Claude Code, read or change Foundry settings, open its configuration folder, export or import encrypted Foundry data, install or inspect the Foundry Skill, or start its Web UI.
+description: Operate the local Foundry workbench through its installed CLI. Use when a task asks to create, read, edit, delete, list, assign, enable, disable, or reapply Foundry instructions for ChatGPT or Claude Code, read or change Foundry settings, open its configuration folder, export or import encrypted Foundry data, install or inspect the Foundry Skill, or start its Web UI.
 ---
 
 # Foundry
@@ -12,8 +12,7 @@ JSON.
 
 Use this Skill when the user wants to:
 
-- Save reusable Markdown instructions or inspect the current instruction
-  library.
+- Save, read, edit, delete, or inspect reusable Markdown instructions.
 - Make ChatGPT or Claude Code follow selected instructions.
 - Reorder, enable, disable, or reapply an agent's instruction set.
 - Read or change appearance, language, time zone, or time format.
@@ -31,7 +30,7 @@ the command details, output shapes, failure modes, and end-to-end examples.
 
 | Need | CLI entry point | Reference |
 | --- | --- | --- |
-| Create or list reusable Markdown instructions | `foundry instructions` | [Instructions](references/instructions.md) |
+| Create, read, edit, delete, or list reusable Markdown instructions | `foundry instructions` | [Instructions](references/instructions.md) |
 | Inspect, assign, enable, disable, or reapply instructions for an agent | `foundry agents instructions` | [Agents](references/agents.md) |
 | Inspect supported agents and raw assignment state | `foundry agents list` | [Agents](references/agents.md) |
 | Read or change application preferences | `foundry settings get/set` | [Settings](references/settings.md) |
@@ -105,6 +104,25 @@ foundry agents instructions enable claude-code
 Read [Instructions](references/instructions.md) for creation rules and
 [Agents](references/agents.md) for assignment and enable semantics.
 
+### Edit an instruction and propagate the new content
+
+```bash
+foundry instructions edit <instruction-id> \
+  --name "Release checklist" \
+  --content "# Release
+
+- Run tests
+- Verify the changelog"
+```
+
+Editing changes the stored instruction only. Reapply each enabled agent that
+uses it:
+
+```bash
+foundry agents instructions reapply chatgpt
+foundry agents instructions reapply claude-code
+```
+
 ### Inspect what each agent currently receives
 
 ```bash
@@ -113,6 +131,17 @@ foundry agents instructions list
 
 This resolves ordered IDs to instruction names. Use `foundry instructions list`
 when the full Markdown content is needed.
+
+### Delete an instruction nobody uses
+
+```bash
+foundry agents instructions list
+foundry instructions delete <instruction-id>
+```
+
+Deletion is blocked while any agent assignment references the instruction.
+Clear the assignment from every agent before deleting; see
+[Instructions](references/instructions.md#delete-an-instruction).
 
 ### Temporarily stop writing instructions without losing the order
 
@@ -174,8 +203,11 @@ foundry web
 Use `--no-open` to start the same local server without opening a browser. It
 prints the URL and serves the UI on port `11111`. Instructions and Settings are
 the implemented Web features. The Instructions page is at
-`#/library/instructions` and supports the same creation and agent-assignment
-flows as the CLI. Settings routes are documented in
+`#/library/instructions` and supports creation, direct source editing, and
+agent assignment. Right-clicking an instruction row exposes Edit and Delete;
+Delete is disabled while an agent assignment uses the instruction. The Web UI
+edits Markdown source and does not render it.
+Settings routes are documented in
 [Settings](references/settings.md#web-ui-synchronization).
 
 ## Safety boundaries
@@ -184,6 +216,8 @@ flows as the CLI. Settings routes are documented in
   [Encrypted backups](references/backups.md) before running it.
 - Instructions are not included in encrypted backups; exporting a backup does
   not preserve the instruction library or agent assignments.
+- Deleting an instruction is rejected with `INSTRUCTION_IN_USE` while any agent
+  assignment references its ID. Clear those assignments first.
 - Enabling an agent overwrites Foundry's managed block. Reapply is the recovery
   path after manual or malformed edits inside that block.
 - The agent output paths are fixed. No command accepts an arbitrary destination

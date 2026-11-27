@@ -16,7 +16,7 @@ export class CaptureRepository {
   }
 
   private newJob(captureId: string, config: StoredJobConfig): FetchJobRecord {
-    const now = new Date().toISOString();
+    const now = Date.now();
     return {
       id: randomUUID(),
       captureId,
@@ -34,7 +34,7 @@ export class CaptureRepository {
   }
 
   list(filter: CaptureFilter): CaptureSummary[] {
-    return this.storage.all('captures').filter((row) => !row.deletedAt && (filter !== 'no-successful' || !row.latestSuccessfulJobId)).toSorted((a, b) => b.createdAt.localeCompare(a.createdAt)).map((row) => toCaptureSummary(row));
+    return this.storage.all('captures').filter((row) => !row.deletedAt && (filter !== 'no-successful' || !row.latestSuccessfulJobId)).toSorted((a, b) => b.createdAt - a.createdAt).map((row) => toCaptureSummary(row));
   }
 
   counts(): CaptureCounts {
@@ -68,7 +68,7 @@ export class CaptureRepository {
       if (this.findActiveByURL(url)) {
         throw new CaptureError('CAPTURE_ALREADY_EXISTS', 'This link is already captured');
       }
-      const now = new Date().toISOString();
+      const now = Date.now();
       const capture: CaptureRecord = {
         id: randomUUID(),
         url,
@@ -116,7 +116,7 @@ export class CaptureRepository {
       if (this.hasActiveJob(captureId)) {
         throw new CaptureError('ACTIVE_JOB_EXISTS', 'This capture already has an active fetch job');
       }
-      const now = new Date().toISOString();
+      const now = Date.now();
       this.storage.put('captures', { ...row, deletedAt: now, updatedAt: now });
       for (const job of this.storage.all('fetchJobs')) {
         if (job.captureId === captureId && !job.deletedAt) {
@@ -133,14 +133,14 @@ export class CaptureRepository {
       if (!row) {
         return null;
       }
-      const updated = { ...row, userNote: userNote.trim() || null, updatedAt: new Date().toISOString() };
+      const updated = { ...row, userNote: userNote.trim() || null, updatedAt: Date.now() };
       this.storage.put('captures', updated);
       return toCaptureSummary(updated);
     });
   }
 
   listJobs(captureId: string): FetchJobSummary[] {
-    return this.storage.all('fetchJobs').filter((job) => job.captureId === captureId && !job.deletedAt).toSorted((a, b) => b.createdAt.localeCompare(a.createdAt)).map((row) => toJobSummary(row));
+    return this.storage.all('fetchJobs').filter((job) => job.captureId === captureId && !job.deletedAt).toSorted((a, b) => b.createdAt - a.createdAt).map((row) => toJobSummary(row));
   }
 
   getJob(captureId: string, jobId: string): FetchJobSummary | null {
@@ -163,7 +163,7 @@ export class CaptureRepository {
     this.storage.transaction(() => {
       const job = this.storage.get('fetchJobs', jobId);
       if (job?.status === 'pending') {
-        this.storage.put('fetchJobs', { ...job, status: 'running', updatedAt: new Date().toISOString() });
+        this.storage.put('fetchJobs', { ...job, status: 'running', updatedAt: Date.now() });
       }
     });
   }
@@ -175,7 +175,7 @@ export class CaptureRepository {
       if (!job || !capture || job.captureId !== captureId) {
         throw new Error('Invalid capture job');
       }
-      const now = new Date().toISOString();
+      const now = Date.now();
       this.storage.put('fetchJobs', {
         ...job,
         status: 'succeeded',
@@ -204,7 +204,7 @@ export class CaptureRepository {
           creditsUsed: null,
           errorCode,
           errorMessage,
-          updatedAt: new Date().toISOString(),
+          updatedAt: Date.now(),
         });
       }
     });
@@ -221,7 +221,7 @@ export class CaptureRepository {
   }
 
   pendingJobIDs(): string[] {
-    return this.storage.all('fetchJobs').filter((job) => job.status === 'pending' && !job.deletedAt).toSorted((a, b) => a.createdAt.localeCompare(b.createdAt)).map((job) => job.id);
+    return this.storage.all('fetchJobs').filter((job) => job.status === 'pending' && !job.deletedAt).toSorted((a, b) => a.createdAt - b.createdAt).map((job) => job.id);
   }
 }
 function toCaptureSummary(row: CaptureRecord): CaptureSummary {

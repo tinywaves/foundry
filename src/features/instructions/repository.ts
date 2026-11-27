@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { parse, stringify } from 'yaml';
 import type { CreateInstructionInput, Instruction } from '@dhzh/foundry-shared';
 
-import { writeTextAtomic } from '../../storage/files';
+import { syncDirectory, writeTextAtomic } from '../../storage/files';
 import type { FoundryStorage } from '../../storage/store';
 import { INSTRUCTION_NAME_MAX_LENGTH } from './contracts';
 
@@ -17,15 +17,15 @@ const FRONTMATTER_PATTERN = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/u;
 interface InstructionFrontmatter {
   id: string;
   name: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export function createInstruction(
   input: CreateInstructionInput,
   storage: FoundryStorage,
 ): Instruction {
-  const now = new Date().toISOString();
+  const now = Date.now();
   const instruction: Instruction = {
     id: randomUUID(),
     name: input.name,
@@ -59,7 +59,78 @@ export function listInstructions(storage: FoundryStorage): Instruction[] {
 
   return filenames
     .map((filename) => readInstructionFile(path.join(directory, filename), filename))
-    .toSorted((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+    .toSorted((left, right) => right.updatedAt - left.updatedAt);
+}
+
+export function getInstruction(
+  id: string,
+  storage: FoundryStorage,
+): Instruction | undefined {
+  if (!INSTRUCTION_ID_PATTERN.test(id)) {
+    return undefined;
+  }
+  const filename = `${id}${INSTRUCTION_FILE_SUFFIX}`;
+  try {
+    return readInstructionFile(
+      path.join(instructionsDirectory(storage), filename),
+      filename,
+    );
+  } catch (error) {
+    if (isMissingFileError(error)) {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
+export function updateInstruction(
+  id: string,
+  input: CreateInstructionInput,
+  storage: FoundryStorage,
+): Instruction | undefined {
+  const current = getInstruction(id, storage);
+  if (!current) {
+    return undefined;
+  }
+  const instruction: Instruction = {
+    ...current,
+    name: input.name,
+    content: input.content,
+    updatedAt: Date.now(),
+  };
+
+  storage.transaction(() => {
+    writeTextAtomic(
+      instructionPath(storage, instruction.id),
+      serializeInstruction(instruction),
+    );
+  });
+
+  return instruction;
+}
+
+export function removeInstructionFile(
+  id: string,
+  storage: FoundryStorage,
+): 'removed' | 'missing' {
+  if (!INSTRUCTION_ID_PATTERN.test(id)) {
+    return 'missing';
+  }
+  const directory = instructionsDirectory(storage);
+  const filename = path.join(directory, `${id}${INSTRUCTION_FILE_SUFFIX}`);
+
+  return storage.transaction(() => {
+    try {
+      rmSync(filename);
+      syncDirectory(directory);
+      return 'removed';
+    } catch (error) {
+      if (isMissingFileError(error)) {
+        return 'missing';
+      }
+      throw error;
+    }
+  });
 }
 
 export function serializeInstruction(instruction: Instruction): string {
@@ -127,8 +198,12 @@ function readString(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
-function readTimestamp(value: unknown): string {
-  if (typeof value !== 'string' || Number.isNaN(Date.parse(value))) {
+function readTimestamp(value: unknown): number {
+  if (
+    typeof value !== 'number'
+    || !Number.isSafeInteger(value)
+    || value < 0
+  ) {
     throw invalidInstructionFile('frontmatter');
   }
   return value;

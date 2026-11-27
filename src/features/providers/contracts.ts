@@ -33,9 +33,9 @@ export interface ProviderSummary {
   apiKey: string;
   customModels: CustomModel[];
   status: ProviderStatus;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
+  createdAt: number;
+  updatedAt: number;
+  deletedAt: number | null;
 }
 
 export interface ProviderListItem extends ProviderSummary {

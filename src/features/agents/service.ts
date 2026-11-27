@@ -127,7 +127,7 @@ export class AgentsService {
           instructionIds.length === 0,
         );
       }
-      const updatedAt = new Date().toISOString();
+      const updatedAt = Date.now();
       const saved = saveAgentRecord(this.storage, {
         ...record,
         instructions: {
@@ -167,7 +167,7 @@ export class AgentsService {
         this.writeAgentDocument(definition, [], true);
       }
 
-      const updatedAt = new Date().toISOString();
+      const updatedAt = Date.now();
       return toAgent(definition, saveAgentRecord(this.storage, {
         ...record,
         instructions: {
@@ -200,7 +200,7 @@ export class AgentsService {
         false,
       );
 
-      const updatedAt = new Date().toISOString();
+      const updatedAt = Date.now();
       return toAgent(definition, saveAgentRecord(this.storage, {
         ...record,
         instructions: {
@@ -240,7 +240,7 @@ function toAgent(
 }
 
 function defaultRecord(id: string): AgentRecord {
-  const now = new Date().toISOString();
+  const now = Date.now();
   return {
     id,
     instructions: {

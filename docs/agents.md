@@ -38,6 +38,14 @@ also turns the switch off and removes the block. Reapply is available only while
 the switch is on and rewrites the current block to recover from manual or
 malformed edits.
 
+Editing an instruction updates the stored instruction only. Enabled agent files
+keep the content from their previous write until the affected agent is
+reapplied or re-enabled.
+
+An instruction cannot be deleted while any agent assignment references its ID.
+Clear it from every agent first; the API returns `409 INSTRUCTION_IN_USE` and
+leaves the Markdown file unchanged.
+
 ## API
 
 `packages/shared/src/agents.ts` defines the shared response and input contracts.
@@ -103,15 +111,15 @@ named objects. The current record format is:
       "instruction-id-2"
     ],
     "enabled": true,
-    "createdAt": "2026-11-28T...",
-    "updatedAt": "2026-11-28T..."
+    "createdAt": 1795824000000,
+    "updatedAt": 1795824000000
   }
 }
 ```
 
 The fixed agent definitions supply names, icons, and file paths; the record
 stores only mutable capability state. Agent records are outside the encrypted
-backup payload.
+backup payload. Timestamps are Unix epoch milliseconds, not ISO strings.
 
 The record remains agent-centric because ordering is per agent. Putting the
 assignment list into each instruction file's frontmatter would duplicate shared

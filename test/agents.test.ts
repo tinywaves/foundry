@@ -94,8 +94,8 @@ it('applies ordered instruction blocks and only removes Foundry content', async 
         instructions: {
           instructionIds: [first.id],
           enabled: true,
-          createdAt: expect.any(String),
-          updatedAt: expect.any(String),
+          createdAt: expect.any(Number),
+          updatedAt: expect.any(Number),
         },
       },
     ]);

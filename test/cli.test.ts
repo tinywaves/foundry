@@ -132,8 +132,8 @@ it('creates and lists instructions through the CLI', async () => {
       id: string;
       name: string;
       content: string;
-      createdAt: string;
-      updatedAt: string;
+      createdAt: number;
+      updatedAt: number;
     };
     expect(created).toMatchObject({
       name: 'Release checklist',
@@ -144,11 +144,158 @@ it('creates and lists instructions through the CLI', async () => {
       'utf8',
     );
     expect(markdown).toContain('name: Release checklist');
+    expect(markdown).toContain(`createdAt: ${created.createdAt}`);
+    expect(markdown).toContain(`updatedAt: ${created.updatedAt}`);
     expect(markdown).toContain('# Release\n\n- Run tests');
 
     const listed = await runJsonCommand(['instructions', 'list']);
     expect(listed).toEqual([created]);
   } finally {
+    vi.unstubAllEnvs();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+it('gets and edits one instruction through the CLI', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'foundry-cli-instruction-edit-'));
+  stubHome(directory);
+
+  try {
+    const created = await runJsonCommand([
+      'instructions',
+      'new',
+      '--name',
+      'Draft',
+      '--content',
+      '# Draft',
+    ]) as { id: string };
+    expect(await runJsonCommand(['instructions', 'get', created.id]))
+      .toEqual(created);
+
+    const updated = await runJsonCommand([
+      'instructions',
+      'edit',
+      created.id,
+      '--name',
+      'Final',
+      '--content',
+      '# Final\n\nUpdated.',
+    ]);
+    expect(updated).toMatchObject({
+      id: created.id,
+      name: 'Final',
+      content: '# Final\n\nUpdated.',
+    });
+    expect(await runJsonCommand(['instructions', 'get', created.id]))
+      .toEqual(updated);
+    expect(await runJsonCommand(['instructions', 'list'])).toEqual([updated]);
+  } finally {
+    vi.unstubAllEnvs();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+it('reports missing instructions through the CLI', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'foundry-cli-instruction-missing-'));
+  stubHome(directory);
+  const previousExitCode = process.exitCode;
+  const errors: string[] = [];
+  const error = vi.spyOn(console, 'error').mockImplementation((value: unknown) => {
+    errors.push(String(value));
+  });
+
+  try {
+    for (const args of [
+      ['instructions', 'get', 'missing-id'],
+      ['instructions', 'edit', 'missing-id', '--name', 'Name', '--content', 'Body'],
+      ['instructions', 'delete', 'missing-id'],
+    ]) {
+      errors.length = 0;
+      process.exitCode = undefined;
+      await runCommand(createFoundryCommand(), { rawArgs: args });
+      expect(process.exitCode).toBe(1);
+      expect(JSON.parse(errors.join(''))).toMatchObject({
+        error: { code: 'INSTRUCTION_NOT_FOUND' },
+      });
+    }
+  } finally {
+    error.mockRestore();
+    process.exitCode = previousExitCode;
+    vi.unstubAllEnvs();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+it('deletes unused CLI instructions and refuses assigned ones', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'foundry-cli-instruction-delete-'));
+  stubHome(directory);
+  const previousExitCode = process.exitCode;
+
+  try {
+    const unused = await runJsonCommand([
+      'instructions',
+      'new',
+      '--name',
+      'Unused',
+      '--content',
+      '# Unused',
+    ]) as { id: string };
+    expect(await runJsonCommand(['instructions', 'delete', unused.id]))
+      .toMatchObject({ id: unused.id });
+    expect(existsSync(
+      join(directory, '.foundry', 'instructions', `${unused.id}.md`),
+    )).toBe(false);
+    expect(await runJsonCommand(['instructions', 'list'])).toEqual([]);
+
+    const assigned = await runJsonCommand([
+      'instructions',
+      'new',
+      '--name',
+      'Assigned',
+      '--content',
+      '# Assigned',
+    ]) as { id: string };
+    await runJsonCommand([
+      'agents',
+      'instructions',
+      'assign',
+      'chatgpt',
+      '--instructions',
+      assigned.id,
+    ]);
+
+    const errors: string[] = [];
+    const error = vi.spyOn(console, 'error').mockImplementation((value: unknown) => {
+      errors.push(String(value));
+    });
+    try {
+      process.exitCode = undefined;
+      await runCommand(createFoundryCommand(), {
+        rawArgs: ['instructions', 'delete', assigned.id],
+      });
+      expect(process.exitCode).toBe(1);
+      expect(JSON.parse(errors.join(''))).toMatchObject({
+        error: { code: 'INSTRUCTION_IN_USE' },
+      });
+    } finally {
+      error.mockRestore();
+    }
+    expect(existsSync(
+      join(directory, '.foundry', 'instructions', `${assigned.id}.md`),
+    )).toBe(true);
+
+    await runJsonCommand([
+      'agents',
+      'instructions',
+      'assign',
+      'chatgpt',
+      '--instructions',
+      '',
+    ]);
+    expect(await runJsonCommand(['instructions', 'delete', assigned.id]))
+      .toMatchObject({ id: assigned.id });
+  } finally {
+    process.exitCode = previousExitCode;
     vi.unstubAllEnvs();
     await rm(directory, { recursive: true, force: true });
   }

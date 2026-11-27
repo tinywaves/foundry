@@ -5,9 +5,9 @@ export const STORAGE_FORMAT_VERSION = 1;
 export interface ProviderRecord extends ProviderInput {
   id: string;
   status: string;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
+  createdAt: number;
+  updatedAt: number;
+  deletedAt: number | null;
 }
 export interface CaptureRecord {
   id: string;
@@ -15,9 +15,9 @@ export interface CaptureRecord {
   title: string | null;
   userNote: string | null;
   latestSuccessfulJobId: string | null;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
+  createdAt: number;
+  updatedAt: number;
+  deletedAt: number | null;
 }
 export interface FetchJobRecord {
   id: string;
@@ -29,15 +29,15 @@ export interface FetchJobRecord {
   status: string;
   errorCode: string | null;
   errorMessage: string | null;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
+  createdAt: number;
+  updatedAt: number;
+  deletedAt: number | null;
 }
 export interface AgentInstructionsRecord {
   instructionIds: string[];
   enabled: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: number;
+  updatedAt: number;
 }
 export interface AgentRecord {
   id: string;

@@ -9,8 +9,8 @@ export interface CaptureSummary {
   title: string | null;
   userNote: string | null;
   latestSuccessfulJobId: string | null;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface CaptureDetail {
@@ -36,8 +36,8 @@ export interface FetchJobSummary {
   creditsUsed: number | null;
   errorCode: string | null;
   errorMessage: string | null;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface StoredJobConfig {

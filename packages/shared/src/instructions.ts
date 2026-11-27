@@ -2,8 +2,8 @@ export interface Instruction {
   id: string;
   name: string;
   content: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface CreateInstructionInput {

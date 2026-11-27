@@ -117,6 +117,9 @@ Rules:
 - Assigning while the agent is enabled rewrites the managed block immediately.
 - Clearing the final instruction also turns the agent off and removes the
   managed block.
+- An instruction cannot be deleted while any agent assignment references its
+  ID. Clear it from every agent first; otherwise deletion fails with
+  `INSTRUCTION_IN_USE`.
 
 ## Apply and remove
 
@@ -142,6 +145,8 @@ Semantics:
   preserving all other file content.
 - Enabling an agent whose file does not exist creates the file with only the
   managed block. Disabling a missing file does not create it.
+- Editing an instruction does not rewrite enabled agent files. Reapply each
+  agent that uses the edited instruction to write the new content.
 
 ## Open the file
 
@@ -244,14 +249,15 @@ an `instructions` namespace:
   "instructions": {
     "instructionIds": ["instruction-id-1", "instruction-id-2"],
     "enabled": true,
-    "createdAt": "2026-11-28T00:00:00.000Z",
-    "updatedAt": "2026-11-28T00:00:00.000Z"
+    "createdAt": 1795824000000,
+    "updatedAt": 1795824000000
   }
 }
 ```
 
 Read it through `foundry agents list` or
-`foundry agents instructions list`; use the CLI for writes.
+`foundry agents instructions list`; use the CLI for writes. Timestamps are Unix
+epoch milliseconds, not ISO strings.
 
 ## Errors
 
